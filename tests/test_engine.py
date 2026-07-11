@@ -174,7 +174,7 @@ def test_matching_stamp_is_not_suspect():
 def test_unratified_ai_origin_proposed_item():
     intent = Item(uid="INT-1", type="intent", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status="proposed",
-              attrs={"origin": "scout"},
+              attrs={"origin": "ai"},
               links=[Link(target="INT-1", type="derives_from")])
     assert ("FR-1", "unratified") in _rules(validate(_project(_doc("INT", intent),
                                                               _doc("FR", fr))))
@@ -203,7 +203,7 @@ def test_declared_status_is_accepted_and_rule_inert_without_vocabulary():
 def test_strict_promotes_warnings_to_errors():
     intent = Item(uid="INT-1", type="intent", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status="proposed",
-              attrs={"origin": "scout"},
+              attrs={"origin": "ai"},
               links=[Link(target="INT-1", type="derives_from")])
     p = _project(_doc("INT", intent), _doc("FR", fr))
     assert _errors(validate(p, strict=False)) == []
@@ -480,7 +480,7 @@ _CTX_CFG = {
     "grounding": {"root_types": ["intent", "risk"],
                   "delivery_roots": ["intent"],
                   "ground_link_types": ["derives_from", "mitigates", "verifies"],
-                  "ai_origins": ["scout"]},
+                  "ai_origins": ["ai"]},
     "rules": {"coverage": [{"filter": "type == 'requirement'",
                             "needs": "incoming:verifies", "severity": "warning"}]},
 }
@@ -517,7 +517,7 @@ def test_context_renders_link_rules_and_transitions_from_schema():
     assert "`draft`" in doc and "approved" in doc
     # grounding + coverage sections reflect config
     assert "incoming:verifies" in doc
-    assert "`scout`" in doc                # ai origins
+    assert "`ai`" in doc                   # ai origins
 
 def test_context_is_dynamic_absent_optional_tables():
     # a minimal project: no attrs, no transitions, no link_rules, no coverage
@@ -665,7 +665,7 @@ def test_scout_ingest_proposes_roots_and_flags_ambiguity():
     summary = scout_ingest(p, report)
     assert "BN-9" in summary["roots_proposed"]
     assert p.get("BN-9").status == "proposed"
-    assert p.get("BN-9").attrs["origin"] == "scout"
+    assert p.get("BN-9").attrs["origin"] == "ai"
     assert p.get("FR-1").attrs["ambiguous"] is True
     assert p.get("FR-1").status == "suspect"
     assert ("CON-2", "unimplemented") in summary["gaps"]

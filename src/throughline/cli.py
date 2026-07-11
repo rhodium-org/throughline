@@ -892,7 +892,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--status", default="draft")
     s.add_argument("--title", default="")
     s.add_argument("--text", default="")
-    s.add_argument("--origin", default=None, help="human|ai|scout|hybrid")
+    s.add_argument("--origin", default=None, help="human|ai|hybrid")
     s.add_argument("--ground", action="append", metavar="UID",
                    help="parent to ground against at creation (repeatable)")
     s.add_argument("--ground-type", default=None,

@@ -1,0 +1,16 @@
+uid: SR-0092
+type: system_requirement
+status: ratified
+title: Unratified machine-origin items fail the gate
+text: The Tool's check shall report an unratified finding for any item whose origin
+  is in the configured machine-origin set (ai_origins) while its status is still
+  proposed, so a machine-proposed item cannot pass the gate without human ratification.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+attrs:
+  origin: human
+  priority: must
+  verification: test
+  ratified_by: henry.grechcini@gmail.com

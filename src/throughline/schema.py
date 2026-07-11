@@ -27,7 +27,7 @@ _GROUNDING_DEFAULTS = {
     "root_types": ["intent", "business_need", "risk", "constraint", "assumption"],
     "delivery_roots": ["intent", "business_need", "risk", "constraint"],
     "ground_link_types": ["derives_from", "mitigates", "implements", "verifies"],
-    "ai_origins": ["ai", "scout", "hybrid"],
+    "ai_origins": ["ai", "hybrid"],
 }
 
 # Attribute value kinds a project may declare (SR-0020).

@@ -9,7 +9,7 @@ format_version = 1
 root_types = ["intent", "business_need"]
 delivery_roots = ["intent", "business_need"]
 ground_link_types = ["derives_from", "implements", "verifies", "mitigates"]
-ai_origins = ["ai", "scout", "hybrid"]
+ai_origins = ["ai", "hybrid"]
 
 [types.user_requirement]
 attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
@@ -38,8 +38,8 @@ derives_from = { from = ["business_need", "user_requirement", "nfr"], to = ["int
 [status]
 # draft = actively moving toward approval; deferred = acknowledged and grounded
 # but deliberately parked (a backlog wish-list item, not on the active front).
-values = ["proposed", "draft", "deferred", "approved", "implemented", "verified",
-          "suspect", "rejected", "deleted"]
+values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented",
+          "verified", "suspect", "rejected", "deleted"]
 
 # Allowed status moves (SR-0083). `tl check` measures each item against its
 # status in the previous commit and flags any change these do not permit, so the
@@ -47,11 +47,12 @@ values = ["proposed", "draft", "deferred", "approved", "implemented", "verified"
 # merely documented. Anything may be parked, rejected, or deleted; a suspect
 # item must be re-triaged before it can advance again.
 [transitions]
-proposed    = ["draft", "approved", "deferred", "rejected", "deleted"]
+proposed    = ["draft", "approved", "ratified", "deferred", "rejected", "deleted"]
 draft       = ["approved", "deferred", "rejected", "deleted"]
 deferred    = ["draft", "approved", "rejected", "deleted"]
-approved    = ["implemented", "deferred", "suspect", "rejected", "deleted"]
+approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
+ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
-suspect     = ["approved", "implemented", "verified", "rejected", "deleted"]
+suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
 rejected    = ["draft", "deleted"]

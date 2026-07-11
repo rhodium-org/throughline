@@ -85,7 +85,7 @@ def scout_ingest(project, report: dict) -> dict:
         item = Item(uid=r["id"], type=r.get("type", "business_need"),
                     status="proposed", title=r.get("title", ""),
                     text=r.get("rationale", ""))
-        item.attrs["origin"] = "scout"
+        item.attrs["origin"] = "ai"
         item._doc_prefix = doc.prefix
         doc.items[item.uid] = item
         summary["roots_proposed"].append(item.uid)
