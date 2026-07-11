@@ -18,6 +18,16 @@ Two ideas, one system:
    cascades **suspect** across its blast radius. Unbounded generation yields a
    bounded, ranked review queue instead of silent sprawl.
 
+> **What is scout, and do I need it?** No. **scout** is a *separate*, optional
+> AI tool that reads a codebase or corpus and *proposes* requirements, roots, and
+> ambiguities for a human to ratify — it feeds throughline through `tl scout`, but
+> throughline is a complete, standalone tool without it. Everything below works
+> whether requirements are hand-authored or scout-proposed; the grounding layer
+> treats a scout proposal exactly like any other `proposed` item awaiting a
+> human's sign-off. scout is released separately (expected in the coming weeks);
+> until then, ignore the `scout` references — they change nothing about the core
+> workflow.
+
 The build contract is the throughline spec in
 [`docs/referenced-resource/`](docs/referenced-resource) (docs 04 system
 requirements, 06 data format, 07 architecture).
