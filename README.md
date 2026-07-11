@@ -41,11 +41,11 @@ only how you obtain Python and put scripts on `PATH` differs.
 isolated environment):
 
 ```
-pipx install "git+https://github.com/rhodium-org/throughline.git"
+pipx install throughline
 ```
 
-> A PyPI release (`pipx install throughline`) is planned but not yet published —
-> until then, install from Git as above.
+> Prefer the bleeding edge? Install straight from Git instead:
+> `pipx install "git+https://github.com/rhodium-org/throughline.git"`
 
 Per-OS notes:
 
