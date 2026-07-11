@@ -13,7 +13,7 @@ useful. If something here is unclear or you disagree with a priority, open an is
 - SHA-256 *normative* fingerprints → **suspect** links when a target's normative
   content changes; content-change → **unreviewed**.
 - The grounding layer: root-reachability, grounding-DAG acyclicity, proposed-by-
-  default for AI/scout origin, human **ratify**, assumptions as first-class nodes
+  default for AI origin, human **ratify**, assumptions as first-class nodes
   whose invalidation cascades *suspect*.
 - `tl check` with a stable exit-code contract (0 / 1 / 2) — drops into pre-commit
   and CI.

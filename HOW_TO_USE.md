@@ -215,7 +215,6 @@ tl docs [--doc PREFIX] [--at REF]              # render a Markdown requirements 
 tl context                                     # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                     # a human takes accountability
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
-throughline scout <report.json>                          # ingest scout proposals
 ```
 
 ### What `check` enforces
@@ -230,7 +229,7 @@ throughline scout <report.json>                          # ingest scout proposal
 | `schema` | missing required attribute or out-of-enum value |
 | `suspect-link` | a link's target changed since it was last confirmed |
 | `unreviewed` | item content changed since last review |
-| `unratified` | an AI/scout-origin item is still `proposed` |
+| `unratified` | an AI-origin item is still `proposed` |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 

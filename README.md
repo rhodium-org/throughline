@@ -13,20 +13,10 @@ Two ideas, one system:
    links, SHA-256 *normative* fingerprints that turn a real content change into a
    **suspect** link, and a `check` CLI with stable exit codes.
 2. **grounding layer** — every non-root item must justify itself by reaching a
-   *root* ("why"); AI/scout-generated items enter `proposed` and must be
+   *root* ("why"); AI-generated items enter `proposed` and must be
    **ratified** by a human; assumptions are first-class and invalidating one
    cascades **suspect** across its blast radius. Unbounded generation yields a
    bounded, ranked review queue instead of silent sprawl.
-
-> **What is scout, and do I need it?** No. **scout** is a *separate*, optional
-> AI tool that reads a codebase or corpus and *proposes* requirements, roots, and
-> ambiguities for a human to ratify — it feeds throughline through `tl scout`, but
-> throughline is a complete, standalone tool without it. Everything below works
-> whether requirements are hand-authored or scout-proposed; the grounding layer
-> treats a scout proposal exactly like any other `proposed` item awaiting a
-> human's sign-off. scout is released separately (expected in the coming weeks);
-> until then, ignore the `scout` references — they change nothing about the core
-> workflow.
 
 The build contract is the throughline spec in
 [`docs/referenced-resource/`](docs/referenced-resource) (docs 04 system
@@ -124,7 +114,6 @@ tl docs [--doc PREFIX] [--at REF]             # render a Markdown requirements d
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                    # a human takes accountability
 throughline invalidate <UID> --reason "…"              # falsify; cascade suspect
-throughline scout <report.json>                         # ingest scout proposals
 ```
 
 Exit codes are a stable contract: **0** ok · **1** findings at error severity ·
@@ -145,7 +134,7 @@ Upward and downward coverage are independent and both matter:
 | `schema` | missing required attr or out-of-enum value |
 | `suspect-link` | target changed since the link was last confirmed |
 | `unreviewed` | item content changed since last review |
-| `unratified` | AI/scout-origin item still `proposed` |
+| `unratified` | AI-origin item still `proposed` |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 
@@ -193,17 +182,6 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
   items: the two states that must never be signed off.
 - **invalidate** — falsify an assumption (or any node): it is rejected and every
   transitive dependent is marked `suspect` (its blast radius).
-- **scout ingest** — scout *proposes*, humans *ratify*. Proposed roots enter as
-  `origin: scout, status: proposed`; ambiguities set `attrs.ambiguous` and block
-  ratification; coverage gaps corroborate the structural `unserved-root` finding.
-
-```json
-{
-  "proposed_roots": [{"id": "BN-0009", "type": "business_need", "title": "…", "rationale": "…"}],
-  "ambiguities":    [{"id": "FR-0055", "reason": "'fast' is unquantified"}],
-  "coverage_gaps":  [{"root": "CON-0002", "detail": "no requirement implements it"}]
-}
-```
 
 ---
 
