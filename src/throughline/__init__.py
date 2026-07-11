@@ -15,7 +15,6 @@ from .grounding import (
     invalidate,
     ratify,
     reaches_root,
-    scout_ingest,
 )
 from .model import Document, Item, Link, Project
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
@@ -23,7 +22,7 @@ from .storage import ProjectError, init_project, load_project, write_item, write
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
 from .validate import Finding, validate
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "Document", "Item", "Link", "Project",
@@ -33,6 +32,5 @@ __all__ = [
     "validate", "Finding",
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
     "GroundingError", "reaches_root", "ratify", "invalidate",
-    "scout_ingest",
     "__version__",
 ]

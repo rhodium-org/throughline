@@ -22,7 +22,6 @@ from .grounding import (
     invalidate,
     ratify,
     reaches_root,
-    scout_ingest,
 )
 from .model import Document, Link
 from .storage import (
@@ -844,23 +843,6 @@ def cmd_invalidate(args) -> int:
     return OK
 
 
-def cmd_scout(args) -> int:
-    try:
-        project = load_project(args.path)
-        report = json.loads(Path(args.report).read_text(encoding="utf-8"))
-    except (ProjectError, OSError, json.JSONDecodeError) as e:
-        return _err(str(e))
-    summary = scout_ingest(project, report)
-    for prefix, uid in sorted(summary["touched"]):
-        item = project.get(uid)
-        if item is not None:
-            write_item(item, project.document_of(uid))
-    print(f"scout ingest: {len(summary['roots_proposed'])} root(s) proposed, "
-          f"{len(summary['ambiguities_flagged'])} ambiguity(ies) flagged, "
-          f"{len(summary['gaps'])} coverage gap(s)")
-    return OK
-
-
 # ------------------------------------------------------------------------ parse
 
 def build_parser() -> argparse.ArgumentParser:
@@ -986,10 +968,6 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("uid")
     s.add_argument("--reason", default="")
     s.set_defaults(func=cmd_invalidate)
-
-    s = sub.add_parser("scout", help="ingest a scout report (proposes; humans ratify)")
-    s.add_argument("report", help="path to a scout report JSON")
-    s.set_defaults(func=cmd_scout)
 
     return p
 

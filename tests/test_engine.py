@@ -20,12 +20,11 @@ from throughline import (
     parse_uid,
     ProjectError,
     ratify,
-    scout_ingest,
     validate,
     write_item,
     write_manifest,
 )
-from throughline.grounding import GroundingError
+from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
 from throughline.storage import baseline_statuses
 from throughline.uid import UidError
