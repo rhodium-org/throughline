@@ -1,0 +1,9 @@
+uid: FR-0022
+type: requirement
+status: approved
+title: Guided setup wizard
+text: The system shall walk new users through a 3-step setup.
+normative: true
+links:
+- target: BN-0003
+  type: derives_from

@@ -1,0 +1,13 @@
+uid: SR-0057
+type: system_requirement
+status: approved
+title: Markdown export
+text: The Tool shall export each document as standalone Markdown (for wikis and code
+  review).
+normative: true
+links:
+- target: UR-0008
+  type: implements
+attrs:
+  priority: should
+  verification: test

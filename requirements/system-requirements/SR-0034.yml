@@ -1,0 +1,14 @@
+uid: SR-0034
+type: system_requirement
+status: approved
+title: Suspect links
+text: Each link shall store the target's fingerprint when last confirmed; when stored
+  and current fingerprints differ, the Tool reports the link suspect and provides
+  a command to re-confirm (re-stamp) links after review.
+normative: true
+links:
+- target: UR-0005
+  type: implements
+attrs:
+  priority: must
+  verification: test

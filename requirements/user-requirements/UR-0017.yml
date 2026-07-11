@@ -1,0 +1,13 @@
+uid: UR-0017
+type: user_requirement
+status: approved
+title: Requirement quality support
+text: Users should be offered assistance writing well-formed requirements (EARS templates,
+  lint warnings for ambiguity, missing rationale, compound statements).
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+attrs:
+  priority: should
+  verification: test

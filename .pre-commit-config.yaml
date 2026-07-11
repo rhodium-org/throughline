@@ -1,0 +1,19 @@
+# Local hook — no network install needed for the grounding gate.
+# An ungrounded, unserved, or otherwise invalid requirements graph fails the
+# commit. Runs against the committed demo project; point it at your own
+# project root by editing the entry.
+repos:
+  - repo: local
+    hooks:
+      - id: tl-check-demo
+        name: tl check (demo graph must stay grounded)
+        entry: tl -C examples/grounding-demo check --strict --quiet
+        language: system
+        pass_filenames: false
+        files: ^examples/grounding-demo/.*\.ya?ml$
+      - id: tl-check-selfhost
+        name: tl check (throughline's own requirements must stay grounded)
+        entry: tl -C requirements check --strict --quiet
+        language: system
+        pass_filenames: false
+        files: ^requirements/.*\.ya?ml$

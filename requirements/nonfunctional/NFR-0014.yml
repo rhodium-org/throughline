@@ -1,0 +1,13 @@
+uid: NFR-0014
+type: nfr
+status: approved
+title: Actionable errors
+text: Every validation and CLI error shall state the offending file/UID, the rule
+  violated, and where applicable a suggested fix.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: inspection

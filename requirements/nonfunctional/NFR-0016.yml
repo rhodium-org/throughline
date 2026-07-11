@@ -1,0 +1,13 @@
+uid: NFR-0016
+type: nfr
+status: approved
+title: Internationalized content
+text: All content fields shall support full Unicode; UID prefixes remain ASCII for
+  portability.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

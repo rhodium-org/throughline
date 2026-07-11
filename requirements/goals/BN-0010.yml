@@ -1,0 +1,14 @@
+uid: BN-0010
+type: business_need
+status: approved
+title: Contributable
+text: As an open-source project, throughline should let an outside contributor establish
+  a correct, invariant-enforcing development environment quickly and confirm it is
+  sound, so contributions arrive already conforming to the project's checks rather
+  than failing them after the fact.
+normative: false
+links:
+- target: INT-0001
+  type: derives_from
+attrs:
+  origin: human

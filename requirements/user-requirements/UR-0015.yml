@@ -1,0 +1,13 @@
+uid: UR-0015
+type: user_requirement
+status: approved
+title: No lock-in
+text: Users shall be able to read, migrate, and process their data with ordinary
+  tools using a documented open format, offline, under an OSI-approved license.
+normative: true
+links:
+- target: BN-0006
+  type: derives_from
+attrs:
+  priority: must
+  verification: inspection

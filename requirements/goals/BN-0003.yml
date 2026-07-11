@@ -1,0 +1,9 @@
+uid: BN-0003
+type: business_need
+status: approved
+title: Traceability as a first-class feature
+text: Typed links, suspect-link detection, coverage and impact analysis.
+normative: false
+links:
+- target: INT-0001
+  type: derives_from

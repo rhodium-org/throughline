@@ -1,0 +1,9 @@
+uid: BN-0006
+type: business_need
+status: approved
+title: No lock-in
+text: Documented, versioned, open file format; OSI-approved license; offline operation.
+normative: false
+links:
+- target: INT-0001
+  type: derives_from

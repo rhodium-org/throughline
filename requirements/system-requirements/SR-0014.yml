@@ -1,0 +1,13 @@
+uid: SR-0014
+type: system_requirement
+status: approved
+title: Project initialization and templates
+text: The Tool shall provide an init operation creating a valid empty project, and
+  should ship starter templates aligned with ISO/IEC/IEEE 29148 document types.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  priority: must
+  verification: demonstration

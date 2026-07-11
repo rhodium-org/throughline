@@ -1,0 +1,13 @@
+uid: SR-0070
+type: system_requirement
+status: approved
+title: Project configuration file
+text: The Tool shall read project settings (schema, link types, rules, publishing
+  options) from a single versioned TOML file at the project root.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: must
+  verification: test

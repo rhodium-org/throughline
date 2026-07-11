@@ -1,0 +1,57 @@
+[project]
+name = "throughline"
+format_version = 1
+
+# throughline's own spec, self-hosted (SR-0061). Roots are the vision (intent) and
+# the eight goals + the maintainability need (business_need); every user and
+# system requirement must ground upward to one of them.
+[grounding]
+root_types = ["intent", "business_need"]
+delivery_roots = ["intent", "business_need"]
+ground_link_types = ["derives_from", "implements", "verifies", "mitigates"]
+ai_origins = ["ai", "scout", "hybrid"]
+
+[types.user_requirement]
+attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
+attrs.verification = { type = "enum", values = ["test", "demonstration", "inspection", "analysis"] }
+
+[types.system_requirement]
+attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
+attrs.verification = { type = "enum", values = ["test", "demonstration", "inspection", "analysis"] }
+
+[types.nfr]
+attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
+attrs.verification = { type = "enum", values = ["test", "demonstration", "inspection", "analysis"] }
+
+[links]
+types = ["refines", "verifies", "satisfies", "implements", "relates",
+         "derives_from", "mitigates", "assumes"]
+
+# Type-level link constraints (SR-0084): the item types each link may join.
+# `tl shape` prints the graph's actual shape to author these from. This is
+# the taxonomy of throughline's own spec — an SR/NFR implements a UR; a UR/NFR/BN
+# derives upward toward the vision. `relates` is left free as a loose "see also".
+[link_rules]
+implements   = { from = ["system_requirement", "nfr"], to = ["user_requirement"] }
+derives_from = { from = ["business_need", "user_requirement", "nfr"], to = ["intent", "business_need"] }
+
+[status]
+# draft = actively moving toward approval; deferred = acknowledged and grounded
+# but deliberately parked (a backlog wish-list item, not on the active front).
+values = ["proposed", "draft", "deferred", "approved", "implemented", "verified",
+          "suspect", "rejected", "deleted"]
+
+# Allowed status moves (SR-0083). `tl check` measures each item against its
+# status in the previous commit and flags any change these do not permit, so the
+# IDD lifecycle (draft -> approved -> implemented -> verified) is enforced, not
+# merely documented. Anything may be parked, rejected, or deleted; a suspect
+# item must be re-triaged before it can advance again.
+[transitions]
+proposed    = ["draft", "approved", "deferred", "rejected", "deleted"]
+draft       = ["approved", "deferred", "rejected", "deleted"]
+deferred    = ["draft", "approved", "rejected", "deleted"]
+approved    = ["implemented", "deferred", "suspect", "rejected", "deleted"]
+implemented = ["verified", "suspect", "rejected", "deleted"]
+verified    = ["implemented", "suspect", "deleted"]
+suspect     = ["approved", "implemented", "verified", "rejected", "deleted"]
+rejected    = ["draft", "deleted"]

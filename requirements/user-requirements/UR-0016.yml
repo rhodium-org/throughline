@@ -1,0 +1,13 @@
+uid: UR-0016
+type: user_requirement
+status: approved
+title: CI automation
+text: Users shall be able to run the tool's validation in continuous integration
+  so that broken traceability or invalid data fails the build.
+normative: true
+links:
+- target: BN-0007
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

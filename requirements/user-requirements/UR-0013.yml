@@ -1,0 +1,13 @@
+uid: UR-0013
+type: user_requirement
+status: approved
+title: Baselines
+text: Users shall be able to freeze a named snapshot of the requirement set and later
+  compare against it or reproduce it exactly.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

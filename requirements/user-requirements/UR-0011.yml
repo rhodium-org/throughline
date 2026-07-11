@@ -1,0 +1,13 @@
+uid: UR-0011
+type: user_requirement
+status: approved
+title: Project-specific data model
+text: Users shall be able to define their own item types, attributes (with types
+  and allowed values), and link types per project.
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

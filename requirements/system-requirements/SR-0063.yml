@@ -1,0 +1,13 @@
+uid: SR-0063
+type: system_requirement
+status: deferred
+title: Local web viewer
+text: The Tool could serve the published site with live reload for authoring; web-UI
+  editing is out of scope for 1.0.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  priority: could
+  verification: demonstration

@@ -1,0 +1,6 @@
+uid: INT-0001
+type: intent
+status: ratified
+title: Frictionless onboarding
+text: New users reach first value within 15 minutes.
+normative: true

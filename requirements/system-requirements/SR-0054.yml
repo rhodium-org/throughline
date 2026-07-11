@@ -1,0 +1,15 @@
+uid: SR-0054
+type: system_requirement
+status: approved
+title: CSV/Excel round-trip
+text: The Tool shall export any document or filter result to CSV and XLSX and import
+  CSV/XLSX, matching on UID and assigning fresh UIDs to rows without one.
+normative: true
+links:
+- target: UR-0009
+  type: implements
+- target: UR-0018
+  type: implements
+attrs:
+  priority: must
+  verification: test

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Redundant packaged snapshot — content now lives first-class in this repo.
+grounding-engine.tar.gz

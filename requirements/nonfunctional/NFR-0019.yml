@@ -1,0 +1,13 @@
+uid: NFR-0019
+type: nfr
+status: approved
+title: Dependency discipline
+text: Runtime dependencies shall be few, permissively licensed, and pinned by a lockfile
+  for releases; a dependency review is required to add one.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+attrs:
+  priority: should
+  verification: inspection

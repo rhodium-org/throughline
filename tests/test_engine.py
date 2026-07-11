@@ -1,0 +1,926 @@
+"""throughline M0 test suite — model, UID allocation, fingerprint, storage
+round-trip, the validation pipeline, and the grounding operations.
+"""
+from pathlib import Path
+
+import pytest
+
+from throughline import (
+    Document,
+    Index,
+    Item,
+    Link,
+    Project,
+    collisions,
+    fingerprint,
+    init_project,
+    invalidate,
+    load_project,
+    next_uid,
+    parse_uid,
+    ProjectError,
+    ratify,
+    scout_ingest,
+    validate,
+    write_item,
+    write_manifest,
+)
+from throughline.grounding import GroundingError
+from throughline.schema import Schema, SchemaError
+from throughline.storage import baseline_statuses
+from throughline.uid import UidError
+
+REPO = Path(__file__).resolve().parent.parent
+DEMO = REPO / "examples" / "grounding-demo"
+SELFHOST = REPO / "requirements"
+
+
+# --------------------------------------------------------------------- helpers
+
+def _doc(prefix: str, *items: Item, digits: int = 4, reserved=None) -> Document:
+    d = Document(prefix=prefix, digits=digits, reserved=reserved or [])
+    for it in items:
+        it._doc_prefix = prefix
+        d.items[it.uid] = it
+    return d
+
+def _project(*docs: Document, config: dict | None = None) -> Project:
+    p = Project(path=Path("/tmp/none"), config=config or {})
+    for d in docs:
+        p.documents[d.prefix] = d
+    return p
+
+def _rules(findings) -> set[tuple[str, str]]:
+    return {(f.uid, f.rule) for f in findings}
+
+def _errors(findings):
+    return [f for f in findings if f.severity == "error"]
+
+
+# ------------------------------------------------------------------------- UID
+
+def test_uid_grammar_accepts_and_rejects():
+    assert parse_uid("SR-0001") == ("SR", 1)
+    assert parse_uid("NFR-00042") == ("NFR", 42)
+    with pytest.raises(UidError):
+        parse_uid("sr-1")
+    with pytest.raises(UidError):
+        parse_uid("SR_0001")
+
+def test_next_uid_skips_reserved_and_tombstones():
+    live = Item(uid="SR-0001", type="requirement")
+    tomb = Item(uid="SR-0003", type="requirement", status="deleted")
+    d = _doc("SR", live, tomb, reserved=[5])
+    # max ever-used is 5 (reserved); tombstone 3 still counts, so next is 6.
+    assert next_uid(d) == "SR-0006"
+
+def test_collisions_detected_across_documents():
+    a = _doc("SR", Item(uid="SR-0001", type="requirement"))
+    b = _doc("XR", Item(uid="SR-0001", type="requirement"))
+    # same uid in two docs -> a merge collision
+    p = _project(a, b)
+    assert "SR-0001" in collisions(p)
+
+
+# ----------------------------------------------------------------- fingerprint
+
+def test_fingerprint_ignores_status_title_order_links():
+    base = Item(uid="SR-1", type="requirement", text="The system shall foo.")
+    fp = fingerprint(base)
+    noisy = Item(uid="SR-1", type="requirement", text="The system shall foo.",
+                 status="ratified", title="changed", order=9.0,
+                 links=[Link(target="X", type="relates")])
+    assert fingerprint(noisy) == fp
+
+def test_fingerprint_tracks_text_and_normative_attrs():
+    schema = Schema.from_config(
+        {"types": {"requirement": {"attrs": {"priority": {"normative": True}}}}})
+    a = Item(uid="SR-1", type="requirement", text="foo", attrs={"priority": "must"})
+    b = Item(uid="SR-1", type="requirement", text="foo", attrs={"priority": "should"})
+    assert fingerprint(a, schema) != fingerprint(b, schema)
+    # text change moves the fingerprint too
+    c = Item(uid="SR-1", type="requirement", text="bar", attrs={"priority": "must"})
+    assert fingerprint(c, schema) != fingerprint(a, schema)
+
+
+# --------------------------------------------------------------------- storage
+
+def test_storage_roundtrip_preserves_unknown_keys(tmp_path):
+    proj = init_project(tmp_path, name="RT")
+    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc.path.mkdir()
+    it = Item.from_dict({"uid": "SR-0001", "type": "requirement",
+                         "text": "hi", "x_custom": {"keep": 1}})
+    it._doc_prefix = "SR"
+    doc.items[it.uid] = it
+    write_manifest(doc)
+    write_item(it, doc)
+    proj.documents["SR"] = doc
+    reloaded = load_project(tmp_path).get("SR-0001")
+    assert reloaded is not None
+    assert reloaded.extra.get("x_custom") == {"keep": 1}
+
+
+# -------------------------------------------------------------------- validate
+
+def _grounded_project(config=None):
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              links=[Link(target="INT-1", type="derives_from")])
+    return _project(_doc("INT", intent), _doc("FR", fr), config=config)
+
+def test_orphan_flagged_when_no_grounding_link():
+    fr = Item(uid="FR-1", type="requirement")
+    p = _project(_doc("FR", fr))
+    assert ("FR-1", "orphan") in _rules(validate(p))
+
+def test_grounded_requirement_is_not_orphan():
+    p = _grounded_project()
+    assert ("FR-1", "orphan") not in _rules(validate(p))
+
+def test_unserved_delivery_root_flagged():
+    con = Item(uid="CON-1", type="constraint", status="ratified")
+    p = _project(_doc("CON", con))
+    assert ("CON-1", "unserved-root") in _rules(validate(p))
+
+def test_dangling_link_flagged():
+    fr = Item(uid="FR-1", type="requirement",
+              links=[Link(target="NOPE", type="derives_from")])
+    assert ("FR-1", "dangling-link") in _rules(validate(_project(_doc("FR", fr))))
+
+def test_grounding_cycle_flagged():
+    a = Item(uid="A-1", type="requirement",
+             links=[Link(target="B-1", type="derives_from")])
+    b = Item(uid="B-1", type="requirement",
+             links=[Link(target="A-1", type="derives_from")])
+    findings = validate(_project(_doc("A", a), _doc("B", b)))
+    assert any(r == "grounding-cycle" for _, r in _rules(findings))
+
+def test_suspect_link_when_stamp_stale():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              links=[Link(target="INT-1", type="derives_from", stamp="sha256:stale")])
+    assert ("FR-1", "suspect-link") in _rules(validate(_project(_doc("INT", intent),
+                                                                _doc("FR", fr))))
+
+def test_matching_stamp_is_not_suspect():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="approved")
+    p = _project(_doc("INT", intent), _doc("FR", fr))
+    fr.links.append(Link(target="INT-1", type="derives_from",
+                         stamp=fingerprint(intent, p.schema)))
+    assert ("FR-1", "suspect-link") not in _rules(validate(p))
+
+def test_unratified_ai_origin_proposed_item():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="proposed",
+              attrs={"origin": "scout"},
+              links=[Link(target="INT-1", type="derives_from")])
+    assert ("FR-1", "unratified") in _rules(validate(_project(_doc("INT", intent),
+                                                              _doc("FR", fr))))
+
+def test_bad_status_flagged_against_declared_vocabulary():
+    cfg = {"status": {"values": ["draft", "approved"]}}
+    fr = Item(uid="FR-1", type="requirement", status="wip",
+              links=[Link(target="INT-1", type="derives_from")])
+    intent = Item(uid="INT-1", type="intent", status="approved")
+    p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
+    assert ("FR-1", "bad-status") in _rules(validate(p))
+
+def test_declared_status_is_accepted_and_rule_inert_without_vocabulary():
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              links=[Link(target="INT-1", type="derives_from")])
+    intent = Item(uid="INT-1", type="intent", status="approved")
+    # declared + valid -> no finding
+    cfg = {"status": {"values": ["draft", "approved"]}}
+    p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
+    assert ("FR-1", "bad-status") not in _rules(validate(p))
+    # no vocabulary declared -> rule is inert even for an odd status
+    fr.status = "whatever"
+    p2 = _project(_doc("INT", intent), _doc("FR", fr), config={})
+    assert not any(r == "bad-status" for _, r in _rules(validate(p2)))
+
+def test_strict_promotes_warnings_to_errors():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="proposed",
+              attrs={"origin": "scout"},
+              links=[Link(target="INT-1", type="derives_from")])
+    p = _project(_doc("INT", intent), _doc("FR", fr))
+    assert _errors(validate(p, strict=False)) == []
+    assert _errors(validate(p, strict=True)) != []
+
+def test_coverage_rule_needs_incoming_link():
+    config = {"rules": {"coverage": [
+        {"filter": "type == 'requirement'", "needs": "incoming:verifies",
+         "severity": "error"}]}}
+    p = _grounded_project(config=config)
+    assert ("FR-1", "coverage") in _rules(validate(p))
+
+
+# ---------------------------------------------------------------------- schema
+
+def test_schema_helpers_are_the_single_source(tmp_path):
+    """The Schema exposes the typed lookups every component reuses (SR-0082)."""
+    cfg = {
+        "project": {"name": "Demo"},
+        "types": {"requirement": {"attrs": {
+            "priority": {"type": "enum", "values": ["must", "should"],
+                         "required": True, "normative": True},
+            "note": {"type": "string"}}}},
+        "links": {"types": ["derives_from", "verifies"]},
+        "status": {"values": ["draft", "approved"]},
+        "grounding": {"root_types": ["intent"],
+                      "ground_link_types": ["derives_from"]},
+        "rules": {"orphan": "warning"},
+    }
+    s = Schema.from_config(cfg)
+    assert s.name == "Demo"
+    assert set(s.attrs_for("requirement")) == {"priority", "note"}
+    assert s.normative_attrs("requirement") == ["priority"]
+    assert s.attr("requirement", "priority").values == ("must", "should")
+    assert s.is_link_type("verifies") and not s.is_link_type("bogus")
+    assert s.is_status("draft") and not s.is_status("wip")
+    assert s.is_root(Item(uid="I-1", type="intent"))
+    assert not s.is_root(Item(uid="R-1", type="requirement"))
+    # rule override beats default; strict promotes a warning to an error
+    assert s.rule_severity("orphan", "error", strict=False) == "warning"
+    assert s.rule_severity("orphan", "error", strict=True) == "error"
+
+def test_schema_unconstrained_when_vocabularies_absent():
+    s = Schema.from_config({})
+    assert s.is_link_type("anything")   # no [links] -> everything legal
+    assert s.is_status("anything")      # no [status] -> everything legal
+
+def test_schema_rejects_grounding_link_not_in_links():
+    with pytest.raises(SchemaError):
+        Schema.from_config({
+            "links": {"types": ["derives_from"]},
+            "grounding": {"ground_link_types": ["derives_from", "mitigates"]}})
+
+def test_schema_rejects_coverage_needing_unknown_link():
+    with pytest.raises(SchemaError):
+        Schema.from_config({
+            "links": {"types": ["derives_from"]},
+            "rules": {"coverage": [{"filter": "true", "needs": "incoming:verifies"}]}})
+
+def test_schema_rejects_enum_without_values_and_unknown_kind():
+    with pytest.raises(SchemaError):
+        Schema.from_config({"types": {"r": {"attrs": {"p": {"type": "enum"}}}}})
+    with pytest.raises(SchemaError):
+        Schema.from_config({"types": {"r": {"attrs": {"p": {"type": "wat"}}}}})
+
+def test_load_project_fails_fast_on_bad_config(tmp_path):
+    (tmp_path / "throughline.toml").write_text(
+        '[links]\ntypes = ["derives_from"]\n'
+        '[grounding]\nground_link_types = ["mitigates"]\n', encoding="utf-8")
+    with pytest.raises(ProjectError):
+        load_project(tmp_path)
+
+
+# --------------------------------------------------------------- transitions
+
+def test_allows_transition_semantics():
+    """Declared moves gate; a no-op stays; an unlisted source is stuck (SR-0083)."""
+    s = Schema.from_config({
+        "status": {"values": ["draft", "approved", "rejected"]},
+        "transitions": {"draft": ["approved", "rejected"]}})
+    assert s.allows_transition("draft", "approved")
+    assert not s.allows_transition("draft", "verified")
+    assert s.allows_transition("approved", "approved")   # no-op always fine
+    assert not s.allows_transition("approved", "draft")  # source not listed
+
+def test_transitions_unconstrained_when_absent():
+    s = Schema.from_config({"status": {"values": ["draft", "approved"]}})
+    assert s.transitions is None
+    assert s.allows_transition("draft", "anything")      # inert without a table
+
+def test_schema_rejects_transition_endpoint_not_a_status():
+    with pytest.raises(SchemaError):
+        Schema.from_config({
+            "status": {"values": ["draft", "approved"]},
+            "transitions": {"draft": ["shipped"]}})   # 'shipped' undeclared
+
+def test_bad_transition_flagged_against_baseline():
+    cfg = {"status": {"values": ["draft", "approved", "verified"]},
+           "transitions": {"draft": ["approved"], "approved": ["verified"]}}
+    fr = Item(uid="FR-1", type="requirement", status="verified",
+              links=[Link(target="INT-1", type="derives_from")])
+    intent = Item(uid="INT-1", type="intent", status="approved")
+    p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
+    # draft -> verified skips approved: illegal
+    baseline = {"FR-1": "draft", "INT-1": "approved"}
+    assert ("FR-1", "bad-transition") in _rules(validate(p, baseline=baseline))
+    # a legal single step is clean; so is no baseline at all
+    fr.status = "approved"
+    assert ("FR-1", "bad-transition") not in _rules(validate(p, baseline=baseline))
+    assert ("FR-1", "bad-transition") not in _rules(validate(p, baseline=None))
+
+def test_new_item_is_not_a_transition():
+    cfg = {"status": {"values": ["draft", "approved"]},
+           "transitions": {"draft": ["approved"]}}
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              links=[Link(target="INT-1", type="derives_from")])
+    intent = Item(uid="INT-1", type="intent", status="approved")
+    p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
+    # FR-1 absent from the baseline -> creation, not a move
+    assert ("FR-1", "bad-transition") not in _rules(
+        validate(p, baseline={"INT-1": "approved"}))
+
+def test_baseline_statuses_reads_git_and_gates_check(tmp_path):
+    """End-to-end: the committed status is the baseline the working tree is
+    measured against (SR-0083)."""
+    import subprocess
+    # the scaffold ships a [transitions] table where draft may only go to
+    # approved/deferred/rejected/deleted, so draft -> verified is illegal.
+    init_project(tmp_path, name="TX")
+    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc.path.mkdir()
+    write_manifest(doc)
+    it = Item(uid="SR-0001", type="requirement", status="draft", text="x")
+    it._doc_prefix = "SR"
+    it._path = doc.path / "SR-0001.yml"
+    write_item(it, doc)
+
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
+                                    capture_output=True, check=True)
+    git("init")
+    git("config", "user.email", "t@t"); git("config", "user.name", "t")
+    git("add", "-A"); git("commit", "-m", "seed draft")
+
+    project = load_project(tmp_path)
+    base = baseline_statuses(project, "HEAD")
+    assert base["SR-0001"] == "draft"
+
+    # jump draft -> verified in the working tree: illegal
+    it.status = "verified"
+    write_item(it, doc)
+    p2 = load_project(tmp_path)
+    findings = validate(p2, baseline=baseline_statuses(p2, "HEAD"))
+    assert ("SR-0001", "bad-transition") in _rules(findings)
+
+def test_baseline_statuses_none_outside_git(tmp_path):
+    proj = init_project(tmp_path, name="NG")   # not a git repo
+    assert baseline_statuses(proj, "HEAD") is None
+
+
+# --------------------------------------------------------------- link_rules
+
+def test_link_allowed_semantics():
+    """A rule constrains one or both endpoints; unruled links are free (SR-0084)."""
+    s = Schema.from_config({
+        "links": {"types": ["mitigates", "relates"]},
+        "grounding": {"ground_link_types": ["mitigates"]},
+        "link_rules": {"mitigates": {"from": ["requirement"], "to": ["risk"]}}})
+    assert s.link_allowed("mitigates", "requirement", "risk") is None
+    assert s.link_allowed("mitigates", "nfr", "risk")            # bad source
+    assert s.link_allowed("mitigates", "requirement", "intent")  # bad target
+    assert s.link_allowed("relates", "anything", "whatever") is None  # no rule
+    # external / unknown target skips the target side, keeps the source check
+    assert s.link_allowed("mitigates", "requirement", None) is None
+    assert s.link_allowed("mitigates", "nfr", None)
+
+def test_link_rule_one_sided():
+    s = Schema.from_config({
+        "links": {"types": ["verifies"]},
+        "grounding": {"ground_link_types": ["verifies"]},
+        "link_rules": {"verifies": {"to": ["requirement"]}}})  # source unconstrained
+    assert s.link_allowed("verifies", "anything", "requirement") is None
+    assert s.link_allowed("verifies", "anything", "nfr")
+
+def test_schema_rejects_link_rule_for_unknown_link_type():
+    with pytest.raises(SchemaError):
+        Schema.from_config({
+            "links": {"types": ["mitigates"]},
+            "link_rules": {"grounds": {"from": ["risk"]}}})   # 'grounds' undeclared
+
+def test_bad_link_shape_flagged():
+    cfg = {"links": {"types": ["derives_from", "mitigates"]},
+           "grounding": {"root_types": ["intent", "risk"],
+                         "ground_link_types": ["derives_from", "mitigates"]},
+           "link_rules": {"mitigates": {"from": ["requirement"], "to": ["risk"]}}}
+    intent = Item(uid="INT-1", type="intent", status="approved")
+    risk = Item(uid="RSK-1", type="risk", status="approved")
+    # legal: requirement mitigates risk
+    good = Item(uid="FR-1", type="requirement", status="approved",
+                links=[Link(target="RSK-1", type="mitigates")])
+    # illegal: an nfr mitigating a risk (bad source)
+    bad = Item(uid="NF-1", type="nfr", status="approved",
+               links=[Link(target="RSK-1", type="mitigates"),
+                      Link(target="INT-1", type="derives_from")])
+    p = _project(_doc("INT", intent), _doc("RSK", risk),
+                 _doc("FR", good), _doc("NF", bad), config=cfg)
+    rules = _rules(validate(p))
+    assert ("NF-1", "bad-link-shape") in rules
+    assert ("FR-1", "bad-link-shape") not in rules
+
+def test_link_shape_reports_triples():
+    intent = Item(uid="INT-1", type="intent")
+    fr = Item(uid="FR-1", type="requirement",
+              links=[Link(target="INT-1", type="derives_from"),
+                     Link(target="https://x/y", type="relates")])
+    idx = Index.build(_project(_doc("INT", intent), _doc("FR", fr)))
+    shape = idx.link_shape()
+    assert shape[("requirement", "derives_from", "intent")] == 1
+    assert shape[("requirement", "relates", None)] == 1   # external target
+
+
+# -------------------------------------------------------------------- diagrams
+
+def test_mermaid_types_renders_observed_edges():
+    from throughline.cli import _mermaid_types
+    intent = Item(uid="INT-1", type="intent")
+    fr = Item(uid="FR-1", type="requirement",
+              links=[Link(target="INT-1", type="derives_from"),
+                     Link(target="https://x/y", type="relates")])
+    idx = Index.build(_project(_doc("INT", intent), _doc("FR", fr)))
+    src = _mermaid_types(idx)
+    assert src.startswith("flowchart LR")
+    assert "requirement -->|derives_from| intent" in src
+    # external targets have no node type, so no edge is emitted for them
+    assert "relates" not in src
+
+def test_mermaid_types_none_when_no_internal_edges():
+    from throughline.cli import _mermaid_types
+    fr = Item(uid="FR-1", type="requirement",
+              links=[Link(target="https://x/y", type="relates")])
+    idx = Index.build(_project(_doc("FR", fr)))
+    assert _mermaid_types(idx) is None
+
+def test_mermaid_transitions_renders_declared_moves():
+    from throughline.cli import _mermaid_transitions
+    cfg = {"status": {"values": ["draft", "approved", "deleted"]},
+           "transitions": {"draft": ["approved", "deleted"],
+                           "approved": ["deleted"]}}
+    schema = Schema.from_config(cfg)
+    src = _mermaid_transitions(schema)
+    assert src.startswith("stateDiagram-v2")
+    assert "draft --> approved" in src
+    assert "approved --> deleted" in src
+
+def test_mermaid_transitions_none_when_absent():
+    from throughline.cli import _mermaid_transitions
+    schema = Schema.from_config({"status": {"values": ["draft", "approved"]}})
+    assert _mermaid_transitions(schema) is None
+
+
+# ------------------------------------------------------------------ agent context
+
+_CTX_CFG = {
+    "types": {
+        "requirement": {"attrs": {
+            "priority": {"type": "enum", "values": ["must", "should"],
+                         "normative": True},
+            "verification": {"type": "enum", "values": ["test", "analysis"]}}},
+        "risk": {},
+    },
+    "links": {"types": ["derives_from", "mitigates", "verifies", "relates"]},
+    "status": {"values": ["draft", "approved", "deleted"]},
+    "transitions": {"draft": ["approved", "deleted"], "approved": ["deleted"]},
+    "link_rules": {"mitigates": {"from": ["requirement"], "to": ["risk"]}},
+    "grounding": {"root_types": ["intent", "risk"],
+                  "delivery_roots": ["intent"],
+                  "ground_link_types": ["derives_from", "mitigates", "verifies"],
+                  "ai_origins": ["scout"]},
+    "rules": {"coverage": [{"filter": "type == 'requirement'",
+                            "needs": "incoming:verifies", "severity": "warning"}]},
+}
+
+def _ctx(config=_CTX_CFG):
+    from throughline.cli import _context_markdown
+    intent = Item(uid="INT-1", type="intent")
+    fr = Item(uid="FR-1", type="requirement", attrs={"priority": "must"},
+              links=[Link(target="INT-1", type="derives_from")])
+    return _context_markdown(_project(_doc("INT", intent), _doc("FR", fr),
+                                      config=config))
+
+def test_context_states_the_idd_contract():
+    doc = _ctx()
+    # the fixed conceptual contract is present, in agent-directed language
+    assert "Intent-Driven Development" in doc
+    assert "red test" in doc
+    assert "ratif" in doc.lower()          # AI-origin items need human ratification
+    assert "tl check" in doc          # the gate
+
+def test_context_renders_types_and_normative_attrs_from_schema():
+    doc = _ctx()
+    assert "`requirement`" in doc and "`risk`" in doc
+    # the enum values and the normative flag come straight from the schema
+    assert "`must`, `should`" in doc
+    # risk is declared a root, so it is tagged as such
+    assert "risk" in doc and "root" in doc
+
+def test_context_renders_link_rules_and_transitions_from_schema():
+    doc = _ctx()
+    # link endpoint rule surfaces both ends
+    assert "mitigates" in doc and "`risk`" in doc
+    # declared transitions are listed
+    assert "`draft`" in doc and "approved" in doc
+    # grounding + coverage sections reflect config
+    assert "incoming:verifies" in doc
+    assert "`scout`" in doc                # ai origins
+
+def test_context_is_dynamic_absent_optional_tables():
+    # a minimal project: no attrs, no transitions, no link_rules, no coverage
+    doc = _ctx(config={"links": {"types": ["derives_from"]},
+                       "grounding": {"ground_link_types": ["derives_from"]}})
+    assert "none declared" in doc.lower() or "unconstrained" in doc.lower()
+    assert "No `[[rules.coverage]]` declared." in doc
+    # still carries the fixed IDD contract regardless of config
+    assert "Intent-Driven Development" in doc
+
+def test_context_includes_live_snapshot():
+    doc = _ctx()
+    assert "Live snapshot" in doc
+    assert "-[derives_from]->" in doc      # observed link shape line
+
+
+# ---------------------------------------------------------- docs (SR-0089/0090)
+
+def _docs_project():
+    from throughline.model import Document
+    intent = Item(uid="INT-1", type="intent", status="approved",
+                  title="Ship value", text="The vision.")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              title="Wizard", text="The system shall guide setup.",
+              attrs={"priority": "must"},
+              links=[Link(target="INT-1", type="derives_from")])
+    gone = Item(uid="FR-2", type="requirement", status="deleted", title="Dropped")
+    di = Document(prefix="INT", title="Vision"); di.items["INT-1"] = intent
+    df = Document(prefix="FR", title="Features", parent="INT")
+    df.items["FR-1"] = fr; df.items["FR-2"] = gone
+    return _project(di, df, config={"project": {"name": "acme"}})
+
+def test_docs_renders_document_from_graph():
+    from throughline.cli import _docs_markdown
+    md = _docs_markdown(_docs_project(), "acme")
+    assert md.startswith("# acme — Requirements")
+    assert "## Vision (INT)" in md and "## Features (FR)" in md
+    assert "### FR-1 — Wizard" in md
+    assert "> The system shall guide setup." in md      # statement as blockquote
+    assert "**priority**: must" in md                   # project attribute
+    assert "_derives_from_ → INT-1" in md               # grounding shown inline
+
+def test_docs_excludes_tombstoned_and_counts_live():
+    from throughline.cli import _docs_markdown
+    md = _docs_markdown(_docs_project(), "acme")
+    assert "FR-2" not in md and "Dropped" not in md
+    assert "_2 live item(s) across 2 document(s)._" in md
+
+def test_docs_orders_parent_before_child_and_limits_to_one_doc():
+    from throughline.cli import _docs_markdown
+    full = _docs_markdown(_docs_project(), "acme")
+    assert full.index("## Vision (INT)") < full.index("## Features (FR)")
+    only = _docs_markdown(_docs_project(), "acme", doc_prefix="FR")
+    assert "## Features (FR)" in only and "## Vision (INT)" not in only
+
+def test_docs_provenance_working_tree_vs_ref():
+    from throughline.cli import _docs_markdown
+    assert "from the working tree" in _docs_markdown(_docs_project(), "acme")
+    at = _docs_markdown(_docs_project(), "acme", ref="v1.0", sha="deadbeefcafe0000")
+    assert "from `v1.0` (`deadbeefcafe`)." in at        # sha trimmed to 12
+
+def test_load_project_at_ref_reproduces_committed_state(tmp_path):
+    """`--at REF` renders the graph as committed, ignoring later working-tree
+    edits (SR-0090)."""
+    import subprocess
+    from throughline.storage import load_project_at_ref
+    init_project(tmp_path, name="TX")
+    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc.path.mkdir()
+    write_manifest(doc)
+    it = Item(uid="SR-0001", type="requirement", status="draft",
+              title="Original", text="x")
+    it._doc_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
+    write_item(it, doc)
+
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
+                                    capture_output=True, check=True)
+    git("init"); git("config", "user.email", "t@t"); git("config", "user.name", "t")
+    git("add", "-A"); git("commit", "-m", "seed")
+
+    # edit the working tree after committing
+    it.title = "Changed in working tree"
+    write_item(it, doc)
+
+    project, sha = load_project_at_ref(tmp_path, "HEAD")
+    assert len(sha) == 40
+    assert project.get("SR-0001").title == "Original"   # committed, not the edit
+
+def test_load_project_at_ref_outside_git_raises(tmp_path):
+    from throughline.storage import ProjectError, load_project_at_ref
+    init_project(tmp_path, name="NG")   # not a git repo
+    with pytest.raises(ProjectError):
+        load_project_at_ref(tmp_path, "HEAD")
+
+
+# ------------------------------------------------------------------- grounding
+
+def test_ratify_refuses_ungrounded():
+    p = _project(_doc("FR", Item(uid="FR-1", type="requirement")))
+    with pytest.raises(GroundingError):
+        ratify(p, "FR-1", by="j.doe")
+
+def test_ratify_refuses_ambiguous():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement",
+              attrs={"ambiguous": True},
+              links=[Link(target="INT-1", type="derives_from")])
+    with pytest.raises(GroundingError):
+        ratify(_project(_doc("INT", intent), _doc("FR", fr)), "FR-1", by="j.doe")
+
+def test_ratify_succeeds_and_records_accountability():
+    p = _grounded_project()
+    item = ratify(p, "FR-1", by="j.doe")
+    assert item.status == "ratified"
+    assert item.attrs["ratified_by"] == "j.doe"
+
+def test_invalidate_cascades_suspect_to_blast_radius():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    asm = Item(uid="ASM-1", type="assumption", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="ratified",
+              links=[Link(target="INT-1", type="derives_from"),
+                     Link(target="ASM-1", type="assumes")])
+    nfr = Item(uid="NFR-1", type="nfr", status="ratified",
+               links=[Link(target="FR-1", type="derives_from")])
+    p = _project(_doc("INT", intent), _doc("ASM", asm),
+                 _doc("FR", fr), _doc("NFR", nfr))
+    affected = invalidate(p, "ASM-1", reason="measured false")
+    assert asm.status == "rejected"
+    assert set(affected) == {"FR-1", "NFR-1"}
+    assert fr.status == "suspect"
+    assert nfr.status == "suspect"
+
+def test_scout_ingest_proposes_roots_and_flags_ambiguity():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="ratified",
+              attrs={"origin": "ai"},
+              links=[Link(target="INT-1", type="derives_from")])
+    p = _project(_doc("INT", intent, fr))
+    report = {
+        "proposed_roots": [{"id": "BN-9", "type": "business_need",
+                            "title": "recover access", "rationale": "cluster"}],
+        "ambiguities": [{"id": "FR-1", "reason": "'fast' unquantified"}],
+        "coverage_gaps": [{"root": "CON-2", "detail": "unimplemented"}],
+    }
+    summary = scout_ingest(p, report)
+    assert "BN-9" in summary["roots_proposed"]
+    assert p.get("BN-9").status == "proposed"
+    assert p.get("BN-9").attrs["origin"] == "scout"
+    assert p.get("FR-1").attrs["ambiguous"] is True
+    assert p.get("FR-1").status == "suspect"
+    assert ("CON-2", "unimplemented") in summary["gaps"]
+
+
+# -------------------------------------------------- self-hosting / demo is green
+
+def test_demo_project_passes_strict():
+    """The committed demo must stay green under --strict — the CI-gate contract
+    (mirrors SR-0061 self-hosting)."""
+    p = load_project(DEMO)
+    assert _errors(validate(p, strict=True)) == []
+
+def test_demo_has_no_uid_collisions():
+    assert collisions(load_project(DEMO)) == []
+
+def test_selfhost_project_passes_strict():
+    """throughline's own spec, seeded as a throughline project, must stay grounded
+    under --strict — the tool dogfoods its own scope-discipline gate (SR-0061)."""
+    p = load_project(SELFHOST)
+    assert _errors(validate(p, strict=True)) == []
+
+def test_selfhost_has_no_uid_collisions():
+    assert collisions(load_project(SELFHOST)) == []
+
+
+# ---------------------------------------------- grounding-assisted authoring (SR-0073)
+
+from throughline.cli import main as _cli  # noqa: E402
+
+
+def _scaffold(tmp_path) -> Path:
+    """A minimal project with a root (INT) and a home for requirements (FR)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
+    assert _cli(["-C", str(root), "doc", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "doc", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
+                 "--title", "why"]) == 0
+    return root
+
+
+def test_new_ground_flag_grounds_at_birth(tmp_path):
+    """--ground attaches a parent when the item is created, so it is justified
+    the moment it exists (SR-0073) rather than being caught later by check."""
+    root = _scaffold(tmp_path)
+    rc = _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+               "--title", "feat", "--ground", "INT-0001",
+               "--ground-type", "derives_from", "--no-interactive"])
+    assert rc == 0
+    item = load_project(root).get("FR-0001")
+    assert [(l.target, l.type) for l in item.links] == [("INT-0001", "derives_from")]
+
+
+def test_new_ground_defaults_to_derives_from(tmp_path):
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "feat", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    item = load_project(root).get("FR-0001")
+    assert item.links[0].type == "derives_from"
+
+
+def test_new_ground_rejects_missing_target(tmp_path):
+    root = _scaffold(tmp_path)
+    rc = _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+               "--title", "feat", "--ground", "NOPE-0001", "--no-interactive"])
+    assert rc == 2
+    assert load_project(root).get("FR-0001") is None
+
+
+def test_new_non_interactive_leaves_ungrounded(tmp_path):
+    """Backward compat: without --ground and non-interactive, creation is
+    unchanged — the item is born orphaned and check will flag it."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "feat", "--no-interactive"]) == 0
+    assert load_project(root).get("FR-0001").links == []
+
+
+def test_new_root_honors_explicit_grounding(tmp_path):
+    """An EXPLICIT --ground link on a root type must be attached, never silently
+    dropped (SR-0091). Roots are exempt from the interactive prompt, but a link
+    the author asked for is authoring intent — a root may legitimately ground to
+    another root (e.g. a business_need that derives_from the vision)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
+                 "--title", "another", "--ground", "INT-0001",
+                 "--ground-type", "derives_from", "--no-interactive"]) == 0
+    item = load_project(root).get("INT-0002")
+    assert [(l.target, l.type) for l in item.links] == [("INT-0001", "derives_from")]
+
+
+def test_init_reports_absolute_path(tmp_path, capsys):
+    """init echoes where the project actually landed, not a bare '.' (SR-0077)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
+    out = capsys.readouterr().out
+    assert str(root.resolve()) in out
+
+
+def test_init_refuses_to_nest_inside_existing_project(tmp_path):
+    """init inside a tree already holding an throughline.toml is refused and writes
+    nothing, so a newcomer cannot silently create a broken nested layout."""
+    outer = tmp_path / "outer"
+    assert _cli(["-C", str(outer), "init", "--name", "outer"]) == 0
+    inner = outer / "sub" / "inner"
+    assert _cli(["-C", str(inner), "init", "--name", "inner"]) == 2
+    assert not (inner / "throughline.toml").exists()
+
+
+def test_init_force_allows_nesting(tmp_path):
+    """--force overrides the nesting guard for the rare intentional case."""
+    outer = tmp_path / "outer"
+    assert _cli(["-C", str(outer), "init", "--name", "outer"]) == 0
+    inner = outer / "sub" / "inner"
+    assert _cli(["-C", str(inner), "init", "--name", "inner", "--force"]) == 0
+    assert (inner / "throughline.toml").exists()
+
+
+def test_init_refuses_to_wrap_existing_child_project(tmp_path):
+    """The mirror case: init in a dir that already has a descendant project is
+    refused too — wrapping is the same broken nested layout (SR-0077)."""
+    child = tmp_path / "outer" / "sub" / "inner"
+    assert _cli(["-C", str(child), "init", "--name", "inner"]) == 0
+    outer = tmp_path / "outer"
+    assert _cli(["-C", str(outer), "init", "--name", "outer"]) == 2
+    assert not (outer / "throughline.toml").exists()
+
+
+def test_init_force_allows_wrapping_child(tmp_path):
+    """--force overrides the wrap guard as well."""
+    child = tmp_path / "outer" / "sub" / "inner"
+    assert _cli(["-C", str(child), "init", "--name", "inner"]) == 0
+    outer = tmp_path / "outer"
+    assert _cli(["-C", str(outer), "init", "--name", "outer", "--force"]) == 0
+    assert (outer / "throughline.toml").exists()
+
+
+def test_default_status_set_includes_deferred(tmp_path):
+    """A fresh project ships a 'deferred' status so a parked backlog item is
+    distinct from an active 'draft' (SR-0080). Ordered right after 'draft'."""
+    init_project(tmp_path, name="DS")
+    cfg = load_project(tmp_path).config
+    values = cfg["status"]["values"]
+    assert "deferred" in values
+    assert values.index("deferred") == values.index("draft") + 1
+
+
+def test_find_nested_project_reports_progress(tmp_path):
+    """The descendant scan reports a monotonic directory count so the CLI can
+    show live progress on a slow scan, and still returns the right answer."""
+    from throughline.storage import find_nested_project, init_project
+
+    base = tmp_path / "tree"
+    (base / "a" / "b" / "c").mkdir(parents=True)
+    counts: list[int] = []
+
+    # No descendant project -> walks the whole tree, calling back per directory.
+    assert find_nested_project(base, on_progress=counts.append) is None
+    assert counts == sorted(counts) and counts[-1] >= 4  # base + a + b + c
+
+    # A descendant project is found and still reported through the callback.
+    init_project(base / "a" / "proj", name="child")
+    hits: list[int] = []
+    found = find_nested_project(base, on_progress=hits.append)
+    assert found is not None and found.name == "proj"
+    assert hits  # callback fired at least once
+
+
+def test_check_summary_default_and_quiet(tmp_path, capsys):
+    """check prints a graph summary by default (SR-0078) and --quiet suppresses
+    it, leaving only findings + the tally."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "feat", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    capsys.readouterr()  # discard setup output
+
+    assert _cli(["-C", str(root), "check"]) == 0
+    err = capsys.readouterr().err
+    assert "tl check ·" in err
+    assert "trace to a root" in err
+    assert "error(s)" in err  # tally still present
+
+    assert _cli(["-C", str(root), "check", "--quiet"]) == 0
+    err_q = capsys.readouterr().err
+    assert "trace to a root" not in err_q
+    assert "error(s)" in err_q  # tally survives --quiet
+
+
+def test_check_json_unaffected_by_summary(tmp_path, capsys):
+    """--format json stays a clean machine contract: no summary prose on stdout."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "feat", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "check", "--format", "json"]) == 0
+    out = capsys.readouterr().out
+    import json as _json
+    _json.loads(out)  # parses cleanly
+    assert "tl check ·" not in out
+
+
+def _seed_query_project(tmp_path) -> Path:
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "alpha", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0            # FR-0001, status draft
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "beta", "--status", "approved", "--ground",
+                 "INT-0001", "--no-interactive"]) == 0  # FR-0002, approved
+    return root
+
+
+def test_query_filters_by_status(tmp_path, capsys):
+    """query lists items matching an SR-0045 expression (SR-0079)."""
+    root = _seed_query_project(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "query", "status == 'draft'"]) == 0
+    out = capsys.readouterr().out
+    assert "FR-0001" in out and "alpha" in out
+    assert "FR-0002" not in out  # approved item excluded
+
+
+def test_query_no_expr_lists_all_live_items(tmp_path, capsys):
+    root = _seed_query_project(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "query"]) == 0
+    out = capsys.readouterr().out
+    assert "INT-0001" in out and "FR-0001" in out and "FR-0002" in out
+
+
+def test_query_ls_alias_and_json(tmp_path, capsys):
+    root = _seed_query_project(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "ls", "type == 'intent'",
+                 "--format", "json"]) == 0
+    import json as _json
+    data = _json.loads(capsys.readouterr().out)
+    assert [d["uid"] for d in data] == ["INT-0001"]
+
+
+def test_query_bad_expression_is_usage_error(tmp_path, capsys):
+    root = _seed_query_project(tmp_path)
+    assert _cli(["-C", str(root), "query", "status = 'draft'"]) == 2  # '=' typo
+
+
+def test_version_flag_prints_and_exits_zero(capsys):
+    """--version reports the installed version and exits 0, so users and CI can
+    record which build produced a result (SR-0076)."""
+    with pytest.raises(SystemExit) as exc:
+        _cli(["--version"])
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert out.startswith("tl ")
+    assert out.split()[1]  # a non-empty version string follows the program name

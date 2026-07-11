@@ -1,0 +1,13 @@
+uid: SR-0001
+type: system_requirement
+status: approved
+title: Unique immutable UID
+text: The Tool shall assign every item a project-unique UID that never changes for
+  the life of the project.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+attrs:
+  priority: must
+  verification: test

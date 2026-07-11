@@ -1,0 +1,13 @@
+uid: NFR-0012
+type: nfr
+status: approved
+title: Deterministic outputs
+text: Given identical input state, publish/export outputs shall be byte-identical
+  (no embedded timestamps by default) to keep artifacts diffable and builds reproducible.
+normative: true
+links:
+- target: UR-0007
+  type: implements
+attrs:
+  priority: should
+  verification: test

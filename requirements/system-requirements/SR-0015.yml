@@ -1,0 +1,13 @@
+uid: SR-0015
+type: system_requirement
+status: approved
+title: Rich text in statements
+text: The Tool shall support CommonMark Markdown (subset in doc 06 §6) in item text
+  fields, including tables, lists, code blocks, and images by relative path.
+normative: true
+links:
+- target: UR-0008
+  type: implements
+attrs:
+  priority: must
+  verification: test

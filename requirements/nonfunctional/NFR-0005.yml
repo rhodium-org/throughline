@@ -1,0 +1,13 @@
+uid: NFR-0005
+type: nfr
+status: approved
+title: Simple installation
+text: Installation shall require a single standard package-manager command with no
+  database or service setup.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  priority: must
+  verification: demonstration

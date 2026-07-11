@@ -1,0 +1,10 @@
+uid: BN-0005
+type: business_need
+status: approved
+title: Publishable
+text: Stakeholder-quality HTML/PDF output and standard exchange formats (ReqIF, CSV/Excel,
+  JSON).
+normative: false
+links:
+- target: INT-0001
+  type: derives_from

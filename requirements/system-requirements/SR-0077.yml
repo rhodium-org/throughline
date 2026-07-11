@@ -1,0 +1,19 @@
+uid: SR-0077
+type: system_requirement
+status: approved
+title: Safe, clear project initialisation
+text: The init command shall report the created project's absolute path, and shall
+  refuse to create a project that would nest with an existing one — whether an ancestor
+  directory or a descendant directory already contains a throughline.toml — unless --force
+  is given. On refusal it shall change nothing and exit with a usage error. While scanning
+  descendants for existing projects, if the scan takes noticeable time it shall show
+  live progress on an interactive terminal rather than appear to hang (actionable output,
+  NFR-0014; no accidental broken layouts).
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: test

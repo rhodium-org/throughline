@@ -1,0 +1,14 @@
+uid: SR-0045
+type: system_requirement
+status: approved
+title: Filter expression language
+text: The Tool shall provide one boolean filter language over attributes, tags, text,
+  status, type, document, and link predicates, usable identically in search, table
+  generation, exports, and coverage rules.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+attrs:
+  priority: must
+  verification: test

@@ -1,0 +1,13 @@
+uid: SR-0024
+type: system_requirement
+status: approved
+title: Status vocabulary and transitions
+text: The Tool shall provide a default status set that projects can replace, and
+  should support declaring allowed transitions which validation enforces.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: must
+  verification: test

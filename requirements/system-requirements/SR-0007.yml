@@ -1,0 +1,10 @@
+uid: SR-0007
+type: system_requirement
+status: deleted
+title: RETIRED — renumber command
+text: 'Was: ''The Tool shall provide a renumber command to compact UID sequences.''
+  Withdrawn during drafting because it contradicts SR-0001/SR-0003/SR-0004. The ID
+  is retired and will never be reused.'
+normative: false
+deleted:
+  reason: Contradicts SR-0001/SR-0003/SR-0004; kept as tombstone example.

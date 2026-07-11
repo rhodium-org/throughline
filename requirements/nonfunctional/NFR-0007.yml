@@ -1,0 +1,12 @@
+uid: NFR-0007
+type: nfr
+status: approved
+title: Memory bound
+text: Peak memory for the reference project shall not exceed 1 GB.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: should
+  verification: analysis

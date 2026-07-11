@@ -1,0 +1,13 @@
+uid: NFR-0002
+type: nfr
+status: approved
+title: Open file format
+text: The on-disk format shall be fully documented (doc 06), schema-validatable,
+  and readable/writable without the Tool.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+attrs:
+  priority: must
+  verification: inspection

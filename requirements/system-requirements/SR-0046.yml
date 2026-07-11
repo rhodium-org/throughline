@@ -1,0 +1,13 @@
+uid: SR-0046
+type: system_requirement
+status: approved
+title: Full-text search
+text: The Tool shall support case-insensitive substring and regex search across statements,
+  titles, and rationale, returning UIDs and locations.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+attrs:
+  priority: must
+  verification: test

@@ -1,0 +1,15 @@
+uid: UR-0007
+type: user_requirement
+status: approved
+title: Plain text under version control
+text: Users shall be able to store all requirement data as human-readable text files
+  in Git, using branches, merges, and pull requests as the change workflow.
+rationale: Reuses the team's existing review tooling and permissions; avoids a database
+  server.
+normative: true
+links:
+- target: BN-0002
+  type: derives_from
+attrs:
+  priority: must
+  verification: inspection

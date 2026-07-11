@@ -1,0 +1,16 @@
+uid: UR-0021
+type: user_requirement
+status: approved
+title: Verifiable development environment
+text: A contributor shall be able to run a single command that diagnoses their development
+  environment — Python version, an importable/installed throughline, the test runner,
+  and whether the local grounding gate is wired — and reports, per check, either
+  pass or a specific remediation, exiting non-zero if the environment is not ready.
+normative: true
+links:
+- target: BN-0010
+  type: derives_from
+attrs:
+  origin: human
+  priority: should
+  verification: demonstration

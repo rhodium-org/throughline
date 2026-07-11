@@ -1,0 +1,13 @@
+uid: UR-0006
+type: user_requirement
+status: approved
+title: Review state
+text: Users shall be able to mark requirements as reviewed and detect any requirement
+  that changed after its last review.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

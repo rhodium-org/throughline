@@ -1,0 +1,13 @@
+uid: UR-0002
+type: user_requirement
+status: approved
+title: Frictionless add/remove
+text: Users shall be able to add and remove requirements anywhere in a document without
+  affecting the identifiers, links, or history of other requirements.
+normative: true
+links:
+- target: BN-0001
+  type: derives_from
+attrs:
+  priority: must
+  verification: demonstration

@@ -1,0 +1,13 @@
+uid: NFR-0010
+type: nfr
+status: approved
+title: Versioned format with migrations
+text: The file format shall carry an explicit schema version; the Tool shall read
+  all prior 1.x format versions and provide a migration command for major changes.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+attrs:
+  priority: must
+  verification: test

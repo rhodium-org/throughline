@@ -1,0 +1,20 @@
+uid: SR-0089
+type: system_requirement
+status: approved
+title: Render a requirements document as Markdown
+text: The Tool shall emit, on demand, a requirements document generated from the
+  live graph as a single Markdown text stream. The document shall carry a heading
+  with the project name, a provenance line stating the source it was rendered from,
+  and one section per document folder — each listing its live (non-tombstoned)
+  items in UID order with the item title, type, status, statement text, project
+  attributes, and outgoing grounding links so the "why" reads inline. A caller may
+  narrow the output to one document by its UID prefix. Output shall be plain
+  Markdown, deterministic, and dependency-free, so a wrapper can convert it to
+  navigable HTML or PDF while the core stays a pure text engine.
+normative: true
+links:
+- target: UR-0008
+  type: implements
+attrs:
+  priority: should
+  verification: test

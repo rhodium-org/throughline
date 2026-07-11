@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "throughline"
+version = "0.1.0"
+description = "A Git-native requirements management tool with a scope-avalanche grounding layer: permanent UIDs, one file per item, typed links, suspect detection, and a CI-gating check."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Time Back Solutions Limited" }]
+keywords = [
+  "requirements",
+  "requirements-management",
+  "traceability",
+  "grounding",
+  "git-native",
+  "idd",
+  "intent-driven-development",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/rhodium-org/throughline"
+Repository = "https://github.com/rhodium-org/throughline"
+Issues = "https://github.com/rhodium-org/throughline/issues"
+
+[project.scripts]
+tl = "throughline.cli:main"
+throughline = "throughline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

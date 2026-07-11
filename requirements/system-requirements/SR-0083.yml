@@ -1,0 +1,23 @@
+uid: SR-0083
+type: system_requirement
+status: approved
+title: Enforced status transitions
+text: The Tool shall let a project declare, in configuration, the status
+  transitions it permits (for each status, the set of statuses it may move to),
+  and validation shall report a clear, actionable finding when an item's status
+  changes to one the declared transitions do not allow. The baseline status is
+  the item's status in a git reference (the previous commit by default), so
+  `check` gates the change actually being introduced; creating a new item is not
+  a transition. When no transition table is declared, or the baseline cannot be
+  read (the project is not in a git work tree), transition checking is inert and
+  every status is reachable, matching the tool's other optional vocabularies.
+  Declared transition endpoints must be members of the declared status set,
+  reported as a configuration error at load time otherwise. This completes the
+  transition half of SR-0024, whose status vocabulary is already enforced.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: should
+  verification: test

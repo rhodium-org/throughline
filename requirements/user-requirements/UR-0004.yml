@@ -1,0 +1,13 @@
+uid: UR-0004
+type: user_requirement
+status: approved
+title: Traceability
+text: Users shall be able to link requirements to parent requirements, tests, design
+  artifacts, and external references, and navigate those links in both directions.
+normative: true
+links:
+- target: BN-0003
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

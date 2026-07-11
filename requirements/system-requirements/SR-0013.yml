@@ -1,0 +1,13 @@
+uid: SR-0013
+type: system_requirement
+status: approved
+title: Ordering as metadata
+text: The Tool shall represent presentation order with an explicit per-document ordering
+  that can be edited freely without touching item identity or content fingerprints.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+attrs:
+  priority: must
+  verification: test

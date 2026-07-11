@@ -1,0 +1,12 @@
+uid: NFR-0018
+type: nfr
+status: approved
+title: CI on all platforms
+text: Every merge to main shall pass automated tests on Linux, macOS, and Windows.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: inspection

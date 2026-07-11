@@ -1,0 +1,13 @@
+uid: UR-0008
+type: user_requirement
+status: approved
+title: Stakeholder-quality publishing
+text: Users shall be able to publish requirement documents as navigable HTML and
+  as PDF suitable for customers, auditors, and reviewers who don't use the tool.
+normative: true
+links:
+- target: BN-0005
+  type: derives_from
+attrs:
+  priority: must
+  verification: demonstration

@@ -1,0 +1,13 @@
+uid: NFR-0003
+type: nfr
+status: approved
+title: Offline and private
+text: All specified functionality shall work with no network access, and the Tool
+  shall send no telemetry or project data anywhere by default.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+attrs:
+  priority: must
+  verification: test
