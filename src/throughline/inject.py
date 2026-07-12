@@ -167,6 +167,18 @@ def _matching(project, expr: str) -> list:
     return sorted(items, key=lambda it: it.uid)
 
 
+# Statuses that mean an item is no longer part of the live graph — mirrors the
+# invalidate cascade's terminal set (grounding.py) so "live" means one thing.
+_DEAD_STATUSES = ("rejected", "deleted")
+
+
+def _is_live(project, uid: str) -> bool:
+    """True if uid names an item present in the graph that is neither deleted nor
+    rejected — i.e. something that genuinely realizes/relates, not a dead record."""
+    it = project.get(uid)
+    return it is not None and not it.is_deleted and it.status not in _DEAD_STATUSES
+
+
 def _cell(value: str) -> str:
     """Escape a table cell so a pipe or newline in content cannot break the row."""
     return value.replace("|", "\\|").replace("\n", " ").strip()
@@ -198,7 +210,9 @@ def _render_matrix(project, arg: str) -> str:
         for it in rows:
             links = (idx.in_links(it.uid, {ltype}) if direction == "incoming"
                      else idx.out_links(it.uid, {ltype}))
-            cells = ", ".join(u for u, _k in links) or "—"
+            # Only live items count as realizers — a rejected or deleted item
+            # does not realize anything (SR-0099).
+            cells = ", ".join(u for u, _k in links if _is_live(project, u)) or "—"
             out.append(f"| {it.uid} | {_cell(it.title or '')} | {cells} |")
         if not rows:
             out.append("| _(no matching items)_ |  |  |")

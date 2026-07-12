@@ -825,7 +825,11 @@ def _inject_project():
     tc = Item(uid="TC-1", type="requirement", status="approved", title="Setup test",
               links=[Link(target="FR-1", type="verifies")])
     gone = Item(uid="FR-9", type="requirement", status="deleted", title="Dropped")
-    return _project(_doc("INT", intent), _doc("FR", fr, gone), _doc("TC", tc),
+    # A rejected item that still carries a derives_from link — it must not count
+    # as a live realizer in a directional matrix (SR-0099).
+    dead = Item(uid="FR-2", type="requirement", status="rejected", title="Abandoned",
+                links=[Link(target="INT-1", type="derives_from")])
+    return _project(_doc("INT", intent), _doc("FR", fr, gone, dead), _doc("TC", tc),
                     config={"grounding": {"ground_link_types": ["derives_from"]}})
 
 def test_inject_item_fills_only_the_marked_region():
@@ -879,6 +883,15 @@ def test_inject_matrix_incoming_lists_realizers():
     out = inject_text(_inject_project(), src)
     assert "| UID | Title | Derives_from (incoming) |" in out
     assert "| INT-1 | Ship value | FR-1 |" in out
+
+def test_inject_matrix_incoming_omits_rejected_realizers():
+    """SR-0099: a rejected item (FR-2) that still links derives_from INT-1 must
+    not appear as a realizer — only live items count."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix incoming:derives_from type == 'intent' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| INT-1 | Ship value | FR-1 |" in out   # FR-1 live
+    assert "FR-2" not in out                          # FR-2 rejected, omitted
 
 def test_inject_matrix_outgoing_selector_lists_targets():
     """SR-0099: outgoing:<link_type> lists what each match links out to."""

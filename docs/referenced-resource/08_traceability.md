@@ -19,7 +19,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
 | UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
-| UR-0008 | Stakeholder-quality publishing | NFR-0015, SR-0015, SR-0050, SR-0053, SR-0057, SR-0089 |
+| UR-0008 | Stakeholder-quality publishing | NFR-0015, SR-0015, SR-0050, SR-0053, SR-0057 |
 | UR-0009 | Exchange with other tools | SR-0054, SR-0056 |
 | UR-0010 | Search and filter | SR-0045, SR-0046, SR-0079 |
 | UR-0011 | Project-specific data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0024, SR-0070, SR-0080, SR-0081, SR-0082, SR-0083, SR-0084 |
