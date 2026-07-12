@@ -24,9 +24,15 @@ from throughline import (
     write_item,
     write_manifest,
 )
+from throughline import storage
 from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
-from throughline.storage import baseline_statuses
+from throughline.storage import (
+    FORMAT_VERSION,
+    ProjectError,
+    baseline_statuses,
+    migrate_project,
+)
 from throughline.uid import UidError
 
 REPO = Path(__file__).resolve().parent.parent
@@ -1260,6 +1266,98 @@ def test_check_reports_prefix_collision_from_disk(tmp_path):
     rules = {f.rule for f in validate(load_project(root))}
     assert "prefix-collision" in rules
     assert _cli(["-C", str(root), "check", "--quiet"]) == 1  # FINDINGS
+
+
+def _set_format_version(root, value):
+    """Rewrite the format_version line of a project's config for the tests below."""
+    cfg = root / "throughline.toml"
+    text = cfg.read_text(encoding="utf-8")
+    if value is None:  # simulate a hand-authored / pre-versioning config
+        lines = [ln for ln in text.splitlines() if not ln.strip().startswith("format_version")]
+        cfg.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return
+    import re
+    cfg.write_text(re.sub(r"(?m)^format_version\s*=.*$",
+                          f"format_version = {value}", text), encoding="utf-8")
+
+
+def test_load_refuses_newer_format_version(tmp_path):
+    """A project whose format major is newer than this tl must refuse to load and
+    tell the user to upgrade tl, never silently mis-parse a future format
+    (NFR-0010)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, FORMAT_VERSION + 1)
+    with pytest.raises(ProjectError, match="upgrade tl"):
+        load_project(root)
+    assert _cli(["-C", str(root), "check"]) == 2  # USAGE — refuses to run
+
+
+def test_load_points_older_format_at_migrate(tmp_path):
+    """A project older than this tl refuses to load and points at `tl migrate`,
+    rather than silently rewriting it under the reader's feet (NFR-0010)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, FORMAT_VERSION - 1)
+    with pytest.raises(ProjectError, match="tl migrate"):
+        load_project(root)
+    assert _cli(["-C", str(root), "check"]) == 2  # USAGE — refuses to run
+
+
+def test_load_missing_format_version_assumes_current(tmp_path):
+    """A hand-authored config with no format_version is assumed current and loads,
+    honouring the no-lock-in promise rather than rejecting ordinary files
+    (UR-0015)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, None)
+    assert list(load_project(root).items()) == []  # loads without error
+
+
+def test_migrate_current_project_is_noop(tmp_path):
+    """`tl migrate` on an already-current project changes nothing and exits 0."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    assert migrate_project(root) == (FORMAT_VERSION, FORMAT_VERSION)
+    assert _cli(["-C", str(root), "migrate"]) == 0
+
+
+def test_migrate_refuses_newer_project(tmp_path):
+    """`tl migrate` refuses a project newer than this tl — there is nothing to
+    migrate down to; the user must upgrade tl (NFR-0010)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, FORMAT_VERSION + 1)
+    with pytest.raises(ProjectError, match="upgrade tl"):
+        migrate_project(root)
+    assert _cli(["-C", str(root), "migrate"]) == 2  # USAGE
+
+
+def test_migrate_no_registered_path_errors_cleanly(tmp_path):
+    """An older major with no registered migration step fails with a clear error
+    rather than a half-applied upgrade (NFR-0010)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, FORMAT_VERSION - 1)
+    with pytest.raises(ProjectError, match="no migration path"):
+        migrate_project(root)
+
+
+def test_migrate_walks_registered_chain(tmp_path, monkeypatch):
+    """With a step registered for the older major, `tl migrate` applies it, bumps
+    the recorded version to current, and the project then loads clean — proving
+    the migrate command performs a real upgrade, not just a version bump."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _set_format_version(root, FORMAT_VERSION - 1)
+    calls = []
+    monkeypatch.setitem(storage._MIGRATIONS, FORMAT_VERSION - 1,
+                        lambda p: calls.append(p))
+    assert migrate_project(root) == (FORMAT_VERSION - 1, FORMAT_VERSION)
+    assert calls == [root]                       # the step ran, once
+    cfg = (root / "throughline.toml").read_text(encoding="utf-8")
+    assert f"format_version = {FORMAT_VERSION}" in cfg
+    assert list(load_project(root).items()) == []  # loads clean afterwards
 
 
 def test_init_refuses_to_nest_inside_existing_project(tmp_path):

@@ -31,9 +31,103 @@ else:  # pragma: no cover
 CONFIG_NAME = "throughline.toml"
 MANIFEST_NAME = ".register.yml"
 
+# The on-disk format major this build of the Tool reads and writes (NFR-0010).
+# Bump only for a breaking structural change; additive (minor) evolution keeps
+# the same major so older 1.x projects stay readable without migration.
+FORMAT_VERSION = 1
+
 
 class ProjectError(Exception):
     pass
+
+
+def _read_format_version(config: dict) -> int:
+    """The recorded format major, or the current major when the field is absent.
+
+    A missing field means a hand-authored or pre-versioning project; we assume
+    the current major rather than reject it, honouring the no-lock-in promise
+    (UR-0015). A present value must be an integer major.
+    """
+    raw = config.get("project", {}).get("format_version", FORMAT_VERSION)
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        raise ProjectError(
+            f"project.format_version must be an integer major, got {raw!r}")
+    return raw
+
+
+def _gate_format_version(config: dict, root: Path) -> None:
+    """Refuse to load a project whose format major differs from ours (NFR-0010).
+
+    Newer than we understand -> tell the user to upgrade the Tool rather than
+    mis-parse a format from the future. Older than ours -> point at `tl migrate`
+    rather than silently rewrite. An equal major reads transparently.
+    """
+    disk = _read_format_version(config)
+    if disk > FORMAT_VERSION:
+        raise ProjectError(
+            f"{root / CONFIG_NAME} declares format version {disk}, but this tl "
+            f"understands up to {FORMAT_VERSION} — upgrade tl to open this project")
+    if disk < FORMAT_VERSION:
+        raise ProjectError(
+            f"{root / CONFIG_NAME} is at format version {disk}; this tl uses "
+            f"{FORMAT_VERSION} — run `tl migrate` to upgrade the project")
+
+
+# Structural migrations keyed by the source major they upgrade FROM; each rewrites
+# the project tree in place to the next major. Empty until a breaking format change
+# lands — `tl migrate` then walks this chain from the on-disk major to the current
+# one. Kept explicit so a future v2 registers exactly one step here (NFR-0010).
+_MIGRATIONS: dict[int, Callable[[Path], None]] = {}
+
+
+def _rewrite_format_version(cfg_file: Path, version: int) -> None:
+    """Set project.format_version by targeted line rewrite, not a reserialize, so
+    the config's comments and key order survive (NFR-0009)."""
+    lines = cfg_file.read_text(encoding="utf-8").splitlines()
+    for i, line in enumerate(lines):
+        if line.strip().startswith("format_version") and "=" in line:
+            lines[i] = f"format_version = {version}"
+            break
+    else:
+        for i, line in enumerate(lines):
+            if line.strip() == "[project]":
+                lines.insert(i + 1, f"format_version = {version}")
+                break
+        else:  # pragma: no cover - config always has a [project] table
+            lines.insert(0, f"format_version = {version}")
+    cfg_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def migrate_project(path: str | Path) -> tuple[int, int]:
+    """Upgrade a project's on-disk format to the current major (NFR-0010).
+
+    Returns ``(from_version, to_version)``. A project already current is a no-op
+    returning ``(FORMAT_VERSION, FORMAT_VERSION)``. Raises ``ProjectError`` when
+    the project is newer than this Tool (upgrade tl instead) or when no migration
+    step is registered for an older major.
+    """
+    root = Path(path)
+    cfg_file = root / CONFIG_NAME
+    if not cfg_file.exists():
+        raise ProjectError(
+            f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
+    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    start = _read_format_version(config)
+    if start > FORMAT_VERSION:
+        raise ProjectError(
+            f"{cfg_file} declares format version {start}, newer than this tl "
+            f"({FORMAT_VERSION}) — upgrade tl rather than migrate down")
+    current = start
+    while current < FORMAT_VERSION:
+        step = _MIGRATIONS.get(current)
+        if step is None:
+            raise ProjectError(
+                f"no migration path from format version {current} to {current + 1}")
+        step(root)
+        current += 1
+    if current != start:
+        _rewrite_format_version(cfg_file, current)
+    return start, current
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -63,6 +157,7 @@ def load_project(path: str | Path) -> Project:
     if not cfg_file.exists():
         raise ProjectError(f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    _gate_format_version(config, root)
 
     project = Project(path=root, config=config)
     try:

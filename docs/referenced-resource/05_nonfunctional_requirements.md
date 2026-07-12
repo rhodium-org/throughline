@@ -87,7 +87,7 @@ with `tl docs --check` (SR-0094).
 <!-- tl:item NFR-0010 -->
 **NFR-0010 — Versioned format with migrations** — `nfr`, status `approved`
 
-> The file format shall carry an explicit schema version; the Tool shall read all prior 1.x format versions and provide a migration command for major changes.
+> The file format shall carry an explicit schema version in throughline.toml, and on load the Tool shall compare it against the format the Tool implements and act by the on-disk major. When the on-disk major equals the Tool's, the Tool shall read the project transparently with no warning whatever the minor, so every prior 1.x version stays readable without migration. When the on-disk major is newer than the Tool understands, the Tool shall refuse to load and tell the user to upgrade the Tool rather than silently mis-parse a format from the future. When the on-disk major is older than the Tool's, the Tool shall decline to load until the user runs the migration command the Tool provides, which rewrites the project to the current format and bumps the recorded version.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->

@@ -262,6 +262,7 @@ default; edit it to fit your project.
 
 ```
 tl init [--name NAME] [--bare]                 # scaffold a project (--bare = config only, no seed)
+tl migrate                                     # upgrade an older project's on-disk format to this tl
 tl register new <PREFIX> <dir> [--parent P]    # add a register (prefix-owning collection)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID [--ground-type K]]  # allocate + create (ground at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]    # add a typed link

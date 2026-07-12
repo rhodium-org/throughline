@@ -32,6 +32,7 @@ from .storage import (
     init_project,
     load_project,
     load_project_at_ref,
+    migrate_project,
     write_item,
     write_manifest,
 )
@@ -110,6 +111,18 @@ def cmd_init(args) -> int:
     if not args.bare:
         print("seeded a starter graph (INT/REQ/NFR/TEST/NG) and docs/overview.md — "
               "edit or delete freely; run `tl check` and `tl docs` to explore.")
+    return OK
+
+
+def cmd_migrate(args) -> int:
+    try:
+        start, end = migrate_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    if start == end:
+        print(f"already at format version {end} — nothing to migrate")
+    else:
+        print(f"migrated project from format version {start} to {end}")
     return OK
 
 
@@ -900,6 +913,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--bare", action="store_true",
                    help="write only throughline.toml; skip the seeded starter graph")
     s.set_defaults(func=cmd_init)
+
+    s = sub.add_parser("migrate",
+                       help="upgrade an older project's on-disk format to this tl")
+    s.set_defaults(func=cmd_migrate)
 
     s = sub.add_parser("register", help="register (prefix-owning collection) operations")
     dsub = s.add_subparsers(dest="register_cmd", required=True)
