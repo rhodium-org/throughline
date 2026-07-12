@@ -2,328 +2,662 @@
 
 Functional requirements on the Tool. Grouped by capability; **IDs are
 permanent and gaps are meaningless**. "The Tool" = the software specified by
-this set. Normative terms per README conventions.
+this set.
+
+Each requirement below is **generated from the graph** by `tl docs`; only the
+section headings and the tombstone note are hand-owned. Regenerate with
+`tl docs` and gate it in CI with `tl docs --check` (SR-0094). Retired and
+rejected IDs keep their tombstones in the graph but are excluded from this
+published view (SR-0012); the SR-0007 note below is kept by hand as a live
+example of the tombstone convention.
 
 ## 1. Identification and numbering
 
-**SR-0001 — Unique immutable UID.**
-The Tool shall assign every item a project-unique UID that never changes for
-the life of the project.
-`Priority: Must | Verification: Test | Traces: UR-0001 | Status: Approved`
+<!-- tl:item SR-0001 -->
+**SR-0001 — Unique immutable UID** — `system_requirement`, status `approved`
 
-**SR-0002 — UID format.**
-The Tool shall form UIDs as `<PREFIX>-<NUMBER>` where PREFIX is the owning
-document's configured prefix (uppercase letters/digits) and NUMBER is a
-zero-padded positive integer of configured width (default 4).
-*Rationale:* A mandatory separator keeps UIDs unambiguous and sortable;
-grammar in doc 06 §3.
-`Priority: Must | Verification: Test | Traces: UR-0001 | Status: Approved`
+> The Tool shall assign every item a project-unique UID that never changes for the life of the project.
 
-**SR-0003 — No UID reuse.**
-The Tool shall never assign a UID that has ever existed in the project,
-including UIDs of deleted items; retired numbers shall be recorded so
-allocation can skip them.
-`Priority: Must | Verification: Test | Traces: UR-0001, UR-0002 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0004 — Identity independent of position.**
-The Tool shall not derive, change, or validate any UID based on an item's
-section, order, level, or file location; moving or reordering items shall
-leave UIDs untouched.
-`Priority: Must | Verification: Test | Traces: UR-0001, UR-0002 | Status: Approved`
+<!-- tl:item SR-0002 -->
+**SR-0002 — UID format** — `system_requirement`, status `approved`
 
-**SR-0005 — Automatic UID allocation.**
-On item creation the Tool shall allocate the next unused number for the
-document's prefix automatically, while also accepting an explicit unused UID.
-`Priority: Must | Verification: Test | Traces: UR-0002 | Status: Approved`
+> The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning document's configured prefix and NUMBER is a zero-padded positive integer of configured width (default 4).
 
-**SR-0006 — Merge-safe allocation.**
-The Tool shall detect UID collisions arising from parallel branches at
-validation time and shall provide a conflict-resolution command that reassigns
-the *younger* item to a fresh UID and rewrites references to it.
-*Rationale:* Two branches can both allocate `REQ-0107`; detection plus an
-assisted, single-direction fix keeps the invariant SR-0001 while making
-merges tractable. An optional reservation service is out of scope (doc 02 §1).
-`Priority: Must | Verification: Test | Traces: UR-0014 | Status: Approved`
+*Rationale:* A mandatory separator keeps UIDs unambiguous and sortable; grammar in doc 06 §3.
 
-**SR-0007 — RETIRED.**
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0003 -->
+**SR-0003 — No UID reuse** — `system_requirement`, status `approved`
+
+> The Tool shall never assign a UID that has ever existed in the project, including UIDs of deleted items; retired numbers shall be recorded so allocation skips them.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0004 -->
+**SR-0004 — Identity independent of position** — `system_requirement`, status `approved`
+
+> The Tool shall not derive, change, or validate any UID based on an item's section, order, level, or file location; moving or reordering items shall leave UIDs untouched.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0005 -->
+**SR-0005 — Automatic UID allocation** — `system_requirement`, status `approved`
+
+> On item creation the Tool shall allocate the next unused number for the document's prefix automatically, while also accepting an explicit unused UID.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0006 -->
+**SR-0006 — Merge-safe allocation** — `system_requirement`, status `approved`
+
+> The Tool shall detect UID collisions arising from parallel branches at validation time and provide a conflict-resolution command that reassigns the younger item to a fresh UID and rewrites references to it.
+
+*Rationale:* Detection plus an assisted single-direction fix keeps SR-0001 while making merges tractable.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+**SR-0007 — RETIRED (tombstone).**
 *(Was: "The Tool shall provide a renumber command to compact UID sequences."
-Withdrawn during drafting because it contradicts SR-0001/SR-0003/SR-0004.
-The ID is retired and will never be reused — this entry is intentionally kept
-as a live example of the tombstone convention.)*
-`Status: Retired`
+Withdrawn during drafting because it contradicts SR-0001/SR-0003/SR-0004. The
+ID is retired and will never be reused. It lives in the graph at status
+`deleted`, so `tl docs` deliberately does not render it — this hand note is
+kept as a live example of the tombstone convention.)*
 
-**SR-0008 — Human-readable aliases.**
-The Tool may support optional, non-unique display titles and searchable
-aliases, provided all references and links use UIDs only.
-`Priority: Could | Verification: Inspection | Traces: UR-0001 | Status: Draft`
+<!-- tl:item SR-0008 -->
+**SR-0008 — Human-readable aliases** — `system_requirement`, status `deferred`
+
+> The Tool may support optional, non-unique display titles and searchable aliases, provided all references and links use UIDs only.
+
+**priority**: could · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item SR-0093 -->
+**SR-0093 — Tombstone permanence** — `system_requirement`, status `ratified`
+
+> The Tool shall report, at validation time, any UID whose last recorded status was deleted but whose item file is absent from the working tree, because a tombstone is the permanent record that a UID was retired and must never be removed.
+
+*Rationale:* A tombstone is the only record that a UID was retired; if it is erased by a bad merge or a stray git rm, the never-reused guarantee (SR-0001) silently breaks. The gate already reads each item's status at the previous commit (SR-0083), so a vanished tombstone is detectable there without a redundant second ledger.
+
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
 
 ## 2. Data model, storage, and editing
 
-**SR-0010 — One file per item.**
-The Tool shall store each item as one UTF-8 text file (YAML per doc 06),
-named by its UID, inside its document's directory.
-`Priority: Must | Verification: Inspection | Traces: UR-0007, UR-0014 | Status: Approved`
+<!-- tl:item SR-0010 -->
+**SR-0010 — One file per item** — `system_requirement`, status `approved`
 
-**SR-0011 — Document tree.**
-The Tool shall organize items into documents (a directory with a manifest
-defining prefix, title, attribute schema, and ordering) and documents into a
-project tree with declared parent relationships.
-`Priority: Must | Verification: Test | Traces: UR-0011 | Status: Approved`
+> The Tool shall store each item as one UTF-8 text file (YAML per doc 06), named by its UID, inside its document's directory.
 
-**SR-0012 — Soft delete with tombstone.**
-The Tool shall implement deletion as a status change to `deleted`, retaining
-the item file (or a tombstone stub) with UID, deletion date, reason, and last
-content hash; deleted items shall be excluded from publishing and exports by
-default but included in history, diffs, and UID-reuse prevention.
-`Priority: Must | Verification: Test | Traces: UR-0002, UR-0003 | Status: Approved`
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
 
-**SR-0013 — Ordering as metadata.**
-The Tool shall represent presentation order with an explicit per-document
-ordering (fractional `level` values or a manifest list) that can be edited
-freely without touching item identity or content fingerprints.
-`Priority: Must | Verification: Test | Traces: UR-0002 | Status: Approved`
+<!-- tl:item SR-0011 -->
+**SR-0011 — Document tree** — `system_requirement`, status `approved`
 
-**SR-0014 — Project initialization and templates.**
-The Tool shall provide an `init` operation creating a valid empty project,
-and should ship starter templates aligned with ISO/IEC/IEEE 29148 document
-types (stakeholder, system, software requirements).
-`Priority: Must / Should (templates) | Verification: Demonstration | Traces: UR-0020 | Status: Approved`
+> The Tool shall organize items into documents (a directory with a manifest defining prefix, title, attribute schema, and ordering) and documents into a project tree with declared parent relationships.
 
-**SR-0015 — Rich text in statements.**
-The Tool shall support CommonMark Markdown (subset defined in doc 06 §6) in
-item text fields, including tables, lists, code blocks, and images by
-relative path.
-`Priority: Must | Verification: Test | Traces: UR-0008 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0016 — Move between documents.**
-The Tool shall support moving an item to another document; because prefixes
-encode the original document, the moved item keeps its UID and the Tool shall
-record its new location.
-*Rationale:* Identity outranks tidy prefixes; StrictDoc lists node moves as a
-core capability.
-`Priority: Should | Verification: Test | Traces: UR-0002 | Status: Approved`
+<!-- tl:item SR-0012 -->
+**SR-0012 — Soft delete with tombstone** — `system_requirement`, status `approved`
+
+> The Tool shall implement deletion as a status change to 'deleted', retaining the item file with UID, deletion date, reason, and last content hash; deleted items are excluded from publishing/exports by default but included in history, diffs, and UID-reuse prevention.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0013 -->
+**SR-0013 — Ordering as metadata** — `system_requirement`, status `approved`
+
+> The Tool shall represent presentation order with an explicit per-document ordering that can be edited freely without touching item identity or content fingerprints.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0014 -->
+**SR-0014 — Project initialization and templates** — `system_requirement`, status `approved`
+
+> The Tool shall provide an init operation creating a valid empty project, and should ship starter templates aligned with ISO/IEC/IEEE 29148 document types.
+
+**priority**: must · **verification**: demonstration
+<!-- tl:end -->
+
+<!-- tl:item SR-0015 -->
+**SR-0015 — Rich text in statements** — `system_requirement`, status `approved`
+
+> The Tool shall support CommonMark Markdown (subset in doc 06 §6) in item text fields, including tables, lists, code blocks, and images by relative path.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0016 -->
+**SR-0016 — Move between documents** — `system_requirement`, status `approved`
+
+> The Tool shall support moving an item to another document; the moved item keeps its UID and the Tool records its new location.
+
+*Rationale:* Identity outranks tidy prefixes.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0077 -->
+**SR-0077 — Safe, clear project initialisation** — `system_requirement`, status `approved`
+
+> The init command shall report the created project's absolute path, and shall refuse to create a project that would nest with an existing one — whether an ancestor directory or a descendant directory already contains a throughline.toml — unless --force is given. On refusal it shall change nothing and exit with a usage error. While scanning descendants for existing projects, if the scan takes noticeable time it shall show live progress on an interactive terminal rather than appear to hang (actionable output, NFR-0014; no accidental broken layouts).
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 3. Attributes and schema
 
-**SR-0020 — Custom attributes.**
-The Tool shall let each project define custom item attributes with name,
-type (string, markdown, integer, float, boolean, date, enum, multi-enum,
-UID-reference, URL), default value, and required flag.
-`Priority: Must | Verification: Test | Traces: UR-0011 | Status: Approved`
+<!-- tl:item SR-0020 -->
+**SR-0020 — Custom attributes** — `system_requirement`, status `approved`
 
-**SR-0021 — Item types.**
-The Tool shall support project-defined item types (e.g. requirement,
-heading/section, test case, risk) with per-type attribute schemas; UID
-prefixes remain per document, not per type.
-`Priority: Must | Verification: Test | Traces: UR-0011 | Status: Approved`
+> The Tool shall let each project define custom item attributes with name, type, default value, and required flag.
 
-**SR-0022 — Built-in core fields.**
-The Tool shall reserve and manage these fields on every item: `uid`, `type`,
-`status`, `text` (statement), `title` (optional), `links`, `order/level`,
-`normative` (bool), `derived` (bool), `reviewed` (fingerprint), `created`,
-`modified`.
-`Priority: Must | Verification: Inspection | Traces: UR-0011 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0023 — Schema validation.**
-The Tool shall validate every item against the project schema (types,
-required fields, enum membership, ID regex) and report violations with file,
-field, and reason.
-`Priority: Must | Verification: Test | Traces: UR-0016 | Status: Approved`
+<!-- tl:item SR-0021 -->
+**SR-0021 — Item types** — `system_requirement`, status `approved`
 
-**SR-0024 — Status vocabulary and transitions.**
-The Tool shall provide a default status set
-(`draft, approved, implemented, verified, deleted, rejected`) that projects
-can replace, and should support declaring allowed transitions which
-validation enforces.
-`Priority: Must / Should (transitions) | Verification: Test | Traces: UR-0011 | Status: Approved`
+> The Tool shall support project-defined item types with per-type attribute schemas; UID prefixes remain per document, not per type.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0022 -->
+**SR-0022 — Built-in core fields** — `system_requirement`, status `approved`
+
+> The Tool shall reserve and manage these fields on every item: uid, type, status, text, title, links, order/level, normative, derived, reviewed, created, modified.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item SR-0023 -->
+**SR-0023 — Schema validation** — `system_requirement`, status `approved`
+
+> The Tool shall validate every item against the project schema (types, required fields, enum membership, ID regex) and report violations with file, field, and reason.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0024 -->
+**SR-0024 — Status vocabulary and transitions** — `system_requirement`, status `approved`
+
+> The Tool shall provide a default status set that projects can replace, and should support declaring allowed transitions which validation enforces.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0080 -->
+**SR-0080 — Deferred (parked) status** — `system_requirement`, status `approved`
+
+> The Tool's default status set shall include a 'deferred' status for an item that is acknowledged and grounded but deliberately not scheduled — a parked backlog item, distinct from 'draft' (actively moving toward approval). Deferred items remain live (they are not tombstoned like 'deleted') so they still ground and appear in queries, letting authors separate the active work-front from the wish-list.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0081 -->
+**SR-0081 — Status membership validation** — `system_requirement`, status `approved`
+
+> When a project declares a status vocabulary ([status] values), the Tool's check shall validate every live item's status against it and report a finding (rule 'bad-status', severity configurable per SR-0041) for any status outside the declared set, so typos and stale statuses cannot silently enter the graph. When no vocabulary is declared the rule is inert.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0082 -->
+**SR-0082 — Single validated project schema** — `system_requirement`, status `approved`
+
+> The Tool shall load a project's configuration into one validated schema object when the project is opened, reporting a clear, actionable error for malformed or internally inconsistent configuration (for example a rule that references an unknown type, or a grounding link type absent from the declared link set) instead of silently mis-behaving. The schema object shall expose a stable set of typed accessor and predicate helpers (for example the attributes and normative attributes of a type, whether a status or link type is declared, and the grounding and root types) so that each lookup, check, and indirection is defined once and reused. All components — validation, fingerprinting, UID allocation, publishing, and the CLI — shall derive their behaviour from these helpers rather than reading configuration ad hoc, so that new domain concepts (types, link types, statuses, and rules) can be introduced through configuration alone without code changes.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0083 -->
+**SR-0083 — Enforced status transitions** — `system_requirement`, status `approved`
+
+> The Tool shall let a project declare, in configuration, the status transitions it permits (for each status, the set of statuses it may move to), and validation shall report a clear, actionable finding when an item's status changes to one the declared transitions do not allow. The baseline status is the item's status in a git reference (the previous commit by default), so `check` gates the change actually being introduced; creating a new item is not a transition. When no transition table is declared, or the baseline cannot be read (the project is not in a git work tree), transition checking is inert and every status is reachable, matching the tool's other optional vocabularies. Declared transition endpoints must be members of the declared status set, reported as a configuration error at load time otherwise. This completes the transition half of SR-0024, whose status vocabulary is already enforced.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 4. Links and traceability
 
-**SR-0030 — Typed, directed links.**
-The Tool shall support links from item to item carrying a project-defined
-type/role (default set: `refines` parent, `verifies`, `satisfies`,
-`implements`, `relates`), stored on the source item and indexed in both
-directions.
-`Priority: Must | Verification: Test | Traces: UR-0004 | Status: Approved`
+<!-- tl:item SR-0030 -->
+**SR-0030 — Typed, directed links** — `system_requirement`, status `approved`
 
-**SR-0031 — External references.**
-The Tool shall support links to external targets: URLs and repository file
-paths (optionally with line ranges).
-`Priority: Must | Verification: Test | Traces: UR-0004 | Status: Approved`
+> The Tool shall support links from item to item carrying a project-defined type/role, stored on the source item and indexed in both directions.
 
-**SR-0032 — Link integrity.**
-Validation shall flag links to unknown UIDs, links to deleted items, and
-(configurably) circular `refines` chains.
-`Priority: Must | Verification: Test | Traces: UR-0004, UR-0016 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0033 — Content fingerprints.**
-The Tool shall compute a SHA-256 fingerprint of each item's normative
-content (fields listed in doc 06 §5; excludes ordering, comments, and
-non-normative metadata).
-`Priority: Must | Verification: Test | Traces: UR-0005, UR-0006 | Status: Approved`
+<!-- tl:item SR-0031 -->
+**SR-0031 — External references** — `system_requirement`, status `approved`
 
-**SR-0034 — Suspect links.**
-Each link shall store the target's fingerprint at the time the link was last
-confirmed; when the stored and current fingerprints differ, the Tool shall
-report the link as suspect, and shall provide a command to re-confirm
-(re-stamp) links after review.
-`Priority: Must | Verification: Test | Traces: UR-0005 | Status: Approved`
+> The Tool shall support links to external targets: URLs and repository file paths (optionally with line ranges).
 
-**SR-0035 — Impact analysis.**
-Given a UID, the Tool shall report the transitive set of items reachable via
-incoming links (what depends on this), grouped by link type and depth.
-`Priority: Must | Verification: Test | Traces: UR-0012 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0036 — Baselines.**
-The Tool shall create named baselines that pin the exact state of all items
-(via VCS revision + a baseline manifest containing every UID and
-fingerprint), list existing baselines, and check out or read any baseline.
-`Priority: Must | Verification: Test | Traces: UR-0013 | Status: Approved`
+<!-- tl:item SR-0032 -->
+**SR-0032 — Link integrity** — `system_requirement`, status `approved`
 
-**SR-0037 — Diff between versions.**
-The Tool shall compare two baselines, revisions, or working state and report
-per item: added, deleted, modified (with changed fields), and links
-added/removed — as human-readable text/HTML and machine-readable JSON.
-`Priority: Must | Verification: Test | Traces: UR-0003 | Status: Approved`
+> Validation shall flag links to unknown UIDs, links to deleted items, and (configurably) circular refines chains.
 
-**SR-0038 — Review workflow states.**
-The Tool shall record a per-item `reviewed` fingerprint set by an explicit
-review command, and validation shall list items whose current fingerprint
-differs from their reviewed fingerprint.
-`Priority: Must | Verification: Test | Traces: UR-0006 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0033 -->
+**SR-0033 — Content fingerprints** — `system_requirement`, status `approved`
+
+> The Tool shall compute a SHA-256 fingerprint of each item's normative content (fields in doc 06 §5; excludes ordering, comments, and non-normative metadata).
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0034 -->
+**SR-0034 — Suspect links** — `system_requirement`, status `approved`
+
+> Each link shall store the target's fingerprint when last confirmed; when stored and current fingerprints differ, the Tool reports the link suspect and provides a command to re-confirm (re-stamp) links after review.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0035 -->
+**SR-0035 — Impact analysis** — `system_requirement`, status `approved`
+
+> Given a UID, the Tool shall report the transitive set of items reachable via incoming links, grouped by link type and depth.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0036 -->
+**SR-0036 — Baselines** — `system_requirement`, status `approved`
+
+> The Tool shall create named baselines pinning the exact state of all items, list baselines, and check out or read any baseline.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0037 -->
+**SR-0037 — Diff between versions** — `system_requirement`, status `approved`
+
+> The Tool shall compare two baselines, revisions, or working state and report per item added/deleted/modified and links added/removed, as text/HTML and JSON.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0038 -->
+**SR-0038 — Review workflow states** — `system_requirement`, status `approved`
+
+> The Tool shall record a per-item reviewed fingerprint set by an explicit review command, and validation shall list items whose current fingerprint differs from it.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0084 -->
+**SR-0084 — Type-constrained links** — `system_requirement`, status `approved`
+
+> The Tool shall let a project declare, per link type, the item types permitted at each end of that link — the set of source types it may originate from and the set of target types it may point to — and validation shall report a clear, actionable finding when a link's endpoints violate the declared shape (for example a `mitigates` link whose source is not a risk-bearing type, or that points at something other than a risk). A link type with no declared rule is unconstrained, and the target-side check is skipped when the target is external or absent, matching the tool's other optional vocabularies. A rule may constrain only the source, only the target, or both. Any link type named in a rule must be a member of the declared link vocabulary, reported as a configuration error at load time otherwise. This lets a new domain concept — a `risk` type that only requirements may mitigate, say — be expressed and its graph shape enforced through configuration alone, without code changes.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0085 -->
+**SR-0085 — Report the graph's link shape** — `system_requirement`, status `approved`
+
+> The Tool shall be able to report the actual link shape of a project — the set of distinct (source type, link type, target type) triples present in the graph, with a count of each — as a first-class operation on the link index rather than something a user must reconstruct by hand. The CLI shall surface this report so that a maintainer can see how the graph is currently wired and author or tighten `[link_rules]` (SR-0084) from observed reality. Targets that are not known items (external or dangling) are reported with an empty target type so the report stays total.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 5. Validation, quality, and CI
 
-**SR-0040 — Single check command.**
-The Tool shall provide a `check` command running all validations (schema,
-links, suspect, review, coverage rules) with a non-zero exit code on error,
-suitable for CI.
-`Priority: Must | Verification: Test | Traces: UR-0016 | Status: Approved`
+<!-- tl:item SR-0040 -->
+**SR-0040 — Single check command** — `system_requirement`, status `approved`
 
-**SR-0041 — Severity configuration.**
-Projects shall be able to set each validation rule to `error`, `warning`, or
-`off`, and the Tool shall support promoting all warnings to errors for CI.
-`Priority: Must | Verification: Test | Traces: UR-0016 | Status: Approved`
+> The Tool shall provide a check command running all validations with a non-zero exit code on error, suitable for CI.
 
-**SR-0042 — Coverage rules.**
-Projects shall be able to declare coverage rules of the form "every item of
-type/document X with status in S must have ≥1 outgoing/incoming link of type
-T to document Y", which `check` enforces.
-`Priority: Must | Verification: Test | Traces: UR-0012 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0043 — Requirement quality lint.**
-The Tool should provide optional lint rules for statement quality: missing
-"shall/should/may", multiple "shall" in one statement, vague terms from a
-configurable word list ("fast", "user-friendly", "etc."), empty rationale on
-`Must` items, and EARS-pattern templates for new items.
-`Priority: Should | Verification: Test | Traces: UR-0017 | Status: Approved`
+<!-- tl:item SR-0041 -->
+**SR-0041 — Severity configuration** — `system_requirement`, status `approved`
 
-**SR-0044 — Machine-readable check output.**
-`check` shall optionally emit findings as JSON (rule id, severity, uid, file,
-message) for tooling and CI annotations.
-`Priority: Must | Verification: Test | Traces: UR-0016 | Status: Approved`
+> Projects shall be able to set each validation rule to error, warning, or off, and the Tool shall support promoting all warnings to errors for CI.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0042 -->
+**SR-0042 — Coverage rules** — `system_requirement`, status `approved`
+
+> Projects shall be able to declare coverage rules of the form 'every item of type/document X with status in S must have >=1 link of type T to document Y', which check enforces.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0043 -->
+**SR-0043 — Requirement quality lint** — `system_requirement`, status `approved`
+
+> The Tool should provide optional lint rules for statement quality: missing shall/should/may, multiple shall in one statement, vague terms, empty rationale on Must items, and EARS templates.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0044 -->
+**SR-0044 — Machine-readable check output** — `system_requirement`, status `approved`
+
+> check shall optionally emit findings as JSON (rule id, severity, uid, file, message) for tooling and CI annotations.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0078 -->
+**SR-0078 — Informative check summary** — `system_requirement`, status `approved`
+
+> By default in text output, the check command shall print a summary of the validated graph — live item counts by type, link counts by type, and grounding health (how many non-root items reach a root and how many delivery roots are served) — so a run communicates what was actually validated, not only an error/warning tally. A --quiet flag shall suppress the summary for CI and scripting. The --format json output is the machine contract and shall be unaffected.
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 6. Search, filter, and query
 
-**SR-0045 — Filter expression language.**
-The Tool shall provide one boolean filter language over attributes, tags,
-text, status, type, document, and link predicates (e.g.
-`type == "req" and status in ["draft"] and links_to("TST")`), usable
-identically in search, table generation, exports, and coverage rules.
-`Priority: Must | Verification: Test | Traces: UR-0010 | Status: Approved`
+<!-- tl:item SR-0045 -->
+**SR-0045 — Filter expression language** — `system_requirement`, status `approved`
 
-**SR-0046 — Full-text search.**
-The Tool shall support case-insensitive substring and regular-expression
-search across statements, titles, and rationale, returning UIDs and
-locations.
-`Priority: Must | Verification: Test | Traces: UR-0010 | Status: Approved`
+> The Tool shall provide one boolean filter language over attributes, tags, text, status, type, document, and link predicates, usable identically in search, table generation, exports, and coverage rules.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0046 -->
+**SR-0046 — Full-text search** — `system_requirement`, status `approved`
+
+> The Tool shall support case-insensitive substring and regex search across statements, titles, and rationale, returning UIDs and locations.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0079 -->
+**SR-0079 — CLI query command** — `system_requirement`, status `approved`
+
+> The CLI shall provide a query command (alias ls) that lists the items matching an SR-0045 filter expression over type, status, document, attributes, normative flag, and text. It shall print each match as UID, type/status, and title, or emit the full items as JSON with --format json, and report the match count — so users can find requirements by attribute and status without external tools. A malformed expression shall produce an actionable error and a usage exit code.
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 7. Publishing and reporting
 
-**SR-0050 — HTML publishing.**
-The Tool shall publish the project as a static HTML site with a document
-view (ordered, numbered-for-print sections), per-item anchors by UID,
-cross-document hyperlinks, and an index.
-`Priority: Must | Verification: Demonstration | Traces: UR-0008 | Status: Approved`
+<!-- tl:item SR-0050 -->
+**SR-0050 — HTML publishing** — `system_requirement`, status `approved`
 
-**SR-0051 — Traceability views.**
-Publishing shall include generated traceability views: a table view
-(configurable columns), a traceability matrix between two chosen
-documents/link types, and a link-graph export (DOT/Graphviz).
-`Priority: Must | Verification: Test | Traces: UR-0004, UR-0012 | Status: Approved`
+> The Tool shall publish the project as a static HTML site with a document view, per-item anchors by UID, cross-document hyperlinks, and an index.
 
-**SR-0052 — Coverage report.**
-The Tool shall generate a coverage report per coverage rule (SR-0042) with
-counts, percentages, and the list of uncovered UIDs.
-`Priority: Must | Verification: Test | Traces: UR-0012 | Status: Approved`
+**priority**: must · **verification**: demonstration
+<!-- tl:end -->
 
-**SR-0053 — PDF output.**
-The Tool should produce PDF from the HTML document view.
-`Priority: Should | Verification: Demonstration | Traces: UR-0008 | Status: Approved`
+<!-- tl:item SR-0051 -->
+**SR-0051 — Traceability views** — `system_requirement`, status `approved`
+
+> Publishing shall include generated traceability views: a table view, a traceability matrix between two documents/link types, and a link-graph export (DOT/Graphviz).
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0052 -->
+**SR-0052 — Coverage report** — `system_requirement`, status `approved`
+
+> The Tool shall generate a coverage report per coverage rule (SR-0042) with counts, percentages, and the list of uncovered UIDs.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0053 -->
+**SR-0053 — PDF output** — `system_requirement`, status `approved`
+
+> The Tool should produce PDF from the HTML document view.
+
+**priority**: should · **verification**: demonstration
+<!-- tl:end -->
+
+<!-- tl:item SR-0086 -->
+**SR-0086 — Visual model and lifecycle diagrams** — `system_requirement`, status `approved`
+
+> The Tool shall emit a visual representation of a project's shape as Mermaid diagram source — a type model (item types as nodes joined by labelled edges for the links observed between them) and a status-transition state machine (the declared [transitions], each move an edge between states) — so a maintainer or newcomer can see how the graph is wired and how items move through their lifecycle without reading the configuration by hand. Mermaid is chosen because it is plain text (so a diagram lives in version control and diffs cleanly) and renders directly in Markdown and on the forge. The CLI shall offer each diagram and, by default, both, wrapped as fenced Markdown blocks ready to embed; a raw Mermaid form shall be available for piping into a renderer. When a project declares no transitions, the lifecycle diagram is reported as absent rather than emitted empty.
+
+**priority**: could · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0090 -->
+**SR-0090 — Reproduce a document at a past revision** — `system_requirement`, status `approved`
+
+> The Tool shall render the requirements document as the graph stood at a named git revision, so a stakeholder can reproduce exactly what a baseline said. Given a commit-ish, the Tool shall reconstruct the project from that revision's tracked files without touching the working tree, render the document from it, and stamp the provenance line with the revision and its resolved commit hash. Because items are plain YAML under version control, this makes any past state addressable by commit rather than only the current checkout. When the project is not inside a git work tree, or the revision cannot be resolved, the Tool shall fail with a clear message rather than silently render the working tree.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 8. Import and export
 
-**SR-0054 — CSV/Excel round-trip.**
-The Tool shall export any document or filter result to CSV and XLSX with a
-chosen column set, and shall import CSV/XLSX creating or updating items
-(matching on UID; assigning fresh UIDs to rows without one).
-`Priority: Must | Verification: Test | Traces: UR-0009, UR-0018 | Status: Approved`
+<!-- tl:item SR-0054 -->
+**SR-0054 — CSV/Excel round-trip** — `system_requirement`, status `approved`
 
-**SR-0055 — Canonical JSON export.**
-The Tool shall export the entire project (items, schema, links, baselines)
-as a single documented JSON structure for third-party tooling.
-`Priority: Must | Verification: Test | Traces: UR-0015 | Status: Approved`
+> The Tool shall export any document or filter result to CSV and XLSX and import CSV/XLSX, matching on UID and assigning fresh UIDs to rows without one.
 
-**SR-0056 — ReqIF exchange.**
-The Tool shall export documents to ReqIF (.reqif/.reqifz) preserving
-hierarchy, attributes, and links, and should import ReqIF including
-iterative re-import that preserves previously assigned UIDs via stored
-foreign IDs.
-`Priority: Should | Verification: Test | Traces: UR-0009 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0057 — Markdown export.**
-The Tool shall export each document as standalone Markdown (for wikis and
-code review).
-`Priority: Should | Verification: Test | Traces: UR-0008 | Status: Approved`
+<!-- tl:item SR-0055 -->
+**SR-0055 — Canonical JSON export** — `system_requirement`, status `approved`
+
+> The Tool shall export the entire project (items, schema, links, baselines) as a single documented JSON structure for third-party tooling.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0056 -->
+**SR-0056 — ReqIF exchange** — `system_requirement`, status `approved`
+
+> The Tool shall export documents to ReqIF preserving hierarchy, attributes, and links, and should import ReqIF including iterative re-import preserving UIDs via stored foreign IDs.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0057 -->
+**SR-0057 — Markdown export** — `system_requirement`, status `approved`
+
+> The Tool shall export each document as standalone Markdown (for wikis and code review).
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 9. Interfaces
 
-**SR-0060 — CLI.**
-The Tool shall expose all capabilities through a scriptable CLI (command
-sketch in doc 07 §6) with stable exit codes: 0 ok, 1 validation errors,
-2 usage/internal error.
-`Priority: Must | Verification: Test | Traces: UR-0016 | Status: Approved`
+<!-- tl:item SR-0060 -->
+**SR-0060 — CLI** — `system_requirement`, status `approved`
 
-**SR-0061 — Library API and self-hosting.**
-The Tool shall expose its core as a documented library API (load project,
-query, mutate, validate, publish), and the project shall manage its own
-requirements with itself.
-`Priority: Must | Verification: Inspection | Traces: UR-0015 | Status: Approved`
+> The Tool shall expose all capabilities through a scriptable CLI with stable exit codes: 0 ok, 1 validation errors, 2 usage/internal error.
 
-**SR-0062 — Source-code traceability scan.**
-The Tool could scan configured source trees for UID markers in comments
-(e.g. `# impl: REQ-0031`) and treat them as `implements` links for coverage.
-`Priority: Could | Verification: Test | Traces: UR-0019 | Status: Draft`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**SR-0063 — Local web viewer.**
-The Tool could serve the published site with live reload for authoring;
-editing via web UI is out of scope.
-`Priority: Could | Verification: Demonstration | Traces: UR-0020 | Status: Draft`
+<!-- tl:item SR-0061 -->
+**SR-0061 — Library API and self-hosting** — `system_requirement`, status `approved`
+
+> The Tool shall expose its core as a documented library API, and the project shall manage its own requirements with itself before 1.0.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item SR-0062 -->
+**SR-0062 — Source-code traceability scan** — `system_requirement`, status `deferred`
+
+> The Tool could scan configured source trees for UID markers in comments and treat them as implements links for coverage.
+
+**priority**: could · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0063 -->
+**SR-0063 — Local web viewer** — `system_requirement`, status `deferred`
+
+> The Tool could serve the published site with live reload for authoring; web-UI editing is out of scope for 1.0.
+
+**priority**: could · **verification**: demonstration
+<!-- tl:end -->
+
+<!-- tl:item SR-0074 -->
+**SR-0074 — CLI invocation must not silently collide with existing tools** — `system_requirement`, status `approved`
+
+> The Tool's installed command shall not silently shadow, or be shadowed by, a standard system utility of the same name (e.g. the POSIX 'rmt' tape tool). The Tool shall either ship a non-colliding invocation name, or detect the clash at install / first run and warn the user with remediation. A newcomer's first command must run the Tool, not an unrelated utility.
+
+**priority**: should · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item SR-0075 -->
+**SR-0075 — Contributor environment doctor** — `system_requirement`, status `approved`
+
+> The project shall provide a contributor setup/doctor script that verifies development prerequisites, runs the grounding gate, and can wire the local pre-commit grounding hook on request, reporting an actionable pass/fix status per check and exiting non-zero on failure. It is developer tooling maintained in the repository — not part of the shipped throughline package — and may therefore be environment-specific.
+
+**origin**: human · **priority**: should · **verification**: demonstration
+<!-- tl:end -->
+
+<!-- tl:item SR-0076 -->
+**SR-0076 — CLI version reporting** — `system_requirement`, status `approved`
+
+> The Tool's CLI shall report its own version via a --version flag, printing the installed package version and exiting 0, so users and CI can record which build produced a result (supports the SemVer compatibility surface, NFR-0011).
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
 
 ## 10. Configuration and extensibility
 
-**SR-0070 — Project configuration file.**
-The Tool shall read project settings (schema, link types, rules, publishing
-options) from a single versioned TOML file at the project root.
-`Priority: Must | Verification: Test | Traces: UR-0011 | Status: Approved`
+<!-- tl:item SR-0070 -->
+**SR-0070 — Project configuration file** — `system_requirement`, status `approved`
 
-**SR-0071 — Plugin points.**
-The Tool should define plugin interfaces for exporters, importers, and
-validation rules, discoverable without modifying core code.
-`Priority: Should | Verification: Test | Traces: UR-0015 | Status: Approved`
+> The Tool shall read project settings (schema, link types, rules, publishing options) from a single versioned TOML file at the project root.
 
-**SR-0072 — Deterministic file writes.**
-All Tool writes shall be deterministic and minimal-diff (stable key order,
-stable quoting, trailing newline, no timestamp churn) so that Git diffs show
-only real changes.
-`Priority: Must | Verification: Test | Traces: UR-0007, UR-0014 | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0071 -->
+**SR-0071 — Plugin points** — `system_requirement`, status `approved`
+
+> The Tool should define plugin interfaces for exporters, importers, and validation rules, discoverable without modifying core code.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0072 -->
+**SR-0072 — Deterministic file writes** — `system_requirement`, status `approved`
+
+> All Tool writes shall be deterministic and minimal-diff (stable key order, stable quoting, trailing newline, no timestamp churn) so Git diffs show only real changes.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+## 11. Grounding and intent-driven development
+
+<!-- tl:item SR-0073 -->
+**SR-0073 — Grounding-assisted authoring** — `system_requirement`, status `approved`
+
+> When creating a non-root item, the Tool should help the author attach it to a valid parent at creation time (offering the existing roots and grounding candidates to link against), so an item is grounded at birth rather than caught as an orphan by a later check. Interactive prompts are optional and non-blocking; the same operation stays scriptable via flags.
+
+**priority**: should · **verification**: demonstration
+<!-- tl:end -->
+
+<!-- tl:item SR-0091 -->
+**SR-0091 — Grounding flags must never fail silently** — `system_requirement`, status `approved`
+
+> When 'tl new' is invoked with a --ground flag, the Tool shall either attach the requested grounding link or, if it declines to add it, reject the command with a clear, actionable error. It shall never create the item while silently discarding the requested link — including for root-type sources, which may legitimately carry an explicit grounding link (e.g. a business_need that derives_from the vision). Rationale: a silently dropped grounding link yields an item the author believes is grounded but which surfaces only later as an orphan or unserved-root check failure — a fail-fast violation and a silent loss of authoring intent. Observed in throughline 0.1.0 (2026-07-10): 'tl new BN --ground INT-0001 --ground-type derives_from' created the business_need with no links block because the grounding block was skipped for root types, and the delivery-root intent then reported unserved-root under 'tl check'.
+
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: henry
+<!-- tl:end -->
+
+<!-- tl:item SR-0092 -->
+**SR-0092 — Unratified machine-origin items fail the gate** — `system_requirement`, status `ratified`
+
+> The Tool's check shall report an unratified finding for any item whose origin is in the configured machine-origin set (ai_origins) while its status is still proposed, so a machine-proposed item cannot pass the gate without human ratification.
+
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+<!-- tl:item SR-0097 -->
+**SR-0097 — non_goal root type** — `system_requirement`, status `ratified`
+
+> The Tool's default project scaffold shall include a non_goal root item type, self-justifying like other roots, and non_goals shall appear in the agent-facing context brief so deliberately-excluded scope is visible to humans and agents. The Tool shall not attempt to automatically detect items that violate a non_goal.
+
+*Rationale:* A non_goal is the negative space of the grounding layer — the object a human points at to reject a category of proposed scope with authority. Passive in this cut (documents and traces) because detecting a 'violation' of a non_goal is undecidable in general and would be scope creep.
+
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+<!-- tl:item SR-0098 -->
+**SR-0098 — Ratified_by records a genuine human identity** — `system_requirement`, status `ratified`
+
+> The identity recorded by ratify (the ratified_by value) shall be a genuine human identity supplied by the ratifying person. Project guidance for AI agents shall direct them, when the ratifier is unknown, to ask the user rather than invent, guess, or reuse a value seen elsewhere — a fabricated ratified_by is a false accountability record, the exact failure the grounding layer exists to prevent.
+
+*Rationale:* UR-0023 makes accountability rest with a person; that guarantee is only as good as the identity captured at ratification. The Tool cannot verify a name is real, so the control is a documented obligation on the human and their agents, reviewed rather than machine-checked. Named here so the AGENTS.md guidance has a requirement to trace to instead of living only as prose.
+
+**origin**: ai · **priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+## 12. Narrative documents and agent interfaces
+
+<!-- tl:item SR-0088 -->
+**SR-0088 — Generate an agent-facing project brief** — `system_requirement`, status `approved`
+
+> The Tool shall emit, as a single Markdown document on demand, a briefing that equips an AI coding agent to work in the project under its own rules — combining the fixed conceptual contract of Intent-Driven Development (author a grounded requirement as a draft "red test" first, implement it, flip it to approved, and keep `check` green; roots justify themselves while non-roots must reach a root through a grounding link; AI-origin items enter the proposed state and require human ratification), the on-disk YAML item format, and the commands the agent will use. The project-specific half — the declared item types and their attributes (kind, whether required, whether normative, and any enum values), which types are roots and delivery roots, the link vocabulary and its per-type endpoint rules, the status vocabulary and the permitted transitions, the grounding configuration and the AI origins, and any coverage rules — shall be rendered from the loaded schema rather than restated in code, so the brief cannot drift from the configuration the validator enforces and stays correct as that configuration changes. The brief shall also include a live snapshot of the current graph (item and link counts and the observed link shape) so the agent sees the project as it actually stands. The document shall be plain text, so it can be committed as an AGENTS-style file or piped straight into an agent's context.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0094 -->
+**SR-0094 — In-place marker injection** — `system_requirement`, status `ratified`
+
+> The Tool shall render item content into HTML-comment marker regions (tl:item / tl:table / tl:matrix ... tl:end) within existing Markdown files, overwriting only the marked regions and leaving all other content unchanged. Table and matrix directives shall select items using the SR-0045 filter grammar. Only these three directives shall be provided in this cut; other output formats are delegated to external tools (pandoc, mdBook).
+
+*Rationale:* Injecting item content into human-owned files (terraform-docs style) keeps the document valid Markdown that renders on GitHub and shows generated changes in the PR diff, and it removes the parallel hand-maintained artifact that caused the docs/referenced-resource drift. Supersedes the stdout whole-document render (SR-0089).
+
+**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+<!-- tl:item SR-0095 -->
+**SR-0095 — Document staleness gate (separate command)** — `system_requirement`, status `ratified`
+
+> The Tool shall provide a dedicated command that reports a document as stale when re-rendering its marker regions would change their content (write-then-diff), exiting non-zero so a drifted document fails a CI gate. This staleness check shall NOT run as part of tl check. The command shall be inert for files that contain no tl: markers.
+
+*Rationale:* Staleness is a publication-time concern, not an authoring-time one. Folding it into tl check would force every routine check to also reconcile docs, introducing friction in general use; keeping doc freshness a separate CI gate lets authors run tl check freely while CI still refuses to merge a drifted document.
+
+**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+<!-- tl:item SR-0096 -->
+**SR-0096 — Publication coverage (unpublished)** — `system_requirement`, status `ratified`
+
+> The Tool shall report, as unpublished, any normative item referenced by no published document, once published-document paths are configured. The finding shall default to warning severity and be inert when no document paths are configured.
+
+*Rationale:* The publication analogue of orphan — scope that cannot justify itself and also cannot hide from the reader. Doorstop, StrictDoc and Sphinx-Needs all transclude but none gate on it; this is the differentiator.
+
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
+<!-- tl:item SR-0099 -->
+**SR-0099 — Directional traceability matrix in documents** — `system_requirement`, status `ratified`
+
+> The tl:matrix document directive shall accept an optional <direction>:<link_type> selector (direction one of incoming or outgoing, reusing the coverage-rule grammar) preceding its filter. With a selector, each matching item is rendered as a row whose relationship column lists the items linked to it in that direction by that link type — so a document can render, for example, each user_requirement and the items that implement it (incoming:implements). With no selector the directive keeps its default behaviour (grounding trace plus verifying items). A relationship cell shall list only live items — an item that is rejected or deleted does not realize anything and shall be omitted (the terminal-status set is the same one the invalidate cascade uses). A malformed selector or filter fails injection rather than rendering silently wrong.
+
+*Rationale:* UR-0004 requires navigating links in both directions; the matrix could previously only render the outgoing side, so the classic UR-to-realizers coverage matrix (the artifact doc 08 maintains by hand) could not be generated from the graph. One reused selector grammar covers either direction without a new directive, keeping the injector's surface small (NG-0001).
+
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
