@@ -149,6 +149,9 @@ def _render_item(project, uid: str) -> str:
     if item.text:
         lines += [f"> {ln}" if ln else ">" for ln in item.text.splitlines()]
         lines.append("")
+    if item.rationale:
+        lines.append(f"*Rationale:* {' '.join(item.rationale.split())}")
+        lines.append("")
     if item.attrs:
         lines.append(" · ".join(f"**{k}**: {v}" for k, v in item.attrs.items()))
         lines.append("")

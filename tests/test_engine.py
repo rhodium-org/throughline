@@ -820,6 +820,7 @@ def _inject_project():
                   title="Ship value", text="The vision.")
     fr = Item(uid="FR-1", type="requirement", status="approved",
               title="Wizard", text="The system shall guide setup.\nIn three steps.",
+              rationale="Newcomers stall without guidance.",
               attrs={"priority": "must"},
               links=[Link(target="INT-1", type="derives_from")])
     tc = Item(uid="TC-1", type="requirement", status="approved", title="Setup test",
@@ -843,6 +844,7 @@ def test_inject_item_fills_only_the_marked_region():
     # the item content landed between the markers
     assert "**FR-1 — Wizard** — `requirement`, status `approved`" in out
     assert "> The system shall guide setup." in out
+    assert "*Rationale:* Newcomers stall without guidance." in out
     assert "**priority**: must" in out
 
 def test_inject_is_idempotent():
