@@ -645,7 +645,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0096 -->
 **SR-0096 — Publication coverage (unpublished)** — `system_requirement`, status `ratified`
 
-> The Tool shall report, as unpublished, any normative item referenced by no published document, once published-document paths are configured. The finding shall default to warning severity and be inert when no document paths are configured.
+> The Tool shall report, as unpublished, any live normative item referenced by no published document, once published-document paths are configured. The finding shall default to warning severity and be inert when no document paths are configured. A terminal-status item (rejected or deleted) is not live scope — it need never reach a reader — and shall be excluded from the rule, using the same terminal-status set as the invalidate cascade so "live" means one thing across the tool.
 
 *Rationale:* The publication analogue of orphan — scope that cannot justify itself and also cannot hide from the reader. Doorstop, StrictDoc and Sphinx-Needs all transclude but none gate on it; this is the differentiator.
 

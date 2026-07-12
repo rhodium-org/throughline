@@ -747,7 +747,11 @@ def _pub_project():
               normative=True, links=[Link(target="INT-1", type="derives_from")])
     note = Item(uid="FR-2", type="requirement", status="approved", title="Aside",
                 normative=False, links=[Link(target="INT-1", type="derives_from")])
-    return _project(_doc("INT", intent), _doc("FR", fr, note),
+    # A normative but rejected item — dead scope that need never reach a reader,
+    # so it must not be reported as unpublished (SR-0096 liveness clause).
+    dead = Item(uid="FR-3", type="requirement", status="rejected", title="Dropped",
+                normative=True, links=[Link(target="INT-1", type="derives_from")])
+    return _project(_doc("INT", intent), _doc("FR", fr, note, dead),
                     config={"grounding": {"root_types": ["intent"],
                                           "ground_link_types": ["derives_from"]}})
 
@@ -772,6 +776,14 @@ def test_unpublished_ignores_non_normative_items():
     flagged = {f.uid for f in findings if f.rule == "unpublished"}
     assert "FR-2" not in flagged     # non-normative
     assert {"INT-1", "FR-1"} <= flagged
+
+def test_unpublished_excludes_terminal_status_items():
+    """A rejected normative item is dead scope — it need never reach a reader —
+    so it is not reported as unpublished even when referenced nowhere (SR-0096)."""
+    findings = validate(_pub_project(), published=set())
+    flagged = {f.uid for f in findings if f.rule == "unpublished"}
+    assert "FR-3" not in flagged     # rejected → terminal status, excluded
+    assert "FR-1" in flagged         # a live normative item still is
 
 def test_unpublished_default_severity_is_warning():
     findings = validate(_pub_project(), published=set())

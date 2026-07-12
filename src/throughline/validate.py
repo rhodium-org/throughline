@@ -47,6 +47,11 @@ _DEFAULT_SEVERITY = {
     "unpublished": WARNING,
 }
 
+# Statuses that mean an item is no longer live scope — mirrors the invalidate
+# cascade (grounding.py) and the injector's liveness filter (inject.py) so
+# "live" means one thing across the tool (SR-0096, SR-0099).
+_TERMINAL_STATUSES = ("rejected", "deleted")
+
 
 def _file(item) -> str:
     return str(item._path) if item._path else ""
@@ -159,10 +164,15 @@ def validate(project, strict: bool = False,
             add("unratified", item.uid, f,
                 f"{item.attrs['origin']}-origin item awaiting human ratification")
 
-        # Publication coverage (SR-0096): a normative item referenced by no
+        # Publication coverage (SR-0096): a live normative item referenced by no
         # published document is scope that can justify itself but cannot reach
         # the reader. Inert (published is None) until [docs] paths are configured.
-        if published is not None and item.normative and item.uid not in published:
+        # A terminal-status item (rejected — deleted is already skipped above) is
+        # dead scope that need never reach a reader, so it is excluded, using the
+        # same terminal set as the invalidate cascade so "live" means one thing.
+        if (published is not None and item.normative
+                and item.status not in _TERMINAL_STATUSES
+                and item.uid not in published):
             add("unpublished", item.uid, f,
                 "normative item is referenced by no published document")
 
