@@ -1,0 +1,27 @@
+uid: SR-0099
+type: system_requirement
+status: ratified
+title: Directional traceability matrix in documents
+text: 'The tl:matrix document directive shall accept an optional
+  <direction>:<link_type> selector (direction one of incoming or outgoing, reusing
+  the coverage-rule grammar) preceding its filter. With a selector, each matching
+  item is rendered as a row whose relationship column lists the items linked to it
+  in that direction by that link type — so a document can render, for example,
+  each user_requirement and the items that implement it (incoming:implements). With
+  no selector the directive keeps its default behaviour (grounding trace plus
+  verifying items). A malformed selector or filter fails injection rather than
+  rendering silently wrong.'
+rationale: UR-0004 requires navigating links in both directions; the matrix could
+  previously only render the outgoing side, so the classic UR-to-realizers coverage
+  matrix (the artifact doc 08 maintains by hand) could not be generated from the
+  graph. One reused selector grammar covers either direction without a new
+  directive, keeping the injector's surface small (NG-0001).
+normative: true
+links:
+- target: UR-0004
+  type: implements
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

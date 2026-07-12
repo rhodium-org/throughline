@@ -1,42 +1,50 @@
 # 08 · Traceability and Verification Summary
 
-Forward trace: every UR maps to the SR/NFRs that implement it. (Backward
-trace is embedded in each SR/NFR's `Traces:` line.) This matrix is exactly
-the artifact SR-0051 will generate automatically once the tool self-hosts.
+Forward trace: every user requirement maps to the system requirements that
+`implements` it. The table below is **generated from the graph** by
+`tl docs` — it is not maintained by hand, so it cannot drift from the actual
+links. Regenerate it with `tl docs` and gate it in CI with `tl docs --check`
+(SR-0094, SR-0099). Backward trace (each SR up to its UR) is one `tl trace`
+away, and the whole graph is validated by `tl check --strict`.
 
-## UR → SR/NFR matrix
+## UR → realizing SR matrix
 
-| UR | Realized by |
-|---|---|
-| UR-0001 Stable identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008 |
-| UR-0002 Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0016 |
-| UR-0003 Version comparison | SR-0012, SR-0037 |
-| UR-0004 Traceability | SR-0030, SR-0031, SR-0032, SR-0051 |
-| UR-0005 Stale-link awareness | SR-0033, SR-0034 |
-| UR-0006 Review state | SR-0033, SR-0038 |
-| UR-0007 Plain text + Git | SR-0010, SR-0072, NFR-0012 |
-| UR-0008 Publishing | SR-0015, SR-0050, SR-0053, SR-0057, NFR-0015 |
-| UR-0009 Tool exchange | SR-0054, SR-0056 |
-| UR-0010 Search & filter | SR-0045, SR-0046 |
-| UR-0011 Custom data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0023, SR-0024, SR-0070 |
-| UR-0012 Coverage & impact | SR-0035, SR-0042, SR-0051, SR-0052 |
-| UR-0013 Baselines | SR-0036 |
-| UR-0014 Serverless collaboration | SR-0006, SR-0010, SR-0072 |
-| UR-0015 No lock-in | SR-0055, SR-0061, SR-0071, NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019 |
-| UR-0016 CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060 |
-| UR-0017 Quality support | SR-0043 |
-| UR-0018 Migration in | SR-0054 |
-| UR-0019 Code traceability | SR-0062 |
-| UR-0020 Newcomer-friendly | SR-0014, SR-0063, NFR-0005, NFR-0013 |
+<!-- tl:matrix incoming:implements type == 'user_requirement' -->
+| UID | Title | Implements (incoming) |
+|---|---|---|
+| UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008 |
+| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0016 |
+| UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
+| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099 |
+| UR-0005 | Stale-link awareness | SR-0033, SR-0034 |
+| UR-0006 | Review state | SR-0033, SR-0038 |
+| UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
+| UR-0008 | Stakeholder-quality publishing | NFR-0015, SR-0015, SR-0050, SR-0053, SR-0057, SR-0089 |
+| UR-0009 | Exchange with other tools | SR-0054, SR-0056 |
+| UR-0010 | Search and filter | SR-0045, SR-0046, SR-0079 |
+| UR-0011 | Project-specific data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0024, SR-0070, SR-0080, SR-0081, SR-0082, SR-0083, SR-0084 |
+| UR-0012 | Coverage and impact analysis | SR-0035, SR-0042, SR-0051, SR-0052, SR-0078, SR-0085, SR-0086, SR-0096 |
+| UR-0013 | Baselines | SR-0036, SR-0090 |
+| UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093 |
+| UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071 |
+| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076 |
+| UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091 |
+| UR-0018 | Migration path in | SR-0054 |
+| UR-0019 | Requirements-to-code traceability | SR-0062 |
+| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0063, SR-0074, SR-0077 |
+| UR-0021 | Verifiable development environment | SR-0075 |
+| UR-0022 | Comprehensible to AI agents | SR-0088 |
+| UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098 |
+| UR-0024 | Drift-free narrative documents | SR-0094, SR-0095 |
+| UR-0025 | Explicit non-goals as first-class items | SR-0097 |
+<!-- tl:end -->
 
-## Coverage check (manual, pre-self-hosting)
+## Coverage check
 
-- Every UR has ≥1 realizing SR/NFR: **yes (20/20)**.
-- Every non-retired SR traces to ≥1 UR: **yes** (see `Traces:` lines).
-- Retired IDs: **SR-0007** (tombstone retained; number reserved).
-- Unnumbered gaps present by design (e.g. SR-0009, SR-0017..19, SR-0025..29,
-  SR-0039, SR-0047..49, SR-0058..59, SR-0064..69): reserved headroom per
-  group — gaps carry no meaning.
+`tl check --strict` enforces this continuously: a user requirement that nothing
+`implements` is an `unserved-root`, and a system requirement that reaches no
+root is an `orphan` — either fails the build. Retired IDs keep their tombstones
+and their numbers are never reused; unnumbered gaps carry no meaning.
 
 ## Verification method distribution
 

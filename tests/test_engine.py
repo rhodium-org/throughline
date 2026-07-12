@@ -871,6 +871,30 @@ def test_inject_matrix_shows_trace_and_verification():
     assert "| UID | Title | Traces to | Verified by |" in out
     assert "| FR-1 | Wizard | INT-1 | TC-1 |" in out
 
+def test_inject_matrix_incoming_lists_realizers():
+    """SR-0099: incoming:<link_type> renders each match and the items that link
+    TO it in that direction — here each intent and what derives_from it."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix incoming:derives_from type == 'intent' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| UID | Title | Derives_from (incoming) |" in out
+    assert "| INT-1 | Ship value | FR-1 |" in out
+
+def test_inject_matrix_outgoing_selector_lists_targets():
+    """SR-0099: outgoing:<link_type> lists what each match links out to."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix outgoing:derives_from uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| UID | Title | Derives_from (outgoing) |" in out
+    assert "| FR-1 | Wizard | INT-1 |" in out
+
+def test_inject_matrix_incoming_empty_relationship_shows_dash():
+    """A match with no incoming link of that type renders an em dash, not blank."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix incoming:verifies type == 'intent' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| INT-1 | Ship value | — |" in out
+
 def test_inject_unknown_item_is_fatal():
     from throughline.inject import InjectError, inject_text
     with pytest.raises(InjectError):

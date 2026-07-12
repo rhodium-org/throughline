@@ -14,7 +14,10 @@ Three directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
 
     tl:item   <UID>     one item rendered as a block
     tl:table  <filter>  a table of items matching an SR-0045 filter
-    tl:matrix <filter>  a traceability matrix for matching items
+    tl:matrix [<dir>:<link_type>] <filter>  a traceability matrix for matching
+              items; an optional incoming:/outgoing:<link_type> selector renders
+              the items linked to each match in that direction (SR-0099), e.g.
+              ``tl:matrix incoming:implements type == 'user_requirement'``
 
 Anything richer (HTML, PDF, a whole book) is delegated to external tools
 (pandoc, mdBook) run over the injected files. Keeping the engine to these three
@@ -43,6 +46,19 @@ _BLOCK = re.compile(
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
 _OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix)\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
+
+# An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
+# the filter. Reuses the coverage-rule grammar so the language is identical.
+_MATRIX_REL = re.compile(r"^(incoming|outgoing):(\w+)\b\s*(.*)$", re.DOTALL)
+
+
+def _parse_matrix_arg(arg: str) -> tuple[str | None, str | None, str]:
+    """Split a tl:matrix argument into (direction, link_type, filter). Absent a
+    selector, direction and link_type are None and the whole arg is the filter."""
+    m = _MATRIX_REL.match(arg.strip())
+    if m:
+        return m.group(1), m.group(2), m.group(3).strip()
+    return None, None, arg.strip()
 
 
 class InjectError(ValueError):
@@ -80,8 +96,9 @@ def referenced_uids(project) -> set[str] | None:
                 if kind == "item":
                     refs.add(arg)
                 else:
+                    expr = _parse_matrix_arg(arg)[2] if kind == "matrix" else arg
                     try:
-                        refs.update(it.uid for it in _matching(project, arg))
+                        refs.update(it.uid for it in _matching(project, expr))
                     except InjectError:
                         continue
     return refs
@@ -166,12 +183,28 @@ def _render_table(project, expr: str) -> str:
     return "\n".join(out)
 
 
-def _render_matrix(project, expr: str) -> str:
-    """A traceability matrix: each matching item with what it grounds up to and
-    what verifies it, so the 'why' and the coverage read at a glance."""
+def _render_matrix(project, arg: str) -> str:
+    """A traceability matrix. Default form: each matching item with what it grounds
+    up to and what verifies it. With an incoming:/outgoing:<link_type> selector
+    (SR-0099): each matching item and the items linked to it in that direction —
+    e.g. incoming:implements over user_requirements lists each UR's realizers."""
+    direction, ltype, expr = _parse_matrix_arg(arg)
     idx = Index.build(project)
-    ground = project.schema.ground_link_types
     rows = _matching(project, expr)
+
+    if direction is not None:
+        header = f"{ltype.capitalize()} ({direction})"
+        out = [f"| UID | Title | {header} |", "|---|---|---|"]
+        for it in rows:
+            links = (idx.in_links(it.uid, {ltype}) if direction == "incoming"
+                     else idx.out_links(it.uid, {ltype}))
+            cells = ", ".join(u for u, _k in links) or "—"
+            out.append(f"| {it.uid} | {_cell(it.title or '')} | {cells} |")
+        if not rows:
+            out.append("| _(no matching items)_ |  |  |")
+        return "\n".join(out)
+
+    ground = project.schema.ground_link_types
     out = ["| UID | Title | Traces to | Verified by |", "|---|---|---|---|"]
     for it in rows:
         up = ", ".join(t for t, _k in idx.out_links(it.uid, ground)) or "—"
