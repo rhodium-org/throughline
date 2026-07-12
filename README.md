@@ -31,6 +31,23 @@ requirements, 06 data format, 07 architecture).
 
 ---
 
+## How it differs
+
+Doorstop, StrictDoc, and OpenFastTrack already do Git-native, plain-text
+requirements with permanent IDs and link-based traceability — and so does
+throughline's core. The difference is the **grounding layer**. Those tools trace
+links *once the items exist*; none of them gate on whether an item has any
+*reason* to exist, or on whether a machine-generated item has been signed off by
+a person. throughline makes both a build failure: an item that reaches no root
+is an `orphan`, a delivery root nobody serves is `unserved-root`, and an
+AI-`proposed` item stays `unratified` until a human ratifies it. That is the axis
+this tool adds — not "are the links well-formed?" but **"should this scope exist
+at all, and who took responsibility for it?"** It is why throughline is built for
+an age where a machine can generate a hundred plausible requirements an hour:
+generation is bounded by a ranked review queue instead of silent sprawl.
+
+---
+
 ## Install
 
 throughline is pure Python (one dependency, `pyyaml`) and needs **Python >= 3.11**
@@ -103,8 +120,8 @@ tl init [--name NAME]                         # scaffold a project
 tl doc new <PREFIX> <dir> [--parent P]        # add a document
 tl new <PREFIX> [--uid U] [--type T] [--ground UID]  # allocate + create (grounded at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
-throughline delete <UID> --reason "…"                  # tombstone (never erased)
-throughline review [<UID> | --all-clean]               # mark reviewed at current content
+tl delete <UID> --reason "…"                  # tombstone (never erased)
+tl review [<UID> | --all-clean]               # mark reviewed at current content
 tl check [--strict] [--format json]           # validate the graph — the CI gate
 tl trace <UID> [--direction in|out] [--depth N]
 tl blast <UID> [--format json]                # everything depending on an item
@@ -113,8 +130,11 @@ tl diagram [types|transitions|both]           # Mermaid of the model / lifecycle
 tl docs [--doc PREFIX] [--at REF]             # render a Markdown requirements document
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                    # a human takes accountability
-throughline invalidate <UID> --reason "…"              # falsify; cascade suspect
+tl invalidate <UID> --reason "…"              # falsify; cascade suspect
 ```
+
+> `tl` and `throughline` are the same command — `tl` is the short alias, and
+> every subcommand above works under either name.
 
 Exit codes are a stable contract: **0** ok · **1** findings at error severity ·
 **2** usage/internal error. So `tl check` drops straight into a pre-commit hook
