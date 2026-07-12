@@ -89,7 +89,7 @@ public** and it is explicitly designed for Git/SVN storage.
 | Baselining via Git; branch/merge collaboration documented | **Adopt** | Baselines as tags (SR-0036) |
 | Import: Word, Excel/CSV, ReqIF (iterative re-import preserving IDs) | **Adapt** | CSV/ReqIF; Word import out of scope (Pandoc) |
 | Export: DOCX, XLSX, PDF, HTML, CSV, ReqIF; custom Handlebars templates | **Adapt** | HTML/CSV/ReqIF/JSON; template engine optional |
-| Templates based on ISO/IEC/IEEE 29148 | **Adopt** | Ship starter document templates (SR-0014) |
+| Templates based on ISO/IEC/IEEE 29148 | **Adopt** | Ship starter register templates (SR-0014) |
 | Linked projects (cross-project requirement reuse) | **Exclude** | Out of scope |
 
 Sources: reqview.com/doc (Traceability Links, File Data Format, Export ReqIF,

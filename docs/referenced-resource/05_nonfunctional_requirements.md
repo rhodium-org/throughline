@@ -53,7 +53,7 @@ with `tl docs --check` (SR-0094).
 <!-- tl:item NFR-0006 -->
 **NFR-0006 — Reference scale** — `nfr`, status `approved`
 
-> On the reference project (10,000 items, 25 documents, 30,000 links) and reference hardware, the Tool shall complete: full check <=10 s, query <=1 s, full HTML publish <=60 s, incremental publish of one document <=5 s.
+> On the reference project (10,000 items, 25 registers, 30,000 links) and reference hardware, the Tool shall complete: full check <=10 s, query <=1 s, full HTML publish <=60 s, incremental publish of one document <=5 s.
 
 **priority**: must · **verification**: analysis
 <!-- tl:end -->

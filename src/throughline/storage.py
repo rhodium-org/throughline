@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Parser/Writer — the only module that touches disk (arch doc 07 §2).
 
-Loads a project (throughline.toml + per-document .document.yml + one <UID>.yml per
+Loads a project (throughline.toml + per-register .register.yml + one <UID>.yml per
 item) into the pure model, and writes items deterministically: stable key
 order, LF endings, UTF-8, final newline, no timestamp churn (SR-0072). Unknown
 keys survive read-modify-write (NFR-0009).
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import yaml
 
-from .model import Document, Item, Project
+from .model import Item, Link, Project, Register
 from .schema import SchemaError
 
 if sys.version_info >= (3, 11):
@@ -29,7 +29,7 @@ else:  # pragma: no cover
     import tomli as tomllib
 
 CONFIG_NAME = "throughline.toml"
-MANIFEST_NAME = ".document.yml"
+MANIFEST_NAME = ".register.yml"
 
 
 class ProjectError(Exception):
@@ -70,22 +70,31 @@ def load_project(path: str | Path) -> Project:
     except SchemaError as e:
         raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
     for manifest in sorted(root.rglob(MANIFEST_NAME)):
-        doc_dir = manifest.parent
+        reg_dir = manifest.parent
         raw = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
-        doc = Document.from_manifest(raw, path=doc_dir)
-        for item_file in sorted(doc_dir.glob("*.yml")):
+        reg = Register.from_manifest(raw, path=reg_dir)
+        if reg.prefix in project.registers:
+            # A second register folder claims a prefix already loaded. Keeping the
+            # first-seen register is deterministic (rglob is sorted); merging the
+            # duplicate's items would clobber UID numbering, so record the clash
+            # for `check` to fail on (SR-0101) and skip loading this folder.
+            conflict = project.prefix_conflicts.setdefault(
+                reg.prefix, [str(project.registers[reg.prefix].path)])
+            conflict.append(str(reg_dir))
+            continue
+        for item_file in sorted(reg_dir.glob("*.yml")):
             if item_file.name == MANIFEST_NAME:
                 continue
             d = yaml.safe_load(item_file.read_text(encoding="utf-8")) or {}
             item = Item.from_dict(d, path=item_file)
-            item._doc_prefix = doc.prefix
-            if item.uid in doc.items:
+            item._register_prefix = reg.prefix
+            if item.uid in reg.items:
                 # A second file in the same folder claims a UID already loaded.
                 # The dict overwrite below would silently drop the loser, so
                 # record it for `uid-collision` before it vanishes (SR-0006).
                 project.duplicate_uids.add(item.uid)
-            doc.items[item.uid] = item
-        project.documents[doc.prefix] = doc
+            reg.items[item.uid] = item
+        project.registers[reg.prefix] = reg
     return project
 
 
@@ -232,11 +241,11 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
 
 # ---------------------------------------------------------------------- write
 
-def write_item(item: Item, doc: Document | None = None) -> Path:
+def write_item(item: Item, reg: Register | None = None) -> Path:
     if item._path is None:
-        if doc is None or doc.path is None:
+        if reg is None or reg.path is None:
             raise ProjectError(f"cannot write {item.uid}: no path known")
-        item._path = doc.path / f"{item.uid}.yml"
+        item._path = reg.path / f"{item.uid}.yml"
     text = _dump_yaml(item.to_dict())
     if not text.endswith("\n"):
         text += "\n"
@@ -244,11 +253,11 @@ def write_item(item: Item, doc: Document | None = None) -> Path:
     return item._path
 
 
-def write_manifest(doc: Document) -> Path:
-    if doc.path is None:
-        raise ProjectError(f"document {doc.prefix} has no path")
-    path = doc.path / MANIFEST_NAME
-    text = _dump_yaml(doc.manifest_dict())
+def write_manifest(reg: Register) -> Path:
+    if reg.path is None:
+        raise ProjectError(f"register {reg.prefix} has no path")
+    path = reg.path / MANIFEST_NAME
+    text = _dump_yaml(reg.manifest_dict())
     path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
     return path
 
@@ -291,6 +300,7 @@ def init_project(
     path: str | Path,
     name: str = "Example",
     force: bool = False,
+    bare: bool = False,
     on_progress: Callable[[int], None] | None = None,
 ) -> Project:
     root = Path(path)
@@ -311,8 +321,87 @@ def init_project(
                 f"{root.resolve()} already contains a throughline project at "
                 f"{nested} — refusing to wrap it; pass --force to override"
             )
-    cfg.write_text(_DEFAULT_CONFIG.format(name=name), encoding="utf-8")
+    cfg_text = _DEFAULT_CONFIG.format(name=name)
+    # The seeded starter publishes through a document, so it needs [docs] wired;
+    # a --bare project ships only the schema (SR-0100).
+    if not bare:
+        cfg_text += _DOCS_CONFIG
+    cfg.write_text(cfg_text, encoding="utf-8")
+    if not bare:
+        _seed_starter(root, name)
     return load_project(root)
+
+
+def _seed_starter(root: Path, name: str) -> None:
+    """Seed a small, self-consistent example graph and one published document so a
+    fresh project passes ``tl check`` and renders content immediately, instead of
+    forcing the newcomer to reverse-engineer the schema (SR-0100). Everything
+    written here is ordinary project content the user may edit, move, or delete.
+
+    The graph exercises the shipped default configuration end to end: a root
+    intent, a requirement and a non-functional requirement grounded to it, a test
+    that verifies the requirement (satisfying the coverage rule), and a non-goal.
+    ``docs/overview.md`` carries tl:item / tl:table / tl:matrix regions and is
+    injected before return, so it ships already rendered."""
+    registers = [
+        Register(prefix="INT", title="Vision", path=root / "vision"),
+        Register(prefix="REQ", title="Requirements", path=root / "requirements"),
+        Register(prefix="NFR", title="Non-functional requirements",
+                 path=root / "nonfunctional"),
+        Register(prefix="NG", title="Non-goals", path=root / "non-goals"),
+        Register(prefix="TEST", title="Tests", path=root / "tests"),
+    ]
+    by_prefix = {r.prefix: r for r in registers}
+    for reg in registers:
+        reg.path.mkdir(parents=True, exist_ok=True)
+        write_manifest(reg)
+
+    items = [
+        Item(uid="INT-0001", type="intent", status="approved", normative=False,
+             title=f"Deliver {name}",
+             text="Describe the outcome this project exists to create. Every "
+                  "requirement below grounds back to this intent."),
+        Item(uid="REQ-0001", type="requirement", status="approved", normative=True,
+             title="First requirement",
+             text="State something the system shall do, then replace this with a "
+                  "real requirement.",
+             links=[Link(target="INT-0001", type="implements")],
+             attrs={"priority": "must", "origin": "human"}),
+        Item(uid="NFR-0001", type="nfr", status="approved", normative=True,
+             title="First quality attribute",
+             text="State a quality the system shall have (performance, security, "
+                  "usability), then replace this.",
+             links=[Link(target="INT-0001", type="implements")],
+             attrs={"origin": "human"}),
+        Item(uid="TEST-0001", type="test", status="approved", normative=False,
+             title="Verifies the first requirement",
+             text="Describe how REQ-0001 is checked. This verifies link satisfies "
+                  "the coverage rule declared in throughline.toml.",
+             links=[Link(target="REQ-0001", type="verifies")]),
+        Item(uid="NG-0001", type="non_goal", status="approved", normative=False,
+             title="First non-goal",
+             text="Record something deliberately out of scope, so nobody proposes "
+                  "it later. Non-goals are negative space; nothing grounds to them.",
+             attrs={"origin": "human"}),
+    ]
+    for item in items:
+        prefix = item.uid.split("-")[0]
+        item._register_prefix = prefix
+        write_item(item, by_prefix[prefix])
+
+    docs_dir = root / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    overview = docs_dir / "overview.md"
+    overview.write_text(_STARTER_OVERVIEW.format(name=name), encoding="utf-8")
+
+    # Ship the document already rendered, so `tl docs --check` is green on a fresh
+    # project and the newcomer sees content, not empty marker pairs (SR-0100).
+    from .inject import inject_text
+    project = load_project(root)
+    rendered = inject_text(project, overview.read_text(encoding="utf-8"))
+    if not rendered.endswith("\n"):
+        rendered += "\n"
+    overview.write_text(rendered, encoding="utf-8")
 
 
 _DEFAULT_CONFIG = '''\
@@ -379,4 +468,61 @@ rejected    = ["draft", "deleted"]
 filter = "type == 'requirement' and status != 'deleted'"
 needs = "incoming:verifies"
 severity = "warning"
+'''
+
+
+# Appended to the config only when init seeds a starter project (SR-0100). The
+# seeded example publishes through docs/overview.md, so publication coverage must
+# be on; a --bare project omits this and stays purely a schema.
+_DOCS_CONFIG = '''
+# Published documents (SR-0094 / SR-0096). `tl docs` injects item content into the
+# tl: marker regions in these files; `tl docs --check` gates their freshness in
+# CI. With paths set, `tl check` also flags any live normative item that no
+# published document references. Delete this section to turn publication off.
+[docs]
+paths = ["docs/*.md"]
+'''
+
+
+# The starter document seeded by init (SR-0100). Prose is hand-owned; the regions
+# between tl: markers are regenerated from the graph by `tl docs`. Injected once
+# at init time so the file ships already rendered.
+_STARTER_OVERVIEW = '''\
+# {name}
+
+Welcome to your new throughline project. This document mixes prose you own with
+regions generated from the requirements graph. Edit the prose freely; the marker
+regions (each a tl: opener paired with a tl:end line) are regenerated by
+`tl docs`, so change the underlying items (in `vision/`, `requirements/`, ...)
+rather than the generated text. Run `tl docs` after editing items, and `tl check`
+to validate the graph.
+
+Delete anything here you do not need — the starter is a runway, not a fixture.
+
+## Vision
+
+<!-- tl:item INT-0001 -->
+<!-- tl:end -->
+
+## Requirements
+
+<!-- tl:table type == 'requirement' -->
+<!-- tl:end -->
+
+## Non-functional requirements
+
+<!-- tl:table type == 'nfr' -->
+<!-- tl:end -->
+
+## Non-goals
+
+<!-- tl:table type == 'non_goal' -->
+<!-- tl:end -->
+
+## Traceability
+
+Each requirement, what it grounds up to, and what verifies it.
+
+<!-- tl:matrix type == 'requirement' -->
+<!-- tl:end -->
 '''

@@ -55,7 +55,7 @@ class Item:
     deleted: dict | None = None       # {date, reason} tombstone payload (SR-0012)
     extra: dict = field(default_factory=dict)
     _path: Path | None = None
-    _doc_prefix: str | None = None
+    _register_prefix: str | None = None
 
     @property
     def is_deleted(self) -> bool:
@@ -108,7 +108,11 @@ class Item:
 
 
 @dataclass
-class Document:
+class Register:
+    """A prefix-owning, numbered collection of items on disk (the folder with a
+    ``.register.yml`` manifest). A register owns a UID prefix and its numbering
+    (SR-0002); it is orthogonal to item *type*. Distinct from a published
+    *document* — the reader-facing Markdown that ``tl docs`` injects into."""
     prefix: str
     title: str = ""
     digits: int = 4
@@ -120,7 +124,7 @@ class Document:
     extra: dict = field(default_factory=dict)
 
     @classmethod
-    def from_manifest(cls, d: dict, path: Path | None = None) -> "Document":
+    def from_manifest(cls, d: dict, path: Path | None = None) -> "Register":
         known = {"prefix", "digits", "title", "parent", "reserved", "sections"}
         return cls(
             prefix=d["prefix"], title=d.get("title", ""),
@@ -147,13 +151,18 @@ class Document:
 class Project:
     path: Path
     config: dict = field(default_factory=dict)
-    documents: dict[str, Document] = field(default_factory=dict)
-    # UIDs seen more than once *within a single document folder* on disk. The
-    # per-document ``items`` dict folds duplicates into one entry, so a
+    registers: dict[str, Register] = field(default_factory=dict)
+    # UIDs seen more than once *within a single register folder* on disk. The
+    # per-register ``items`` dict folds duplicates into one entry, so a
     # same-folder merge clash (two files both declaring SR-0001) would be
     # silently lost; the loader records it here so ``uid.collisions()`` can
     # still surface it (SR-0006).
     duplicate_uids: set[str] = field(default_factory=set)
+    # Prefixes declared by more than one register folder on disk, mapped to every
+    # declaring directory. A prefix owns a UID namespace (SR-0002), so a shared
+    # prefix overlaps numbering and makes the loader drop one folder's items; the
+    # loader records the clash here so ``check`` can fail fast (SR-0101).
+    prefix_conflicts: dict[str, list[str]] = field(default_factory=dict)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -166,17 +175,17 @@ class Project:
         return self._schema
 
     def items(self):
-        for doc in self.documents.values():
-            yield from doc.items.values()
+        for reg in self.registers.values():
+            yield from reg.items.values()
 
     def get(self, uid: str) -> Item | None:
-        for doc in self.documents.values():
-            if uid in doc.items:
-                return doc.items[uid]
+        for reg in self.registers.values():
+            if uid in reg.items:
+                return reg.items[uid]
         return None
 
-    def document_of(self, uid: str) -> Document | None:
-        for doc in self.documents.values():
-            if uid in doc.items:
-                return doc
+    def register_of(self, uid: str) -> Register | None:
+        for reg in self.registers.values():
+            if uid in reg.items:
+                return reg
         return None

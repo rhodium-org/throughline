@@ -3,7 +3,7 @@ type: system_requirement
 status: approved
 title: Filter expression language
 text: The Tool shall provide one boolean filter language over attributes, tags, text,
-  status, type, document, and link predicates, usable identically in search, table
+  status, type, register, and link predicates, usable identically in search, table
   generation, exports, and coverage rules.
 normative: true
 links:

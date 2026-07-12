@@ -70,26 +70,26 @@ def scout_ingest(project, report: dict) -> dict:
 
     report = {proposed_roots:[{id,type,title,rationale}],
               ambiguities:[{id,reason}], coverage_gaps:[{root,detail}]}
-    Returns a summary and the Documents that changed (for write-back).
+    Returns a summary and the Registers that changed (for write-back).
     """
     summary = {"roots_proposed": [], "ambiguities_flagged": [], "gaps": [], "touched": set()}
 
-    # proposed roots need a home document; use the first doc whose prefix looks
-    # right, else the first document in the project.
+    # proposed roots need a home register; use the first register whose prefix
+    # looks right, else the first register in the project.
     for r in report.get("proposed_roots", []):
         if project.get(r["id"]) is not None:
             continue
-        doc = project.document_of(r["id"]) or next(iter(project.documents.values()), None)
-        if doc is None:
+        reg = project.register_of(r["id"]) or next(iter(project.registers.values()), None)
+        if reg is None:
             continue
         item = Item(uid=r["id"], type=r.get("type", "business_need"),
                     status="proposed", title=r.get("title", ""),
                     text=r.get("rationale", ""))
         item.attrs["origin"] = "ai"
-        item._doc_prefix = doc.prefix
-        doc.items[item.uid] = item
+        item._register_prefix = reg.prefix
+        reg.items[item.uid] = item
         summary["roots_proposed"].append(item.uid)
-        summary["touched"].add((doc.prefix, item.uid))
+        summary["touched"].add((reg.prefix, item.uid))
 
     for a in report.get("ambiguities", []):
         item = project.get(a["id"])
@@ -100,7 +100,7 @@ def scout_ingest(project, report: dict) -> dict:
         if item.status == "ratified":
             item.status = "suspect"
         summary["ambiguities_flagged"].append(item.uid)
-        summary["touched"].add((item._doc_prefix, item.uid))
+        summary["touched"].add((item._register_prefix, item.uid))
 
     for gap in report.get("coverage_gaps", []):
         summary["gaps"].append((gap.get("root"), gap.get("detail")))

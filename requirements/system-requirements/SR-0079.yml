@@ -3,7 +3,7 @@ type: system_requirement
 status: approved
 title: CLI query command
 text: The CLI shall provide a query command (alias ls) that lists the items matching
-  an SR-0045 filter expression over type, status, document, attributes, normative
+  an SR-0045 filter expression over type, status, register, attributes, normative
   flag, and text. It shall print each match as UID, type/status, and title, or emit
   the full items as JSON with --format json, and report the match count — so users
   can find requirements by attribute and status without external tools. A malformed

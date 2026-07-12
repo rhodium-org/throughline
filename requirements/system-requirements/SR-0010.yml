@@ -3,7 +3,7 @@ type: system_requirement
 status: approved
 title: One file per item
 text: The Tool shall store each item as one UTF-8 text file (YAML per doc 06), named
-  by its UID, inside its document's directory.
+  by its UID, inside its register's directory.
 normative: true
 links:
 - target: UR-0007

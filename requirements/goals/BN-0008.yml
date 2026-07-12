@@ -2,7 +2,7 @@ uid: BN-0008
 type: business_need
 status: approved
 title: Approachable
-text: Usable by a single engineer in minutes; scales to a regulated multi-document
+text: Usable by a single engineer in minutes; scales to a regulated multi-register
   project.
 normative: false
 links:

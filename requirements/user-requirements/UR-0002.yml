@@ -2,7 +2,7 @@ uid: UR-0002
 type: user_requirement
 status: approved
 title: Frictionless add/remove
-text: Users shall be able to add and remove requirements anywhere in a document without
+text: Users shall be able to add and remove requirements anywhere in a register without
   affecting the identifiers, links, or history of other requirements.
 normative: true
 links:

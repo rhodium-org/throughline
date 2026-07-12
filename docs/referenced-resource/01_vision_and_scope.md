@@ -28,7 +28,7 @@ and any two versions of the requirement set can be diffed meaningfully.
 ## 3. Goals
 
 - **G1 — Stable identity.** Immutable, never-reused requirement UIDs fully
-  decoupled from document position. (→ UR-0001, UR-0002)
+  decoupled from register position. (→ UR-0001, UR-0002)
 - **G2 — Plain text, Git native.** All data in human-readable text files that
   merge, branch, diff, and review like source code. (→ UR-0007)
 - **G3 — Traceability as a first-class feature.** Typed links, suspect-link
@@ -41,7 +41,7 @@ and any two versions of the requirement set can be diffed meaningfully.
   license; offline operation. (→ UR-0015)
 - **G7 — Automatable.** CLI + library API designed for CI gates. (→ UR-0016)
 - **G8 — Approachable.** Usable by a single engineer in minutes; scales to a
-  regulated multi-document project.
+  regulated multi-register project.
 
 ## 4. Non-goals (this scope)
 

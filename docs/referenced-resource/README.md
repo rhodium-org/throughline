@@ -37,7 +37,7 @@ status, priority, verification method, and trace links.
 - IDs are **never reused**. A withdrawn requirement keeps its ID with status
   `Retired` and a short tombstone note (see SR-0007 for a live example).
 - Gaps in the numbering are normal and carry no meaning.
-- Document position (section, order) carries **no meaning** for identity.
+- Register position (section, order) carries **no meaning** for identity.
 
 ### Requirement statements
 Statement keywords follow ISO/IEC/IEEE 29148 style:

@@ -12,9 +12,6 @@ certain links (e.g. every system requirement is verified by a test).
 **Derived (item)** — An item that does not trace to a parent requirement by
 design; exempt from "must have parent" coverage rules.
 
-**Document** — A named collection of items with one UID prefix, a manifest,
-and a place in the project tree. A *view* over items, not their identity.
-
 **EARS** — Easy Approach to Requirements Syntax; sentence patterns
 (ubiquitous, event-driven, state-driven, unwanted-behavior, optional) used
 as authoring templates by the lint feature (SR-0043).
@@ -31,7 +28,7 @@ or other typed object with a UID.
 **Link role / link type** — The semantic label on a link (refines, verifies,
 satisfies, implements, relates), configurable per project.
 
-**Manifest** — Per-document metadata file (`.document.yml`) holding prefix,
+**Manifest** — Per-register metadata file (`.register.yml`) holding prefix,
 ordering, sections, and reserved numbers.
 
 **Normative** — Content whose change is a real requirement change (statement
@@ -40,6 +37,9 @@ to ordering, status, or comments.
 
 **ReqIF** — Requirements Interchange Format, the OMG XML standard for
 lossless requirements exchange between RM tools (SR-0056).
+
+**Register** — A named collection of items with one UID prefix, a manifest,
+and a place in the project tree. A *view* over items, not their identity.
 
 **Reserved number** — A UID number recorded as used-forever (retired or
 manually blocked) so allocation can never reissue it.

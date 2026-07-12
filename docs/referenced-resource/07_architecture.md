@@ -10,7 +10,7 @@
 │  validate │ trace/impact │ diff/baseline │ query        │
 │  publish (HTML/MD/PDF) │ import/export (CSV/JSON/ReqIF) │
 ├────────────────────────────────────────────────────────┤
-│ Core model:  Project · Document · Item · Link · Schema │
+│ Core model:  Project · Register · Item · Link · Schema │
 │ Indexes:     UID map · link graph (fwd/back) · attrs   │
 ├────────────────────────────────────────────────────────┤
 │ Storage:  YAML item files · manifests · TOML config    │
@@ -42,10 +42,10 @@ validation rules attach via the plugin registry (SR-0071).
 
 ## 3. Key decision records
 
-**D1 — One file per item (vs one file per document).**
+**D1 — One file per item (vs one file per register).**
 Chosen: per item (Doorstop model). Merge conflicts localize to a single
 requirement; Git history and blame are per-requirement; renames are moves.
-Trade-off (StrictDoc argues the per-document side): whole-document reading
+Trade-off (StrictDoc argues the per-register side): whole-register reading
 order lives in metadata rather than file layout — mitigated by the manifest
 `sections` + `order` fields and by generated document views.
 
@@ -82,14 +82,14 @@ Suggested Python stack: `ruamel.yaml`, `tomllib`, `jinja2` (publish),
 
 Parse once → build indexes → all services query indexes. Cache parsed model
 keyed by (file mtime, size) under `.cache/` for incremental runs. Publishing
-renders per document, parallelizable. Benchmarks live in CI against a
+renders per register, parallelizable. Benchmarks live in CI against a
 generated 10k-item reference project (NFR-0006, NFR-0017).
 
 ## 6. CLI surface (sketch, binary name `rmt`)
 
 ```
 rmt init [--template 29148]
-rmt doc new <PREFIX> <path> [--parent PREFIX]
+rmt register new <PREFIX> <path> [--parent PREFIX]
 rmt new <PREFIX> [--uid SR-0107] [--edit]        # allocate + open $EDITOR
 rmt edit <UID> | rmt move <UID> <PREFIX> | rmt reorder <PREFIX>
 rmt delete <UID> --reason "…"                    # tombstone, never erase

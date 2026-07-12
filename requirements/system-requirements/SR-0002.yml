@@ -2,7 +2,7 @@ uid: SR-0002
 type: system_requirement
 status: approved
 title: UID format
-text: The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning document's
+text: The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning register's
   configured prefix and NUMBER is a zero-padded positive integer of configured width
   (default 4).
 rationale: A mandatory separator keeps UIDs unambiguous and sortable; grammar in

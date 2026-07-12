@@ -29,25 +29,25 @@ def format_uid(prefix: str, number: int, digits: int = 4) -> str:
     return f"{prefix}-{number:0{digits}d}"
 
 
-def used_numbers(document) -> set[int]:
-    """Every number that has ever been consumed for this document's prefix:
+def used_numbers(register) -> set[int]:
+    """Every number that has ever been consumed for this register's prefix:
     live items, tombstones (still on disk), and reserved (SR-0003)."""
-    nums = set(document.reserved)
-    for item in document.items.values():
+    nums = set(register.reserved)
+    for item in register.items.values():
         try:
             pfx, n = parse_uid(item.uid)
         except UidError:
             continue
-        if pfx == document.prefix:
+        if pfx == register.prefix:
             nums.add(n)
     return nums
 
 
-def next_uid(document) -> str:
-    """Allocate the next unused number for the document's prefix (SR-0005)."""
-    used = used_numbers(document)
+def next_uid(register) -> str:
+    """Allocate the next unused number for the register's prefix (SR-0005)."""
+    used = used_numbers(register)
     n = (max(used) + 1) if used else 1
-    return format_uid(document.prefix, n, document.digits)
+    return format_uid(register.prefix, n, register.digits)
 
 
 def collisions(project) -> list[str]:
@@ -56,7 +56,7 @@ def collisions(project) -> list[str]:
     for item in project.items():
         seen[item.uid] = seen.get(item.uid, 0) + 1
     cross_doc = {u for u, c in seen.items() if c > 1}
-    # Same-folder duplicates never reach ``project.items()`` — the per-document
+    # Same-folder duplicates never reach ``project.items()`` — the per-register
     # dict already collapsed them — so fold in what the loader recorded.
     same_folder = getattr(project, "duplicate_uids", set())
     return sorted(cross_doc | same_folder)

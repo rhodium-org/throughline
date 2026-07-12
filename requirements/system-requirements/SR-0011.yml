@@ -1,9 +1,9 @@
 uid: SR-0011
 type: system_requirement
 status: approved
-title: Document tree
-text: The Tool shall organize items into documents (a directory with a manifest defining
-  prefix, title, attribute schema, and ordering) and documents into a project tree
+title: Register tree
+text: The Tool shall organize items into registers (a directory with a manifest defining
+  prefix, title, attribute schema, and ordering) and registers into a project tree
   with declared parent relationships.
 normative: true
 links:

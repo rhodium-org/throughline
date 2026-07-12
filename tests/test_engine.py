@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from throughline import (
-    Document,
+    Register,
     Index,
     Item,
     Link,
@@ -36,17 +36,17 @@ SELFHOST = REPO / "requirements"
 
 # --------------------------------------------------------------------- helpers
 
-def _doc(prefix: str, *items: Item, digits: int = 4, reserved=None) -> Document:
-    d = Document(prefix=prefix, digits=digits, reserved=reserved or [])
+def _doc(prefix: str, *items: Item, digits: int = 4, reserved=None) -> Register:
+    d = Register(prefix=prefix, digits=digits, reserved=reserved or [])
     for it in items:
-        it._doc_prefix = prefix
+        it._register_prefix = prefix
         d.items[it.uid] = it
     return d
 
-def _project(*docs: Document, config: dict | None = None) -> Project:
+def _project(*docs: Register, config: dict | None = None) -> Project:
     p = Project(path=Path("/tmp/none"), config=config or {})
     for d in docs:
-        p.documents[d.prefix] = d
+        p.registers[d.prefix] = d
     return p
 
 def _rules(findings) -> set[tuple[str, str]]:
@@ -82,7 +82,7 @@ def test_collisions_detected_across_documents():
 
 
 def test_collisions_detected_within_a_folder_from_disk(tmp_path):
-    # Two files in the SAME document folder declaring the same UID — the exact
+    # Two files in the SAME register folder declaring the same UID — the exact
     # shape a real merge clash takes (both branches ran `tl new SR` and allocated
     # SR-0001). Must be caught on a disk load, not only when the collision is
     # constructed in memory: the loader used to fold them into one dict entry and
@@ -90,7 +90,7 @@ def test_collisions_detected_within_a_folder_from_disk(tmp_path):
     init_project(tmp_path, name="MC")
     doc_dir = tmp_path / "sr"
     doc_dir.mkdir()
-    write_manifest(Document(prefix="SR", path=doc_dir))
+    write_manifest(Register(prefix="SR", path=doc_dir))
     (doc_dir / "SR-0001.yml").write_text(
         "uid: SR-0001\ntype: requirement\ntitle: original\n"
         "text: The system shall foo.\n", encoding="utf-8")
@@ -127,15 +127,15 @@ def test_fingerprint_tracks_text_and_normative_attrs():
 
 def test_storage_roundtrip_preserves_unknown_keys(tmp_path):
     proj = init_project(tmp_path, name="RT")
-    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     it = Item.from_dict({"uid": "SR-0001", "type": "requirement",
                          "text": "hi", "x_custom": {"keep": 1}})
-    it._doc_prefix = "SR"
+    it._register_prefix = "SR"
     doc.items[it.uid] = it
     write_manifest(doc)
     write_item(it, doc)
-    proj.documents["SR"] = doc
+    proj.registers["SR"] = doc
     reloaded = load_project(tmp_path).get("SR-0001")
     assert reloaded is not None
     assert reloaded.extra.get("x_custom") == {"keep": 1}
@@ -150,7 +150,7 @@ def test_load_rejects_python_object_yaml_tags(tmp_path):
     init_project(tmp_path, name="SEC")
     doc_dir = tmp_path / "sr"
     doc_dir.mkdir()
-    (doc_dir / ".document.yml").write_text(
+    (doc_dir / ".register.yml").write_text(
         "prefix: SR\ndigits: 4\ntitle: S\n", encoding="utf-8")
     # apply os.system would run a command under an unsafe loader.
     (doc_dir / "SR-0001.yml").write_text(
@@ -166,12 +166,12 @@ def test_hostile_field_value_cannot_break_yaml_structure(tmp_path):
     sibling key) is emitted through the SafeDumper as data and round-trips as a
     single string — it cannot inject sibling keys or alter structure (NFR-0022)."""
     init_project(tmp_path, name="SEC")
-    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     hostile = "Bob\ninjected_admin: true\n- not: a list item\ntype: intent"
     it = Item.from_dict({"uid": "SR-0001", "type": "requirement", "title": "t",
                          "attrs": {"ratified_by": hostile}})
-    it._doc_prefix = "SR"
+    it._register_prefix = "SR"
     doc.items[it.uid] = it
     write_manifest(doc)
     write_item(it, doc)
@@ -190,7 +190,7 @@ def test_malformed_yaml_fails_fast(tmp_path):
     init_project(tmp_path, name="SEC")
     doc_dir = tmp_path / "sr"
     doc_dir.mkdir()
-    (doc_dir / ".document.yml").write_text(
+    (doc_dir / ".register.yml").write_text(
         "prefix: SR\ndigits: 4\ntitle: S\n", encoding="utf-8")
     (doc_dir / "SR-0001.yml").write_text(
         "uid: SR-0001\ntype: requirement\ntitle: \"unterminated\n", encoding="utf-8")
@@ -410,11 +410,11 @@ def test_baseline_statuses_reads_git_and_gates_check(tmp_path):
     # the scaffold ships a [transitions] table where draft may only go to
     # approved/deferred/rejected/deleted, so draft -> verified is illegal.
     init_project(tmp_path, name="TX")
-    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     write_manifest(doc)
     it = Item(uid="SR-0001", type="requirement", status="draft", text="x")
-    it._doc_prefix = "SR"
+    it._register_prefix = "SR"
     it._path = doc.path / "SR-0001.yml"
     write_item(it, doc)
 
@@ -447,11 +447,11 @@ def test_deleted_tombstone_flagged_against_baseline(tmp_path):
     guarantee (SR-0001) silently breaks. The gate must catch the vanished record."""
     import subprocess
     init_project(tmp_path, name="TS")
-    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     write_manifest(doc)
     it = Item(uid="SR-0001", type="requirement", status="deleted", text="x")
-    it._doc_prefix = "SR"
+    it._register_prefix = "SR"
     it._path = doc.path / "SR-0001.yml"
     write_item(it, doc)
 
@@ -484,11 +484,11 @@ def test_deleted_tombstone_scoped_to_own_project(tmp_path):
     main = tmp_path / "main"; other = tmp_path / "other"
     for root, name in ((main, "MAIN"), (other, "OTHER")):
         init_project(root, name=name)
-        doc = Document(prefix="SR", path=root / "sr")
+        doc = Register(prefix="SR", path=root / "sr")
         doc.path.mkdir()
         write_manifest(doc)
         it = Item(uid="SR-0001", type="requirement", status="deleted", text="x")
-        it._doc_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
+        it._register_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
         write_item(it, doc)
 
     git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
@@ -710,12 +710,12 @@ def test_load_project_at_ref_reproduces_committed_state(tmp_path):
     import subprocess
     from throughline.storage import load_project_at_ref
     init_project(tmp_path, name="TX")
-    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     write_manifest(doc)
     it = Item(uid="SR-0001", type="requirement", status="draft",
               title="Original", text="x")
-    it._doc_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
+    it._register_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
     write_item(it, doc)
 
     git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
@@ -1034,11 +1034,13 @@ from throughline.cli import main as _cli  # noqa: E402
 
 
 def _scaffold(tmp_path) -> Path:
-    """A minimal project with a root (INT) and a home for requirements (FR)."""
+    """A minimal project with a root (INT) and a home for requirements (FR). Uses
+    --bare so the test controls the whole graph rather than inheriting the seeded
+    starter (SR-0100)."""
     root = tmp_path / "proj"
-    assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
-    assert _cli(["-C", str(root), "doc", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", str(root), "doc", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "FR", "features"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     return root
@@ -1193,6 +1195,71 @@ def test_scaffold_ships_non_goal_root_type(tmp_path):
     assert "non_goal" in schema.types            # a first-class declared type
     assert "non_goal" in schema.root_types       # may exist ungrounded
     assert "non_goal" not in schema.delivery_roots  # passive: never 'unserved'
+
+
+def test_init_seeds_a_check_clean_starter_graph(tmp_path):
+    """By default init seeds a small grounded example so a fresh project passes
+    `tl check` and renders content immediately, instead of leaving the newcomer an
+    empty project to reverse-engineer from the schema (SR-0100)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "Widget"]) == 0
+    proj = load_project(root)
+    assert {it.uid for it in proj.items()} == {
+        "INT-0001", "REQ-0001", "NFR-0001", "TEST-0001", "NG-0001"}
+    # sound under the strictest gate, with no hand-fixing required
+    assert _cli(["-C", str(root), "check", "--strict", "--quiet"]) == 0
+    # and the published document ships already rendered, not as empty markers
+    overview = (root / "docs" / "overview.md").read_text(encoding="utf-8")
+    assert "**INT-0001 — Deliver Widget**" in overview
+    assert "| REQ-0001 | requirement |" in overview
+
+
+def test_init_seeded_docs_are_fresh(tmp_path):
+    """The seeded document is injected at init time, so `tl docs --check` — the CI
+    freshness gate — is green on a fresh project from minute one (SR-0100)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init"]) == 0
+    assert _cli(["-C", str(root), "docs", "--check"]) == 0
+
+
+def test_init_bare_writes_only_the_config(tmp_path):
+    """--bare suppresses the starter entirely: only throughline.toml is written,
+    with publication left off, for users who want an empty project (SR-0100)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    assert (root / "throughline.toml").exists()
+    assert list(load_project(root).items()) == []
+    assert not (root / "docs").exists()
+    assert "[docs]" not in (root / "throughline.toml").read_text(encoding="utf-8")
+
+
+def test_register_new_refuses_duplicate_prefix(tmp_path):
+    """A prefix owns a UID namespace and must be unique (SR-0101). `tl register
+    new` refuses a prefix another register already declares, exits with a usage
+    error, and writes nothing — rather than letting the loader silently drop one
+    register's items."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    # a second register reusing prefix SR into a different folder is refused
+    assert _cli(["-C", str(root), "register", "new", "SR", "system2"]) == 2  # USAGE
+    assert not (root / "system2" / ".register.yml").exists()   # nothing written
+
+
+def test_check_reports_prefix_collision_from_disk(tmp_path):
+    """The validation backstop for a clash introduced by a merge or hand edit
+    (SR-0101): two register folders on disk declaring the same prefix make the
+    loader keep only one, so `check` reports a prefix-collision error rather than
+    silently loading a graph missing items."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    for sub in ("a", "b"):
+        d = root / sub
+        d.mkdir()
+        write_manifest(Register(prefix="SR", path=d))
+    rules = {f.rule for f in validate(load_project(root))}
+    assert "prefix-collision" in rules
+    assert _cli(["-C", str(root), "check", "--quiet"]) == 1  # FINDINGS
 
 
 def test_init_refuses_to_nest_inside_existing_project(tmp_path):

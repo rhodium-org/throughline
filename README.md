@@ -88,8 +88,8 @@ docker run --rm -v "$PWD/my-project:/work" throughline -C /work check --strict
 
 ## The format
 
-A project is a directory: `throughline.toml` (config) + per-document folders, each
-with a `.document.yml` manifest and one `<UID>.yml` per item.
+A project is a directory: `throughline.toml` (config) + per-register folders, each
+with a `.register.yml` manifest and one `<UID>.yml` per item.
 
 ```yaml
 uid: FR-0022                 # permanent, immutable, never reused
@@ -122,7 +122,7 @@ detect items that "violate" a non-goal — that judgement stays with a human.
 
 ```
 tl init [--name NAME]                         # scaffold a project
-tl doc new <PREFIX> <dir> [--parent P]        # add a document
+tl register new <PREFIX> <dir> [--parent P]   # add a register
 tl new <PREFIX> [--uid U] [--type T] [--ground UID]  # allocate + create (grounded at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
 tl delete <UID> --reason "…"                  # tombstone (never erased)

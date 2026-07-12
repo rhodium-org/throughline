@@ -16,7 +16,7 @@ from .grounding import (
     ratify,
     reaches_root,
 )
-from .model import Document, Item, Link, Project
+from .model import Item, Link, Project, Register
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
 from .storage import ProjectError, init_project, load_project, write_item, write_manifest
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
@@ -25,7 +25,7 @@ from .validate import Finding, validate
 __version__ = "0.1.4"
 
 __all__ = [
-    "Document", "Item", "Link", "Project",
+    "Register", "Item", "Link", "Project",
     "load_project", "init_project", "write_item", "write_manifest", "ProjectError",
     "Index", "fingerprint",
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",

@@ -1,0 +1,28 @@
+uid: SR-0102
+type: system_requirement
+status: approved
+title: Register names the prefix-owning collection
+text: The tool shall name the prefix-owning, numbered collection of items a
+  "register" — the on-disk folder with a `.register.yml` manifest, created by
+  `tl register new`, that owns a UID prefix and its numbering (SR-0002) — and
+  shall reserve the word "document" for the reader-facing published Markdown that
+  `tl docs` injects graph content into (SR-0094). The two concepts shall not
+  share one word anywhere a user meets them; the CLI command, the model type, the
+  manifest filename, the query filter field, and the guides shall each name
+  exactly one of register or document per concept.
+rationale: The word document was overloaded — the `.document.yml` folder holds no
+  prose; it is a register of items under one prefix, while the readable documents
+  are the Markdown files publication injects into. The ambiguity was severe enough
+  that the authors themselves lost the thread, which is precisely the
+  comprehensibility failure UR-0020 and UR-0022 forbid. Naming each concept once
+  removes it.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+- target: UR-0022
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: inspection

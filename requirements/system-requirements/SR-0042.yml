@@ -3,7 +3,7 @@ type: system_requirement
 status: approved
 title: Coverage rules
 text: Projects shall be able to declare coverage rules of the form 'every item of
-  type/document X with status in S must have >=1 link of type T to document Y', which
+  type/register X with status in S must have >=1 link of type T to register Y', which
   check enforces.
 normative: true
 links:

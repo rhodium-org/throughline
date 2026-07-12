@@ -12,7 +12,7 @@ away, and the whole graph is validated by `tl check --strict`.
 <!-- tl:matrix incoming:implements type == 'user_requirement' -->
 | UID | Title | Implements (incoming) |
 |---|---|---|
-| UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008 |
+| UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101 |
 | UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0016 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099 |
@@ -31,9 +31,9 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091 |
 | UR-0018 | Migration path in | SR-0054 |
 | UR-0019 | Requirements-to-code traceability | SR-0062 |
-| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0063, SR-0074, SR-0077 |
+| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0063, SR-0074, SR-0077, SR-0100, SR-0102 |
 | UR-0021 | Verifiable development environment | SR-0075 |
-| UR-0022 | Comprehensible to AI agents | SR-0088 |
+| UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098 |
 | UR-0024 | Drift-free narrative documents | SR-0094, SR-0095 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |

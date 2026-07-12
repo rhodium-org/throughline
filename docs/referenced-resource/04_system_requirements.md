@@ -24,7 +24,7 @@ example of the tombstone convention.
 <!-- tl:item SR-0002 -->
 **SR-0002 — UID format** — `system_requirement`, status `approved`
 
-> The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning document's configured prefix and NUMBER is a zero-padded positive integer of configured width (default 4).
+> The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning register's configured prefix and NUMBER is a zero-padded positive integer of configured width (default 4).
 
 *Rationale:* A mandatory separator keeps UIDs unambiguous and sortable; grammar in doc 06 §3.
 
@@ -50,7 +50,7 @@ example of the tombstone convention.
 <!-- tl:item SR-0005 -->
 **SR-0005 — Automatic UID allocation** — `system_requirement`, status `approved`
 
-> On item creation the Tool shall allocate the next unused number for the document's prefix automatically, while also accepting an explicit unused UID.
+> On item creation the Tool shall allocate the next unused number for the register's prefix automatically, while also accepting an explicit unused UID.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -95,15 +95,15 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0010 -->
 **SR-0010 — One file per item** — `system_requirement`, status `approved`
 
-> The Tool shall store each item as one UTF-8 text file (YAML per doc 06), named by its UID, inside its document's directory.
+> The Tool shall store each item as one UTF-8 text file (YAML per doc 06), named by its UID, inside its register's directory.
 
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
 
 <!-- tl:item SR-0011 -->
-**SR-0011 — Document tree** — `system_requirement`, status `approved`
+**SR-0011 — Register tree** — `system_requirement`, status `approved`
 
-> The Tool shall organize items into documents (a directory with a manifest defining prefix, title, attribute schema, and ordering) and documents into a project tree with declared parent relationships.
+> The Tool shall organize items into registers (a directory with a manifest defining prefix, title, attribute schema, and ordering) and registers into a project tree with declared parent relationships.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -119,7 +119,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0013 -->
 **SR-0013 — Ordering as metadata** — `system_requirement`, status `approved`
 
-> The Tool shall represent presentation order with an explicit per-document ordering that can be edited freely without touching item identity or content fingerprints.
+> The Tool shall represent presentation order with an explicit per-register ordering that can be edited freely without touching item identity or content fingerprints.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -127,7 +127,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0014 -->
 **SR-0014 — Project initialization and templates** — `system_requirement`, status `approved`
 
-> The Tool shall provide an init operation creating a valid empty project, and should ship starter templates aligned with ISO/IEC/IEEE 29148 document types.
+> The Tool shall provide an init operation creating a valid empty project, and should ship starter templates aligned with ISO/IEC/IEEE 29148 register types.
 
 **priority**: must · **verification**: demonstration
 <!-- tl:end -->
@@ -141,9 +141,9 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0016 -->
-**SR-0016 — Move between documents** — `system_requirement`, status `approved`
+**SR-0016 — Move between registers** — `system_requirement`, status `approved`
 
-> The Tool shall support moving an item to another document; the moved item keeps its UID and the Tool records its new location.
+> The Tool shall support moving an item to another register; the moved item keeps its UID and the Tool records its new location.
 
 *Rationale:* Identity outranks tidy prefixes.
 
@@ -156,6 +156,36 @@ kept as a live example of the tombstone convention.)*
 > The init command shall report the created project's absolute path, and shall refuse to create a project that would nest with an existing one — whether an ancestor directory or a descendant directory already contains a throughline.toml — unless --force is given. On refusal it shall change nothing and exit with a usage error. While scanning descendants for existing projects, if the scan takes noticeable time it shall show live progress on an interactive terminal rather than appear to hang (actionable output, NFR-0014; no accidental broken layouts).
 
 **origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0100 -->
+**SR-0100 — Guided starter project on init** — `system_requirement`, status `approved`
+
+> The init command shall by default seed a small, self-consistent starter graph and a published document, so that a freshly initialised project passes `tl check` and renders content immediately rather than presenting an empty project the user must reverse-engineer from the schema. The starter shall exercise the shipped default configuration end to end — a root intent, a requirement and a non-functional requirement grounded to it, a test that verifies the requirement, and a non-goal — plus a docs/overview.md carrying tl:item, tl:table and tl:matrix regions with [docs] paths configured, so publication coverage is active and the document ships already rendered. A --bare flag shall suppress all seeded content and write only throughline.toml. Every seeded item, register, and published document is ordinary project content the user may freely edit, move, or delete; the starter is a runway, not a fixture.
+
+*Rationale:* An opinionated schema with no content makes a newcomer reverse-engineer the grounding model from configuration alone, which is exactly the friction UR-0020 forbids. Shipping a check-clean, already-rendered example turns the first minute into a working demonstration of grounding, injection, and publication coverage, and the --bare escape hatch keeps the empty-project workflow for those who want it.
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0101 -->
+**SR-0101 — Unique register prefixes** — `system_requirement`, status `approved`
+
+> Each register's UID prefix shall be unique across the project. The register new command shall refuse to create a register whose prefix another register already declares, changing nothing and exiting with a usage error; and validation shall report a prefix-collision error when two registers on disk declare the same prefix. A prefix names the register that owns a UID namespace (SR-0002), so if two registers share one their UID numbering overlaps and the loader would silently drop one register's items — a data-loss trap — therefore the clash shall fail fast rather than corrupt the graph. Registers remain orthogonal to item types (a register owns a prefix and numbering, not a type), so this rule constrains prefixes only and never restricts which item types a register may contain.
+
+*Rationale:* The loader keys registers by prefix, so a second register reusing a prefix silently clobbers the first and its items vanish from the graph while UID allocation collides — a corruption that undermines stable identity (UR-0001) invisibly. register new already guards one folder against a repeated manifest; extending that guard to prefixes, with a validation backstop for clashes introduced by a merge or a hand edit, closes the gap fail-fast.
+
+**origin**: human · **priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0102 -->
+**SR-0102 — Register names the prefix-owning collection** — `system_requirement`, status `approved`
+
+> The tool shall name the prefix-owning, numbered collection of items a "register" — the on-disk folder with a `.register.yml` manifest, created by `tl register new`, that owns a UID prefix and its numbering (SR-0002) — and shall reserve the word "document" for the reader-facing published Markdown that `tl docs` injects graph content into (SR-0094). The two concepts shall not share one word anywhere a user meets them; the CLI command, the model type, the manifest filename, the query filter field, and the guides shall each name exactly one of register or document per concept.
+
+*Rationale:* The word document was overloaded — the `.document.yml` folder holds no prose; it is a register of items under one prefix, while the readable documents are the Markdown files publication injects into. The ambiguity was severe enough that the authors themselves lost the thread, which is precisely the comprehensibility failure UR-0020 and UR-0022 forbid. Naming each concept once removes it.
+
+**origin**: human · **priority**: should · **verification**: inspection
 <!-- tl:end -->
 
 ## 3. Attributes and schema
@@ -171,7 +201,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0021 -->
 **SR-0021 — Item types** — `system_requirement`, status `approved`
 
-> The Tool shall support project-defined item types with per-type attribute schemas; UID prefixes remain per document, not per type.
+> The Tool shall support project-defined item types with per-type attribute schemas; UID prefixes remain per register, not per type.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -343,7 +373,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0042 -->
 **SR-0042 — Coverage rules** — `system_requirement`, status `approved`
 
-> Projects shall be able to declare coverage rules of the form 'every item of type/document X with status in S must have >=1 link of type T to document Y', which check enforces.
+> Projects shall be able to declare coverage rules of the form 'every item of type/register X with status in S must have >=1 link of type T to register Y', which check enforces.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -377,7 +407,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0045 -->
 **SR-0045 — Filter expression language** — `system_requirement`, status `approved`
 
-> The Tool shall provide one boolean filter language over attributes, tags, text, status, type, document, and link predicates, usable identically in search, table generation, exports, and coverage rules.
+> The Tool shall provide one boolean filter language over attributes, tags, text, status, type, register, and link predicates, usable identically in search, table generation, exports, and coverage rules.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -393,7 +423,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0079 -->
 **SR-0079 — CLI query command** — `system_requirement`, status `approved`
 
-> The CLI shall provide a query command (alias ls) that lists the items matching an SR-0045 filter expression over type, status, document, attributes, normative flag, and text. It shall print each match as UID, type/status, and title, or emit the full items as JSON with --format json, and report the match count — so users can find requirements by attribute and status without external tools. A malformed expression shall produce an actionable error and a usage exit code.
+> The CLI shall provide a query command (alias ls) that lists the items matching an SR-0045 filter expression over type, status, register, attributes, normative flag, and text. It shall print each match as UID, type/status, and title, or emit the full items as JSON with --format json, and report the match count — so users can find requirements by attribute and status without external tools. A malformed expression shall produce an actionable error and a usage exit code.
 
 **origin**: human · **priority**: should · **verification**: test
 <!-- tl:end -->
@@ -411,7 +441,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0051 -->
 **SR-0051 — Traceability views** — `system_requirement`, status `approved`
 
-> Publishing shall include generated traceability views: a table view, a traceability matrix between two documents/link types, and a link-graph export (DOT/Graphviz).
+> Publishing shall include generated traceability views: a table view, a traceability matrix between two registers/link types, and a link-graph export (DOT/Graphviz).
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -453,7 +483,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0054 -->
 **SR-0054 — CSV/Excel round-trip** — `system_requirement`, status `approved`
 
-> The Tool shall export any document or filter result to CSV and XLSX and import CSV/XLSX, matching on UID and assigning fresh UIDs to rows without one.
+> The Tool shall export any register or filter result to CSV and XLSX and import CSV/XLSX, matching on UID and assigning fresh UIDs to rows without one.
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -469,7 +499,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0056 -->
 **SR-0056 — ReqIF exchange** — `system_requirement`, status `approved`
 
-> The Tool shall export documents to ReqIF preserving hierarchy, attributes, and links, and should import ReqIF including iterative re-import preserving UIDs via stored foreign IDs.
+> The Tool shall export registers to ReqIF preserving hierarchy, attributes, and links, and should import ReqIF including iterative re-import preserving UIDs via stored foreign IDs.
 
 **priority**: should · **verification**: test
 <!-- tl:end -->
@@ -477,7 +507,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0057 -->
 **SR-0057 — Markdown export** — `system_requirement`, status `approved`
 
-> The Tool shall export each document as standalone Markdown (for wikis and code review).
+> The Tool shall export each register as standalone Markdown (for wikis and code review).
 
 **priority**: should · **verification**: test
 <!-- tl:end -->

@@ -2,7 +2,7 @@ uid: SR-0056
 type: system_requirement
 status: approved
 title: ReqIF exchange
-text: The Tool shall export documents to ReqIF preserving hierarchy, attributes,
+text: The Tool shall export registers to ReqIF preserving hierarchy, attributes,
   and links, and should import ReqIF including iterative re-import preserving UIDs
   via stored foreign IDs.
 normative: true

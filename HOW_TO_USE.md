@@ -1,8 +1,9 @@
 # How to use throughline
 
-A hands-on quick start. In about fifteen minutes you'll scaffold a project, add
-three linked requirements, watch the validator reject an ungrounded graph, fix
-it, and trace a requirement back to its reason for existing.
+A hands-on quick start. In about fifteen minutes you'll scaffold a project that
+is green from the first command, then build a graph by hand — watching the
+validator reject an ungrounded one, fixing it, and tracing a requirement back to
+its reason for existing.
 
 This guide documents what the tool does. If a capability isn't covered here,
 it isn't in the tool.
@@ -56,28 +57,86 @@ graph instead of silent scope sprawl.
 
 ---
 
-## 3. Quick start — from empty folder to grounded graph
+## 3. Quick start — a working project in one command
 
-Everything below is a real terminal session. Run it and you'll see the same
-output.
-
-### Scaffold a project
+`tl init` seeds a small, self-consistent example, so you start from a *green*
+graph instead of a blank folder:
 
 ```bash
 cd ~/my-project
-tl init --name "acme-app"        # writes ./throughline.toml
+tl init --name "acme-app"
 ```
 
-### Create a document folder per group of items
+```
+initialised throughline project at /home/you/my-project
+seeded a starter graph (INT/REQ/NFR/TEST/NG) and docs/overview.md — edit or delete freely; run `tl check` and `tl docs` to explore.
+```
+
+You now have a grounded graph and a rendered document:
+
+```
+my-project/
+├── throughline.toml            # the schema: roots, link types, statuses, rules
+├── vision/INT-0001.yml         # a root intent — the "why"
+├── requirements/REQ-0001.yml   # a requirement that implements the intent
+├── nonfunctional/NFR-0001.yml  # a quality attribute, also grounded to the intent
+├── tests/TEST-0001.yml         # a test that verifies the requirement
+├── non-goals/NG-0001.yml       # deliberately-excluded scope (negative space)
+└── docs/overview.md            # your prose + generated regions, already rendered
+```
+
+It passes the strictest gate out of the box:
 
 ```bash
-tl doc new INT vision   --title "Product vision"          # ./vision/.document.yml
-tl doc new BN  goals    --title "Business goals"          # ./goals/.document.yml
-tl doc new FR  features --title "Functional requirements" # ./features/.document.yml
+tl check --strict        # 0 error(s), 0 warning(s)  → exit 0
 ```
 
-A *document* is just a folder with a `.document.yml` manifest that owns a UID
-prefix (`INT`, `BN`, `FR`, …) and hands out sequential numbers.
+Trace the requirement up to its reason for existing:
+
+```bash
+tl trace REQ-0001
+```
+
+```
+REQ-0001  [requirement/approved] First requirement
+└─(implements) INT-0001  [intent/approved] Deliver acme-app
+```
+
+Open `docs/overview.md`: your prose surrounds generated regions — a vision block,
+requirement / non-goal tables, and a traceability matrix — that `tl docs` keeps
+in step with the graph. Edit an item, run `tl docs`, and the document updates in
+place; it can never silently drift (that is what `tl docs --check` gates in CI).
+
+Everything seeded is ordinary content: rename it, move it, delete what you don't
+need — the starter is a runway, not a fixture. Prefer to begin from nothing?
+`tl init --bare` writes only `throughline.toml`, which is exactly what the next
+section uses to teach the grounding layer.
+
+---
+
+## 4. Build a graph from scratch — the grounding lesson
+
+The fastest way to feel *why* the grounding layer matters is to build a graph by
+hand and watch `check` reject it before you ground it. Everything below is a real
+terminal session; run it and you'll see the same output.
+
+### Scaffold a bare project
+
+```bash
+cd ~/scratch-project
+tl init --name "acme-app" --bare   # writes only ./throughline.toml, no seed
+
+### Create a register (prefix-owning folder) per group of items
+
+```bash
+tl register new INT vision   --title "Product vision"          # ./vision/.register.yml
+tl register new BN  goals    --title "Business goals"          # ./goals/.register.yml
+tl register new FR  features --title "Functional requirements" # ./features/.register.yml
+```
+
+A *register* is just a folder with a `.register.yml` manifest that owns a UID
+prefix (`INT`, `BN`, `FR`, …) and hands out sequential numbers. (It is distinct
+from a *document* — the reader-facing Markdown that `tl docs` publishes into.)
 
 ### Add some items (UIDs are allocated for you)
 
@@ -133,7 +192,7 @@ tl link FR-0001 BN-0001  --type derives_from   # feature justifies itself to the
 ### The default config wants every requirement verified — add a test
 
 ```bash
-tl doc new TEST tests --title "Verification"
+tl register new TEST tests --title "Verification"
 tl new TEST --type test --title "Wizard completes in 3 steps"
 tl link TEST-0001 FR-0001 --type verifies
 ```
@@ -165,9 +224,9 @@ navigate. Commit the `.yml` files to Git like any other source.
 
 ---
 
-## 4. The file format
+## 5. The file format
 
-A project is a directory containing `throughline.toml` plus per-document folders.
+A project is a directory containing `throughline.toml` plus per-register folders.
 
 **An item** (`features/FR-0022.yml`):
 
@@ -189,7 +248,7 @@ attrs:
   verification: test
 ```
 
-**A document manifest** (`features/.document.yml`) records the prefix, the digit
+**A register manifest** (`features/.register.yml`) records the prefix, the digit
 width, and which UIDs have been handed out. You normally let the CLI maintain it.
 
 **The project config** (`throughline.toml`) declares which types are roots, which
@@ -199,11 +258,11 @@ default; edit it to fit your project.
 
 ---
 
-## 5. Command reference
+## 6. Command reference
 
 ```
-tl init [--name NAME]                          # scaffold a project
-tl doc new <PREFIX> <dir> [--parent P]         # add a document
+tl init [--name NAME] [--bare]                 # scaffold a project (--bare = config only, no seed)
+tl register new <PREFIX> <dir> [--parent P]    # add a register (prefix-owning collection)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID [--ground-type K]]  # allocate + create (ground at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]    # add a typed link
 throughline delete <UID> --reason "…"                   # tombstone (never erased)
@@ -243,7 +302,7 @@ promotes every warning to an error — use it in CI.
 
 ---
 
-## 6. Wire it into your pipeline
+## 7. Wire it into your pipeline
 
 **Pre-commit** (`.pre-commit-config.yaml`): a local hook running
 `tl -C <project> check --strict` so a broken graph can't be committed.
@@ -259,7 +318,7 @@ requirements](requirements) exactly this way.
 
 ---
 
-## 7. Not included
+## 8. Not included
 
 throughline is **M0 — Core**. `tl docs` **injects** graph content into the marked
 regions (`<!-- tl:item … -->` … `<!-- tl:end -->`) of your own Markdown files —

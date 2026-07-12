@@ -24,7 +24,7 @@ from .grounding import (
     reaches_root,
 )
 from .inject import InjectError, has_markers, inject_text, referenced_uids
-from .model import Document, Link
+from .model import Link, Register
 from .storage import (
     MANIFEST_NAME,
     ProjectError,
@@ -100,25 +100,39 @@ def cmd_init(args) -> int:
     progress = _ScanProgress()
     try:
         init_project(args.path, name=args.name, force=args.force,
-                     on_progress=progress)
+                     bare=args.bare, on_progress=progress)
     except ProjectError as e:
         progress.clear()
         return _err(str(e))
     progress.clear()
-    print(f"initialised throughline project at {Path(args.path).resolve()}")
+    root = Path(args.path).resolve()
+    print(f"initialised throughline project at {root}")
+    if not args.bare:
+        print("seeded a starter graph (INT/REQ/NFR/TEST/NG) and docs/overview.md — "
+              "edit or delete freely; run `tl check` and `tl docs` to explore.")
     return OK
 
 
-def cmd_doc_new(args) -> int:
+def cmd_register_new(args) -> int:
     root = Path(args.path)
-    doc_dir = root / args.dir
-    if (doc_dir / MANIFEST_NAME).exists():
-        return _err(f"{doc_dir} already has a {MANIFEST_NAME}")
-    doc_dir.mkdir(parents=True, exist_ok=True)
-    doc = Document(prefix=args.prefix, title=args.title or args.prefix,
-                   digits=args.digits, parent=args.parent, path=doc_dir)
-    write_manifest(doc)
-    print(f"created document {args.prefix} at {doc_dir}")
+    try:
+        project = load_project(root)
+    except ProjectError as e:
+        return _err(str(e))
+    # Prefixes own a UID namespace and must be unique across the project (SR-0101);
+    # a duplicate would make the loader silently drop one register's items.
+    existing = project.registers.get(args.prefix)
+    if existing is not None:
+        return _err(f"prefix '{args.prefix}' is already used by the register at "
+                    f"{existing.path} — prefixes must be unique across the project")
+    reg_dir = root / args.dir
+    if (reg_dir / MANIFEST_NAME).exists():
+        return _err(f"{reg_dir} already has a {MANIFEST_NAME}")
+    reg_dir.mkdir(parents=True, exist_ok=True)
+    reg = Register(prefix=args.prefix, title=args.title or args.prefix,
+                   digits=args.digits, parent=args.parent, path=reg_dir)
+    write_manifest(reg)
+    print(f"created register {args.prefix} at {reg_dir}")
     return OK
 
 
@@ -176,9 +190,9 @@ def cmd_new(args) -> int:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    doc = project.documents.get(args.prefix)
-    if doc is None:
-        return _err(f"no document with prefix '{args.prefix}' (run `tl doc new`)")
+    reg = project.registers.get(args.prefix)
+    if reg is None:
+        return _err(f"no register with prefix '{args.prefix}' (run `tl register new`)")
     if args.uid:
         try:
             pfx, _ = parse_uid(args.uid)
@@ -190,13 +204,13 @@ def cmd_new(args) -> int:
             return _err(f"{args.uid} already exists")
         uid = args.uid
     else:
-        uid = next_uid(doc)
+        uid = next_uid(reg)
     from .model import Item
     item = Item(uid=uid, type=args.type, status=args.status,
                 title=args.title or "", text=args.text or "")
     if args.origin:
         item.attrs["origin"] = args.origin
-    item._doc_prefix = doc.prefix
+    item._register_prefix = reg.prefix
 
     # Grounding-assisted authoring (SR-0073): attach a parent at birth so the
     # item is justified the moment it exists, rather than being created orphaned
@@ -223,8 +237,8 @@ def cmd_new(args) -> int:
     for target, ltype in grounds:
         item.links.append(Link(target=target, type=ltype))
 
-    doc.items[uid] = item
-    path = write_item(item, doc)
+    reg.items[uid] = item
+    path = write_item(item, reg)
     print(f"created {uid} -> {path}")
     for target, ltype in grounds:
         print(f"  grounded: {uid} --{ltype}--> {target}")
@@ -244,7 +258,7 @@ def cmd_link(args) -> int:
         return _err(f"target {args.dst} does not exist")
     stamp = fingerprint(dst, project.schema) if args.stamp else None
     src.links.append(Link(target=args.dst, type=args.type, stamp=stamp))
-    write_item(src, project.document_of(src.uid))
+    write_item(src, project.register_of(src.uid))
     print(f"linked {args.src} --{args.type}--> {args.dst}"
           + (" (stamped)" if stamp else ""))
     return OK
@@ -260,7 +274,7 @@ def cmd_delete(args) -> int:
         return _err(f"{args.uid} does not exist")
     item.status = "deleted"
     item.deleted = {"reason": args.reason or "unspecified"}
-    write_item(item, project.document_of(item.uid))
+    write_item(item, project.register_of(item.uid))
     print(f"tombstoned {args.uid} (UID retired, never reused)")
     return OK
 
@@ -280,7 +294,7 @@ def cmd_review(args) -> int:
         fp = fingerprint(item, project.schema)
         if item.reviewed != fp:
             item.reviewed = fp
-            write_item(item, project.document_of(item.uid))
+            write_item(item, project.register_of(item.uid))
             n += 1
     print(f"marked {n} item(s) reviewed at current content")
     return OK
@@ -679,8 +693,8 @@ def _ctx_coverage(schema) -> str:
 
 _CTX_FORMAT = (
     "## The on-disk format\n\n"
-    "A project is a directory: `throughline.toml` (config) + one folder per document, "
-    "each with a `.document.yml` manifest and one `<UID>.yml` per item. **An item "
+    "A project is a directory: `throughline.toml` (config) + one folder per register, "
+    "each with a `.register.yml` manifest and one `<UID>.yml` per item. **An item "
     "looks like this** (attributes under `attrs:` are the project-defined ones "
     "listed above for that type):\n\n"
     "```yaml\n"
@@ -851,7 +865,7 @@ def cmd_ratify(args) -> int:
         item = ratify(project, args.uid, by=args.by)
     except (ProjectError, GroundingError) as e:
         return _err(str(e))
-    write_item(item, project.document_of(item.uid))
+    write_item(item, project.register_of(item.uid))
     print(f"{args.uid} ratified by {args.by}")
     return OK
 
@@ -862,9 +876,9 @@ def cmd_invalidate(args) -> int:
         affected = invalidate(project, args.uid, reason=args.reason or "")
     except (ProjectError, GroundingError) as e:
         return _err(str(e))
-    write_item(project.get(args.uid), project.document_of(args.uid))
+    write_item(project.get(args.uid), project.register_of(args.uid))
     for uid in affected:
-        write_item(project.get(uid), project.document_of(uid))
+        write_item(project.get(uid), project.register_of(uid))
     print(f"{args.uid} invalidated; {len(affected)} dependent(s) marked suspect")
     for uid in affected:
         print(f"  {uid}")
@@ -883,17 +897,19 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--name", default="Example")
     s.add_argument("--force", action="store_true",
                    help="create even if nested inside an existing project")
+    s.add_argument("--bare", action="store_true",
+                   help="write only throughline.toml; skip the seeded starter graph")
     s.set_defaults(func=cmd_init)
 
-    s = sub.add_parser("doc", help="document operations")
-    dsub = s.add_subparsers(dest="doc_cmd", required=True)
-    d = dsub.add_parser("new", help="create a document/manifest")
+    s = sub.add_parser("register", help="register (prefix-owning collection) operations")
+    dsub = s.add_subparsers(dest="register_cmd", required=True)
+    d = dsub.add_parser("new", help="create a register/manifest")
     d.add_argument("prefix")
     d.add_argument("dir", help="directory (relative to project root)")
     d.add_argument("--title", default="")
     d.add_argument("--digits", type=int, default=4)
     d.add_argument("--parent", default=None)
-    d.set_defaults(func=cmd_doc_new)
+    d.set_defaults(func=cmd_register_new)
 
     s = sub.add_parser("new", help="allocate + create an item")
     s.add_argument("prefix")

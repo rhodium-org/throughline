@@ -12,7 +12,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:item UR-0001 -->
 **UR-0001 — Stable requirement identity** — `user_requirement`, status `approved`
 
-> Users shall be able to refer to any requirement by an identifier that never changes for the life of the project, regardless of edits to any document.
+> Users shall be able to refer to any requirement by an identifier that never changes for the life of the project, regardless of edits to any register.
 
 *Rationale:* The root pain point: positional numbering breaks every reference on insert/delete.
 
@@ -22,7 +22,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:item UR-0002 -->
 **UR-0002 — Frictionless add/remove** — `user_requirement`, status `approved`
 
-> Users shall be able to add and remove requirements anywhere in a document without affecting the identifiers, links, or history of other requirements.
+> Users shall be able to add and remove requirements anywhere in a register without affecting the identifiers, links, or history of other requirements.
 
 **priority**: must · **verification**: demonstration
 <!-- tl:end -->

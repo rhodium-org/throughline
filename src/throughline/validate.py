@@ -37,7 +37,8 @@ class Finding:
 
 # severities a project may override under [rules] (rule_name = "error"|"warning"|"off")
 _DEFAULT_SEVERITY = {
-    "uid-grammar": ERROR, "uid-collision": ERROR, "schema": ERROR,
+    "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
+    "schema": ERROR,
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
     "bad-link-target": ERROR, "bad-status": ERROR, "bad-transition": ERROR,
@@ -72,6 +73,14 @@ def validate(project, strict: bool = False,
     # UID collisions across the whole project (SR-0006).
     for uid in collisions(project):
         add("uid-collision", uid, "", "UID appears in more than one item (merge collision)")
+
+    # Prefix collisions (SR-0101): two register folders declaring the same prefix
+    # overlap a UID namespace, and the loader silently keeps only one — so the
+    # graph is missing items. Fail fast rather than corrupt identity (UR-0001).
+    for prefix, dirs in project.prefix_conflicts.items():
+        add("prefix-collision", prefix, dirs[-1],
+            f"prefix '{prefix}' is declared by {len(dirs)} registers "
+            f"({', '.join(dirs)}) — prefixes must be unique so UIDs stay unambiguous")
 
     # A tombstone is permanent (SR-0093): an item that was `deleted` at the
     # baseline but is now absent from the working tree means the record of a
@@ -235,7 +244,7 @@ def _filter_namespace(item) -> dict:
     """The one set of names an SR-0045 filter can reference. Shared by coverage
     rules and the `query` CLI so the language is identical in both."""
     return {
-        "type": item.type, "status": item.status, "doc": item._doc_prefix,
+        "type": item.type, "status": item.status, "register": item._register_prefix,
         "uid": item.uid, "derived": item.derived, "normative": item.normative,
         "title": item.title, "text": item.text, "rationale": item.rationale,
         "attrs": dict(item.attrs),  # e.g. attrs.get('priority') == 'must'

@@ -8,7 +8,7 @@ version: `1`.
 | Entity | Identity | Stored as |
 |---|---|---|
 | **Project** | root directory | `throughline.toml` at root |
-| **Document** | directory + `PREFIX` | directory containing `.document.yml` manifest |
+| **Register** | directory + `PREFIX` | directory containing `.register.yml` manifest |
 | **Item** (requirement, heading, test, …) | **UID**, immutable | one YAML file `<UID>.yml` |
 | **Link** | (source UID, target, type) | list entry inside the source item |
 | **Tombstone** | retired UID | retained item file with `status: deleted`, or stub |
@@ -21,12 +21,12 @@ project/
 ├─ throughline.toml               # project config: schema, link types, rules
 ├─ .baselines/
 │  └─ SRS-2.0.yml             # baseline manifest (UID → fingerprint map)
-├─ ur/                        # a document
-│  ├─ .document.yml           # prefix: UR, title, parent, order list
+├─ ur/                        # a register
+│  ├─ .register.yml           # prefix: UR, title, parent, order list
 │  ├─ UR-0001.yml
 │  └─ UR-0002.yml
 └─ srs/
-   ├─ .document.yml           # prefix: SR, parent: UR
+   ├─ .register.yml           # prefix: SR, parent: UR
    ├─ SR-0001.yml
    └─ SR-0007.yml             # tombstone (status: deleted/retired)
 ```
@@ -35,15 +35,15 @@ project/
 
 ```
 uid     = prefix "-" number
-prefix  = UPPER (UPPER | DIGIT){1,15}        ; ASCII, per document, unique in project
-number  = DIGIT{width}                       ; zero-padded, width per document (default 4);
+prefix  = UPPER (UPPER | DIGIT){1,15}        ; ASCII, per register, unique in project
+number  = DIGIT{width}                       ; zero-padded, width per register (default 4);
                                              ; numbers beyond width grow naturally (no rollover)
 ```
 Regex (width 4): `^[A-Z][A-Z0-9]{1,15}-[0-9]{4,}$`
 
 Allocation rule: next number = 1 + max(number ever used for prefix), where
 "ever used" includes deleted/retired items and the reserved list in the
-document manifest (enforces SR-0003).
+register manifest (enforces SR-0003).
 
 ## 4. Item file (YAML)
 
@@ -102,10 +102,10 @@ inline code, code blocks, ordered/unordered lists, tables (GFM), block
 quotes, images and links by relative path or URL. Raw HTML is ignored by
 publishers. `[[UID]]` is an inline cross-reference resolved at publish time.
 
-## 7. Document manifest
+## 7. Register manifest
 
 ```yaml
-# srs/.document.yml
+# srs/.register.yml
 prefix: SR
 digits: 4
 title: System Requirements
@@ -134,7 +134,7 @@ values = ["draft","approved","implemented","verified","rejected","deleted"]
 transitions = [["draft","approved"], ["approved","implemented"], ["implemented","verified"]]
 
 [rules]                       # coverage + lint severities (SR-0041/42/43)
-uncovered = [{filter = "type=='requirement' && doc=='SR' && status!='deleted'", needs = "incoming:verifies from TST", severity = "error"}]
+uncovered = [{filter = "type=='requirement' && register=='SR' && status!='deleted'", needs = "incoming:verifies from TST", severity = "error"}]
 vague_words = {severity = "warning", words = ["fast","user-friendly","etc"]}
 ```
 
@@ -157,7 +157,7 @@ as set/fingerprint comparison between two manifests or working state.
 
 ## 10. Canonical JSON export (shape)
 
-Single object: `{format_version, project, documents:[{prefix, manifest,
+Single object: `{format_version, project, registers:[{prefix, manifest,
 items:[…full item objects…]}], links_index, baselines}` — field names
 identical to the YAML keys (SR-0055). This is the interchange surface for
 third-party tools and the web viewer.

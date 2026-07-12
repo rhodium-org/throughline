@@ -3,7 +3,7 @@ type: user_requirement
 status: approved
 title: Stable requirement identity
 text: Users shall be able to refer to any requirement by an identifier that never
-  changes for the life of the project, regardless of edits to any document.
+  changes for the life of the project, regardless of edits to any register.
 rationale: 'The root pain point: positional numbering breaks every reference on insert/delete.'
 normative: true
 links:
