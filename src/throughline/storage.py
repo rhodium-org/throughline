@@ -97,7 +97,8 @@ def _gate_format_version(config: dict, root: Path) -> None:
     if disk < FORMAT_VERSION:
         raise ProjectError(
             f"{root / CONFIG_NAME} is at format version {disk}; this tl uses "
-            f"{FORMAT_VERSION} — run `tl migrate` to upgrade the project")
+            f"{FORMAT_VERSION} — run `tl migrate` to upgrade the project "
+            f"(a lossless, in-place rewrite)")
 
 
 def _migrate_1_to_2(root: Path) -> None:
