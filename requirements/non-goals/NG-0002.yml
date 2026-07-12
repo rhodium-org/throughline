@@ -1,0 +1,17 @@
+uid: NG-0002
+type: non_goal
+status: approved
+title: No separate documentation license
+text: 'throughline shall not maintain a separate or dual license for its
+  documentation. All artifacts in the repository — code, the specification under
+  docs/referenced-resource/, and the guides — ship under the single repository
+  license, Apache-2.0. The project deliberately does not adopt a distinct
+  documentation license (for example CC-BY-4.0).'
+rationale: An earlier draft suggested CC-BY-4.0 for the specification while the code
+  is Apache-2.0, which contradicted the single LICENSE/NOTICE the repository already
+  declares and forced readers to reason about which license applies to which file.
+  Recording a single-license stance as an explicit non-goal removes that ambiguity
+  and gives the license-alignment change a ratified intent to trace to.
+normative: true
+attrs:
+  origin: human

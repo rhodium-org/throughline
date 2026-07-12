@@ -81,7 +81,8 @@ and any two versions of the requirement set can be diffed meaningfully.
 - **Code license:** Apache-2.0 (recommended; MIT acceptable). Rationale:
   permissive licensing maximizes adoption incl. commercial users;
   Apache-2.0 adds an explicit patent grant. (NFR-0001)
-- **Spec/doc license:** CC-BY-4.0.
+- **Spec/doc license:** Apache-2.0 — the whole repository ships under a single
+  license; there is no separate documentation license (NG-0002).
 - **Contributions:** DCO sign-off; maintainer review via pull requests.
 - **Versioning:** Semantic Versioning for the tool; independent version
   number for the file-format schema (NFR-0010, NFR-0011).

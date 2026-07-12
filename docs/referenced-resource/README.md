@@ -1,7 +1,7 @@
 # Requirements Management Tool — Specification Set
 
-**Working codename:** `throughline` (replace with your chosen project name)
-**Spec version:** 0.1.0 · **Date:** 2026-07-08 · **License of these documents:** CC-BY-4.0 (suggested)
+**Project:** `throughline`
+**Spec version:** 0.1.0 · **Date:** 2026-07-08 · **License of these documents:** Apache-2.0 (single repository license — see NG-0002)
 
 This is a complete, buildable specification set for an open-source, plain-text,
 Git-native requirements management tool. Its features are distilled from the
