@@ -33,7 +33,7 @@ requirements, 06 data format, 07 architecture).
 
 ## How it differs
 
-Doorstop, StrictDoc, and OpenFastTrack already do Git-native, plain-text
+Doorstop, StrictDoc, and OpenFastTrace already do Git-native, plain-text
 requirements with permanent IDs and link-based traceability — and so does
 throughline's core. The difference is the **grounding layer**. Those tools trace
 links *once the items exist*; none of them gate on whether an item has any
