@@ -55,4 +55,8 @@ def collisions(project) -> list[str]:
     seen: dict[str, int] = {}
     for item in project.items():
         seen[item.uid] = seen.get(item.uid, 0) + 1
-    return sorted(u for u, c in seen.items() if c > 1)
+    cross_doc = {u for u, c in seen.items() if c > 1}
+    # Same-folder duplicates never reach ``project.items()`` — the per-document
+    # dict already collapsed them — so fold in what the loader recorded.
+    same_folder = getattr(project, "duplicate_uids", set())
+    return sorted(cross_doc | same_folder)

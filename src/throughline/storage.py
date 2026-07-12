@@ -79,6 +79,11 @@ def load_project(path: str | Path) -> Project:
             d = yaml.safe_load(item_file.read_text(encoding="utf-8")) or {}
             item = Item.from_dict(d, path=item_file)
             item._doc_prefix = doc.prefix
+            if item.uid in doc.items:
+                # A second file in the same folder claims a UID already loaded.
+                # The dict overwrite below would silently drop the loser, so
+                # record it for `uid-collision` before it vanishes (SR-0006).
+                project.duplicate_uids.add(item.uid)
             doc.items[item.uid] = item
         project.documents[doc.prefix] = doc
     return project

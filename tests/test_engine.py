@@ -81,6 +81,27 @@ def test_collisions_detected_across_documents():
     assert "SR-0001" in collisions(p)
 
 
+def test_collisions_detected_within_a_folder_from_disk(tmp_path):
+    # Two files in the SAME document folder declaring the same UID — the exact
+    # shape a real merge clash takes (both branches ran `tl new SR` and allocated
+    # SR-0001). Must be caught on a disk load, not only when the collision is
+    # constructed in memory: the loader used to fold them into one dict entry and
+    # silently drop the loser (SR-0006).
+    init_project(tmp_path, name="MC")
+    doc_dir = tmp_path / "sr"
+    doc_dir.mkdir()
+    write_manifest(Document(prefix="SR", path=doc_dir))
+    (doc_dir / "SR-0001.yml").write_text(
+        "uid: SR-0001\ntype: requirement\ntitle: original\n"
+        "text: The system shall foo.\n", encoding="utf-8")
+    (doc_dir / "SR-0001-copy.yml").write_text(
+        "uid: SR-0001\ntype: requirement\ntitle: EVIL TWIN\n"
+        "text: Something else entirely.\n", encoding="utf-8")
+    p = load_project(tmp_path)
+    assert "SR-0001" in collisions(p)
+    assert ("SR-0001", "uid-collision") in _rules(validate(p))
+
+
 # ----------------------------------------------------------------- fingerprint
 
 def test_fingerprint_ignores_status_title_order_links():

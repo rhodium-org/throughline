@@ -148,6 +148,12 @@ class Project:
     path: Path
     config: dict = field(default_factory=dict)
     documents: dict[str, Document] = field(default_factory=dict)
+    # UIDs seen more than once *within a single document folder* on disk. The
+    # per-document ``items`` dict folds duplicates into one entry, so a
+    # same-folder merge clash (two files both declaring SR-0001) would be
+    # silently lost; the loader records it here so ``uid.collisions()`` can
+    # still surface it (SR-0006).
+    duplicate_uids: set[str] = field(default_factory=set)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
