@@ -141,6 +141,63 @@ def test_storage_roundtrip_preserves_unknown_keys(tmp_path):
     assert reloaded.extra.get("x_custom") == {"keep": 1}
 
 
+# ------------------------------------------------- safe data handling (NFR-0022)
+
+def test_load_rejects_python_object_yaml_tags(tmp_path):
+    """A malicious project file using a !!python/... tag must not construct an
+    arbitrary object or execute code — the classic pyyaml deserialization RCE.
+    safe_load raises rather than honouring the tag (NFR-0022)."""
+    init_project(tmp_path, name="SEC")
+    doc_dir = tmp_path / "sr"
+    doc_dir.mkdir()
+    (doc_dir / ".document.yml").write_text(
+        "prefix: SR\ndigits: 4\ntitle: S\n", encoding="utf-8")
+    # apply os.system would run a command under an unsafe loader.
+    (doc_dir / "SR-0001.yml").write_text(
+        "uid: SR-0001\ntype: requirement\n"
+        "title: !!python/object/apply:os.system ['echo pwned']\n",
+        encoding="utf-8")
+    with pytest.raises(Exception):  # noqa: B017 - safe_load's ConstructorError
+        load_project(tmp_path)
+
+
+def test_hostile_field_value_cannot_break_yaml_structure(tmp_path):
+    """A field value crafted to look like YAML (newlines, colons, a forged
+    sibling key) is emitted through the SafeDumper as data and round-trips as a
+    single string — it cannot inject sibling keys or alter structure (NFR-0022)."""
+    init_project(tmp_path, name="SEC")
+    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc.path.mkdir()
+    hostile = "Bob\ninjected_admin: true\n- not: a list item\ntype: intent"
+    it = Item.from_dict({"uid": "SR-0001", "type": "requirement", "title": "t",
+                         "attrs": {"ratified_by": hostile}})
+    it._doc_prefix = "SR"
+    doc.items[it.uid] = it
+    write_manifest(doc)
+    write_item(it, doc)
+    reloaded = load_project(tmp_path).get("SR-0001")
+    assert reloaded is not None
+    # The whole hostile string survives as one value; no forged siblings appear.
+    assert reloaded.attrs["ratified_by"] == hostile
+    assert reloaded.type == "requirement"          # not flipped to 'intent'
+    assert "injected_admin" not in reloaded.attrs
+    assert "injected_admin" not in reloaded.extra
+
+
+def test_malformed_yaml_fails_fast(tmp_path):
+    """Broken YAML raises on load rather than being silently coerced or partially
+    applied (NFR-0022)."""
+    init_project(tmp_path, name="SEC")
+    doc_dir = tmp_path / "sr"
+    doc_dir.mkdir()
+    (doc_dir / ".document.yml").write_text(
+        "prefix: SR\ndigits: 4\ntitle: S\n", encoding="utf-8")
+    (doc_dir / "SR-0001.yml").write_text(
+        "uid: SR-0001\ntype: requirement\ntitle: \"unterminated\n", encoding="utf-8")
+    with pytest.raises(Exception):  # noqa: B017 - yaml.YAMLError
+        load_project(tmp_path)
+
+
 # -------------------------------------------------------------------- validate
 
 def _grounded_project(config=None):
