@@ -92,14 +92,19 @@ def load_project(path: str | Path) -> Project:
 # -------------------------------------------------------------- git baseline
 
 def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | None:
-    """Map ``uid -> status`` as each live item stood at git ``ref``, so a
-    status transition can be measured against the change actually being
-    committed (SR-0083).
+    """Map ``uid -> status`` as each item stood at git ``ref`` — the snapshot the
+    working tree is measured against.
 
-    Returns ``None`` — transition checking then silently no-ops — when the
-    project is not inside a git work tree or ``ref`` cannot be resolved. Items
-    absent at ``ref`` (newly added) are simply omitted: creation is not a
-    transition.
+    Two consumers read this: transition legality (SR-0083), which only looks up
+    items still present in the working tree, and tombstone permanence (SR-0093),
+    which needs items that existed at ``ref`` but are *gone* now — a UID whose
+    file was erased by a bad merge or a stray ``git rm``. So the map covers both
+    the current items' prior status and any file present at ``ref`` but absent
+    today.
+
+    Returns ``None`` — both checks then silently no-op — when the project is not
+    inside a git work tree or ``ref`` cannot be resolved. Items absent at ``ref``
+    (newly added) are simply omitted: creation is not a transition.
     """
     root = Path(project.path).resolve()
     try:
@@ -134,6 +139,43 @@ def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | N
         status = data.get("status")
         if isinstance(status, str):
             out[item.uid] = status
+
+    # Files that existed at `ref` but are gone from the working tree now. No
+    # current item carries their status, so a transition can't be measured — but
+    # a vanished tombstone must still reach the gate (SR-0093). Read their status
+    # straight from the tree.
+    present = {i._path.resolve() for i in project.items() if i._path is not None}
+    # Scope the scan to this project's own subtree: a project may be a
+    # subdirectory of a larger repo (e.g. examples/ alongside the self-host
+    # graph), and a tombstone in a *sibling* project must not be read as this
+    # project's erased record.
+    try:
+        proj_rel = root.relative_to(top)
+        prefix = "" if proj_rel == Path(".") else proj_rel.as_posix() + "/"
+    except ValueError:
+        prefix = ""
+    try:
+        tree = subprocess.run(
+            ["git", "-C", str(top), "ls-tree", "-r", "--name-only", ref,
+             "--", prefix or "."],
+            capture_output=True, text=True, check=True).stdout.splitlines()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        tree = []
+    for rel in tree:
+        if not rel.endswith(".yml") or Path(rel).name == MANIFEST_NAME:
+            continue
+        if (top / rel).resolve() in present:
+            continue  # a current item — already handled above
+        try:
+            blob = subprocess.run(
+                ["git", "-C", str(top), "show", f"{ref}:{rel}"],
+                capture_output=True, text=True, check=True).stdout
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            continue
+        data = yaml.safe_load(blob) or {}
+        uid, status = data.get("uid"), data.get("status")
+        if isinstance(uid, str) and isinstance(status, str):
+            out.setdefault(uid, status)
     return out
 
 

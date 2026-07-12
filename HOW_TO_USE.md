@@ -226,6 +226,7 @@ throughline invalidate <UID> --reason "…"               # falsify; cascade sus
 | `grounding-cycle` | circular justification |
 | `dangling-link` / `deleted-link-target` | link to a missing / tombstoned item |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (a merge clash) |
+| `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
 | `schema` | missing required attribute or out-of-enum value |
 | `suspect-link` | a link's target changed since it was last confirmed |
 | `unreviewed` | item content changed since last review |

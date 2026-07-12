@@ -41,7 +41,7 @@ _DEFAULT_SEVERITY = {
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
     "bad-link-target": ERROR, "bad-status": ERROR, "bad-transition": ERROR,
-    "bad-link-shape": ERROR,
+    "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
 }
@@ -65,6 +65,17 @@ def validate(project, strict: bool = False,
     # UID collisions across the whole project (SR-0006).
     for uid in collisions(project):
         add("uid-collision", uid, "", "UID appears in more than one item (merge collision)")
+
+    # A tombstone is permanent (SR-0093): an item that was `deleted` at the
+    # baseline but is now absent from the working tree means the record of a
+    # retired UID has been erased — a bad merge or a stray `git rm`. The vanished
+    # item never appears in project.items(), so catch it here off the baseline.
+    if baseline is not None:
+        for uid, prev in baseline.items():
+            if prev == "deleted" and project.get(uid) is None:
+                add("tombstone-deleted", uid, "",
+                    "tombstone erased: this UID was retired but its record is gone "
+                    "(a UID's death record must never be removed)")
 
     ground_kinds = schema.ground_link_types
     cycle_types = ground_kinds | {"refines"}

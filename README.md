@@ -131,6 +131,7 @@ Upward and downward coverage are independent and both matter:
 | `grounding-cycle` | circular justification |
 | `dangling-link` / `deleted-link-target` | link to a missing/tombstoned item |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (merge) |
+| `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
 | `schema` | missing required attr or out-of-enum value |
 | `suspect-link` | target changed since the link was last confirmed |
 | `unreviewed` | item content changed since last review |

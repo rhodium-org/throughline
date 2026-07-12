@@ -383,6 +383,74 @@ def test_baseline_statuses_none_outside_git(tmp_path):
     assert baseline_statuses(proj, "HEAD") is None
 
 
+def test_deleted_tombstone_flagged_against_baseline(tmp_path):
+    """A tombstone is the permanent record that a UID was retired (SR-0093). If a
+    bad merge or a stray `git rm` erases the file, the committed status was
+    `deleted` but the item is gone from the working tree — the never-reused
+    guarantee (SR-0001) silently breaks. The gate must catch the vanished record."""
+    import subprocess
+    init_project(tmp_path, name="TS")
+    doc = Document(prefix="SR", path=tmp_path / "sr")
+    doc.path.mkdir()
+    write_manifest(doc)
+    it = Item(uid="SR-0001", type="requirement", status="deleted", text="x")
+    it._doc_prefix = "SR"
+    it._path = doc.path / "SR-0001.yml"
+    write_item(it, doc)
+
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
+                                    capture_output=True, check=True)
+    git("init")
+    git("config", "user.email", "t@t"); git("config", "user.name", "t")
+    git("add", "-A"); git("commit", "-m", "seed tombstone")
+
+    # tombstone present in the working tree: no finding
+    p1 = load_project(tmp_path)
+    assert ("SR-0001", "tombstone-deleted") not in _rules(
+        validate(p1, baseline=baseline_statuses(p1, "HEAD")))
+
+    # erase the tombstone file behind the tool's back
+    (doc.path / "SR-0001.yml").unlink()
+    p2 = load_project(tmp_path)
+    findings = validate(p2, baseline=baseline_statuses(p2, "HEAD"))
+    assert ("SR-0001", "tombstone-deleted") in _rules(findings)
+    # with no git baseline there is nothing to measure against — no false positive
+    assert ("SR-0001", "tombstone-deleted") not in _rules(validate(p2, baseline=None))
+
+
+def test_deleted_tombstone_scoped_to_own_project(tmp_path):
+    """A project may sit in a subdirectory of a larger repo (the self-host graph
+    ships next to example projects). A deleted tombstone in a *sibling* project
+    must not be read as this project's erased record (SR-0093) — the baseline
+    scan is scoped to the project's own subtree, not the whole git tree."""
+    import subprocess
+    main = tmp_path / "main"; other = tmp_path / "other"
+    for root, name in ((main, "MAIN"), (other, "OTHER")):
+        init_project(root, name=name)
+        doc = Document(prefix="SR", path=root / "sr")
+        doc.path.mkdir()
+        write_manifest(doc)
+        it = Item(uid="SR-0001", type="requirement", status="deleted", text="x")
+        it._doc_prefix = "SR"; it._path = doc.path / "SR-0001.yml"
+        write_item(it, doc)
+
+    git = lambda *a: subprocess.run(["git", "-C", str(tmp_path), *a],
+                                    capture_output=True, check=True)
+    git("init")
+    git("config", "user.email", "t@t"); git("config", "user.name", "t")
+    git("add", "-A"); git("commit", "-m", "two sibling projects")
+
+    # erase OTHER's tombstone, then check MAIN: MAIN must stay clean
+    (other / "sr" / "SR-0001.yml").unlink()
+    pm = load_project(main)
+    assert ("SR-0001", "tombstone-deleted") not in _rules(
+        validate(pm, baseline=baseline_statuses(pm, "HEAD")))
+    # OTHER itself still catches its own erased tombstone
+    po = load_project(other)
+    assert ("SR-0001", "tombstone-deleted") in _rules(
+        validate(po, baseline=baseline_statuses(po, "HEAD")))
+
+
 # --------------------------------------------------------------- link_rules
 
 def test_link_allowed_semantics():
