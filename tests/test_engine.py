@@ -622,6 +622,29 @@ def test_context_includes_live_snapshot():
     assert "-[derives_from]->" in doc      # observed link shape line
 
 
+def test_context_surfaces_non_goals(tmp_path):
+    """SR-0097: deliberately-excluded scope must be visible to agents, so every
+    live `non_goal` item is listed in the context brief by title and text."""
+    from throughline.cli import _context_markdown
+    ng = Item(uid="NG-1", type="non_goal", title="No editing surface",
+              text="throughline shall not become a document editor.")
+    doc = _context_markdown(_project(_doc("NG", ng),
+                                     config={"links": {"types": ["derives_from"]},
+                                             "grounding": {
+                                                 "root_types": ["non_goal"],
+                                                 "ground_link_types": ["derives_from"]}}))
+    assert "Non-goal" in doc
+    assert "No editing surface" in doc
+    assert "not become a document editor" in doc
+
+
+def test_context_omits_non_goal_section_when_none(tmp_path):
+    """The non-goals section is absent when a project declares none, so projects
+    not using them see no change (parallels the passive framing of SR-0097)."""
+    doc = _ctx()  # fixture has no non_goal items
+    assert "## Non-goals" not in doc
+
+
 # ---------------------------------------------------------- docs (SR-0089/0090)
 
 def _docs_project():
@@ -853,6 +876,19 @@ def test_init_reports_absolute_path(tmp_path, capsys):
     assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
     out = capsys.readouterr().out
     assert str(root.resolve()) in out
+
+
+def test_scaffold_ships_non_goal_root_type(tmp_path):
+    """SR-0097: the default scaffold declares a `non_goal` type that is a root
+    (self-justifying, may be ungrounded) but NOT a delivery root — a non-goal is
+    negative space, so nothing needs to derive from it and check must not flag it
+    unserved."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
+    schema = load_project(root).schema
+    assert "non_goal" in schema.types            # a first-class declared type
+    assert "non_goal" in schema.root_types       # may exist ungrounded
+    assert "non_goal" not in schema.delivery_roots  # passive: never 'unserved'
 
 
 def test_init_refuses_to_nest_inside_existing_project(tmp_path):

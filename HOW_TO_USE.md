@@ -39,8 +39,10 @@ docker run --rm -v "$PWD/my-project:/work" throughline -C /work check --strict
 
 - Every requirement is **one small YAML file** with a permanent UID (e.g.
   `FR-0001`). The files are the product; they live in your Git repo.
-- **Roots** — `intent`, `business_need`, `risk`, `constraint`, `assumption` — are
-  the "why". They may exist on their own.
+- **Roots** — `intent`, `business_need`, `risk`, `constraint`, `assumption`,
+  `non_goal` — are the "why". They may exist on their own. A **`non_goal`** records
+  deliberately-excluded scope (it surfaces in `tl context`); it is a root but not a
+  *delivery* root, so nothing has to derive from it.
 - **Everything else must justify itself** by linking up to a root through a
   *grounding link* (`derives_from`, `implements`, `verifies`, `mitigates`). Those
   links form a DAG — circular justification is rejected.

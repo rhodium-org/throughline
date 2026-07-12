@@ -730,6 +730,26 @@ def _ctx_snapshot(project) -> str:
     return "\n".join(out)
 
 
+def _ctx_non_goals(project) -> str | None:
+    """List every live `non_goal` item so deliberately-excluded scope is visible
+    to an agent reading the brief (SR-0097). Returns None when the project
+    declares none, so projects not using non-goals see no extra section."""
+    goals = [it for it in project.items()
+             if it.type == "non_goal" and not it.is_deleted]
+    if not goals:
+        return None
+    out = ["## Non-goals (deliberately out of scope)\n",
+           "These are recorded, out-of-scope statements. Do **not** propose work "
+           "that pursues them; if one looks wrong, raise it with a human rather "
+           "than working around it.\n"]
+    for it in sorted(goals, key=lambda i: i.uid):
+        line = f"- **{it.uid}** {it.title}".rstrip()
+        if it.text:
+            line += f" — {it.text}"
+        out.append(line)
+    return "\n".join(out)
+
+
 def _context_markdown(project) -> str:
     schema = project.schema
     name = schema.name or Path(project.path).name
@@ -753,6 +773,9 @@ def _context_markdown(project) -> str:
         _CTX_COMMANDS,
         _ctx_snapshot(project),
     ]
+    non_goals = _ctx_non_goals(project)
+    if non_goals is not None:
+        sections.insert(-1, non_goals)  # before the live snapshot
     return "\n\n".join(sections) + "\n"
 
 

@@ -106,10 +106,15 @@ links:
     stamp: sha256:…          # target fingerprint when last confirmed (suspect tracking)
 ```
 
-**Roots** (`intent`, `business_need`, `risk`, `constraint`, `assumption`) may
-exist ungrounded — they are the roots of "why". Everything else must reach a root
-through a grounding link (`derives_from`, `mitigates`, `implements`, `verifies`),
-which together form a DAG — circular justification is rejected.
+**Roots** (`intent`, `business_need`, `risk`, `constraint`, `assumption`,
+`non_goal`) may exist ungrounded — they are the roots of "why". Everything else
+must reach a root through a grounding link (`derives_from`, `mitigates`,
+`implements`, `verifies`), which together form a DAG — circular justification is
+rejected. A **`non_goal`** records deliberately-excluded scope: it is a root but
+not a *delivery* root, so nothing has to derive from it and it is never flagged
+unserved. Non-goals surface in `tl context` so excluded scope is visible to
+reviewers and agents rather than living only in prose. throughline never tries to
+detect items that "violate" a non-goal — that judgement stays with a human.
 
 ---
 

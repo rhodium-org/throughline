@@ -321,9 +321,11 @@ name = "{name}"
 format_version = 1
 
 # Root item types may exist ungrounded; everything else must reach a root
-# through a grounding link (the scope-avalanche grounding layer).
+# through a grounding link (the scope-avalanche grounding layer). A non_goal is
+# a root but NOT a delivery root: it is negative space, so nothing derives from
+# it and it is never flagged 'unserved'.
 [grounding]
-root_types = ["intent", "business_need", "risk", "constraint", "assumption"]
+root_types = ["intent", "business_need", "risk", "constraint", "assumption", "non_goal"]
 delivery_roots = ["intent", "business_need", "risk", "constraint"]
 ground_link_types = ["derives_from", "mitigates", "implements", "verifies"]
 ai_origins = ["ai", "hybrid"]
@@ -333,6 +335,12 @@ attrs.priority = {{ type = "enum", values = ["must", "should", "could"], normati
 attrs.origin   = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
 
 [types.nfr]
+attrs.origin = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
+
+# A non_goal records deliberately-excluded scope — the object a human points at
+# to reject a category of proposed work. Passive by design: throughline surfaces
+# non_goals in `tl context` but never tries to detect items that 'violate' one.
+[types.non_goal]
 attrs.origin = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
 
 [links]

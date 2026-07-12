@@ -4,9 +4,11 @@ format_version = 1
 
 # throughline's own spec, self-hosted (SR-0061). Roots are the vision (intent) and
 # the eight goals + the maintainability need (business_need); every user and
-# system requirement must ground upward to one of them.
+# system requirement must ground upward to one of them. non_goal is a root but
+# NOT a delivery root — a recorded non-goal is negative space, so nothing derives
+# from it and it is never flagged unserved (SR-0097).
 [grounding]
-root_types = ["intent", "business_need"]
+root_types = ["intent", "business_need", "non_goal"]
 delivery_roots = ["intent", "business_need"]
 ground_link_types = ["derives_from", "implements", "verifies", "mitigates"]
 ai_origins = ["ai", "hybrid"]
@@ -22,6 +24,12 @@ attrs.verification = { type = "enum", values = ["test", "demonstration", "inspec
 [types.nfr]
 attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
 attrs.verification = { type = "enum", values = ["test", "demonstration", "inspection", "analysis"] }
+
+# Deliberately-excluded scope, recorded so it is visible to reviewers and agents
+# rather than living only in prose (SR-0097). Passive: throughline never tries to
+# detect items that 'violate' a non_goal.
+[types.non_goal]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
 
 [links]
 types = ["refines", "verifies", "satisfies", "implements", "relates",
