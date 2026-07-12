@@ -645,50 +645,7 @@ def test_context_omits_non_goal_section_when_none(tmp_path):
     assert "## Non-goals" not in doc
 
 
-# ---------------------------------------------------------- docs (SR-0089/0090)
-
-def _docs_project():
-    from throughline.model import Document
-    intent = Item(uid="INT-1", type="intent", status="approved",
-                  title="Ship value", text="The vision.")
-    fr = Item(uid="FR-1", type="requirement", status="approved",
-              title="Wizard", text="The system shall guide setup.",
-              attrs={"priority": "must"},
-              links=[Link(target="INT-1", type="derives_from")])
-    gone = Item(uid="FR-2", type="requirement", status="deleted", title="Dropped")
-    di = Document(prefix="INT", title="Vision"); di.items["INT-1"] = intent
-    df = Document(prefix="FR", title="Features", parent="INT")
-    df.items["FR-1"] = fr; df.items["FR-2"] = gone
-    return _project(di, df, config={"project": {"name": "acme"}})
-
-def test_docs_renders_document_from_graph():
-    from throughline.cli import _docs_markdown
-    md = _docs_markdown(_docs_project(), "acme")
-    assert md.startswith("# acme — Requirements")
-    assert "## Vision (INT)" in md and "## Features (FR)" in md
-    assert "### FR-1 — Wizard" in md
-    assert "> The system shall guide setup." in md      # statement as blockquote
-    assert "**priority**: must" in md                   # project attribute
-    assert "_derives_from_ → INT-1" in md               # grounding shown inline
-
-def test_docs_excludes_tombstoned_and_counts_live():
-    from throughline.cli import _docs_markdown
-    md = _docs_markdown(_docs_project(), "acme")
-    assert "FR-2" not in md and "Dropped" not in md
-    assert "_2 live item(s) across 2 document(s)._" in md
-
-def test_docs_orders_parent_before_child_and_limits_to_one_doc():
-    from throughline.cli import _docs_markdown
-    full = _docs_markdown(_docs_project(), "acme")
-    assert full.index("## Vision (INT)") < full.index("## Features (FR)")
-    only = _docs_markdown(_docs_project(), "acme", doc_prefix="FR")
-    assert "## Features (FR)" in only and "## Vision (INT)" not in only
-
-def test_docs_provenance_working_tree_vs_ref():
-    from throughline.cli import _docs_markdown
-    assert "from the working tree" in _docs_markdown(_docs_project(), "acme")
-    at = _docs_markdown(_docs_project(), "acme", ref="v1.0", sha="deadbeefcafe0000")
-    assert "from `v1.0` (`deadbeefcafe`)." in at        # sha trimmed to 12
+# ------------------------------------------------------- docs at-ref (SR-0090)
 
 def test_load_project_at_ref_reproduces_committed_state(tmp_path):
     """`--at REF` renders the graph as committed, ignoring later working-tree
@@ -722,6 +679,91 @@ def test_load_project_at_ref_outside_git_raises(tmp_path):
     init_project(tmp_path, name="NG")   # not a git repo
     with pytest.raises(ProjectError):
         load_project_at_ref(tmp_path, "HEAD")
+
+
+# ------------------------------------------------ marker injection (SR-0094)
+
+def _inject_project():
+    intent = Item(uid="INT-1", type="intent", status="approved",
+                  title="Ship value", text="The vision.")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              title="Wizard", text="The system shall guide setup.\nIn three steps.",
+              attrs={"priority": "must"},
+              links=[Link(target="INT-1", type="derives_from")])
+    tc = Item(uid="TC-1", type="requirement", status="approved", title="Setup test",
+              links=[Link(target="FR-1", type="verifies")])
+    gone = Item(uid="FR-9", type="requirement", status="deleted", title="Dropped")
+    return _project(_doc("INT", intent), _doc("FR", fr, gone), _doc("TC", tc),
+                    config={"grounding": {"ground_link_types": ["derives_from"]}})
+
+def test_inject_item_fills_only_the_marked_region():
+    from throughline.inject import inject_text
+    src = ("# My document\n\nSome prose I own.\n\n"
+           "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n\nMore of my prose.\n")
+    out = inject_text(_inject_project(), src)
+    # my prose is untouched, top and bottom
+    assert out.startswith("# My document\n\nSome prose I own.")
+    assert out.rstrip().endswith("More of my prose.")
+    # the item content landed between the markers
+    assert "**FR-1 — Wizard** — `requirement`, status `approved`" in out
+    assert "> The system shall guide setup." in out
+    assert "**priority**: must" in out
+
+def test_inject_is_idempotent():
+    from throughline.inject import inject_text
+    src = "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n"
+    once = inject_text(_inject_project(), src)
+    twice = inject_text(_inject_project(), once)
+    assert once == twice
+
+def test_inject_overwrites_stale_region_content():
+    from throughline.inject import inject_text
+    stale = ("<!-- tl:item FR-1 -->\n**FR-1 — OLD TITLE** — outdated junk\n"
+             "<!-- tl:end -->\n")
+    out = inject_text(_inject_project(), stale)
+    assert "OLD TITLE" not in out and "outdated junk" not in out
+    assert "**FR-1 — Wizard**" in out
+
+def test_inject_table_selects_by_filter():
+    from throughline.inject import inject_text
+    src = "<!-- tl:table type == 'requirement' and status == 'approved' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| UID | Type | Status | Title |" in out
+    assert "| FR-1 | requirement | approved | Wizard |" in out
+    assert "FR-9" not in out            # tombstoned item excluded
+
+def test_inject_matrix_shows_trace_and_verification():
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| UID | Title | Traces to | Verified by |" in out
+    assert "| FR-1 | Wizard | INT-1 | TC-1 |" in out
+
+def test_inject_unknown_item_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(), "<!-- tl:item NOPE-1 -->\n<!-- tl:end -->\n")
+
+def test_inject_deleted_item_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(), "<!-- tl:item FR-9 -->\n<!-- tl:end -->\n")
+
+def test_inject_unbalanced_marker_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(), "<!-- tl:item FR-1 -->\nno end marker\n")
+
+def test_inject_bad_filter_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:table nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_has_markers_detects_document_files():
+    from throughline.inject import has_markers
+    assert has_markers("prose <!-- tl:item FR-1 --> x <!-- tl:end -->")
+    assert not has_markers("# Just a normal markdown file\n\nNo markers here.\n")
 
 
 # ------------------------------------------------------------------- grounding
@@ -817,6 +859,35 @@ def _scaffold(tmp_path) -> Path:
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     return root
+
+
+def test_docs_injects_markers_into_a_named_file(tmp_path):
+    """`tl docs FILE` fills marked regions from the graph and leaves the rest of
+    the human-owned file byte-for-byte intact (SR-0094)."""
+    root = _scaffold(tmp_path)  # ships an intent INT-0001 titled "why"
+    doc = root / "overview.md"
+    doc.write_text("# Overview\n\nMy prose.\n\n"
+                   "<!-- tl:item INT-0001 -->\n<!-- tl:end -->\n", encoding="utf-8")
+    assert _cli(["-C", str(root), "docs", str(doc)]) == 0
+    out = doc.read_text(encoding="utf-8")
+    assert out.startswith("# Overview\n\nMy prose.")
+    assert "**INT-0001 — why**" in out
+
+
+def test_docs_uses_config_paths_and_skips_marker_free_files(tmp_path):
+    """With no file arguments, `tl docs` injects the [docs] paths from config and
+    never touches a file that has no tl: markers (SR-0094/0095)."""
+    root = _scaffold(tmp_path)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8") + '\n[docs]\npaths = ["*.md"]\n',
+                   encoding="utf-8")
+    spec = root / "spec.md"
+    spec.write_text("<!-- tl:item INT-0001 -->\n<!-- tl:end -->\n", encoding="utf-8")
+    prose = root / "notes.md"
+    prose.write_text("just prose, no markers\n", encoding="utf-8")
+    assert _cli(["-C", str(root), "docs"]) == 0
+    assert "INT-0001 — why" in spec.read_text(encoding="utf-8")
+    assert prose.read_text(encoding="utf-8") == "just prose, no markers\n"
 
 
 def test_new_ground_flag_grounds_at_birth(tmp_path):

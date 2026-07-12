@@ -70,6 +70,7 @@ class Schema:
     ai_origins: frozenset[str]
     coverage: tuple[dict, ...]
     rule_overrides: dict                   # rule name -> configured severity
+    docs_paths: tuple[str, ...]            # [docs] paths globs (SR-0094/0096)
 
     # ------------------------------------------------------------------ build
 
@@ -137,12 +138,15 @@ class Schema:
         coverage = tuple(rules.get("coverage", []) or [])
         rule_overrides = {k: v for k, v in rules.items() if k != "coverage"}
 
+        docs_paths = tuple((config.get("docs") or {}).get("paths", []) or [])
+
         schema = cls(
             name=name, types=types, link_types=link_types, statuses=statuses,
             transitions=transitions, link_rules=link_rules,
             root_types=root_types, delivery_roots=delivery_roots,
             ground_link_types=ground_link_types, ai_origins=ai_origins,
             coverage=coverage, rule_overrides=rule_overrides,
+            docs_paths=docs_paths,
         )
         schema._check_consistency()
         return schema

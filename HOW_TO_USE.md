@@ -213,7 +213,7 @@ tl trace <UID> [--direction in|out] [--depth N]
 tl blast <UID> [--format json]                 # everything depending on an item
 tl shape [--format json]                       # observed (from)-[link]->(to) triples
 tl diagram [types|transitions|both]            # Mermaid of the model / lifecycle
-tl docs [--doc PREFIX] [--at REF]              # render a Markdown requirements document
+tl docs [FILE ...] [--at REF]                  # inject graph content into marked Markdown regions
 tl context                                     # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                     # a human takes accountability
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
@@ -259,10 +259,12 @@ requirements](requirements) exactly this way.
 
 ## 7. Not included
 
-throughline is **M0 — Core**. `tl docs` renders a **Markdown** requirements
-document (optionally `--at <commit>`, so any past state is reproducible by
-revision); converting that to **HTML/PDF** is a wrapper's job, kept out of the
-text-only core. Still not included: named baselines and a version-to-version
-**diff**, and CSV/ReqIF import-export. Beyond `docs`, "publish" means: your
-requirements are plain YAML in Git — diff, review, and browse them with the same
-tools you already use for code.
+throughline is **M0 — Core**. `tl docs` **injects** graph content into the marked
+regions (`<!-- tl:item … -->` … `<!-- tl:end -->`) of your own Markdown files —
+it never authors or stores documents itself (that is a recorded non-goal). You
+own the prose; throughline keeps the referenced item content, tables, and
+traceability matrices from drifting. Converting an injected `.md` to **HTML/PDF**
+is a wrapper's job (pandoc, mdBook), kept out of the text-only core. Still not
+included: named baselines and a version-to-version **diff**, and CSV/ReqIF
+import-export. Beyond `docs`, "publish" means: your requirements are plain YAML in
+Git — diff, review, and browse them with the same tools you already use for code.
