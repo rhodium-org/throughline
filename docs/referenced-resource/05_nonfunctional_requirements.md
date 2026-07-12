@@ -1,120 +1,195 @@
 # 05 · Non-Functional Requirements (NFR)
 
+Each entry is **generated from the graph** by `tl docs`; the section headings
+are the only hand-owned structure. Regenerate with `tl docs` and gate it in CI
+with `tl docs --check` (SR-0094).
+
 ## Licensing and openness
 
-**NFR-0001 — Open-source license.**
-All Tool code shall be released under an OSI-approved permissive license
-(Apache-2.0 recommended), with no proprietary components required for any
-specified capability.
-`Priority: Must | Verification: Inspection | Traces: UR-0015 | Status: Approved`
+<!-- tl:item NFR-0001 -->
+**NFR-0001 — Open-source license** — `nfr`, status `approved`
 
-**NFR-0002 — Open file format.**
-The on-disk format shall be fully documented (doc 06), schema-validatable,
-and readable/writable without the Tool.
-`Priority: Must | Verification: Inspection | Traces: UR-0015 | Status: Approved`
+> All Tool code shall be released under an OSI-approved permissive license (Apache-2.0 recommended), with no proprietary components required for any capability.
 
-**NFR-0003 — Offline and private.**
-All specified functionality shall work with no network access, and the Tool
-shall send no telemetry or project data anywhere by default.
-`Priority: Must | Verification: Test | Traces: UR-0015 | Status: Approved`
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0002 -->
+**NFR-0002 — Open file format** — `nfr`, status `approved`
+
+> The on-disk format shall be fully documented (doc 06), schema-validatable, and readable/writable without the Tool.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0003 -->
+**NFR-0003 — Offline and private** — `nfr`, status `approved`
+
+> All specified functionality shall work with no network access, and the Tool shall send no telemetry or project data anywhere by default.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
 ## Portability and installation
 
-**NFR-0004 — Cross-platform.**
-The Tool shall run on current Linux, macOS, and Windows, treating paths,
-line endings (store LF), and Unicode identically on all three.
-`Priority: Must | Verification: Test | Status: Approved`
+<!-- tl:item NFR-0004 -->
+**NFR-0004 — Cross-platform** — `nfr`, status `approved`
 
-**NFR-0005 — Simple installation.**
-Installation shall require a single standard package-manager command (e.g.
-`pip install`/`pipx`, `cargo install`, or an OS package) with no database or
-service setup.
-`Priority: Must | Verification: Demonstration | Traces: UR-0020 | Status: Approved`
+> The Tool shall run on current Linux, macOS, and Windows, treating paths, line endings (store LF), and Unicode identically on all three.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item NFR-0005 -->
+**NFR-0005 — Simple installation** — `nfr`, status `approved`
+
+> Installation shall require a single standard package-manager command with no database or service setup.
+
+**priority**: must · **verification**: demonstration
+<!-- tl:end -->
 
 ## Performance and scale
 
-**NFR-0006 — Reference scale.**
-On the reference project (10,000 items, 25 documents, 30,000 links) and
-reference hardware (4-core laptop, SSD), the Tool shall complete: full
-`check` ≤ 10 s, UID/attribute query ≤ 1 s, full HTML publish ≤ 60 s,
-incremental publish of one document ≤ 5 s.
-*Rationale:* Sphinx-Needs documents index-based O(1) key filtering for large
-projects; our index design targets the same behavior.
-`Priority: Must | Verification: Analysis (benchmark) | Status: Approved`
+<!-- tl:item NFR-0006 -->
+**NFR-0006 — Reference scale** — `nfr`, status `approved`
 
-**NFR-0007 — Memory bound.**
-Peak memory for the reference project shall not exceed 1 GB.
-`Priority: Should | Verification: Analysis | Status: Approved`
+> On the reference project (10,000 items, 25 documents, 30,000 links) and reference hardware, the Tool shall complete: full check <=10 s, query <=1 s, full HTML publish <=60 s, incremental publish of one document <=5 s.
 
-**NFR-0008 — Startup latency.**
-CLI startup to first output on a small project (≤100 items) shall be under
-1 second.
-`Priority: Should | Verification: Analysis | Status: Approved`
+**priority**: must · **verification**: analysis
+<!-- tl:end -->
+
+<!-- tl:item NFR-0007 -->
+**NFR-0007 — Memory bound** — `nfr`, status `approved`
+
+> Peak memory for the reference project shall not exceed 1 GB.
+
+**priority**: should · **verification**: analysis
+<!-- tl:end -->
+
+<!-- tl:item NFR-0008 -->
+**NFR-0008 — Startup latency** — `nfr`, status `approved`
+
+> CLI startup to first output on a small project (<=100 items) shall be under 1 second.
+
+**priority**: should · **verification**: analysis
+<!-- tl:end -->
 
 ## Reliability and data safety
 
-**NFR-0009 — No silent data loss.**
-The Tool shall never discard or rewrite user content it does not understand:
-unknown fields are preserved on read-modify-write, and destructive
-operations require an explicit flag or run as status changes (SR-0012).
-`Priority: Must | Verification: Test | Status: Approved`
+<!-- tl:item NFR-0009 -->
+**NFR-0009 — No silent data loss** — `nfr`, status `approved`
 
-**NFR-0010 — Versioned format with migrations.**
-The file format shall carry an explicit schema version; the Tool shall read
-all prior format versions and provide a migration command for major
-changes.
-`Priority: Must | Verification: Test | Traces: UR-0015 | Status: Approved`
+> The Tool shall never discard or rewrite user content it does not understand: unknown fields are preserved on read-modify-write, and destructive operations require an explicit flag or run as status changes (SR-0012).
 
-**NFR-0011 — Semantic versioning.**
-Tool releases shall follow SemVer; CLI flags, exit codes, the library API,
-and the JSON export shape are the compatibility surface.
-`Priority: Must | Verification: Inspection | Status: Approved`
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
-**NFR-0012 — Deterministic outputs.**
-Given identical input state, publish/export outputs shall be byte-identical
-(no embedded timestamps by default) to keep artifacts diffable and builds
-reproducible.
-`Priority: Should | Verification: Test | Traces: UR-0007 | Status: Approved`
+<!-- tl:item NFR-0010 -->
+**NFR-0010 — Versioned format with migrations** — `nfr`, status `approved`
+
+> The file format shall carry an explicit schema version; the Tool shall read all prior 1.x format versions and provide a migration command for major changes.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item NFR-0011 -->
+**NFR-0011 — Semantic versioning** — `nfr`, status `approved`
+
+> Tool releases shall follow SemVer; CLI flags, exit codes, the library API, and the JSON export shape are the compatibility surface.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0012 -->
+**NFR-0012 — Deterministic outputs** — `nfr`, status `approved`
+
+> Given identical input state, publish/export outputs shall be byte-identical (no embedded timestamps by default) to keep artifacts diffable and builds reproducible.
+
+**priority**: should · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item NFR-0022 -->
+**NFR-0022 — Safe handling of untrusted project data** — `nfr`, status `approved`
+
+> Project files are untrusted input. The Tool shall parse all YAML with a safe loader that cannot construct arbitrary Python objects or execute code (no yaml.load without SafeLoader; no !!python/... tags honoured), and shall write every field value through a YAML emitter so that no field value — for example a crafted ratified_by, title, or text — can alter document structure or inject sibling keys. Malformed input shall fail fast with an error rather than be silently coerced or partially applied.
+
+*Rationale:* A requirements graph is edited by many hands and, increasingly, by machines; a single hostile or malformed value must not become code execution or silent structural corruption. The tool already parses with safe_load and emits through a SafeDumper — this NFR pins that guarantee so a future refactor to a convenience loader fails the gate instead of quietly reopening the classic deserialization RCE.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
 
 ## Usability and documentation
 
-**NFR-0013 — Quick start.**
-Documentation shall include a quick start achieving UR-0020's 15-minute
-scenario, plus a complete CLI and format reference.
-`Priority: Must | Verification: Demonstration | Traces: UR-0020 | Status: Approved`
+<!-- tl:item NFR-0013 -->
+**NFR-0013 — Quick start** — `nfr`, status `approved`
 
-**NFR-0014 — Actionable errors.**
-Every validation and CLI error shall state the offending file/UID, the rule
-violated, and where applicable a suggested fix.
-`Priority: Must | Verification: Inspection | Status: Approved`
+> Documentation shall include a quick start achieving UR-0020's 15-minute scenario, plus a complete CLI and format reference.
 
-**NFR-0015 — Accessible HTML output.**
-Published HTML shall meet WCAG 2.1 AA basics: semantic headings, contrast,
-keyboard navigation, alt text passthrough.
-`Priority: Should | Verification: Inspection | Traces: UR-0008 | Status: Approved`
+**priority**: must · **verification**: demonstration
+<!-- tl:end -->
 
-**NFR-0016 — Internationalized content.**
-All content fields shall support full Unicode; UID prefixes remain ASCII for
-portability.
-`Priority: Must | Verification: Test | Status: Approved`
+<!-- tl:item NFR-0014 -->
+**NFR-0014 — Actionable errors** — `nfr`, status `approved`
+
+> Every validation and CLI error shall state the offending file/UID, the rule violated, and where applicable a suggested fix.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0015 -->
+**NFR-0015 — Accessible HTML output** — `nfr`, status `approved`
+
+> Published HTML shall meet WCAG 2.1 AA basics: semantic headings, contrast, keyboard navigation, alt text passthrough.
+
+**priority**: should · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0016 -->
+**NFR-0016 — Internationalized content** — `nfr`, status `approved`
+
+> All content fields shall support full Unicode; UID prefixes remain ASCII for portability.
+
+**priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item NFR-0021 -->
+**NFR-0021 — Conceptual model explained** — `nfr`, status `approved`
+
+> Documentation shall explain throughline's Intent-Driven Development (IDD) model and how it differs from adjacent practices (notably BDD and TDD), so newcomers understand why grounding-at-birth exists and adopt it deliberately rather than treating check as an after-the-fact linter.
+
+**priority**: should · **verification**: inspection
+<!-- tl:end -->
 
 ## Quality of implementation
 
-**NFR-0017 — Test coverage.**
-Core library statement coverage shall be ≥ 85%, with an end-to-end test for
-every `Must` SR before it is marked `Verified`.
-`Priority: Must | Verification: Analysis | Status: Approved`
+<!-- tl:item NFR-0017 -->
+**NFR-0017 — Test coverage** — `nfr`, status `approved`
 
-**NFR-0018 — CI on all platforms.**
-Every merge to main shall pass automated tests on Linux, macOS, and Windows.
-`Priority: Must | Verification: Inspection | Status: Approved`
+> Core library statement coverage shall be >=85%, with an end-to-end test for every Must SR before it is marked Verified.
 
-**NFR-0019 — Dependency discipline.**
-Runtime dependencies shall be few, permissively licensed, and pinned by a
-lockfile for releases; a dependency review is required to add one.
-`Priority: Should | Verification: Inspection | Traces: UR-0015 | Status: Approved`
+**priority**: must · **verification**: analysis
+<!-- tl:end -->
 
-**NFR-0020 — Long-term maintainability.**
-Implementation shall use a mainstream language and avoid exotic runtime
-services, per the maintainability principle in doc 01 §6.
-`Priority: Should | Verification: Inspection | Status: Approved`
+<!-- tl:item NFR-0018 -->
+**NFR-0018 — CI on all platforms** — `nfr`, status `approved`
+
+> Every merge to main shall pass automated tests on Linux, macOS, and Windows.
+
+**priority**: must · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0019 -->
+**NFR-0019 — Dependency discipline** — `nfr`, status `approved`
+
+> Runtime dependencies shall be few, permissively licensed, and pinned by a lockfile for releases; a dependency review is required to add one.
+
+**priority**: should · **verification**: inspection
+<!-- tl:end -->
+
+<!-- tl:item NFR-0020 -->
+**NFR-0020 — Long-term maintainability** — `nfr`, status `approved`
+
+> Implementation shall use a mainstream language and avoid exotic runtime services, per the maintainability principle in doc 01 §6.
+
+**priority**: should · **verification**: inspection
+<!-- tl:end -->
