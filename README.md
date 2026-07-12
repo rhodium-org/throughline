@@ -133,6 +133,7 @@ tl blast <UID> [--format json]                # everything depending on an item
 tl shape [--format json]                      # observed (from)-[link]->(to) triples
 tl diagram [types|transitions|both]           # Mermaid of the model / lifecycle
 tl docs [FILE ...] [--at REF]                 # inject graph content into marked Markdown regions
+tl docs [FILE ...] --check                     # CI gate: fail if any document is out of date
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect

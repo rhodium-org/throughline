@@ -484,9 +484,15 @@ def cmd_docs(args) -> int:
 
     paths = _resolve_doc_paths(project, args.file)
     if not paths:
+        # In --check mode (the CI gate, SR-0095) an unconfigured project has no
+        # documents to be stale, so the gate is inert and passes. In write mode a
+        # caller who ran `tl docs` with nothing to inject wants to know.
+        if args.check:
+            return OK
         return _err("no documents to inject — pass a Markdown file, or configure "
                     "[docs] paths in throughline.toml")
 
+    stale: list[Path] = []
     changed = 0
     for path in paths:
         try:
@@ -494,15 +500,31 @@ def cmd_docs(args) -> int:
         except OSError as e:
             return _err(f"cannot read {path}: {e}")
         if not has_markers(original):
-            continue  # SR-0095: a file with no tl: markers is left untouched
+            continue  # SR-0094/0095: a file with no tl: markers is left untouched
         try:
             rendered = inject_text(project, original)
         except InjectError as e:
             return _err(f"{path}: {e}")
-        if rendered != original:
+        if rendered == original:
+            continue
+        if args.check:
+            stale.append(path)
+            print(f"stale: {path}", file=sys.stderr)
+        else:
             path.write_text(rendered, encoding="utf-8")
             changed += 1
             print(f"injected {path}")
+
+    if args.check:
+        # Separate gate: write-then-diff. A drifted document fails CI; nothing is
+        # rewritten. This is deliberately NOT part of `tl check` so routine checks
+        # stay friction-free (SR-0095).
+        if stale:
+            print(f"{len(stale)} document(s) out of date — run `tl docs` to "
+                  "regenerate", file=sys.stderr)
+            return FINDINGS
+        print("documents up to date")
+        return OK
     if changed == 0:
         print("documents already up to date")
     sys.stdout.flush()
@@ -688,6 +710,7 @@ _CTX_COMMANDS = (
     "tl shape [--format json]                # observed (from)-[link]->(to) triples\n"
     "tl diagram [types|transitions|both]     # Mermaid of the model / lifecycle\n"
     "tl docs [FILE ...] [--at REF]           # inject graph content into marked Markdown regions\n"
+    "tl docs [FILE ...] --check              # CI gate: fail if a document is out of date\n"
     "tl context                              # regenerate this brief\n"
     "```"
 )
@@ -940,6 +963,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="inject graph content into the marked regions of Markdown files")
     s.add_argument("file", nargs="*",
                    help="Markdown files to inject (default: [docs] paths in config)")
+    s.add_argument("--check", action="store_true",
+                   help="CI gate: fail (exit 1) if any document is out of date, "
+                        "without rewriting it (not run by `tl check`)")
     s.add_argument("--at", default=None, metavar="REF",
                    help="inject content as the graph stood at a git revision")
     s.set_defaults(func=cmd_docs)

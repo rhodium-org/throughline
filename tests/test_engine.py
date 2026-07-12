@@ -890,6 +890,39 @@ def test_docs_uses_config_paths_and_skips_marker_free_files(tmp_path):
     assert prose.read_text(encoding="utf-8") == "just prose, no markers\n"
 
 
+def test_docs_check_passes_when_up_to_date(tmp_path):
+    """`tl docs --check` is the separate CI gate (SR-0095): a document whose marked
+    regions already match the graph passes with exit 0."""
+    root = _scaffold(tmp_path)
+    doc = root / "overview.md"
+    doc.write_text("# Overview\n\n<!-- tl:item INT-0001 -->\n<!-- tl:end -->\n",
+                   encoding="utf-8")
+    assert _cli(["-C", str(root), "docs", str(doc)]) == 0        # inject once
+    assert _cli(["-C", str(root), "docs", str(doc), "--check"]) == 0  # now clean
+
+
+def test_docs_check_fails_and_does_not_write_when_stale(tmp_path):
+    """A drifted document fails the gate with a non-zero exit and is left on disk
+    unchanged — --check reports drift, it never fixes it (SR-0095)."""
+    root = _scaffold(tmp_path)
+    doc = root / "overview.md"
+    stale = ("# Overview\n\n<!-- tl:item INT-0001 -->\nSTALE CONTENT\n"
+             "<!-- tl:end -->\n")
+    doc.write_text(stale, encoding="utf-8")
+    rc = _cli(["-C", str(root), "docs", str(doc), "--check"])
+    assert rc == 1                                   # FINDINGS exit code
+    assert doc.read_text(encoding="utf-8") == stale  # untouched by --check
+
+
+def test_docs_check_inert_without_markers(tmp_path):
+    """A file with no tl: markers is not a throughline document, so the gate is
+    inert and passes (SR-0095)."""
+    root = _scaffold(tmp_path)
+    doc = root / "plain.md"
+    doc.write_text("# Just prose\n", encoding="utf-8")
+    assert _cli(["-C", str(root), "docs", str(doc), "--check"]) == 0
+
+
 def test_new_ground_flag_grounds_at_birth(tmp_path):
     """--ground attaches a parent when the item is created, so it is justified
     the moment it exists (SR-0073) rather than being caught later by check."""
