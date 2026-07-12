@@ -45,12 +45,48 @@ and any two versions of the requirement set can be diffed meaningfully.
 
 ## 4. Non-goals (this scope)
 
+Informal scope boundaries:
+
 - Real-time multi-user editing (Git workflow is the collaboration model; a
   web editor is out of scope).
 - Test *execution* management (we link to tests; we don't run them).
 - Project management features (scheduling, sprints, workload).
 - A hosted SaaS offering.
 - WYSIWYG Word-style editing of arbitrary documents.
+
+Recorded non-goals are first-class items in the graph (SR-0097), so a reviewer
+or agent sees the boundary — and its rationale — rather than inferring it from
+absence. The entries below are **generated from the graph** by `tl docs`:
+
+<!-- tl:item NG-0001 -->
+**NG-0001 — Not a document authoring or editing system** — `non_goal`, status `approved`
+
+> throughline shall not become a surface for authoring, editing, or storing narrative document content. It is a validator and an injector: item content lives in the graph and is rendered into documents by reference, never edited through the tool. Interactive editing, WYSIWYG, and web-based document management are out of scope.
+
+*Rationale:* The comparable tools that started as validators and grew editing surfaces became document-management systems and lost the git-native, reference-not-copy property that keeps content from drifting. Recording this as a first-class non-goal is the object a reviewer points at to reject that category of proposed scope.
+
+**origin**: human
+<!-- tl:end -->
+
+<!-- tl:item NG-0002 -->
+**NG-0002 — No separate documentation license** — `non_goal`, status `approved`
+
+> throughline shall not maintain a separate or dual license for its documentation. All artifacts in the repository — code, the specification under docs/referenced-resource/, and the guides — ship under the single repository license, Apache-2.0. The project deliberately does not adopt a distinct documentation license (for example CC-BY-4.0).
+
+*Rationale:* An earlier draft suggested CC-BY-4.0 for the specification while the code is Apache-2.0, which contradicted the single LICENSE/NOTICE the repository already declares and forced readers to reason about which license applies to which file. Recording a single-license stance as an explicit non-goal removes that ambiguity and gives the license-alignment change a ratified intent to trace to.
+
+**origin**: human
+<!-- tl:end -->
+
+<!-- tl:item NG-0003 -->
+**NG-0003 — Item content is not sanitized against prompt injection** — `non_goal`, status `approved`
+
+> throughline stores and renders human- and machine-authored natural-language content — titles, text, rationale, and attribute values. It shall not attempt to detect, strip, or neutralize adversarial instructions embedded in that content that target a downstream AI agent reading the graph, the tl context brief, an injected document, or the YAML files directly. Stored content is untrusted data; the responsibility to sandbox, delimit, or otherwise defend against prompt injection rests with the consuming agent or integration. throughline's guarantee is structural and provenance-level (the graph is well-formed, links resolve, and who authored/ratified what is honest), not semantic (that the words are safe for an agent to act on).
+
+*Rationale:* Trying to filter natural language for "malicious instructions" is both undecidable and a false promise that would invite exactly the trust it cannot earn — the same reason NG-0001 keeps the tool out of content authoring. Naming the boundary explicitly tells integrators where the tool's guarantees stop, so they wrap graph content as untrusted data rather than assuming throughline made it safe. Structural safety is covered separately and positively by NFR-0022.
+
+**origin**: human
+<!-- tl:end -->
 
 ## 5. Target users
 
