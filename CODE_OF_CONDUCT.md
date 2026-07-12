@@ -46,8 +46,9 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be
-reported to the maintainers responsible for enforcement at
-**henry.grechcini@gmail.com**. All complaints will be reviewed and investigated
+reported privately to the maintainer responsible for enforcement, Henry
+Grech-Cini, via GitHub's private vulnerability reporting or by a direct message
+to the project maintainer. All complaints will be reviewed and investigated
 promptly and fairly. Maintainers are obligated to respect the privacy and
 security of the reporter of any incident.
 

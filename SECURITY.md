@@ -14,10 +14,10 @@ there.
 
 Please report suspected vulnerabilities **privately**, not via a public issue:
 
-- Preferred: GitHub's [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-  ("Report a vulnerability" under the repository's *Security* tab), or
-- Email **henry.grechcini@gmail.com** with details and, if possible, a minimal
-  reproduction.
+- Use GitHub's [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
+  ("Report a vulnerability" under the repository's *Security* tab). Include
+  details and, if possible, a minimal reproduction. The report reaches the
+  maintainer (Henry Grech-Cini) privately.
 
 Please give us a reasonable window to investigate and release a fix before any
 public disclosure. We will acknowledge your report, keep you updated, and credit
