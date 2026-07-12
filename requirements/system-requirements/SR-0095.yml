@@ -1,0 +1,22 @@
+uid: SR-0095
+type: system_requirement
+status: ratified
+title: Document staleness gate (separate command)
+text: 'The Tool shall provide a dedicated command that reports a document as stale
+  when re-rendering its marker regions would change their content (write-then-diff),
+  exiting non-zero so a drifted document fails a CI gate. This staleness check shall
+  NOT run as part of tl check. The command shall be inert for files that contain
+  no tl: markers.'
+rationale: Staleness is a publication-time concern, not an authoring-time one. Folding
+  it into tl check would force every routine check to also reconcile docs, introducing
+  friction in general use; keeping doc freshness a separate CI gate lets authors
+  run tl check freely while CI still refuses to merge a drifted document.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: henry.grechcini@gmail.com

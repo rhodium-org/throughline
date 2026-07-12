@@ -1,0 +1,24 @@
+uid: SR-0094
+type: system_requirement
+status: ratified
+title: In-place marker injection
+text: The Tool shall render item content into HTML-comment marker regions (tl:item
+  / tl:table / tl:matrix ... tl:end) within existing Markdown files, overwriting
+  only the marked regions and leaving all other content unchanged. Table and matrix
+  directives shall select items using the SR-0045 filter grammar. Only these three
+  directives shall be provided in this cut; other output formats are delegated to
+  external tools (pandoc, mdBook).
+rationale: Injecting item content into human-owned files (terraform-docs style) keeps
+  the document valid Markdown that renders on GitHub and shows generated changes
+  in the PR diff, and it removes the parallel hand-maintained artifact that caused
+  the docs/referenced-resource drift. Supersedes the stdout whole-document render
+  (SR-0089).
+normative: true
+links:
+- target: UR-0024
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: henry.grechcini@gmail.com

@@ -1,0 +1,19 @@
+uid: UR-0024
+type: user_requirement
+status: ratified
+title: Drift-free narrative documents
+text: Users shall be able to author requirement documents that interleave their own
+  narrative with item content drawn from the graph, such that item content is regenerated
+  in place and cannot silently drift from the graph.
+rationale: A requirements document is includes prose the human owns; generating the
+  whole document from the graph guarantees a parallel hand-maintained artifact and
+  therefore guarantees drift. The seam must be a reference, not a copy.
+normative: true
+links:
+- target: BN-0005
+  type: derives_from
+attrs:
+  origin: ai
+  priority: must
+  verification: demonstration
+  ratified_by: henry.grechcini@gmail.com
