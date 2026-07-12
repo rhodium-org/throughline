@@ -625,7 +625,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0094 -->
 **SR-0094 — In-place marker injection** — `system_requirement`, status `ratified`
 
-> The Tool shall render item content into HTML-comment marker regions (tl:item / tl:table / tl:matrix ... tl:end) within existing Markdown files, overwriting only the marked regions and leaving all other content unchanged. Table and matrix directives shall select items using the SR-0045 filter grammar. Only these three directives shall be provided in this cut; other output formats are delegated to external tools (pandoc, mdBook).
+> The Tool shall render item content into HTML-comment marker regions (tl:item / tl:table / tl:matrix ... tl:end) within existing Markdown files, overwriting only the marked regions and leaving all other content unchanged. Table and matrix directives shall select items using the SR-0045 filter grammar. Only these three directives shall be provided in this cut; other output formats are delegated to external tools (pandoc, mdBook). Every configured document shall be processed uniformly — a document that currently contains no marker regions is a no-op, left byte-for-byte unchanged, not an error and not a special case, so a published document with nothing to inject is treated no differently from one full of markers.
 
 *Rationale:* Injecting item content into human-owned files (terraform-docs style) keeps the document valid Markdown that renders on GitHub and shows generated changes in the PR diff, and it removes the parallel hand-maintained artifact that caused the docs/referenced-resource drift. Supersedes the stdout whole-document render (SR-0089).
 

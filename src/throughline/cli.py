@@ -460,17 +460,19 @@ def cmd_diagram(args) -> int:
 def _resolve_doc_paths(project, explicit: list[str]) -> list[Path]:
     """The Markdown files `tl docs` will inject into: the paths given on the
     command line, or — when none are given — the `[docs] paths` globs from the
-    project config, resolved relative to the project root (SR-0094). Explicit
-    paths are taken verbatim so a caller can target one file; globbed config
-    paths are filtered to files that actually contain tl: markers so an
-    over-broad glob does not touch prose files."""
+    project config, resolved relative to the project root (SR-0094). Every matched
+    file is returned regardless of whether it currently holds tl: markers: a
+    marker-free document is a no-op when injected (its bytes are left unchanged),
+    so a published document with nothing to inject is treated no differently from
+    one full of markers — the same uniform set `referenced_uids` reasons over for
+    publication coverage (SR-0096)."""
     root = Path(project.path)
     if explicit:
         return [Path(p) for p in explicit]
     out: list[Path] = []
     for pattern in project.schema.docs_paths:
         for p in sorted(root.glob(pattern)):
-            if p.is_file() and has_markers(p.read_text(encoding="utf-8")):
+            if p.is_file():
                 out.append(p)
     return out
 

@@ -1073,6 +1073,23 @@ def test_docs_uses_config_paths_and_skips_marker_free_files(tmp_path):
     assert prose.read_text(encoding="utf-8") == "just prose, no markers\n"
 
 
+def test_docs_treats_marker_free_configured_doc_as_clean_noop(tmp_path):
+    """A configured document that currently holds no tl: markers is treated no
+    differently from one full of them: `tl docs` is a no-op that succeeds (exit 0)
+    and leaves the file byte-for-byte unchanged, rather than erroring "no
+    documents to inject". Nothing to inject shouldn't matter (SR-0094)."""
+    root = _scaffold(tmp_path)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8") + '\n[docs]\npaths = ["*.md"]\n',
+                   encoding="utf-8")
+    prose = root / "notes.md"
+    original = "# Notes\n\nAll prose, no markers yet.\n"
+    prose.write_text(original, encoding="utf-8")
+    assert _cli(["-C", str(root), "docs"]) == 0            # not an error
+    assert prose.read_text(encoding="utf-8") == original   # untouched
+    assert _cli(["-C", str(root), "docs", "--check"]) == 0  # gate inert, passes
+
+
 def test_docs_check_passes_when_up_to_date(tmp_path):
     """`tl docs --check` is the separate CI gate (SR-0095): a document whose marked
     regions already match the graph passes with exit 0."""
