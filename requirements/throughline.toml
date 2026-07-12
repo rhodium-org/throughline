@@ -64,3 +64,13 @@ implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
 suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
 rejected    = ["draft", "deleted"]
+
+# Published documents (SR-0094/0096): the Markdown files that render graph
+# content through tl: injection markers. `tl docs` regenerates these in place
+# and `tl docs --check` gates their freshness in CI. Configuring this also
+# activates the `unpublished` rule — every live normative item must be
+# referenced by one of these documents, or `tl check --strict` fails. Paths are
+# globs relative to this project directory (requirements/); the specification
+# lives one level up under docs/referenced-resource/.
+[docs]
+paths = ["../docs/referenced-resource/*.md"]

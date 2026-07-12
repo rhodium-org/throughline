@@ -38,6 +38,9 @@ jobs:
       - name: Self-host gate (throughline's own requirements must stay grounded)
         run: tl -C requirements check --strict --quiet
 
+      - name: Docs freshness gate (published docs must match the graph)
+        run: tl -C requirements docs --check
+
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -52,6 +55,9 @@ jobs:
             throughline:ci -C /work check --strict --quiet
 
       - name: Smoke-test the image against throughline's own requirements
+        # Mount the whole repo (not just requirements/) so the configured
+        # [docs] paths — which live one level up under docs/ — resolve; the
+        # unpublished rule globs them, so they must be present in the container.
         run: |
-          docker run --rm -v "$PWD/requirements:/work" \
-            throughline:ci -C /work check --strict --quiet
+          docker run --rm -v "$PWD:/work" \
+            throughline:ci -C /work/requirements check --strict --quiet
