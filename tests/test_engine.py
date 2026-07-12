@@ -681,6 +681,81 @@ def test_load_project_at_ref_outside_git_raises(tmp_path):
         load_project_at_ref(tmp_path, "HEAD")
 
 
+# ------------------------------------------ publication coverage (SR-0096)
+
+def _pub_project():
+    intent = Item(uid="INT-1", type="intent", status="approved", title="Vision",
+                  normative=True)
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              normative=True, links=[Link(target="INT-1", type="derives_from")])
+    note = Item(uid="FR-2", type="requirement", status="approved", title="Aside",
+                normative=False, links=[Link(target="INT-1", type="derives_from")])
+    return _project(_doc("INT", intent), _doc("FR", fr, note),
+                    config={"grounding": {"root_types": ["intent"],
+                                          "ground_link_types": ["derives_from"]}})
+
+def test_unpublished_rule_inert_without_published_set():
+    """With no [docs] paths configured the published set is None and the rule does
+    not fire — projects that do not publish see no change (SR-0096)."""
+    findings = validate(_pub_project(), published=None)
+    assert not [f for f in findings if f.rule == "unpublished"]
+
+def test_unpublished_flags_normative_item_in_no_document():
+    """A normative item referenced by no published document is reported; an item
+    that IS referenced is not (SR-0096)."""
+    findings = validate(_pub_project(), published={"INT-1"})
+    flagged = {f.uid for f in findings if f.rule == "unpublished"}
+    assert "FR-1" in flagged        # normative, unreferenced
+    assert "INT-1" not in flagged   # referenced by a document
+
+def test_unpublished_ignores_non_normative_items():
+    """Only normative items must reach the reader; a non-normative note is not
+    flagged even when unreferenced (SR-0096)."""
+    findings = validate(_pub_project(), published=set())
+    flagged = {f.uid for f in findings if f.rule == "unpublished"}
+    assert "FR-2" not in flagged     # non-normative
+    assert {"INT-1", "FR-1"} <= flagged
+
+def test_unpublished_default_severity_is_warning():
+    findings = validate(_pub_project(), published=set())
+    unpub = [f for f in findings if f.rule == "unpublished"]
+    assert unpub and all(f.severity == "warning" for f in unpub)
+
+def test_referenced_uids_none_without_docs_paths(tmp_path):
+    """referenced_uids returns None when no [docs] paths are configured."""
+    from throughline.inject import referenced_uids
+    root = _scaffold_pub(tmp_path, docs_paths=None)
+    assert referenced_uids(load_project(root)) is None
+
+def test_referenced_uids_collects_item_and_filter_targets(tmp_path):
+    """A tl:item names one UID; a tl:table/matrix publishes every matching item
+    (SR-0096)."""
+    from throughline.inject import referenced_uids
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "spec.md").write_text(
+        "<!-- tl:item INT-0001 -->\n<!-- tl:end -->\n"
+        "<!-- tl:table type == 'requirement' -->\n<!-- tl:end -->\n",
+        encoding="utf-8")
+    refs = referenced_uids(load_project(root))
+    assert "INT-0001" in refs        # named directly
+    assert "FR-0001" in refs         # matched by the table filter
+
+
+def _scaffold_pub(tmp_path, docs_paths):
+    """A scaffold with an intent (INT-0001) and one requirement (FR-0001), and an
+    optional [docs] paths setting, for publication-coverage tests."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "feat", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    if docs_paths is not None:
+        cfg = root / "throughline.toml"
+        joined = ", ".join(f'"{p}"' for p in docs_paths)
+        cfg.write_text(cfg.read_text(encoding="utf-8") +
+                       f"\n[docs]\npaths = [{joined}]\n", encoding="utf-8")
+    return root
+
+
 # ------------------------------------------------ marker injection (SR-0094)
 
 def _inject_project():

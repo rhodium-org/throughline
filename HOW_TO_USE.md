@@ -236,6 +236,7 @@ throughline invalidate <UID> --reason "…"               # falsify; cascade sus
 | `unratified` | an AI-origin item is still `proposed` |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
+| `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
 
 Every rule's severity is configurable per project under `[rules]`; `--strict`
 promotes every warning to an error — use it in CI.

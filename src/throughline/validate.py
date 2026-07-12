@@ -44,6 +44,7 @@ _DEFAULT_SEVERITY = {
     "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
+    "unpublished": WARNING,
 }
 
 
@@ -52,7 +53,8 @@ def _file(item) -> str:
 
 
 def validate(project, strict: bool = False,
-             baseline: dict[str, str] | None = None) -> list[Finding]:
+             baseline: dict[str, str] | None = None,
+             published: set[str] | None = None) -> list[Finding]:
     idx = Index.build(project)
     schema = project.schema
     out: list[Finding] = []
@@ -156,6 +158,13 @@ def validate(project, strict: bool = False,
         if item.attrs.get("origin") in schema.ai_origins and item.status == "proposed":
             add("unratified", item.uid, f,
                 f"{item.attrs['origin']}-origin item awaiting human ratification")
+
+        # Publication coverage (SR-0096): a normative item referenced by no
+        # published document is scope that can justify itself but cannot reach
+        # the reader. Inert (published is None) until [docs] paths are configured.
+        if published is not None and item.normative and item.uid not in published:
+            add("unpublished", item.uid, f,
+                "normative item is referenced by no published document")
 
         # Quality — grounded but ambiguous is still not deliverable.
         if item.attrs.get("ambiguous"):

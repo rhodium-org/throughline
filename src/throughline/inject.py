@@ -24,6 +24,7 @@ never a document editor (see the ``non_goal`` NG-0001).
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 from .graph import Index
 from .validate import FilterError, eval_filter
@@ -53,6 +54,37 @@ def has_markers(text: str) -> bool:
     """True if the text contains any tl: marker at all — the file is a throughline
     document. Files without markers are left completely untouched (SR-0095)."""
     return bool(_OPEN.search(text) or _END.search(text))
+
+
+def referenced_uids(project) -> set[str] | None:
+    """The set of item UIDs referenced by any marker in a configured published
+    document (SR-0096) — a ``tl:item`` names its UID directly; a ``tl:table`` /
+    ``tl:matrix`` publishes every item its filter selects. Returns ``None`` when
+    no ``[docs] paths`` are configured, so the ``unpublished`` rule is inert for
+    projects that do not publish documents through throughline. Malformed markers
+    are ignored here: reporting them is `tl docs`'s job, not the coverage rule's."""
+    if not project.schema.docs_paths:
+        return None
+    root = Path(project.path)
+    refs: set[str] = set()
+    for pattern in project.schema.docs_paths:
+        for p in sorted(root.glob(pattern)):
+            if not p.is_file():
+                continue
+            try:
+                text = p.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for m in _BLOCK.finditer(text):
+                kind, arg = m.group("kind").lower(), m.group("arg").strip()
+                if kind == "item":
+                    refs.add(arg)
+                else:
+                    try:
+                        refs.update(it.uid for it in _matching(project, arg))
+                    except InjectError:
+                        continue
+    return refs
 
 
 def inject_text(project, text: str) -> str:

@@ -23,7 +23,7 @@ from .grounding import (
     ratify,
     reaches_root,
 )
-from .inject import InjectError, has_markers, inject_text
+from .inject import InjectError, has_markers, inject_text, referenced_uids
 from .model import Document, Link
 from .storage import (
     MANIFEST_NAME,
@@ -330,7 +330,9 @@ def cmd_check(args) -> int:
     baseline = None
     if project.schema.transitions is not None and args.base:
         baseline = baseline_statuses(project, args.base)
-    findings = validate(project, strict=args.strict, baseline=baseline)
+    published = referenced_uids(project)  # None unless [docs] paths configured
+    findings = validate(project, strict=args.strict, baseline=baseline,
+                        published=published)
     if args.format == "json":
         print(json.dumps([f.to_dict() for f in findings], indent=2))
         return FINDINGS if any(f.severity == ERROR for f in findings) else OK
