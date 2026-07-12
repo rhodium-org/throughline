@@ -120,7 +120,7 @@ sections:                    # optional named sections for publishing
 ```toml
 [project]
 name = "Example"
-format_version = 1
+format_version = 2
 
 [types.requirement]
 attrs.priority     = {type = "enum", values = ["must","should","could"], required = true, normative = true}

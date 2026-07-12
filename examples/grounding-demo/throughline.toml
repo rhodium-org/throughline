@@ -1,6 +1,6 @@
 [project]
 name = "Grounding Demo"
-format_version = 1
+format_version = 2
 
 # Root item types may exist ungrounded; everything else must reach a root
 # through a grounding link (the scope-avalanche grounding layer).

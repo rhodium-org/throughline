@@ -33,22 +33,49 @@ MANIFEST_NAME = ".register.yml"
 
 # The on-disk format major this build of the Tool reads and writes (NFR-0010).
 # Bump only for a breaking structural change; additive (minor) evolution keeps
-# the same major so older 1.x projects stay readable without migration.
-FORMAT_VERSION = 1
+# the same major so older projects of that major stay readable without migration.
+# History: v1 named a register manifest `.document.yml`; v2 (the register rename,
+# SR-0102) renamed it to `.register.yml`.
+FORMAT_VERSION = 2
+
+# Manifest filename per format major — the sole structural marker that changed
+# between v1 and v2, so it doubles as the discriminator when a hand-authored
+# config omits format_version (see _infer_format_version).
+_MANIFEST_BY_VERSION = {1: ".document.yml", 2: ".register.yml"}
 
 
 class ProjectError(Exception):
     pass
 
 
-def _read_format_version(config: dict) -> int:
-    """The recorded format major, or the current major when the field is absent.
+def _infer_format_version(root: Path) -> int:
+    """Guess the format major of a config that omits format_version, by content.
 
-    A missing field means a hand-authored or pre-versioning project; we assume
-    the current major rather than reject it, honouring the no-lock-in promise
-    (UR-0015). A present value must be an integer major.
+    A missing field means a hand-authored or pre-versioning project. Rather than
+    blindly assume the current major — which would silently load a v1 tree as an
+    empty v2 graph, since the v2 loader rglobs for `.register.yml` and never sees
+    the v1 `.document.yml` — we read the layout on disk. A `.register.yml` present
+    means v2; only `.document.yml` present means v1; neither (a bare/empty project)
+    assumes the current major. This is the content inference that lets an
+    unversioned old project still be routed to `tl migrate` (NFR-0010, UR-0015).
     """
-    raw = config.get("project", {}).get("format_version", FORMAT_VERSION)
+    if next(root.rglob(_MANIFEST_BY_VERSION[2]), None) is not None:
+        return 2
+    if next(root.rglob(_MANIFEST_BY_VERSION[1]), None) is not None:
+        return 1
+    return FORMAT_VERSION
+
+
+def _read_format_version(config: dict, root: Path) -> int:
+    """The recorded format major, or one inferred from content when absent.
+
+    A present value is authoritative and must be an integer major. When absent,
+    fall back to inferring the major from the on-disk layout (UR-0015).
+    """
+    project = config.get("project", {})
+    if "format_version" not in project:
+        return _infer_format_version(root)
+    raw = project["format_version"]
     if isinstance(raw, bool) or not isinstance(raw, int):
         raise ProjectError(
             f"project.format_version must be an integer major, got {raw!r}")
@@ -62,7 +89,7 @@ def _gate_format_version(config: dict, root: Path) -> None:
     mis-parse a format from the future. Older than ours -> point at `tl migrate`
     rather than silently rewrite. An equal major reads transparently.
     """
-    disk = _read_format_version(config)
+    disk = _read_format_version(config, root)
     if disk > FORMAT_VERSION:
         raise ProjectError(
             f"{root / CONFIG_NAME} declares format version {disk}, but this tl "
@@ -73,11 +100,24 @@ def _gate_format_version(config: dict, root: Path) -> None:
             f"{FORMAT_VERSION} — run `tl migrate` to upgrade the project")
 
 
+def _migrate_1_to_2(root: Path) -> None:
+    """Upgrade a v1 tree to v2 by renaming every register manifest from the old
+    `.document.yml` to `.register.yml` (SR-0102). Only the filename changed — the
+    manifest's keys are identical across the two majors — so the rename is the
+    whole migration and it preserves every item untouched."""
+    old, new = _MANIFEST_BY_VERSION[1], _MANIFEST_BY_VERSION[2]
+    for manifest in sorted(root.rglob(old)):
+        target = manifest.with_name(new)
+        if target.exists():
+            raise ProjectError(
+                f"cannot migrate {manifest}: {target} already exists")
+        manifest.rename(target)
+
+
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
-# the project tree in place to the next major. Empty until a breaking format change
-# lands — `tl migrate` then walks this chain from the on-disk major to the current
-# one. Kept explicit so a future v2 registers exactly one step here (NFR-0010).
-_MIGRATIONS: dict[int, Callable[[Path], None]] = {}
+# the project tree in place to the next major. `tl migrate` walks this chain from
+# the on-disk major to the current one (NFR-0010).
+_MIGRATIONS: dict[int, Callable[[Path], None]] = {1: _migrate_1_to_2}
 
 
 def _rewrite_format_version(cfg_file: Path, version: int) -> None:
@@ -112,7 +152,7 @@ def migrate_project(path: str | Path) -> tuple[int, int]:
         raise ProjectError(
             f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
-    start = _read_format_version(config)
+    start = _read_format_version(config, root)
     if start > FORMAT_VERSION:
         raise ProjectError(
             f"{cfg_file} declares format version {start}, newer than this tl "
@@ -502,7 +542,7 @@ def _seed_starter(root: Path, name: str) -> None:
 _DEFAULT_CONFIG = '''\
 [project]
 name = "{name}"
-format_version = 1
+format_version = 2
 
 # Root item types may exist ungrounded; everything else must reach a root
 # through a grounding link (the scope-avalanche grounding layer). A non_goal is

@@ -1,6 +1,6 @@
 [project]
 name = "throughline"
-format_version = 1
+format_version = 2
 
 # throughline's own spec, self-hosted (SR-0061). Roots are the vision (intent) and
 # the eight goals + the maintainability need (business_need); every user and

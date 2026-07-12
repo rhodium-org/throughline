@@ -24,7 +24,6 @@ from throughline import (
     write_item,
     write_manifest,
 )
-from throughline import storage
 from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
 from throughline.storage import (
@@ -1281,6 +1280,20 @@ def _set_format_version(root, value):
                           f"format_version = {value}", text), encoding="utf-8")
 
 
+def _make_legacy_v1_project(root):
+    """Build a project in the pre-register (v1) on-disk layout: a `.document.yml`
+    manifest holding one item, and format_version = 1 — exactly what any released
+    tl (0.1.0-0.1.4) wrote before the register rename (SR-0102)."""
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    assert _cli(["-C", str(root), "new", "SR", "--type", "system_requirement",
+                 "--no-interactive", "--title", "legacy item"]) == 0
+    reg = root / "system"
+    (reg / ".register.yml").rename(reg / ".document.yml")  # the v1 manifest name
+    _set_format_version(root, 1)
+    return reg
+
+
 def test_load_refuses_newer_format_version(tmp_path):
     """A project whose format major is newer than this tl must refuse to load and
     tell the user to upgrade tl, never silently mis-parse a future format
@@ -1294,24 +1307,46 @@ def test_load_refuses_newer_format_version(tmp_path):
 
 
 def test_load_points_older_format_at_migrate(tmp_path):
-    """A project older than this tl refuses to load and points at `tl migrate`,
-    rather than silently rewriting it under the reader's feet (NFR-0010)."""
+    """A v1 project (declared) refuses to load under this v2 tl and points at
+    `tl migrate`, rather than silently loading its `.document.yml` registers as an
+    empty graph — the data-loss trap the gate exists to prevent (NFR-0010)."""
     root = tmp_path / "proj"
-    assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    _set_format_version(root, FORMAT_VERSION - 1)
+    reg = _make_legacy_v1_project(root)
+    assert (reg / ".document.yml").exists()
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
     assert _cli(["-C", str(root), "check"]) == 2  # USAGE — refuses to run
 
 
-def test_load_missing_format_version_assumes_current(tmp_path):
-    """A hand-authored config with no format_version is assumed current and loads,
-    honouring the no-lock-in promise rather than rejecting ordinary files
-    (UR-0015)."""
+def test_load_missing_field_empty_project_assumes_current(tmp_path):
+    """An empty config with no format_version and no registers on disk is assumed
+    current and loads, honouring no-lock-in rather than rejecting it (UR-0015)."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
     _set_format_version(root, None)
     assert list(load_project(root).items()) == []  # loads without error
+
+
+def test_infer_absent_field_from_v1_layout_routes_to_migrate(tmp_path):
+    """The content-inference case: a config that omits format_version but has the
+    v1 `.document.yml` layout is inferred as v1 and routed to migrate, not
+    mis-read as an empty current-format graph (NFR-0010, UR-0015)."""
+    root = tmp_path / "proj"
+    _make_legacy_v1_project(root)
+    _set_format_version(root, None)  # drop the version line entirely
+    with pytest.raises(ProjectError, match="tl migrate"):
+        load_project(root)
+    assert migrate_project(root) == (1, FORMAT_VERSION)  # migrate off the inferred major
+
+
+def test_infer_absent_field_from_v2_layout_loads(tmp_path):
+    """A config that omits format_version but has the v2 `.register.yml` layout is
+    inferred as current and loads without migration (UR-0015)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    _set_format_version(root, None)
+    assert list(load_project(root).items()) == []  # loads (inferred current)
 
 
 def test_migrate_current_project_is_noop(tmp_path):
@@ -1334,30 +1369,26 @@ def test_migrate_refuses_newer_project(tmp_path):
 
 
 def test_migrate_no_registered_path_errors_cleanly(tmp_path):
-    """An older major with no registered migration step fails with a clear error
-    rather than a half-applied upgrade (NFR-0010)."""
+    """An older major with no registered migration step (a hypothetical v0) fails
+    with a clear error rather than a half-applied upgrade (NFR-0010)."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    _set_format_version(root, FORMAT_VERSION - 1)
+    _set_format_version(root, 0)
     with pytest.raises(ProjectError, match="no migration path"):
         migrate_project(root)
 
 
-def test_migrate_walks_registered_chain(tmp_path, monkeypatch):
-    """With a step registered for the older major, `tl migrate` applies it, bumps
-    the recorded version to current, and the project then loads clean — proving
-    the migrate command performs a real upgrade, not just a version bump."""
+def test_migrate_v1_document_manifests_to_v2_registers(tmp_path):
+    """The real 1->2 migration: `tl migrate` renames every `.document.yml` to
+    `.register.yml`, bumps the recorded version, and the project then loads with
+    its item intact — a genuine upgrade that preserves data (NFR-0010, SR-0102)."""
     root = tmp_path / "proj"
-    assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    _set_format_version(root, FORMAT_VERSION - 1)
-    calls = []
-    monkeypatch.setitem(storage._MIGRATIONS, FORMAT_VERSION - 1,
-                        lambda p: calls.append(p))
-    assert migrate_project(root) == (FORMAT_VERSION - 1, FORMAT_VERSION)
-    assert calls == [root]                       # the step ran, once
-    cfg = (root / "throughline.toml").read_text(encoding="utf-8")
-    assert f"format_version = {FORMAT_VERSION}" in cfg
-    assert list(load_project(root).items()) == []  # loads clean afterwards
+    reg = _make_legacy_v1_project(root)
+    assert migrate_project(root) == (1, 2)
+    assert (reg / ".register.yml").exists()
+    assert not (reg / ".document.yml").exists()
+    assert "format_version = 2" in (root / "throughline.toml").read_text(encoding="utf-8")
+    assert [i.uid for i in load_project(root).items()] == ["SR-0001"]  # item survived
 
 
 def test_init_refuses_to_nest_inside_existing_project(tmp_path):
