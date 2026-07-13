@@ -298,6 +298,16 @@ kept as a live example of the tombstone convention.)*
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
+<!-- tl:item SR-0107 -->
+**SR-0107 — Namespace-qualified references fail fast toward composition** — `system_requirement`, status `approved`
+
+> A reference target of the form `<namespace>:<UID>` — a namespace name, a colon, and an otherwise-valid UID, for example `gds:SR-0001` — asserts that the target resolves inside a declared external source. The core Tool performs no composition and cannot resolve such a target, so `tl check` shall recognise this form from the reference alone and fail with a distinct finding that names the composing tool (`tl-compose`), rather than report it as an ordinary dangling link to a missing local UID. The Tool shall reach this verdict from the reference's syntax only — it shall not read any source configuration and shall remain entirely source-unaware. Free external references — a URL, a repository path, or any other out-of-graph pointer (SR-0031) — shall stay opaque and shall not trigger this rule, because being unresolvable is those forms' intended purpose.
+
+*Rationale:* Without a distinct rule the namespace-qualified form falls through to the dangling-link check (SR-0032) and is reported as a missing local UID, which misleads a composer into hunting for a typo when the real remedy is to run the composing tool. Recognising the syntax as a first-class token turns the wrong tool into a signpost to the right one. It also keeps the core's only concession to composition minimal — the Tool gains no ability to resolve, fetch, or merge; it merely refuses to pretend a cross-source reference is a broken local one. Composition itself stays outside the core and lives in throughline-compose.
+
+**origin**: human · **priority**: must · **verification**: test
+<!-- tl:end -->
+
 <!-- tl:item SR-0033 -->
 **SR-0033 — Content fingerprints** — `system_requirement`, status `approved`
 

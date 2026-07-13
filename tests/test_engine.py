@@ -230,6 +230,26 @@ def test_dangling_link_flagged():
               links=[Link(target="NOPE", type="derives_from")])
     assert ("FR-1", "dangling-link") in _rules(validate(_project(_doc("FR", fr))))
 
+def test_namespace_qualified_reference_flagged_not_dangling():
+    # A `<namespace>:<UID>` target (SR-0107) is the composition syntax the core cannot
+    # resolve — it must fire namespace-unresolved, and NOT be mistaken for a dangling
+    # local link.
+    fr = Item(uid="FR-1", type="requirement",
+              links=[Link(target="gds:SR-0001", type="derives_from")])
+    rules = _rules(validate(_project(_doc("FR", fr))))
+    assert ("FR-1", "namespace-unresolved") in rules
+    assert ("FR-1", "dangling-link") not in rules
+
+def test_free_external_references_stay_opaque():
+    # URLs, repo paths, and anchors (SR-0031) are unresolvable by design and must not
+    # trigger either the dangling or the namespace-unresolved rule.
+    fr = Item(uid="FR-1", type="requirement", links=[
+        Link(target="https://example.com/spec", type="relates"),
+        Link(target="docs/spec.md#L5", type="relates"),
+    ])
+    rules = _rules(validate(_project(_doc("FR", fr))))
+    assert not any(r in ("dangling-link", "namespace-unresolved") for _, r in rules)
+
 def test_grounding_cycle_flagged():
     a = Item(uid="A-1", type="requirement",
              links=[Link(target="B-1", type="derives_from")])

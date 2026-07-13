@@ -41,6 +41,7 @@ _DEFAULT_SEVERITY = {
     "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
     "schema": ERROR,
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
+    "namespace-unresolved": ERROR,
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
     "bad-link-target": ERROR, "bad-status": ERROR, "bad-transition": ERROR,
     "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
@@ -140,7 +141,8 @@ def validate(project, strict: bool = False,
             if not schema.is_link_type(link.type):
                 add("bad-link-target", item.uid, f, f"unknown link type '{link.type}'")
             external = _is_external(link.target)
-            target = None if external else project.get(link.target)
+            namespaced = _is_namespace_qualified(link.target)
+            target = None if (external or namespaced) else project.get(link.target)
             # Endpoint-type shape vs [link_rules] (SR-0084). Target type is
             # unknown for external or missing targets, so only the source side
             # is checked there.
@@ -149,6 +151,11 @@ def validate(project, strict: bool = False,
             if shape:
                 add("bad-link-shape", item.uid, f, shape)
             if external:
+                continue
+            if namespaced:
+                add("namespace-unresolved", item.uid, f,
+                    f"'{link.target}' is a namespace-qualified reference the core cannot "
+                    "resolve — run `tl-compose check` in a composed project")
                 continue
             if target is None:
                 add("dangling-link", item.uid, f, f"link target '{link.target}' does not exist")
@@ -299,6 +306,18 @@ def _match_filter(item, expr: str, idx: Index | None = None) -> bool:
 
 def _is_external(target: str) -> bool:
     return "://" in target or "/" in target or "#" in target
+
+
+# A namespace-qualified reference (SR-0107): a namespace name, a colon, and an
+# otherwise-valid UID (e.g. ``gds:SR-0001``). This is the composition syntax the core
+# cannot resolve. URLs are excluded by _is_external running first (their ``://`` and
+# ``/`` are caught there); this pattern requires the tail to be a bare UID, so a scheme
+# like ``https:`` — whose tail begins ``//`` — never matches.
+_NAMESPACE_REF_RE = re.compile(r"^[a-z][a-z0-9_-]*:[A-Z][A-Z0-9]{1,15}-[0-9]+$")
+
+
+def _is_namespace_qualified(target: str) -> bool:
+    return bool(_NAMESPACE_REF_RE.match(target))
 
 
 class _dummy:
