@@ -188,6 +188,16 @@ kept as a live example of the tombstone convention.)*
 **origin**: human · **priority**: should · **verification**: inspection
 <!-- tl:end -->
 
+<!-- tl:item SR-0103 -->
+**SR-0103 — Filter expressions never reach eval or exec** — `system_requirement`, status `approved`
+
+> The Tool shall never pass any project-supplied value — a coverage-rule filter, a query expression, or any other string read from project files or configuration — to eval, exec, or an equivalent dynamic-code primitive. The one boolean filter language (SR-0045) shall be evaluated through a constrained parser that reads only the published filter namespace (attributes, tags, text, status, type, register, and link predicates) and can reach neither Python builtins nor object internals nor imports. A filter that cannot be parsed shall fail fast with an error rather than fall back to dynamic evaluation.
+
+*Rationale:* NFR-0022 declares project files untrusted input that must not become code execution, but its wording pins only the YAML loader and emitter; the filter path evaluates expressions with eval against a namespace whose only guard is an emptied builtins, which sandbox-escape techniques defeat, so the exact threat NFR-0022 names is still open on the filter surface. A crafted filter in a committed coverage rule already runs on every contributor's and CI machine at tl check; the risk sharpens once graphs are composed across authorities, because a filter authored by one party would then execute inside another party's environment. A parser that evaluates the fixed grammar directly removes the primitive rather than trying to fence it.
+
+**origin**: human · **priority**: must · **verification**: test
+<!-- tl:end -->
+
 ## 3. Attributes and schema
 
 <!-- tl:item SR-0020 -->
