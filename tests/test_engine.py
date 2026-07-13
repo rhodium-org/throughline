@@ -250,6 +250,33 @@ def test_free_external_references_stay_opaque():
     rules = _rules(validate(_project(_doc("FR", fr))))
     assert not any(r in ("dangling-link", "namespace-unresolved") for _, r in rules)
 
+def test_reference_classifiers_are_public(): # SR-0108
+    # The predicates a composer needs are on the public surface, under stable names,
+    # and are the same functions the validator itself runs — so a library consumer and
+    # the core can never disagree about how a target is classified.
+    import importlib
+    import throughline
+    from throughline import is_external, is_namespace_qualified
+    _v = importlib.import_module("throughline.validate")
+
+    assert "is_external" in throughline.__all__
+    assert "is_namespace_qualified" in throughline.__all__
+    assert is_external is _v.is_external
+    assert is_namespace_qualified is _v.is_namespace_qualified
+
+    # A namespace-qualified ref is recognised; is_external runs first so a URL scheme
+    # (tail begins ``//``) is never mistaken for one.
+    assert is_namespace_qualified("gds:SR-0001")
+    assert not is_namespace_qualified("https://example.com/x")
+    assert not is_namespace_qualified("SR-0001")
+
+    # External pointers — URL, path, anchor (SR-0031) — classify as external.
+    assert is_external("https://example.com/x")
+    assert is_external("docs/spec.md#L5")
+    assert is_external("path/to/thing")
+    assert not is_external("SR-0001")
+    assert not is_external("gds:SR-0001")
+
 def test_grounding_cycle_flagged():
     a = Item(uid="A-1", type="requirement",
              links=[Link(target="B-1", type="derives_from")])

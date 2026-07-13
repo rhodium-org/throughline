@@ -140,8 +140,8 @@ def validate(project, strict: bool = False,
         for link in item.links:
             if not schema.is_link_type(link.type):
                 add("bad-link-target", item.uid, f, f"unknown link type '{link.type}'")
-            external = _is_external(link.target)
-            namespaced = _is_namespace_qualified(link.target)
+            external = is_external(link.target)
+            namespaced = is_namespace_qualified(link.target)
             target = None if (external or namespaced) else project.get(link.target)
             # Endpoint-type shape vs [link_rules] (SR-0084). Target type is
             # unknown for external or missing targets, so only the source side
@@ -200,7 +200,7 @@ def validate(project, strict: bool = False,
 
         # Suspect links (SR-0034): stored stamp != target's current fingerprint.
         for link in item.links:
-            if link.stamp is None or _is_external(link.target):
+            if link.stamp is None or is_external(link.target):
                 continue
             target = project.get(link.target)
             if target is None:
@@ -304,19 +304,25 @@ def _match_filter(item, expr: str, idx: Index | None = None) -> bool:
         return False
 
 
-def _is_external(target: str) -> bool:
+def is_external(target: str) -> bool:
+    """True if a link target is a free external reference — a URL, a repository path,
+    or an anchor (SR-0031) — that the graph deliberately leaves opaque. Public so a
+    library consumer classifies targets exactly as the core does (SR-0108)."""
     return "://" in target or "/" in target or "#" in target
 
 
 # A namespace-qualified reference (SR-0107): a namespace name, a colon, and an
 # otherwise-valid UID (e.g. ``gds:SR-0001``). This is the composition syntax the core
-# cannot resolve. URLs are excluded by _is_external running first (their ``://`` and
+# cannot resolve. URLs are excluded by is_external running first (their ``://`` and
 # ``/`` are caught there); this pattern requires the tail to be a bare UID, so a scheme
 # like ``https:`` — whose tail begins ``//`` — never matches.
 _NAMESPACE_REF_RE = re.compile(r"^[a-z][a-z0-9_-]*:[A-Z][A-Z0-9]{1,15}-[0-9]+$")
 
 
-def _is_namespace_qualified(target: str) -> bool:
+def is_namespace_qualified(target: str) -> bool:
+    """True if a link target is a ``<namespace>:<UID>`` reference (SR-0107) — the
+    composition syntax the core cannot resolve. Public so a composer recognises it
+    from the core's own rule rather than a copied grammar (SR-0108)."""
     return bool(_NAMESPACE_REF_RE.match(target))
 
 

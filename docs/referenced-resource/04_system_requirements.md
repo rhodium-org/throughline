@@ -308,6 +308,16 @@ kept as a live example of the tombstone convention.)*
 **origin**: human · **priority**: must · **verification**: test
 <!-- tl:end -->
 
+<!-- tl:item SR-0108 -->
+**SR-0108 — Reference classification is available to library consumers** — `system_requirement`, status `approved`
+
+> The predicates by which the Tool recognises a free external reference (SR-0031) and a namespace-qualified reference (SR-0107) shall be part of throughline's public library surface, exported under stable, non-underscore names and covered by the same compatibility promise as the rest of that surface. A library consumer — in practice the composing tool, which must classify every link target the same way the core does before it can prepare a union (NG-0001) — shall obtain that classification by calling the core, not by reimplementing the grammar. The Tool shall keep exactly one definition of each rule — the public predicates are the same functions the internal validation pipeline uses, so a consumer and the core can never disagree about whether a given target is external, namespace-qualified, or an ordinary local UID.
+
+*Rationale:* SR-0107 makes the core the single authority on what a namespace-qualified reference is, but a composer must reach the same verdict one step earlier, while rewriting targets into a union. If that classification is not on the public surface the composer either couples to a private, underscore-named helper — fragile, and prone to vanish between releases — or copies the grammar, at which point two definitions can drift and a reference the core rejects the composer might silently accept. Publishing the predicates keeps a single source of truth across the library boundary at effectively no cost — they already exist and are already what the core itself runs.
+
+**origin**: human · **priority**: must · **verification**: test
+<!-- tl:end -->
+
 <!-- tl:item SR-0033 -->
 **SR-0033 — Content fingerprints** — `system_requirement`, status `approved`
 

@@ -20,16 +20,16 @@ from .model import Item, Link, Project, Register
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
 from .storage import ProjectError, init_project, load_project, write_item, write_manifest
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
-from .validate import Finding, validate
+from .validate import Finding, is_external, is_namespace_qualified, validate
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "Register", "Item", "Link", "Project",
     "load_project", "init_project", "write_item", "write_manifest", "ProjectError",
     "Index", "fingerprint",
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
-    "validate", "Finding",
+    "validate", "Finding", "is_external", "is_namespace_qualified",
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
     "GroundingError", "reaches_root", "ratify", "invalidate",
     "__version__",
