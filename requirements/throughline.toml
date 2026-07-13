@@ -73,4 +73,4 @@ rejected    = ["draft", "deleted"]
 # globs relative to this project directory (requirements/); the specification
 # lives one level up under docs/referenced-resource/.
 [docs]
-paths = ["../docs/referenced-resource/*.md"]
+paths = ["../docs/referenced-resource/*.md", "../README.md"]

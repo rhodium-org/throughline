@@ -6,6 +6,19 @@ A **Git-native requirements management tool** with a built-in **scope-avalanche
 grounding layer**. Requirements live as one small YAML file per item under
 version control; a `check` command validates the whole graph and gates CI.
 
+**Dogfooded:** throughline's own spec is itself a throughline project —
+<!-- tl:count type == 'system_requirement' -->
+85
+<!-- tl:end --> system requirements,
+<!-- tl:count type == 'user_requirement' -->
+25
+<!-- tl:end --> user requirements, and
+<!-- tl:count type == 'nfr' -->
+22
+<!-- tl:end --> NFRs, every one grounded to a root and green under `tl check --strict`.
+These counts are rendered from the live graph by the `tl:count` directive (SR-0109)
+and gated fresh by `tl docs --check`, so they can never drift from the spec they describe.
+
 Two ideas, one system:
 
 1. **throughline core** — permanent, position-independent UIDs (never renumbered,
