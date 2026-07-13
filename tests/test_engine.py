@@ -1629,3 +1629,26 @@ def test_version_flag_prints_and_exits_zero(capsys):
     out = capsys.readouterr().out
     assert out.startswith("tl ")
     assert out.split()[1]  # a non-empty version string follows the program name
+
+
+def test_trace_renders_unresolved_target_without_crashing(tmp_path, capsys):
+    """`tl trace` walks outward through links; a link whose target is not a local
+    item — a dangling reference, or a namespace-qualified cross-source reference
+    resolved only under tl-compose — is shown as an `(unresolved)` leaf rather
+    than aborting the walk (SR-0051)."""
+    root = _scaffold(tmp_path)  # INT-0001 + FR register
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "cites an external clause",
+                 "--ground", "INT-0001"]) == 0
+    # Give it a link to a target that does not exist in this project.
+    item = root / "features" / "FR-0001.yml"
+    item.write_text(
+        item.read_text(encoding="utf-8")
+        + "- target: \"asvs:SR-0003\"\n  type: relates\n",
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "trace", "FR-0001"]) == 0
+    out = capsys.readouterr().out
+    assert "asvs:SR-0003 (unresolved)" in out
+    assert "FR-0001" in out

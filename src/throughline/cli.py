@@ -840,6 +840,12 @@ def cmd_trace(args) -> int:
             return
         seen.add(uid)
         item = project.get(uid)
+        if item is None:
+            # A link target that is not a local item: a dangling reference, or a
+            # namespace-qualified reference to another source (resolved only under
+            # tl-compose). Show it as a leaf rather than crashing the walk.
+            print(f"{prefix}{uid} (unresolved)")
+            return
         label = f"{uid}  [{item.type}/{item.status}] {item.title}".rstrip()
         print(f"{prefix}{label}")
         edges = (idx.in_links(uid) if args.direction == "in" else idx.out_links(uid))
