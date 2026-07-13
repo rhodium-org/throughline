@@ -974,6 +974,40 @@ def test_inject_matrix_incoming_empty_relationship_shows_dash():
     out = inject_text(_inject_project(), src)
     assert "| INT-1 | Ship value | — |" in out
 
+def test_inject_count_renders_live_cardinality():
+    """SR-0109: tl:count renders a bare integer — the number of live matches. The
+    fixture has three requirements but FR-9 is deleted and FR-2 rejected, so only
+    FR-1 and TC-1 are live."""
+    from throughline.inject import inject_text
+    src = "requirements: <!-- tl:count type == 'requirement' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "<!-- tl:count type == 'requirement' -->\n2\n<!-- tl:end -->" in out
+    assert "requirements: <!-- tl:count" in out   # surrounding prose untouched
+
+def test_inject_count_empty_match_renders_zero():
+    """A filter that matches nothing renders 0 — an honest count, never an error."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:count uid == 'NOPE-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "<!-- tl:count uid == 'NOPE-1' -->\n0\n<!-- tl:end -->" in out
+
+def test_inject_count_bad_filter_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:count nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_count_publishes_its_filter_matches(tmp_path):
+    """SR-0109/SR-0096: the items a tl:count filter selects are published
+    references, exactly as a tl:table filter's are."""
+    from throughline.inject import referenced_uids
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "spec.md").write_text(
+        "<!-- tl:count type == 'requirement' -->\n<!-- tl:end -->\n",
+        encoding="utf-8")
+    refs = referenced_uids(load_project(root))
+    assert "FR-0001" in refs
+
 def test_inject_unknown_item_is_fatal():
     from throughline.inject import InjectError, inject_text
     with pytest.raises(InjectError):

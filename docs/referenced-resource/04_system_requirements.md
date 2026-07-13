@@ -751,3 +751,13 @@ kept as a live example of the tombstone convention.)*
 
 **origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
+
+<!-- tl:item SR-0109 -->
+**SR-0109 — Count directive in documents** — `system_requirement`, status `ratified`
+
+> The Tool shall provide a fourth document directive, tl:count <filter>, that renders the number of live items matching an SR-0045 filter as a plain integer in place of its marked region. Like tl:table and tl:matrix it selects with the filter grammar and counts only live items (an item that is deleted or rejected is not counted, matching the terminal-status set the matrix renderers already use). A malformed filter fails injection rather than rendering a silently wrong number, and a filter that matches nothing renders 0 — an honest count, never an error. The items a tl:count filter selects are published references for the purpose of the unpublished coverage rule (SR-0096), exactly as a tl:table filter is, so a count of a set of items also satisfies their publication. tl:count adds no new grammar and no new output format; it is the existing filter language rendered as a single scalar, keeping the injector's surface small (NG-0001).
+
+*Rationale:* A document (or an index such as a README badge) frequently needs a live tally — how many requirements of a kind, how many tests, how many open items — that must not be hand-maintained, because a stale number is drift exactly as a stale table is (UR-0024). The matrix and table directives could already render the set; what was missing was rendering only its cardinality. One more directive over the same filter grammar closes that gap without widening the language.
+
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->

@@ -9,7 +9,7 @@ throughline regenerates *only* the marked regions, leaving every other byte of
 the file untouched. Because the content is a reference that is re-rendered in
 place — never a hand-maintained copy — it cannot silently drift from the graph.
 
-Three directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
+Four directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
 ``<!-- tl:end -->``:
 
     tl:item   <UID>     one item rendered as a block
@@ -18,9 +18,12 @@ Three directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
               items; an optional incoming:/outgoing:<link_type> selector renders
               the items linked to each match in that direction (SR-0099), e.g.
               ``tl:matrix incoming:implements type == 'user_requirement'``
+    tl:count  <filter>  the number of live items matching an SR-0045 filter,
+              rendered as a bare integer (SR-0109) — a live tally for a document
+              or a README badge that cannot silently drift from the graph
 
 Anything richer (HTML, PDF, a whole book) is delegated to external tools
-(pandoc, mdBook) run over the injected files. Keeping the engine to these three
+(pandoc, mdBook) run over the injected files. Keeping the engine to these four
 directives is a deliberate boundary: throughline is a validator and an injector,
 never a document editor (see the ``non_goal`` NG-0001).
 """
@@ -32,19 +35,19 @@ from pathlib import Path
 from .graph import Index
 from .validate import FilterError, eval_filter
 
-_KINDS = ("item", "table", "matrix")
+_KINDS = ("item", "table", "matrix", "count")
 
 # A marked region: the open marker, its generated body, and the end marker. The
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix)\s+(?P<arg>.*?)\s*-->)"
+    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count)\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
 )
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
-_OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix)\b", re.IGNORECASE)
+_OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix|count)\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
@@ -131,6 +134,8 @@ def _render(project, kind: str, arg: str) -> str:
         return _render_table(project, arg)
     if kind == "matrix":
         return _render_matrix(project, arg)
+    if kind == "count":
+        return _render_count(project, arg)
     raise InjectError(f"unknown directive 'tl:{kind}' (expected one of {_KINDS})")
 
 
@@ -197,6 +202,15 @@ def _render_table(project, expr: str) -> str:
     if not rows:
         out.append("| _(no matching items)_ |  |  |  |")
     return "\n".join(out)
+
+
+def _render_count(project, expr: str) -> str:
+    """The number of live items matching an SR-0045 filter, as a bare integer
+    (SR-0109). Only live items count — a rejected or deleted item is not part of
+    the graph a reader tallies, the same terminal-status set the matrix renderers
+    use. A malformed filter fails injection; a filter matching nothing renders 0."""
+    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
+    return str(len(rows))
 
 
 def _render_matrix(project, arg: str) -> str:
