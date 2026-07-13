@@ -1,0 +1,43 @@
+uid: SR-0104
+type: system_requirement
+status: approved
+title: Filter grammar is a closed, defined language
+text: The filter language (SR-0045) shall be a fixed, closed grammar defined by
+  this requirement, not by whichever expressions a test or a document happens to
+  exercise. A filter is a boolean expression and shall support exactly these
+  constructs — the
+  logical operators and, or, and not, with parentheses for grouping; the
+  comparisons ==, !=, <, <=, >, and >=; the membership tests in and not in;
+  literal values — single- or double-quoted strings, integers, decimals, the
+  booleans true and false, and none — and literal lists, tuples, and sets of
+  them; references to the fixed field namespace (uid, type, status, register,
+  title, text, rationale, normative, derived, and attrs) and no other bare names;
+  indexing a field by a literal or field key, for example attrs['priority']; and
+  a closed allow-list of read-only accessor methods on a referenced value, for
+  example attrs.get('priority') or title.lower(). Every construct outside this
+  grammar — arithmetic, assignment, comprehensions, generator or conditional
+  expressions, lambdas, attribute access other than the allowed accessor calls,
+  a call to anything but an allowed accessor, or any name absent from the
+  namespace — shall be rejected as a malformed filter and never evaluated. The
+  grammar shall be identical in search, query, table and matrix generation,
+  exports, and coverage rules.
+rationale: SR-0045 named the language's dimensions but never its syntax, so the
+  accepted grammar was implicitly whatever the evaluator could parse — the whole
+  of Python, which is simultaneously the deserialisation-class RCE that SR-0103
+  closes and an undefined contract no test set can pin down. Defining the grammar
+  makes the language a deliberate design surface — a contributor or integrator
+  knows precisely what a filter may contain, and the constrained parser (SR-0103)
+  has a fixed specification to enforce rather than a moving target inferred from
+  examples.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+- target: SR-0103
+  type: relates
+attrs:
+  origin: human
+  priority: must
+  verification: test

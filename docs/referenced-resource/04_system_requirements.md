@@ -422,6 +422,36 @@ kept as a live example of the tombstone convention.)*
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
+<!-- tl:item SR-0104 -->
+**SR-0104 — Filter grammar is a closed, defined language** — `system_requirement`, status `approved`
+
+> The filter language (SR-0045) shall be a fixed, closed grammar defined by this requirement, not by whichever expressions a test or a document happens to exercise. A filter is a boolean expression and shall support exactly these constructs — the logical operators and, or, and not, with parentheses for grouping; the comparisons ==, !=, <, <=, >, and >=; the membership tests in and not in; literal values — single- or double-quoted strings, integers, decimals, the booleans true and false, and none — and literal lists, tuples, and sets of them; references to the fixed field namespace (uid, type, status, register, title, text, rationale, normative, derived, and attrs) and no other bare names; indexing a field by a literal or field key, for example attrs['priority']; and a closed allow-list of read-only accessor methods on a referenced value, for example attrs.get('priority') or title.lower(). Every construct outside this grammar — arithmetic, assignment, comprehensions, generator or conditional expressions, lambdas, attribute access other than the allowed accessor calls, a call to anything but an allowed accessor, or any name absent from the namespace — shall be rejected as a malformed filter and never evaluated. The grammar shall be identical in search, query, table and matrix generation, exports, and coverage rules.
+
+*Rationale:* SR-0045 named the language's dimensions but never its syntax, so the accepted grammar was implicitly whatever the evaluator could parse — the whole of Python, which is simultaneously the deserialisation-class RCE that SR-0103 closes and an undefined contract no test set can pin down. Defining the grammar makes the language a deliberate design surface — a contributor or integrator knows precisely what a filter may contain, and the constrained parser (SR-0103) has a fixed specification to enforce rather than a moving target inferred from examples.
+
+**origin**: human · **priority**: must · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0105 -->
+**SR-0105 — Tags as a first-class filter field** — `system_requirement`, status `deferred`
+
+> The filter grammar (SR-0104) shall expose an item's tags as a first-class field so a filter can test tag membership directly — for example 'security' in tags — delivering the "tags" dimension SR-0045 names without requiring the author to know that tags are stored inside a particular attribute. Until this is built, tags have no dedicated field and a filter must reach them through attrs (for example 'security' in attrs.get('tags', [])); this requirement records that gap as a deliberate, grounded backlog item rather than leaving the SR-0045 promise silently unmet.
+
+*Rationale:* SR-0045 lists tags as one of the dimensions the one filter language ranges over, but the tool has no tag concept distinct from ordinary custom attributes, so the grammar (SR-0104) exposes no tags name. Rather than narrow SR-0045 to what is implemented, the shortfall is captured as its own item so the decision to add a first-class tag field — or to fold tags formally into attrs — is made openly.
+
+**origin**: human · **priority**: could · **verification**: test
+<!-- tl:end -->
+
+<!-- tl:item SR-0106 -->
+**SR-0106 — Link predicates in the filter grammar** — `system_requirement`, status `deferred`
+
+> The filter grammar (SR-0104) shall provide link predicates so a filter can select items by their graph edges, not only by scalar fields — for example whether an item has an outgoing or incoming link of a given type, or links to a given target UID (for example has_link('outgoing', 'implements') or links_to('SR-0045')). This delivers the "link predicates" dimension SR-0045 names inside the expression language itself, so a query or an exported view can match on connectivity the way coverage rules (SR-0042) already can through their incoming/outgoing selector. Until this is built, the filter grammar has no link predicate and connectivity can be tested only by a coverage rule's needs selector; this requirement records that gap as a grounded backlog item.
+
+*Rationale:* SR-0045 lists link predicates among the filter language's dimensions, and coverage rules already express incoming/outgoing link requirements, but the shared expression grammar itself exposes no way to reach an item's links — so a query cannot ask "requirements with no verifying test" the way a coverage rule can. Capturing the missing predicate as its own item keeps the grammar definition (SR-0104) honest about what it does and does not yet cover, instead of letting SR-0045 imply a capability the language lacks.
+
+**origin**: human · **priority**: should · **verification**: test
+<!-- tl:end -->
+
 <!-- tl:item SR-0046 -->
 **SR-0046 — Full-text search** — `system_requirement`, status `approved`
 

@@ -1,0 +1,31 @@
+uid: SR-0106
+type: system_requirement
+status: deferred
+title: Link predicates in the filter grammar
+text: The filter grammar (SR-0104) shall provide link predicates so a filter can
+  select items by their graph edges, not only by scalar fields — for example
+  whether an item has an outgoing or incoming link of a given type, or links to a
+  given target UID (for example has_link('outgoing', 'implements') or
+  links_to('SR-0045')). This delivers the "link predicates" dimension SR-0045
+  names inside the expression language itself, so a query or an exported view can
+  match on connectivity the way coverage rules (SR-0042) already can through their
+  incoming/outgoing selector. Until this is built, the filter grammar has no link
+  predicate and connectivity can be tested only by a coverage rule's needs
+  selector; this requirement records that gap as a grounded backlog item.
+rationale: SR-0045 lists link predicates among the filter language's dimensions,
+  and coverage rules already express incoming/outgoing link requirements, but the
+  shared expression grammar itself exposes no way to reach an item's links — so a
+  query cannot ask "requirements with no verifying test" the way a coverage rule
+  can. Capturing the missing predicate as its own item keeps the grammar
+  definition (SR-0104) honest about what it does and does not yet cover, instead
+  of letting SR-0045 imply a capability the language lacks.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+attrs:
+  origin: human
+  priority: should
+  verification: test

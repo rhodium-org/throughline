@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 
 from .fingerprint import fingerprint
+from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import reaches_root
 from .schema import ERROR, OFF, WARNING
@@ -236,10 +237,6 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
     return findings
 
 
-class FilterError(ValueError):
-    """A filter expression could not be evaluated (SR-0045)."""
-
-
 def _filter_namespace(item) -> dict:
     """The one set of names an SR-0045 filter can reference. Shared by coverage
     rules and the `query` CLI so the language is identical in both."""
@@ -248,21 +245,18 @@ def _filter_namespace(item) -> dict:
         "uid": item.uid, "derived": item.derived, "normative": item.normative,
         "title": item.title, "text": item.text, "rationale": item.rationale,
         "attrs": dict(item.attrs),  # e.g. attrs.get('priority') == 'must'
-        "true": True, "false": False,
+        "true": True, "false": False, "none": None,
     }
 
 
 def eval_filter(item, expr: str) -> bool:
     """Evaluate an SR-0045 boolean filter against one item. Raises FilterError
-    on a malformed expression so user-facing callers can report it. The
-    namespace omits builtins; expressions are the user's own (local, offline)."""
+    on a malformed expression so user-facing callers can report it. Project
+    files are untrusted input, so the expression is walked by a constrained
+    parser rather than passed to eval (SR-0103, NFR-0022)."""
     if not expr or not expr.strip():
         return True
-    try:
-        return bool(eval(expr, {"__builtins__": {}},  # noqa: S307 - constrained ns
-                         _filter_namespace(item)))
-    except Exception as e:  # noqa: BLE001 - surface as a typed error
-        raise FilterError(str(e)) from e
+    return bool(safe_eval(expr, _filter_namespace(item)))
 
 
 def _match_filter(item, expr: str) -> bool:

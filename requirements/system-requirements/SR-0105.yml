@@ -1,0 +1,28 @@
+uid: SR-0105
+type: system_requirement
+status: deferred
+title: Tags as a first-class filter field
+text: The filter grammar (SR-0104) shall expose an item's tags as a first-class
+  field so a filter can test tag membership directly — for example
+  'security' in tags — delivering the "tags" dimension SR-0045 names without
+  requiring the author to know that tags are stored inside a particular
+  attribute. Until this is built, tags have no dedicated field and a filter must
+  reach them through attrs (for example 'security' in attrs.get('tags', [])); this
+  requirement records that gap as a deliberate, grounded backlog item rather than
+  leaving the SR-0045 promise silently unmet.
+rationale: SR-0045 lists tags as one of the dimensions the one filter language
+  ranges over, but the tool has no tag concept distinct from ordinary custom
+  attributes, so the grammar (SR-0104) exposes no tags name. Rather than narrow
+  SR-0045 to what is implemented, the shortfall is captured as its own item so the
+  decision to add a first-class tag field — or to fold tags formally into attrs —
+  is made openly.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+attrs:
+  origin: human
+  priority: could
+  verification: test
