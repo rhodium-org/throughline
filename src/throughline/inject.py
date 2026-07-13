@@ -162,9 +162,10 @@ def _matching(project, expr: str) -> list:
     """Live items matching an SR-0045 filter, in UID order. A malformed filter is
     fatal here (unlike coverage rules) so a broken document is fixed, not silently
     empty."""
+    idx = Index.build(project)
     try:
         items = [it for it in project.items()
-                 if not it.is_deleted and eval_filter(it, expr)]
+                 if not it.is_deleted and eval_filter(it, expr, idx)]
     except FilterError as e:
         raise InjectError(f"bad filter '{expr}': {e}") from e
     return sorted(items, key=lambda it: it.uid)

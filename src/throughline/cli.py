@@ -386,8 +386,9 @@ def cmd_query(args) -> int:
         return _err(str(e))
     candidates = [it for it in project.items()
                   if args.all or not it.is_deleted]
+    idx = Index.build(project)
     try:
-        matched = [it for it in candidates if eval_filter(it, args.expr)]
+        matched = [it for it in candidates if eval_filter(it, args.expr, idx)]
     except FilterError as e:
         return _err(f"bad filter expression: {e}")
     matched.sort(key=lambda it: it.uid)

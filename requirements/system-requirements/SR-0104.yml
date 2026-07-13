@@ -17,10 +17,13 @@ text: The filter language (SR-0045) shall be a fixed, closed grammar defined by
   literal values — single- or double-quoted strings, integers, decimals, the
   booleans true and false, and none — and literal lists, tuples, and sets of
   them; references to the fixed field namespace (uid, type, status, register,
-  title, text, rationale, normative, derived, and attrs) and no other bare names;
+  title, text, rationale, normative, derived, attrs, and links) and no other bare
+  names;
   indexing a field by a literal or field key, for example attrs['priority']; and
   a closed allow-list of read-only accessor methods on a referenced value, for
-  example attrs.get('priority') or title.lower(). Every construct outside this
+  example attrs.get('priority'), title.lower(), or the link predicates
+  links.outgoing('implements') and links.incoming('verifies') (SR-0106). Every
+  construct outside this
   grammar — arithmetic, assignment, comprehensions, generator or conditional
   expressions, lambdas, attribute access other than the allowed accessor calls,
   a call to anything but an allowed accessor, or any name absent from the

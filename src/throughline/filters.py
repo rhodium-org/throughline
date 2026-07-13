@@ -23,12 +23,14 @@ _COMPARISONS = {
     ast.In: lambda a, b: a in b, ast.NotIn: lambda a, b: a not in b,
 }
 
-# The only methods callable in a filter — dict/str reads that cannot mutate or
-# reach internals. `format`/`format_map` are excluded on purpose: a crafted
-# format string can walk to __class__.
+# The only methods callable in a filter — dict/str reads and the link-view
+# predicates (SR-0106), none of which can mutate or reach internals.
+# `format`/`format_map` are excluded on purpose: a crafted format string can
+# walk to __class__.
 _METHODS = frozenset({
     "get", "keys", "values", "items",
     "startswith", "endswith", "lower", "upper", "strip",
+    "to", "outgoing", "incoming",  # links.<predicate>(...) — SR-0106
 })
 
 

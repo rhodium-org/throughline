@@ -11,6 +11,9 @@ from __future__ import annotations
 import pytest
 
 from throughline.filters import FilterError, safe_eval
+from throughline.graph import Index
+from throughline.model import Item, Link
+from throughline.validate import eval_filter
 
 NS = {
     "uid": "SR-0045", "type": "system_requirement", "status": "approved",
@@ -92,3 +95,75 @@ def test_rejection_does_not_execute(tmp_path):
     with pytest.raises(FilterError):
         safe_eval(payload, NS)
     assert not marker.exists()
+
+
+# ------------------------------------------------------- link predicates (SR-0106)
+class _Project:
+    def __init__(self, items):
+        self._items = items
+
+    def items(self):
+        return list(self._items)
+
+
+def _link_graph():
+    """A requirement, a test that verifies it, and an unverified requirement.
+    UR-0001 <- SR-0001 (implements) <- TC-0001 (verifies); SR-0002 verifies nothing
+    and links to an external target."""
+    ur = Item(uid="UR-0001", type="user_requirement")
+    sr1 = Item(uid="SR-0001", type="system_requirement",
+               links=[Link(target="UR-0001", type="implements")])
+    sr2 = Item(uid="SR-0002", type="system_requirement",
+               links=[Link(target="https://example.test/spec", type="relates")])
+    tc = Item(uid="TC-0001", type="test_case",
+              links=[Link(target="SR-0001", type="verifies")])
+    project = _Project([ur, sr1, sr2, tc])
+    return project, Index.build(project), {"UR-0001": ur, "SR-0001": sr1,
+                                           "SR-0002": sr2, "TC-0001": tc}
+
+
+def test_links_outgoing():
+    _, idx, it = _link_graph()
+    assert eval_filter(it["SR-0001"], "links.outgoing('implements')", idx)
+    assert not eval_filter(it["SR-0001"], "links.outgoing('verifies')", idx)
+    assert eval_filter(it["SR-0001"], "links.outgoing()", idx)      # any type
+    assert not eval_filter(it["UR-0001"], "links.outgoing()", idx)  # no links
+
+
+def test_links_incoming():
+    _, idx, it = _link_graph()
+    assert eval_filter(it["SR-0001"], "links.incoming('verifies')", idx)
+    assert eval_filter(it["UR-0001"], "links.incoming('implements')", idx)
+    assert eval_filter(it["SR-0001"], "links.incoming()", idx)      # any type
+    assert not eval_filter(it["SR-0002"], "links.incoming()", idx)  # nothing points at it
+
+
+def test_links_to():
+    _, idx, it = _link_graph()
+    assert eval_filter(it["SR-0001"], "links.to('UR-0001')", idx)
+    assert not eval_filter(it["SR-0001"], "links.to('UR-0999')", idx)
+    # external targets match by their literal string
+    assert eval_filter(it["SR-0002"], "links.to('https://example.test/spec')", idx)
+
+
+def test_unverified_requirement_query():
+    """The motivating example from SR-0106: requirements with no verifying test."""
+    _, idx, it = _link_graph()
+    expr = "not links.incoming('verifies')"
+    assert eval_filter(it["UR-0001"], expr, idx)     # nothing verifies the UR
+    assert not eval_filter(it["SR-0001"], expr, idx)  # TC-0001 verifies SR-0001
+
+
+def test_incoming_without_index_fails_fast():
+    """An incoming predicate reads the whole graph; without one it must fail as a
+    malformed filter rather than silently report false (SR-0106)."""
+    _, _, it = _link_graph()
+    with pytest.raises(FilterError):
+        eval_filter(it["SR-0001"], "links.incoming('verifies')", None)
+
+
+def test_outgoing_and_to_work_without_index():
+    """Outgoing predicates read only the item's own links, so they need no index."""
+    _, _, it = _link_graph()
+    assert eval_filter(it["SR-0001"], "links.outgoing('implements')", None)
+    assert eval_filter(it["SR-0001"], "links.to('UR-0001')", None)

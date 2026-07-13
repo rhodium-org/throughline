@@ -227,7 +227,7 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
         if sev == OFF:
             continue
         for item in project.items():
-            if item.is_deleted or not _match_filter(item, rule.get("filter", "")):
+            if item.is_deleted or not _match_filter(item, rule.get("filter", ""), idx):
                 continue
             links = (idx.in_links(item.uid, {ltype}) if direction == "incoming"
                      else idx.out_links(item.uid, {ltype}))
@@ -237,33 +237,62 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
     return findings
 
 
-def _filter_namespace(item) -> dict:
-    """The one set of names an SR-0045 filter can reference. Shared by coverage
-    rules and the `query` CLI so the language is identical in both."""
+class _LinkView:
+    """The ``links`` value a filter sees (SR-0106): read-only predicates over an
+    item's graph edges, called in the accessor style of ``attrs.get`` —
+    ``links.outgoing('implements')``, ``links.to('SR-0045')``,
+    ``links.incoming('verifies')``. A predicate with no type argument matches a
+    link of any type. Outgoing edges are on the item itself; incoming edges need
+    the project :class:`~throughline.graph.Index`, so an incoming predicate
+    without one is a filter error rather than a silent false."""
+
+    def __init__(self, item, idx: Index | None):
+        self._item = item
+        self._idx = idx
+
+    def to(self, target: str) -> bool:
+        return any(link.target == target for link in self._item.links)
+
+    def outgoing(self, type: str | None = None) -> bool:
+        return any(type is None or link.type == type for link in self._item.links)
+
+    def incoming(self, type: str | None = None) -> bool:
+        if self._idx is None:
+            raise FilterError("incoming link predicates are unavailable in this context")
+        types = None if type is None else {type}
+        return bool(self._idx.in_links(self._item.uid, types))
+
+
+def _filter_namespace(item, idx: Index | None = None) -> dict:
+    """The one set of names an SR-0045 filter can reference (grammar: SR-0104).
+    Shared by coverage rules, the `query` CLI, and document injection so the
+    language is identical in all three."""
     return {
         "type": item.type, "status": item.status, "register": item._register_prefix,
         "uid": item.uid, "derived": item.derived, "normative": item.normative,
         "title": item.title, "text": item.text, "rationale": item.rationale,
         "attrs": dict(item.attrs),  # e.g. attrs.get('priority') == 'must'
+        "links": _LinkView(item, idx),  # e.g. links.outgoing('implements')
         "true": True, "false": False, "none": None,
     }
 
 
-def eval_filter(item, expr: str) -> bool:
+def eval_filter(item, expr: str, idx: Index | None = None) -> bool:
     """Evaluate an SR-0045 boolean filter against one item. Raises FilterError
     on a malformed expression so user-facing callers can report it. Project
     files are untrusted input, so the expression is walked by a constrained
-    parser rather than passed to eval (SR-0103, NFR-0022)."""
+    parser rather than passed to eval (SR-0103, NFR-0022). ``idx`` supplies the
+    link graph so incoming link predicates (SR-0106) can be answered."""
     if not expr or not expr.strip():
         return True
-    return bool(safe_eval(expr, _filter_namespace(item)))
+    return bool(safe_eval(expr, _filter_namespace(item, idx)))
 
 
-def _match_filter(item, expr: str) -> bool:
+def _match_filter(item, expr: str, idx: Index | None = None) -> bool:
     """Lenient variant for config-declared coverage rules: a malformed rule
     filter simply fails to match rather than aborting the whole check."""
     try:
-        return eval_filter(item, expr)
+        return eval_filter(item, expr, idx)
     except FilterError:
         return False
 
