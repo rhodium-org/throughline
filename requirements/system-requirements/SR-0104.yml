@@ -4,7 +4,13 @@ status: approved
 title: Filter grammar is a closed, defined language
 text: The filter language (SR-0045) shall be a fixed, closed grammar defined by
   this requirement, not by whichever expressions a test or a document happens to
-  exercise. A filter is a boolean expression and shall support exactly these
+  exercise. The grammar is deliberately a strict subset of Python expression
+  syntax — so that the common case is instantly familiar to the tool's Python and
+  data audience with nothing new to learn, and no separate parser generator or
+  grammar file is carried — using Python's spelling of the operators (and, or,
+  not, in; never the C-style && or ||). It is a subset, not the whole language,
+  and the tool shall reject every construct outside the set below rather than
+  evaluate it. A filter is a boolean expression and shall support exactly these
   constructs — the
   logical operators and, or, and not, with parentheses for grouping; the
   comparisons ==, !=, <, <=, >, and >=; the membership tests in and not in;
@@ -28,7 +34,13 @@ rationale: SR-0045 named the language's dimensions but never its syntax, so the
   makes the language a deliberate design surface — a contributor or integrator
   knows precisely what a filter may contain, and the constrained parser (SR-0103)
   has a fixed specification to enforce rather than a moving target inferred from
-  examples.
+  examples. A Python-expression subset was chosen over a bespoke or C-style
+  grammar because it needs no dependency and no syntax lessons for the likely
+  audience; the risk it carries — expressions that look like Python but are not
+  the whole language — is answered by naming the subset here and failing fast on
+  anything outside it. Should non-Python integrators later make a cross-language
+  standard worthwhile, this is the item where a move to one (for example CEL)
+  would be recorded.
 normative: true
 links:
 - target: UR-0010

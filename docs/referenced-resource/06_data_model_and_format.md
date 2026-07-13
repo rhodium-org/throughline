@@ -134,7 +134,7 @@ values = ["draft","approved","implemented","verified","rejected","deleted"]
 transitions = [["draft","approved"], ["approved","implemented"], ["implemented","verified"]]
 
 [rules]                       # coverage + lint severities (SR-0041/42/43)
-uncovered = [{filter = "type=='requirement' && register=='SR' && status!='deleted'", needs = "incoming:verifies from TST", severity = "error"}]
+uncovered = [{filter = "type=='requirement' and register=='SR' and status!='deleted'", needs = "incoming:verifies from TST", severity = "error"}]
 vague_words = {severity = "warning", words = ["fast","user-friendly","etc"]}
 ```
 
