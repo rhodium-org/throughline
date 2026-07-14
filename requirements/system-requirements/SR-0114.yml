@@ -1,0 +1,27 @@
+uid: SR-0114
+type: system_requirement
+status: ratified
+title: Full-clause mirror of referenced external items in documents
+text: 'The tl:sourced document directive shall render, in full, the distinct external
+  clauses that the items matching its SR-0045 filter reference by a namespace-qualified
+  link target — each rendered as the same full block a tl:item marker produces, in
+  target order, the blocks separated by a blank line. Each block is obtained through
+  the optional target resolver (SR-0110): a composing front end supplies a resolver
+  that renders the borrowed clause from its source, so a composed document can mirror
+  the upstream clauses it depends on in one place. A target the resolver cannot render
+  is omitted; when nothing resolves — no such references, or no source-backed resolver
+  — the directive renders a clear placeholder rather than an error. The clauses a
+  tl:sourced block mirrors belong to their sources, so the directive does not publish
+  the local items its filter selects for the coverage rule (SR-0096). A malformed
+  filter fails injection.'
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0111
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

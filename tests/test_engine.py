@@ -1057,6 +1057,120 @@ def test_inject_catalog_bad_filter_is_fatal():
         inject_text(_inject_project(),
                     "<!-- tl:catalog nonsense syntax ( -->\n<!-- tl:end -->\n")
 
+def test_inject_item_renders_outgoing_links():
+    """SR-0113: an item block lists its outgoing links grouped by type — FR-1
+    derives_from INT-1, so its block carries a link line naming that target."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "*Derives from:* INT-1" in out
+
+def test_inject_item_without_links_renders_no_link_section():
+    """SR-0113: an item with no outgoing links renders no link section, so an
+    unlinked item's block is unchanged — INT-1 has no outgoing links."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:item INT-1 -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "*Derives from:*" not in out
+    assert "**INT-1 — Ship value**" in out
+
+def test_inject_item_link_display_via_resolver():
+    """SR-0113: a link target is rendered through the resolver — a composing caller
+    enriches a borrowed clause (here appending its reference number)."""
+    from throughline.inject import inject_text, TargetResolver
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="ext:SR-9", type="satisfies")])
+    proj = _project(_doc("INT", Item(uid="INT-1", type="intent", status="approved",
+                                     title="Ship value")),
+                    _doc("FR", fr),
+                    config={"grounding": {"ground_link_types": ["derives_from"]},
+                            "links": {"types": ["derives_from", "satisfies"]}})
+
+    class _Res(TargetResolver):
+        def link_display(self, uid):
+            return f"{uid} (V9.9.9)" if uid == "ext:SR-9" else super().link_display(uid)
+
+    src = "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src, resolver=_Res(proj))
+    assert "*Satisfies:* ext:SR-9 (V9.9.9)" in out
+
+def test_inject_catalog_blocks_render_links():
+    """SR-0113: every block a tl:catalog renders lists its links too — FR-1's
+    catalogue block carries the same derives_from line its tl:item block does."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:catalog uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "*Derives from:* INT-1" in out
+
+def test_inject_sourced_renders_borrowed_blocks():
+    """SR-0114: tl:sourced renders, in full, the distinct external clauses the
+    matching items reference by a namespace-qualified target, via the resolver."""
+    from throughline.inject import inject_text, TargetResolver
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="ext:SR-9", type="satisfies")])
+    proj = _project(_doc("INT", Item(uid="INT-1", type="intent", status="approved",
+                                     title="Ship value")),
+                    _doc("FR", fr),
+                    config={"grounding": {"ground_link_types": ["derives_from"]},
+                            "links": {"types": ["derives_from", "satisfies"]}})
+
+    class _Res(TargetResolver):
+        def block(self, uid):
+            return "**ext:SR-9 — Borrowed clause**\n\n> The upstream text." \
+                if uid == "ext:SR-9" else None
+
+    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src, resolver=_Res(proj))
+    assert "**ext:SR-9 — Borrowed clause**" in out
+    assert "> The upstream text." in out
+
+def test_inject_sourced_placeholder_without_resolver():
+    """SR-0114: with the default resolver no external clause resolves, so the
+    directive renders a clear placeholder rather than an error."""
+    from throughline.inject import inject_text
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="ext:SR-9", type="satisfies")])
+    proj = _project(_doc("FR", fr),
+                    config={"links": {"types": ["satisfies"]}})
+    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src)
+    assert "no source-backed external clauses to mirror" in out
+
+def test_inject_sourced_omits_unresolvable_targets():
+    """SR-0114: a target the resolver cannot render is omitted; a resolvable one
+    beside it still renders."""
+    from throughline.inject import inject_text, TargetResolver
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="ext:SR-9", type="satisfies"),
+                     Link(target="ext:SR-8", type="satisfies")])
+    proj = _project(_doc("FR", fr), config={"links": {"types": ["satisfies"]}})
+
+    class _Res(TargetResolver):
+        def block(self, uid):
+            return "**ext:SR-9 — Resolvable**" if uid == "ext:SR-9" else None
+
+    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src, resolver=_Res(proj))
+    assert "**ext:SR-9 — Resolvable**" in out
+    assert "ext:SR-8" not in out
+
+def test_inject_sourced_bad_filter_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:sourced nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_sourced_does_not_publish_local_items(tmp_path):
+    """SR-0114/SR-0096: a tl:sourced block publishes the external clauses, not the
+    local items its filter selects — those items stay unpublished for coverage."""
+    from throughline.inject import referenced_uids
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "reference.md").write_text(
+        "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n",
+        encoding="utf-8")
+    refs = referenced_uids(load_project(root))
+    assert "FR-0001" not in refs
+
 def test_inject_unused_lists_items_no_narrative_cites(tmp_path):
     """SR-0112: tl:unused lists matching items that no narrative directive
     references. A tl:item pins INT-0001, so only FR-0001 is unreferenced."""

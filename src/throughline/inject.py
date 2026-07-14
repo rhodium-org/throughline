@@ -9,10 +9,13 @@ throughline regenerates *only* the marked regions, leaving every other byte of
 the file untouched. Because the content is a reference that is re-rendered in
 place — never a hand-maintained copy — it cannot silently drift from the graph.
 
-Six directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
+Seven directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
 ``<!-- tl:end -->``:
 
-    tl:item   <UID>     one item rendered as a block
+    tl:item   <UID>     one item rendered as a block, including its outgoing links
+              grouped by type (SR-0113) with each target rendered through the
+              optional target resolver, so a borrowed clause shows its reference
+              number rather than a bare UID
     tl:table  <filter>  a table of items matching an SR-0045 filter
     tl:matrix [<dir>:<link_type>] <filter>  a traceability matrix for matching
               items; an optional incoming:/outgoing:<link_type> selector renders
@@ -27,6 +30,10 @@ Six directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
     tl:unused <filter>  the matching items no narrative document references
               (SR-0112) — a catalogue mirror does not count as use, so the report
               stays meaningful alongside a full catalogue
+    tl:sourced <filter> the distinct external clauses that the matching items
+              reference by a namespace-qualified link target, each rendered in full
+              through the target resolver (SR-0114) — a composed document mirrors
+              the upstream clauses it depends on in one place
 
 Anything richer (HTML, PDF, a whole book) is delegated to external tools
 (pandoc, mdBook) run over the injected files. Keeping the engine to these
@@ -39,21 +46,22 @@ import re
 from pathlib import Path
 
 from .graph import Index
-from .validate import FilterError, eval_filter
+from .validate import FilterError, eval_filter, is_namespace_qualified
 
-_KINDS = ("item", "table", "matrix", "count", "catalog", "unused")
+_KINDS = ("item", "table", "matrix", "count", "catalog", "unused", "sourced")
 
 # A marked region: the open marker, its generated body, and the end marker. The
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused)\s+(?P<arg>.*?)\s*-->)"
+    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced)\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
 )
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
-_OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused)\b", re.IGNORECASE)
+_OPEN = re.compile(
+    r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused|sourced)\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
@@ -118,6 +126,20 @@ class TargetResolver:
         val = it.attrs.get(name)
         return None if val is None else str(val)
 
+    def link_display(self, uid: str) -> str:
+        """How an outgoing link target should read inside an item block (SR-0113).
+        The default is the bare UID, so a project that does not compose sees its
+        links unchanged. A composing resolver enriches a borrowed clause — e.g.
+        appending its ``source_ref`` — so a reader sees what the item grounds to."""
+        return uid
+
+    def block(self, uid: str) -> str | None:
+        """The full block for ``uid`` when this resolver can render it, else None
+        (SR-0114). The default cannot render a foreign clause, so ``tl:sourced``
+        over a plain ``tl docs`` renders a placeholder. A composing resolver returns
+        the borrowed clause's own block so a composed document can mirror it."""
+        return None
+
 
 def has_markers(text: str) -> bool:
     """True if the text contains any tl: marker at all — the file is a throughline
@@ -161,10 +183,12 @@ def referenced_uids(project) -> set[str] | None:
     ``None`` when no ``[docs] paths`` are configured, so the ``unpublished`` rule
     is inert for projects that do not publish through throughline. A ``tl:unused``
     report does not itself publish the items it lists (SR-0112), so it is excluded;
-    a ``tl:catalog`` does publish (its items appear in full) and so is counted."""
+    a ``tl:catalog`` does publish (its items appear in full) and so is counted. A
+    ``tl:sourced`` block publishes the *external* clauses its selected local items
+    reference, not those local items (SR-0114), so it too is excluded."""
     if not project.schema.docs_paths:
         return None
-    return _scan_refs(project, exclude_kinds=frozenset({"unused"}))
+    return _scan_refs(project, exclude_kinds=frozenset({"unused", "sourced"}))
 
 
 def inject_text(project, text: str, resolver: "TargetResolver | None" = None) -> str:
@@ -196,7 +220,7 @@ def inject_text(project, text: str, resolver: "TargetResolver | None" = None) ->
 
 def _render(project, kind: str, arg: str, resolver: "TargetResolver") -> str:
     if kind == "item":
-        return _render_item(project, arg)
+        return _render_item(project, arg, resolver)
     if kind == "table":
         return _render_table(project, arg)
     if kind == "matrix":
@@ -204,13 +228,23 @@ def _render(project, kind: str, arg: str, resolver: "TargetResolver") -> str:
     if kind == "count":
         return _render_count(project, arg)
     if kind == "catalog":
-        return _render_catalog(project, arg)
+        return _render_catalog(project, arg, resolver)
     if kind == "unused":
         return _render_unused(project, arg)
+    if kind == "sourced":
+        return _render_sourced(project, arg, resolver)
     raise InjectError(f"unknown directive 'tl:{kind}' (expected one of {_KINDS})")
 
 
-def _render_item(project, uid: str) -> str:
+# Link-type slugs shown as human labels in an item block's link section. Any
+# type not listed falls back to its title-cased slug, so the section is total.
+def _link_label(ltype: str) -> str:
+    return ltype.replace("_", " ").capitalize()
+
+
+def _render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> str:
+    if resolver is None:
+        resolver = TargetResolver(project)
     item = project.get(uid)
     if item is None:
         raise InjectError(
@@ -228,10 +262,25 @@ def _render_item(project, uid: str) -> str:
     if item.rationale:
         lines.append(f"*Rationale:* {' '.join(item.rationale.split())}")
         lines.append("")
+    link_lines = _item_link_lines(item, resolver)
+    if link_lines:
+        lines += link_lines
+        lines.append("")
     if item.attrs:
         lines.append(" · ".join(f"**{k}**: {v}" for k, v in item.attrs.items()))
         lines.append("")
     return "\n".join(lines).rstrip()
+
+
+def _item_link_lines(item, resolver: "TargetResolver") -> list[str]:
+    """The item's outgoing links grouped by link type, one line per type, each
+    target rendered through the resolver (SR-0113). An item with no outgoing links
+    renders no link section, so an unlinked item's block is unchanged."""
+    grouped: dict[str, list[str]] = {}
+    for link in item.links:
+        grouped.setdefault(link.type, []).append(resolver.link_display(link.target))
+    return [f"*{_link_label(ltype)}:* {', '.join(targets)}"
+            for ltype, targets in grouped.items()]
 
 
 def _matching(project, expr: str) -> list:
@@ -338,14 +387,38 @@ def _render_matrix(project, arg: str, resolver: "TargetResolver") -> str:
     return "\n".join(out)
 
 
-def _render_catalog(project, expr: str) -> str:
+def _render_catalog(project, expr: str, resolver: "TargetResolver") -> str:
     """A full-item catalogue (SR-0111): every item matching an SR-0045 filter,
     rendered as the same full block a tl:item marker produces, in UID order. With
-    a catch-all filter this is a self-maintaining master reference document."""
+    a catch-all filter this is a self-maintaining master reference document. Each
+    block renders its links through the resolver (SR-0113), so a borrowed clause a
+    local item satisfies shows its reference number."""
     rows = _matching(project, expr)
     if not rows:
         return "_(no matching items)_"
-    return "\n\n".join(_render_item(project, it.uid) for it in rows)
+    return "\n\n".join(_render_item(project, it.uid, resolver) for it in rows)
+
+
+def _render_sourced(project, expr: str, resolver: "TargetResolver") -> str:
+    """A full-clause mirror (SR-0114): the distinct external clauses that the items
+    matching ``expr`` reference by a namespace-qualified link target, each rendered
+    in full through the resolver's ``block``, in target order, separated by a blank
+    line. A target the resolver cannot render is omitted; when nothing resolves the
+    directive renders a clear placeholder rather than an error. A malformed filter
+    fails injection (via ``_matching``)."""
+    seen: set[str] = set()
+    targets: list[str] = []
+    for it in _matching(project, expr):
+        for link in it.links:
+            t = link.target
+            if is_namespace_qualified(t) and t not in seen:
+                seen.add(t)
+                targets.append(t)
+    blocks = [b for b in (resolver.block(t) for t in sorted(targets)) if b]
+    if not blocks:
+        return ("_(no source-backed external clauses to mirror — compose this "
+                "document to render the clauses it references)_")
+    return "\n\n".join(blocks)
 
 
 def _render_unused(project, expr: str) -> str:
@@ -356,8 +429,10 @@ def _render_unused(project, expr: str) -> str:
     if not project.schema.docs_paths:
         return ("_(no [docs] paths configured — tl:unused cannot tell which items "
                 "are referenced)_")
-    # A catalogue mirror and the report's own listing are not narrative use.
-    referenced = _scan_refs(project, exclude_kinds=frozenset({"catalog", "unused"}))
+    # A catalogue mirror, a sourced-clause mirror, and the report's own listing
+    # are not narrative use of the local items their filters select.
+    referenced = _scan_refs(
+        project, exclude_kinds=frozenset({"catalog", "unused", "sourced"}))
     rows = [it for it in _matching(project, expr) if it.uid not in referenced]
     out = ["| UID | Type | Status | Title |", "|---|---|---|---|"]
     for it in rows:

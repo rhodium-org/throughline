@@ -11,6 +11,8 @@ with `tl docs --check` (SR-0094).
 
 > All Tool code shall be released under an OSI-approved permissive license (Apache-2.0 recommended), with no proprietary components required for any capability.
 
+*Implements:* UR-0015
+
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
 
@@ -19,6 +21,8 @@ with `tl docs --check` (SR-0094).
 
 > The on-disk format shall be fully documented (doc 06), schema-validatable, and readable/writable without the Tool.
 
+*Implements:* UR-0015
+
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
 
@@ -26,6 +30,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0003 — Offline and private** — `nfr`, status `approved`
 
 > All specified functionality shall work with no network access, and the Tool shall send no telemetry or project data anywhere by default.
+
+*Implements:* UR-0015
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -37,6 +43,8 @@ with `tl docs --check` (SR-0094).
 
 > The Tool shall run on current Linux, macOS, and Windows, treating paths, line endings (store LF), and Unicode identically on all three.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
@@ -44,6 +52,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0005 — Simple installation** — `nfr`, status `approved`
 
 > Installation shall require a single standard package-manager command with no database or service setup.
+
+*Implements:* UR-0020
 
 **priority**: must · **verification**: demonstration
 <!-- tl:end -->
@@ -55,6 +65,8 @@ with `tl docs --check` (SR-0094).
 
 > On the reference project (10,000 items, 25 registers, 30,000 links) and reference hardware, the Tool shall complete: full check <=10 s, query <=1 s, full HTML publish <=60 s, incremental publish of one document <=5 s.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: analysis
 <!-- tl:end -->
 
@@ -63,6 +75,8 @@ with `tl docs --check` (SR-0094).
 
 > Peak memory for the reference project shall not exceed 1 GB.
 
+*Derives from:* BN-0009
+
 **priority**: should · **verification**: analysis
 <!-- tl:end -->
 
@@ -70,6 +84,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0008 — Startup latency** — `nfr`, status `approved`
 
 > CLI startup to first output on a small project (<=100 items) shall be under 1 second.
+
+*Derives from:* BN-0009
 
 **priority**: should · **verification**: analysis
 <!-- tl:end -->
@@ -81,6 +97,8 @@ with `tl docs --check` (SR-0094).
 
 > The Tool shall never discard or rewrite user content it does not understand: unknown fields are preserved on read-modify-write, and destructive operations require an explicit flag or run as status changes (SR-0012).
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
@@ -88,6 +106,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0010 — Versioned format with migrations** — `nfr`, status `implemented`
 
 > The file format shall carry an explicit schema version in throughline.toml, and on load the Tool shall compare it against the format the Tool implements and act by the on-disk major. When the on-disk major equals the Tool's, the Tool shall read the project transparently with no warning whatever the minor, so every earlier minor of the same major stays readable without migration. When the on-disk major is newer than the Tool understands, the Tool shall refuse to load and tell the user to upgrade the Tool rather than silently mis-parse a format from the future. When the on-disk major is older than the Tool's, the Tool shall decline to load until the user runs the migration command the Tool provides, which rewrites the project to the current format and bumps the recorded version. When the version field is absent the Tool shall infer the major from the on-disk layout, so an unversioned older project is still routed to migration rather than mis-read as current.
+
+*Implements:* UR-0015
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -97,6 +117,8 @@ with `tl docs --check` (SR-0094).
 
 > Tool releases shall follow SemVer; CLI flags, exit codes, the library API, and the JSON export shape are the compatibility surface.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
 
@@ -104,6 +126,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0012 — Deterministic outputs** — `nfr`, status `approved`
 
 > Given identical input state, publish/export outputs shall be byte-identical (no embedded timestamps by default) to keep artifacts diffable and builds reproducible.
+
+*Implements:* UR-0007
 
 **priority**: should · **verification**: test
 <!-- tl:end -->
@@ -115,6 +139,8 @@ with `tl docs --check` (SR-0094).
 
 *Rationale:* A requirements graph is edited by many hands and, increasingly, by machines; a single hostile or malformed value must not become code execution or silent structural corruption. The tool already parses with safe_load and emits through a SafeDumper — this NFR pins that guarantee so a future refactor to a convenience loader fails the gate instead of quietly reopening the classic deserialization RCE.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
@@ -125,6 +151,9 @@ with `tl docs --check` (SR-0094).
 
 > Documentation shall include a quick start achieving UR-0020's 15-minute scenario, plus a complete CLI and format reference.
 
+*Implements:* UR-0020
+*Relates:* SR-0074
+
 **priority**: must · **verification**: demonstration
 <!-- tl:end -->
 
@@ -132,6 +161,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0014 — Actionable errors** — `nfr`, status `approved`
 
 > Every validation and CLI error shall state the offending file/UID, the rule violated, and where applicable a suggested fix.
+
+*Derives from:* BN-0009
 
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
@@ -141,6 +172,8 @@ with `tl docs --check` (SR-0094).
 
 > Published HTML shall meet WCAG 2.1 AA basics: semantic headings, contrast, keyboard navigation, alt text passthrough.
 
+*Implements:* UR-0008
+
 **priority**: should · **verification**: inspection
 <!-- tl:end -->
 
@@ -149,6 +182,8 @@ with `tl docs --check` (SR-0094).
 
 > All content fields shall support full Unicode; UID prefixes remain ASCII for portability.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
@@ -156,6 +191,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0021 — Conceptual model explained** — `nfr`, status `approved`
 
 > Documentation shall explain throughline's Intent-Driven Development (IDD) model and how it differs from adjacent practices (notably BDD and TDD), so newcomers understand why grounding-at-birth exists and adopt it deliberately rather than treating check as an after-the-fact linter.
+
+*Implements:* UR-0020
 
 **priority**: should · **verification**: inspection
 <!-- tl:end -->
@@ -167,6 +204,8 @@ with `tl docs --check` (SR-0094).
 
 > Core library statement coverage shall be >=85%, with an end-to-end test for every Must SR before it is marked Verified.
 
+*Derives from:* BN-0009
+
 **priority**: must · **verification**: analysis
 <!-- tl:end -->
 
@@ -174,6 +213,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0018 — CI on all platforms** — `nfr`, status `approved`
 
 > Every merge to main shall pass automated tests on Linux, macOS, and Windows.
+
+*Derives from:* BN-0009
 
 **priority**: must · **verification**: inspection
 <!-- tl:end -->
@@ -183,6 +224,8 @@ with `tl docs --check` (SR-0094).
 
 > Runtime dependencies shall be few, permissively licensed, and pinned by a lockfile for releases; a dependency review is required to add one.
 
+*Implements:* UR-0015
+
 **priority**: should · **verification**: inspection
 <!-- tl:end -->
 
@@ -190,6 +233,8 @@ with `tl docs --check` (SR-0094).
 **NFR-0020 — Long-term maintainability** — `nfr`, status `approved`
 
 > Implementation shall use a mainstream language and avoid exotic runtime services, per the maintainability principle in doc 01 §6.
+
+*Derives from:* BN-0009
 
 **priority**: should · **verification**: inspection
 <!-- tl:end -->
