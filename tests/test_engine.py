@@ -1178,9 +1178,9 @@ def test_inject_graph_renders_colour_coded_flowchart():
     src = "<!-- tl:graph type == 'intent' or uid == 'FR-1' -->\n<!-- tl:end -->\n"
     out = inject_text(_inject_project(), src)
     assert "```mermaid" in out
-    # Left-to-right so a dense graph grows tall-and-narrow to fit a portrait page,
-    # and renders on GitHub (which cannot draw the ELK layout engine) — SR-0115.
-    assert "flowchart LR" in out
+    # Top-down is the only layout GitHub's Mermaid build renders reliably; LR and
+    # the ELK engine both fail to draw there — SR-0115.
+    assert "flowchart TD" in out
     assert 'FR_1["FR-1 — Wizard"]:::requirement' in out
     assert "FR_1 -->|derives_from| INT_1" in out
     assert "classDef intent " in out

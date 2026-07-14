@@ -528,12 +528,12 @@ def _external_ns(tgt: str) -> str:
 def _render_graph(project, arg: str) -> str:
     """A Mermaid flowchart of the matching items and their outgoing-link targets
     (SR-0115), coloured by item type with external targets set apart. The chart
-    flows left-to-right (``LR``) so a graph with many items grows into a tall,
-    narrow column that fits a portrait page rather than one very wide row the way a
-    top-down chart would. With a leading ``collapse-external`` flag every borrowed
-    clause folds into one node per source namespace (SR-0118), so a graph that
-    references many external clauses stays small enough to lay out. A malformed
-    filter fails injection; an empty match renders a placeholder."""
+    flows top-down (``TD``) — the layout GitHub's Mermaid build lays out reliably;
+    left-to-right (``LR``) and the ELK engine both fail to render there. With a
+    leading ``collapse-external`` flag every borrowed clause folds into one node
+    per source namespace (SR-0118), so a graph that references many external
+    clauses stays narrow instead of sprawling into a wide row of clause boxes. A
+    malformed filter fails injection; an empty match renders a placeholder."""
     collapse, expr = _parse_graph_arg(arg)
     rows = _matching(project, expr)
     if not rows:
@@ -570,7 +570,7 @@ def _render_graph(project, arg: str) -> str:
             if edge not in seen_edges:      # a source draws one edge per standard
                 seen_edges.add(edge)
                 edges.append(edge)
-    lines = ["flowchart LR"]
+    lines = ["flowchart TD"]
     for uid, (label, cls) in nodes.items():
         lines.append(f'    {_mm_id(uid)}["{label}"]:::{_mm_class(cls)}')
     for src, ltype, tgt in edges:
