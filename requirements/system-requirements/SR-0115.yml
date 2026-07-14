@@ -10,7 +10,9 @@ text: The tl:graph document directive shall render the items matching its SR-004
   by a Mermaid classDef keyed on the item's type, and a link target that is not a
   matched item — an external or namespace-qualified reference such as a borrowed
   standard clause — is given a distinct external class, so intent, the requirement
-  layers and the externals are told apart at a glance. Node identifiers and labels
+  layers and the externals are told apart at a glance. The flowchart is laid out by
+  a self-organising engine so a dense graph packs compactly onto a portrait page
+  rather than sprawling into one wide row. Node identifiers and labels
   are sanitised so a colon in a namespace-qualified target or a special character
   in a title cannot break the diagram. A filter matching nothing renders a clear
   placeholder rather than an empty diagram; a malformed filter fails injection. The

@@ -506,10 +506,18 @@ def _mm_label(uid: str, title: str | None) -> str:
     return f"{uid} — {text}" if text else uid
 
 
+# Mermaid front-matter selecting the ELK layout engine (SR-0115). ELK is a
+# self-organising layered layout that packs a dense graph compactly and keeps a
+# balanced aspect ratio, so a graph with many siblings folds onto a portrait page
+# instead of sprawling into one very wide row the way the default renderer does.
+_GRAPH_LAYOUT = "---\nconfig:\n  layout: elk\n---\n"
+
+
 def _render_graph(project, expr: str) -> str:
     """A Mermaid flowchart of the matching items and their outgoing-link targets
-    (SR-0115), coloured by item type with external targets set apart. A malformed
-    filter fails injection; an empty match renders a placeholder."""
+    (SR-0115), coloured by item type with external targets set apart, laid out by
+    the self-organising ELK engine so a dense graph fits a portrait page. A
+    malformed filter fails injection; an empty match renders a placeholder."""
     rows = _matching(project, expr)
     if not rows:
         return "_(no matching items to graph)_"
@@ -543,7 +551,7 @@ def _render_graph(project, expr: str) -> str:
                      f"{_GRAPH_PALETTE[i % len(_GRAPH_PALETTE)]}")
     if "external" in classes:
         lines.append(f"    classDef external {_GRAPH_EXTERNAL_STYLE}")
-    return "```mermaid\n" + "\n".join(lines) + "\n```"
+    return "```mermaid\n" + _GRAPH_LAYOUT + "\n".join(lines) + "\n```"
 
 
 def _parse_chart_arg(arg: str) -> tuple[str, str]:

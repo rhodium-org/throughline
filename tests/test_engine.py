@@ -1178,6 +1178,8 @@ def test_inject_graph_renders_colour_coded_flowchart():
     src = "<!-- tl:graph type == 'intent' or uid == 'FR-1' -->\n<!-- tl:end -->\n"
     out = inject_text(_inject_project(), src)
     assert "```mermaid" in out
+    # Self-organising ELK layout so a dense graph fits a portrait page (SR-0115).
+    assert "layout: elk" in out
     assert "flowchart TD" in out
     assert 'FR_1["FR-1 — Wizard"]:::requirement' in out
     assert "FR_1 -->|derives_from| INT_1" in out
