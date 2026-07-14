@@ -636,7 +636,7 @@ def _render_stats(project, expr: str) -> str:
     (SR-0117): item and link totals by type, grounding depth, the most-connected
     items, and the degree distribution. Malformed filter fails; empty match →
     placeholder."""
-    rows = _matching(project, expr)
+    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
     if not rows:
         return "_(no matching items to summarise)_"
     idx = Index.build(project)

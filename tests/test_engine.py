@@ -1250,6 +1250,10 @@ def test_inject_stats_summarises_graph_complexity():
     out = inject_text(_inject_project(),
                       "<!-- tl:stats true -->\n<!-- tl:end -->\n")
     assert "**Items:**" in out and "intent 1" in out
+    # Live-only: the rejected FR-2 is excluded from the live graph, so the item
+    # total counts the three live items (INT-1, FR-1, TC-1), not the tombstone
+    # (SR-0117 — "the live item total").
+    assert "**Items:** 3 —" in out
     assert "**Links:**" in out and "derives_from" in out
     assert "**Grounding depth:**" in out
     assert "**Most connected:**" in out
