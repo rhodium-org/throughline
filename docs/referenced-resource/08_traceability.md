@@ -35,7 +35,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098 |
-| UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0114 |
+| UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0114, SR-0115, SR-0116, SR-0117 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
 <!-- tl:end -->
 

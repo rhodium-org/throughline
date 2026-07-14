@@ -1,0 +1,26 @@
+uid: SR-0117
+type: system_requirement
+status: ratified
+title: Graph-statistics directive in documents
+text: The tl:stats document directive shall render a compact Markdown summary of
+  the graph's complexity over the items matching an optional SR-0045 filter — the
+  live item total broken down by type, the outgoing-link total broken down by link
+  type, the grounding depth to a root as a maximum and a mean, the most-connected
+  items by total link degree, and the degree distribution as a count of nodes per
+  degree. A reader sees at a glance how large and how interconnected the graph is
+  without running a query. The summary is drawn live from the graph, so a document
+  or README that carries it cannot silently drift. A filter matching nothing renders
+  a clear placeholder rather than empty statistics; a malformed filter fails injection.
+  The directive reads items to summarise them, it does not publish them for the coverage
+  rule (SR-0096).
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

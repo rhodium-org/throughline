@@ -1171,6 +1171,111 @@ def test_inject_sourced_does_not_publish_local_items(tmp_path):
     refs = referenced_uids(load_project(root))
     assert "FR-0001" not in refs
 
+def test_inject_graph_renders_colour_coded_flowchart():
+    """SR-0115: tl:graph renders a Mermaid flowchart of the matching items and their
+    link targets, edges labelled by link type, nodes classed by item type."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:graph type == 'intent' or uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "```mermaid" in out
+    assert "flowchart TD" in out
+    assert 'FR_1["FR-1 — Wizard"]:::requirement' in out
+    assert "FR_1 -->|derives_from| INT_1" in out
+    assert "classDef intent " in out
+    assert "classDef requirement " in out
+
+def test_inject_graph_sets_external_targets_apart():
+    """SR-0115: a link target that is not a matched item — a namespace-qualified
+    borrowed clause — becomes an external node with the external class, and its id
+    is sanitised so the colon cannot break the diagram."""
+    from throughline.inject import inject_text
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="asvs:SR-9", type="satisfies")])
+    proj = _project(_doc("FR", fr),
+                    config={"links": {"types": ["satisfies"]}})
+    src = "<!-- tl:graph uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src)
+    assert 'asvs_SR_9["asvs:SR-9"]:::external' in out
+    assert "FR_1 -->|satisfies| asvs_SR_9" in out
+    assert "classDef external " in out
+
+def test_inject_graph_empty_and_bad_filter():
+    from throughline.inject import InjectError, inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:graph uid == 'NOPE-1' -->\n<!-- tl:end -->\n")
+    assert "_(no matching items to graph)_" in out
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:graph nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_chart_groups_by_field():
+    """SR-0116: tl:chart <key> renders a Mermaid bar chart of the live-item count
+    grouped by the key — here item type."""
+    from throughline.inject import inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:chart type -->\n<!-- tl:end -->\n")
+    assert "xychart-beta" in out
+    assert '"Items by type"' in out
+    # FR-9 (deleted) and FR-2 (rejected) are not live; only FR-1, TC-1, INT-1 count.
+    assert 'x-axis ["intent", "requirement"]' in out
+    assert "bar [1, 2]" in out
+
+def test_inject_chart_degree_distribution():
+    """SR-0116: the reserved key 'degree' buckets nodes by total link count — a
+    node-complexity distribution."""
+    from throughline.inject import inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:chart degree type == 'intent' or uid == 'FR-1' -->\n"
+                      "<!-- tl:end -->\n")
+    assert '"Nodes by degree"' in out
+    assert "xychart-beta" in out
+
+def test_inject_chart_unknown_key_placeholder():
+    """SR-0116: a key no item exhibits renders a placeholder, not an empty chart."""
+    from throughline.inject import inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:chart nonesuch -->\n<!-- tl:end -->\n")
+    assert "_(no data to chart for 'nonesuch')_" in out
+
+def test_inject_chart_bad_filter_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:chart type nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_stats_summarises_graph_complexity():
+    """SR-0117: tl:stats renders item and link totals, grounding depth, the
+    most-connected items, and the degree distribution."""
+    from throughline.inject import inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:stats true -->\n<!-- tl:end -->\n")
+    assert "**Items:**" in out and "intent 1" in out
+    assert "**Links:**" in out and "derives_from" in out
+    assert "**Grounding depth:**" in out
+    assert "**Most connected:**" in out
+    assert "**Degree distribution:**" in out
+
+def test_inject_stats_empty_and_bad_filter():
+    from throughline.inject import InjectError, inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:stats uid == 'NOPE-1' -->\n<!-- tl:end -->\n")
+    assert "_(no matching items to summarise)_" in out
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:stats nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_graph_chart_stats_do_not_publish(tmp_path):
+    """SR-0115/SR-0116/SR-0117/SR-0096: a diagram or a statistic is not the item's
+    content appearing in a document, so these directives publish nothing."""
+    from throughline.inject import referenced_uids
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "overview.md").write_text(
+        "<!-- tl:graph true -->\n<!-- tl:end -->\n"
+        "<!-- tl:chart type -->\n<!-- tl:end -->\n"
+        "<!-- tl:stats true -->\n<!-- tl:end -->\n", encoding="utf-8")
+    refs = referenced_uids(load_project(root))
+    assert refs == set()
+
 def test_inject_unused_lists_items_no_narrative_cites(tmp_path):
     """SR-0112: tl:unused lists matching items that no narrative directive
     references. A tl:item pins INT-0001, so only FR-0001 is unreferenced."""

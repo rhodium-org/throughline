@@ -9,7 +9,7 @@ throughline regenerates *only* the marked regions, leaving every other byte of
 the file untouched. Because the content is a reference that is re-rendered in
 place — never a hand-maintained copy — it cannot silently drift from the graph.
 
-Seven directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
+Ten directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
 ``<!-- tl:end -->``:
 
     tl:item   <UID>     one item rendered as a block, including its outgoing links
@@ -34,6 +34,15 @@ Seven directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
               reference by a namespace-qualified link target, each rendered in full
               through the target resolver (SR-0114) — a composed document mirrors
               the upstream clauses it depends on in one place
+    tl:graph  <filter>  the matching items and their link targets as a Mermaid
+              flowchart (SR-0115), nodes coloured by item type and external targets
+              set apart, so a reader sees the graph flow from roots to externals
+    tl:chart  <key> [<filter>]  a Mermaid bar chart of the live-item count grouped
+              by a key (SR-0116) — a field (type/status), an attribute, or the
+              reserved ``degree`` for a node-complexity distribution
+    tl:stats  <filter>  a compact Markdown summary of the graph's complexity
+              (SR-0117) — item and link totals by type, grounding depth, the
+              most-connected items, and the degree distribution
 
 Anything richer (HTML, PDF, a whole book) is delegated to external tools
 (pandoc, mdBook) run over the injected files. Keeping the engine to these
@@ -48,20 +57,27 @@ from pathlib import Path
 from .graph import Index
 from .validate import FilterError, eval_filter, is_namespace_qualified
 
-_KINDS = ("item", "table", "matrix", "count", "catalog", "unused", "sourced")
+_KINDS = ("item", "table", "matrix", "count", "catalog", "unused", "sourced",
+          "graph", "chart", "stats")
+
+# Directives that select items to derive a picture or a summary but do not publish
+# those items for the coverage rule (SR-0115/SR-0116/SR-0117) — a diagram or a
+# statistic is not the item's content appearing in a document.
+_NON_PUBLISHING = frozenset({"unused", "sourced", "graph", "chart", "stats"})
 
 # A marked region: the open marker, its generated body, and the end marker. The
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced)\s+(?P<arg>.*?)\s*-->)"
+    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
 )
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
 _OPEN = re.compile(
-    r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused|sourced)\b", re.IGNORECASE)
+    r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)\b",
+    re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
@@ -185,10 +201,12 @@ def referenced_uids(project) -> set[str] | None:
     report does not itself publish the items it lists (SR-0112), so it is excluded;
     a ``tl:catalog`` does publish (its items appear in full) and so is counted. A
     ``tl:sourced`` block publishes the *external* clauses its selected local items
-    reference, not those local items (SR-0114), so it too is excluded."""
+    reference, not those local items (SR-0114); a ``tl:graph`` / ``tl:chart`` /
+    ``tl:stats`` derives a picture or a statistic, not the item's content — none of
+    these publish, so all are excluded (SR-0115/SR-0116/SR-0117)."""
     if not project.schema.docs_paths:
         return None
-    return _scan_refs(project, exclude_kinds=frozenset({"unused", "sourced"}))
+    return _scan_refs(project, exclude_kinds=_NON_PUBLISHING)
 
 
 def inject_text(project, text: str, resolver: "TargetResolver | None" = None) -> str:
@@ -233,6 +251,12 @@ def _render(project, kind: str, arg: str, resolver: "TargetResolver") -> str:
         return _render_unused(project, arg)
     if kind == "sourced":
         return _render_sourced(project, arg, resolver)
+    if kind == "graph":
+        return _render_graph(project, arg)
+    if kind == "chart":
+        return _render_chart(project, arg)
+    if kind == "stats":
+        return _render_stats(project, arg)
     raise InjectError(f"unknown directive 'tl:{kind}' (expected one of {_KINDS})")
 
 
@@ -429,10 +453,10 @@ def _render_unused(project, expr: str) -> str:
     if not project.schema.docs_paths:
         return ("_(no [docs] paths configured — tl:unused cannot tell which items "
                 "are referenced)_")
-    # A catalogue mirror, a sourced-clause mirror, and the report's own listing
-    # are not narrative use of the local items their filters select.
-    referenced = _scan_refs(
-        project, exclude_kinds=frozenset({"catalog", "unused", "sourced"}))
+    # A catalogue mirror, a sourced-clause mirror, a graph/chart/stats summary, and
+    # the report's own listing are not narrative use of the items their filters
+    # select — only prose and item blocks count as a citation.
+    referenced = _scan_refs(project, exclude_kinds=_NON_PUBLISHING | {"catalog"})
     rows = [it for it in _matching(project, expr) if it.uid not in referenced]
     out = ["| UID | Type | Status | Title |", "|---|---|---|---|"]
     for it in rows:
@@ -441,3 +465,212 @@ def _render_unused(project, expr: str) -> str:
     if not rows:
         out.append("| _(every matching item is referenced)_ |  |  |  |")
     return "\n".join(out)
+
+
+# --------------------------------------------------------- diagrams & statistics
+
+# A fixed fill/stroke palette (SR-0115). Item-type classes take colours by their
+# sorted position so a type keeps its colour across renders; external targets get a
+# dashed grey so borrowed clauses read as "not ours" at a glance.
+_GRAPH_PALETTE = (
+    "fill:#dbeafe,stroke:#2563eb,color:#1e3a8a",
+    "fill:#dcfce7,stroke:#16a34a,color:#14532d",
+    "fill:#fef9c3,stroke:#ca8a04,color:#713f12",
+    "fill:#fae8ff,stroke:#c026d3,color:#701a75",
+    "fill:#ffe4e6,stroke:#e11d48,color:#881337",
+    "fill:#e0e7ff,stroke:#4f46e5,color:#312e81",
+    "fill:#ccfbf1,stroke:#0d9488,color:#134e4a",
+)
+_GRAPH_EXTERNAL_STYLE = "fill:#f3f4f6,stroke:#6b7280,color:#374151,stroke-dasharray:4 3"
+
+
+def _mm_id(uid: str) -> str:
+    """A Mermaid-safe node id: a namespace colon or any punctuation becomes ``_`` so
+    a borrowed target such as ``asvs:SR-0172`` cannot break the diagram."""
+    return re.sub(r"[^0-9A-Za-z_]", "_", uid)
+
+
+def _mm_class(name: str) -> str:
+    """A Mermaid-safe classDef name derived from an item type or ``external``."""
+    return re.sub(r"[^0-9A-Za-z_]", "_", name) or "cls"
+
+
+def _mm_label(uid: str, title: str | None) -> str:
+    """A one-line node label ``UID — Title``, stripped of characters that would
+    break a Mermaid ``"..."`` label and truncated so a long title stays readable."""
+    text = " ".join((title or "").split())
+    text = text.replace('"', "'").replace("[", "(").replace("]", ")")
+    text = text.replace("<", "(").replace(">", ")").replace("|", "/")
+    if len(text) > 44:
+        text = text[:43].rstrip() + "…"
+    return f"{uid} — {text}" if text else uid
+
+
+def _render_graph(project, expr: str) -> str:
+    """A Mermaid flowchart of the matching items and their outgoing-link targets
+    (SR-0115), coloured by item type with external targets set apart. A malformed
+    filter fails injection; an empty match renders a placeholder."""
+    rows = _matching(project, expr)
+    if not rows:
+        return "_(no matching items to graph)_"
+    idx = Index.build(project)
+    matched = {it.uid for it in rows}
+    nodes: dict[str, tuple[str, str]] = {}     # uid -> (label, class)
+    classes: set[str] = set()
+    edges: list[tuple[str, str, str]] = []
+    for it in rows:
+        nodes[it.uid] = (_mm_label(it.uid, it.title), it.type)
+        classes.add(it.type)
+    for it in rows:
+        for tgt, ltype in idx.out_links(it.uid):
+            if tgt not in nodes:
+                tit = project.get(tgt)
+                if tit is not None and not tit.is_deleted:
+                    nodes[tgt] = (_mm_label(tgt, tit.title), tit.type)
+                    classes.add(tit.type)
+                else:
+                    nodes[tgt] = (tgt, "external")
+                    classes.add("external")
+            edges.append((it.uid, ltype, tgt))
+    lines = ["flowchart TD"]
+    for uid, (label, cls) in nodes.items():
+        lines.append(f'    {_mm_id(uid)}["{label}"]:::{_mm_class(cls)}')
+    for src, ltype, tgt in edges:
+        lines.append(f"    {_mm_id(src)} -->|{ltype}| {_mm_id(tgt)}")
+    palette_types = sorted(c for c in classes if c != "external")
+    for i, cls in enumerate(palette_types):
+        lines.append(f"    classDef {_mm_class(cls)} "
+                     f"{_GRAPH_PALETTE[i % len(_GRAPH_PALETTE)]}")
+    if "external" in classes:
+        lines.append(f"    classDef external {_GRAPH_EXTERNAL_STYLE}")
+    return "```mermaid\n" + "\n".join(lines) + "\n```"
+
+
+def _parse_chart_arg(arg: str) -> tuple[str, str]:
+    """Split a tl:chart argument into (key, filter). The key is the first token; the
+    remainder is the filter, defaulting to ``true`` (every item)."""
+    m = re.match(r"^(\S+)\s*(.*)$", arg.strip(), re.DOTALL)
+    if not m:
+        raise InjectError("tl:chart needs a grouping key, e.g. 'tl:chart type'")
+    return m.group(1), (m.group(2).strip() or "true")
+
+
+def _chart_groups(project, key: str, rows: list) -> tuple[list[str], list[int], str]:
+    """(labels, counts, title) for a bar chart of ``rows`` grouped by ``key``
+    (SR-0116). ``degree`` buckets nodes by total link count; ``type``/``status`` and
+    any attribute group by that value. Items lacking an attribute key are skipped."""
+    if key == "degree":
+        idx = Index.build(project)
+        counts: dict[int, int] = {}
+        for it in rows:
+            d = len(idx.out_links(it.uid)) + len(idx.in_links(it.uid))
+            counts[d] = counts.get(d, 0) + 1
+        order = sorted(counts)
+        return [str(d) for d in order], [counts[d] for d in order], "Nodes by degree"
+    counts_s: dict[str, int] = {}
+    for it in rows:
+        if key in ("type", "status"):
+            val = getattr(it, key)
+        else:
+            raw = it.attrs.get(key)
+            val = None if raw is None else str(raw)
+        if val is None:
+            continue
+        counts_s[val] = counts_s.get(val, 0) + 1
+    order_s = sorted(counts_s)
+    return order_s, [counts_s[v] for v in order_s], f"Items by {key}"
+
+
+def _render_chart(project, arg: str) -> str:
+    """A Mermaid bar chart of the live-item count grouped by a key (SR-0116). A
+    malformed filter fails injection; a key no item exhibits renders a placeholder."""
+    key, expr = _parse_chart_arg(arg)
+    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
+    labels, counts, title = _chart_groups(project, key, rows)
+    if not labels:
+        return f"_(no data to chart for '{key}')_"
+    xs = ", ".join(f'"{lbl}"' for lbl in labels)
+    ys = ", ".join(str(c) for c in counts)
+    body = ("xychart-beta\n"
+            f'    title "{title}"\n'
+            f"    x-axis [{xs}]\n"
+            '    y-axis "count"\n'
+            f"    bar [{ys}]")
+    return f"```mermaid\n{body}\n```"
+
+
+def _ground_depth(project, idx: "Index") -> dict[str, int]:
+    """The grounding depth of every item — the longest chain of grounding links up
+    to a root — memoised. A root type is depth 0; an item with no grounding path is
+    omitted, so a mean is taken only over items that actually reach a root."""
+    roots = project.schema.root_types
+    ground = project.schema.ground_link_types
+    depth: dict[str, int] = {}
+
+    def _walk(uid: str, seen: frozenset[str]) -> int | None:
+        if uid in depth:
+            return depth[uid]
+        it = project.get(uid)
+        if it is None or uid in seen:
+            return None
+        if it.type in roots:
+            depth[uid] = 0
+            return 0
+        best: int | None = None
+        for tgt, _k in idx.out_links(uid, ground):
+            sub = _walk(tgt, seen | {uid})
+            if sub is not None:
+                best = sub + 1 if best is None else max(best, sub + 1)
+        if best is not None:
+            depth[uid] = best
+        return best
+
+    for it in project.items():
+        if not it.is_deleted:
+            _walk(it.uid, frozenset())
+    return depth
+
+
+def _render_stats(project, expr: str) -> str:
+    """A compact Markdown summary of the graph's complexity over the matching items
+    (SR-0117): item and link totals by type, grounding depth, the most-connected
+    items, and the degree distribution. Malformed filter fails; empty match →
+    placeholder."""
+    rows = _matching(project, expr)
+    if not rows:
+        return "_(no matching items to summarise)_"
+    idx = Index.build(project)
+    by_type: dict[str, int] = {}
+    by_link: dict[str, int] = {}
+    degrees: dict[str, int] = {}
+    for it in rows:
+        by_type[it.type] = by_type.get(it.type, 0) + 1
+        for _t, ltype in idx.out_links(it.uid):
+            by_link[ltype] = by_link.get(ltype, 0) + 1
+        degrees[it.uid] = len(idx.out_links(it.uid)) + len(idx.in_links(it.uid))
+
+    depth_all = _ground_depth(project, idx)
+    depths = [depth_all[it.uid] for it in rows if it.uid in depth_all]
+
+    def _breakdown(d: dict[str, int]) -> str:
+        return " · ".join(f"{k} {v}" for k, v in
+                          sorted(d.items(), key=lambda kv: (-kv[1], kv[0])))
+
+    lines = [
+        f"- **Items:** {len(rows)} — {_breakdown(by_type)}",
+        f"- **Links:** {sum(by_link.values())}" +
+        (f" — {_breakdown(by_link)}" if by_link else " — none"),
+    ]
+    if depths:
+        lines.append(f"- **Grounding depth:** max {max(depths)} · "
+                     f"mean {sum(depths) / len(depths):.1f}")
+    top = sorted(degrees.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+    if top and top[0][1] > 0:
+        lines.append("- **Most connected:** " +
+                     " · ".join(f"{u} ({d})" for u, d in top if d > 0))
+    dist: dict[int, int] = {}
+    for d in degrees.values():
+        dist[d] = dist.get(d, 0) + 1
+    lines.append("- **Degree distribution:** " +
+                 " · ".join(f"{d} → {n}" for d, n in sorted(dist.items())))
+    return "\n".join(lines)
