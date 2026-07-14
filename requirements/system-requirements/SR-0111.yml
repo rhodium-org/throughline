@@ -1,0 +1,24 @@
+uid: SR-0111
+type: system_requirement
+status: ratified
+title: Full-item catalogue directive in documents
+text: 'The tl:catalog document directive shall render every item matching an SR-0045
+  filter as a full item block — the same block a tl:item marker produces, with title,
+  text, rationale and attributes — in UID order, the blocks separated by a blank
+  line. Pointed at a catch-all filter it produces a self-maintaining master reference
+  document: every item in the graph, in full, that other narrative documents can
+  cite by UID while showing only limited detail. A filter matching nothing renders
+  a clear placeholder; a malformed filter fails injection. Items a catalogue renders
+  count as published for the coverage rule (SR-0096), because a catalogued item''s
+  full content genuinely appears in a document.'
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: relates
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,0 +1,24 @@
+uid: SR-0112
+type: system_requirement
+status: ratified
+title: Unreferenced-items report in documents
+text: The tl:unused document directive shall render a table of the items that match
+  its SR-0045 filter but are not referenced by any narrative directive anywhere in
+  the project's configured documents — that is, items no other document cites by
+  UID, table, matrix or count. A catalogue (tl:catalog) reference does not count
+  as narrative use, so a full-catalogue mirror does not make every item appear used;
+  the report keeps meaning even when a master reference lists everything. The directive's
+  own listing likewise does not count as a reference. When no docs paths are configured
+  the report cannot be computed and renders a clear note rather than treating all
+  items as unused. A malformed filter fails injection.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0096
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

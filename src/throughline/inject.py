@@ -9,7 +9,7 @@ throughline regenerates *only* the marked regions, leaving every other byte of
 the file untouched. Because the content is a reference that is re-rendered in
 place — never a hand-maintained copy — it cannot silently drift from the graph.
 
-Four directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
+Six directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
 ``<!-- tl:end -->``:
 
     tl:item   <UID>     one item rendered as a block
@@ -21,9 +21,15 @@ Four directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
     tl:count  <filter>  the number of live items matching an SR-0045 filter,
               rendered as a bare integer (SR-0109) — a live tally for a document
               or a README badge that cannot silently drift from the graph
+    tl:catalog <filter> every matching item rendered as a full block, in UID order
+              (SR-0111) — a self-maintaining master reference document other
+              documents cite by UID
+    tl:unused <filter>  the matching items no narrative document references
+              (SR-0112) — a catalogue mirror does not count as use, so the report
+              stays meaningful alongside a full catalogue
 
 Anything richer (HTML, PDF, a whole book) is delegated to external tools
-(pandoc, mdBook) run over the injected files. Keeping the engine to these four
+(pandoc, mdBook) run over the injected files. Keeping the engine to these
 directives is a deliberate boundary: throughline is a validator and an injector,
 never a document editor (see the ``non_goal`` NG-0001).
 """
@@ -35,38 +41,82 @@ from pathlib import Path
 from .graph import Index
 from .validate import FilterError, eval_filter
 
-_KINDS = ("item", "table", "matrix", "count")
+_KINDS = ("item", "table", "matrix", "count", "catalog", "unused")
 
 # A marked region: the open marker, its generated body, and the end marker. The
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count)\s+(?P<arg>.*?)\s*-->)"
+    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused)\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
 )
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
-_OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix|count)\b", re.IGNORECASE)
+_OPEN = re.compile(r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused)\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
-# the filter. Reuses the coverage-rule grammar so the language is identical.
-_MATRIX_REL = re.compile(r"^(incoming|outgoing):(\w+)\b\s*(.*)$", re.DOTALL)
+# the filter. Reuses the coverage-rule grammar so the language is identical. An
+# optional target-display suffix (SR-0110) follows the link type: @<primary> or
+# @<primary>(<secondary>), each token being `uid` or an attribute name, so a cell
+# can render a borrowed clause's own reference number instead of its UID.
+_MATRIX_REL = re.compile(
+    r"^(incoming|outgoing):(\w+)"
+    r"(?:@(\w+)(?:\((\w+)\))?)?"
+    r"\s*(.*)$",
+    re.DOTALL,
+)
 
 
-def _parse_matrix_arg(arg: str) -> tuple[str | None, str | None, str]:
-    """Split a tl:matrix argument into (direction, link_type, filter). Absent a
-    selector, direction and link_type are None and the whole arg is the filter."""
+def _parse_matrix_arg(
+    arg: str,
+) -> tuple[str | None, str | None, str | None, str | None, str]:
+    """Split a tl:matrix argument into
+    (direction, link_type, primary, secondary, filter). Absent a selector, the
+    first four are None and the whole arg is the filter. `primary`/`secondary` are
+    the target-display tokens (each `uid` or an attribute name); `primary` defaults
+    to `uid` when a selector is present but no suffix is given."""
     m = _MATRIX_REL.match(arg.strip())
     if m:
-        return m.group(1), m.group(2), m.group(3).strip()
-    return None, None, arg.strip()
+        primary = m.group(3) or "uid"
+        return m.group(1), m.group(2), primary, m.group(4), m.group(5).strip()
+    return None, None, None, None, arg.strip()
 
 
 class InjectError(ValueError):
     """A document marker could not be rendered (SR-0094): an unbalanced marker,
     an unknown item, or a malformed filter. Raised so drift is fixed, not hidden."""
+
+
+class TargetResolver:
+    """Resolves a matrix link target's display, liveness and attributes (SR-0110).
+
+    The default reads only the local project, so injection behaves exactly as it
+    did before this seam existed. A composing front end (tl-compose) supplies a
+    resolver backed by the union graph, so a namespace-qualified target such as
+    ``asvs:SR-0227`` — absent from the local project — still resolves its own
+    ``source_ref`` and counts as live."""
+
+    def __init__(self, project):
+        self._project = project
+
+    def present(self, uid: str) -> bool:
+        """True if the target is a live item to be shown in a relationship cell."""
+        return _is_live(self._project, uid)
+
+    def display(self, uid: str) -> str:
+        """The UID as it should appear in a cell. The local target string is
+        already the form the author wrote (e.g. ``asvs:SR-0227``)."""
+        return uid
+
+    def attr(self, uid: str, name: str) -> str | None:
+        """The value of attribute ``name`` on the target, or None if absent."""
+        it = self._project.get(uid)
+        if it is None:
+            return None
+        val = it.attrs.get(name)
+        return None if val is None else str(val)
 
 
 def has_markers(text: str) -> bool:
@@ -75,15 +125,12 @@ def has_markers(text: str) -> bool:
     return bool(_OPEN.search(text) or _END.search(text))
 
 
-def referenced_uids(project) -> set[str] | None:
-    """The set of item UIDs referenced by any marker in a configured published
-    document (SR-0096) — a ``tl:item`` names its UID directly; a ``tl:table`` /
-    ``tl:matrix`` publishes every item its filter selects. Returns ``None`` when
-    no ``[docs] paths`` are configured, so the ``unpublished`` rule is inert for
-    projects that do not publish documents through throughline. Malformed markers
-    are ignored here: reporting them is `tl docs`'s job, not the coverage rule's."""
-    if not project.schema.docs_paths:
-        return None
+def _scan_refs(project, exclude_kinds: frozenset[str] = frozenset()) -> set[str]:
+    """The set of item UIDs referenced by document markers, skipping any marker
+    whose kind is in ``exclude_kinds``. A ``tl:item`` names its UID directly; a
+    ``tl:table`` / ``tl:matrix`` / ``tl:count`` / ``tl:catalog`` publishes every
+    item its filter selects. Malformed markers are ignored — reporting them is
+    `tl docs`'s job, not a coverage question's."""
     root = Path(project.path)
     refs: set[str] = set()
     for pattern in project.schema.docs_paths:
@@ -96,10 +143,12 @@ def referenced_uids(project) -> set[str] | None:
                 continue
             for m in _BLOCK.finditer(text):
                 kind, arg = m.group("kind").lower(), m.group("arg").strip()
+                if kind in exclude_kinds:
+                    continue
                 if kind == "item":
                     refs.add(arg)
                 else:
-                    expr = _parse_matrix_arg(arg)[2] if kind == "matrix" else arg
+                    expr = _parse_matrix_arg(arg)[4] if kind == "matrix" else arg
                     try:
                         refs.update(it.uid for it in _matching(project, expr))
                     except InjectError:
@@ -107,10 +156,27 @@ def referenced_uids(project) -> set[str] | None:
     return refs
 
 
-def inject_text(project, text: str) -> str:
+def referenced_uids(project) -> set[str] | None:
+    """The set of item UIDs published by a configured document (SR-0096). Returns
+    ``None`` when no ``[docs] paths`` are configured, so the ``unpublished`` rule
+    is inert for projects that do not publish through throughline. A ``tl:unused``
+    report does not itself publish the items it lists (SR-0112), so it is excluded;
+    a ``tl:catalog`` does publish (its items appear in full) and so is counted."""
+    if not project.schema.docs_paths:
+        return None
+    return _scan_refs(project, exclude_kinds=frozenset({"unused"}))
+
+
+def inject_text(project, text: str, resolver: "TargetResolver | None" = None) -> str:
     """Return ``text`` with every marked region re-rendered from ``project``.
     Idempotent: injecting already-injected text yields identical output. Raises
-    InjectError on an unbalanced marker so a broken document fails loudly."""
+    InjectError on an unbalanced marker so a broken document fails loudly.
+
+    ``resolver`` (SR-0110) resolves matrix link targets' liveness and attributes;
+    when omitted it reads the local ``project``, so behaviour is unchanged. A
+    composing caller passes a union-backed resolver so borrowed clauses resolve."""
+    if resolver is None:
+        resolver = TargetResolver(project)
     opens = len(_OPEN.findall(text))
     ends = len(_END.findall(text))
     if opens != ends:
@@ -119,7 +185,8 @@ def inject_text(project, text: str) -> str:
             "every opener needs exactly one tl:end")
 
     def _replace(m: re.Match) -> str:
-        body = _render(project, m.group("kind").lower(), m.group("arg").strip())
+        body = _render(project, m.group("kind").lower(), m.group("arg").strip(),
+                       resolver)
         return f"{m.group('open')}\n{body}\n{m.group('close')}"
 
     return _BLOCK.sub(_replace, text)
@@ -127,15 +194,19 @@ def inject_text(project, text: str) -> str:
 
 # ------------------------------------------------------------------- renderers
 
-def _render(project, kind: str, arg: str) -> str:
+def _render(project, kind: str, arg: str, resolver: "TargetResolver") -> str:
     if kind == "item":
         return _render_item(project, arg)
     if kind == "table":
         return _render_table(project, arg)
     if kind == "matrix":
-        return _render_matrix(project, arg)
+        return _render_matrix(project, arg, resolver)
     if kind == "count":
         return _render_count(project, arg)
+    if kind == "catalog":
+        return _render_catalog(project, arg)
+    if kind == "unused":
+        return _render_unused(project, arg)
     raise InjectError(f"unknown directive 'tl:{kind}' (expected one of {_KINDS})")
 
 
@@ -213,12 +284,29 @@ def _render_count(project, expr: str) -> str:
     return str(len(rows))
 
 
-def _render_matrix(project, arg: str) -> str:
+def _target_cell(resolver: "TargetResolver", uid: str,
+                 primary: str, secondary: str | None) -> str:
+    """Render one link target per the display spec (SR-0110). Each token is the
+    literal ``uid`` (the resolver's display form) or an attribute name. An empty
+    parenthesised secondary is dropped so a missing source_ref never renders as
+    bare brackets."""
+    def _tok(tok: str) -> str:
+        return resolver.display(uid) if tok == "uid" else (resolver.attr(uid, tok) or "")
+    head = _tok(primary)
+    if secondary is None:
+        return head
+    tail = _tok(secondary)
+    return f"{head} ({tail})" if tail else head
+
+
+def _render_matrix(project, arg: str, resolver: "TargetResolver") -> str:
     """A traceability matrix. Default form: each matching item with what it grounds
     up to and what verifies it. With an incoming:/outgoing:<link_type> selector
     (SR-0099): each matching item and the items linked to it in that direction —
-    e.g. incoming:implements over user_requirements lists each UR's realizers."""
-    direction, ltype, expr = _parse_matrix_arg(arg)
+    e.g. incoming:implements over user_requirements lists each UR's realizers. An
+    optional @<primary>(<secondary>) suffix (SR-0110) chooses how each target is
+    rendered — its UID, an attribute such as source_ref, or UID plus attribute."""
+    direction, ltype, primary, secondary, expr = _parse_matrix_arg(arg)
     idx = Index.build(project)
     rows = _matching(project, expr)
 
@@ -229,8 +317,11 @@ def _render_matrix(project, arg: str) -> str:
             links = (idx.in_links(it.uid, {ltype}) if direction == "incoming"
                      else idx.out_links(it.uid, {ltype}))
             # Only live items count as realizers — a rejected or deleted item
-            # does not realize anything (SR-0099).
-            cells = ", ".join(u for u, _k in links if _is_live(project, u)) or "—"
+            # does not realize anything (SR-0099). Liveness and attributes are
+            # resolved through the resolver so borrowed targets resolve (SR-0110).
+            cells = ", ".join(
+                _target_cell(resolver, u, primary, secondary)
+                for u, _k in links if resolver.present(u)) or "—"
             out.append(f"| {it.uid} | {_cell(it.title or '')} | {cells} |")
         if not rows:
             out.append("| _(no matching items)_ |  |  |")
@@ -244,4 +335,34 @@ def _render_matrix(project, arg: str) -> str:
         out.append(f"| {it.uid} | {_cell(it.title or '')} | {up} | {ver} |")
     if not rows:
         out.append("| _(no matching items)_ |  |  |  |")
+    return "\n".join(out)
+
+
+def _render_catalog(project, expr: str) -> str:
+    """A full-item catalogue (SR-0111): every item matching an SR-0045 filter,
+    rendered as the same full block a tl:item marker produces, in UID order. With
+    a catch-all filter this is a self-maintaining master reference document."""
+    rows = _matching(project, expr)
+    if not rows:
+        return "_(no matching items)_"
+    return "\n\n".join(_render_item(project, it.uid) for it in rows)
+
+
+def _render_unused(project, expr: str) -> str:
+    """A report of items matching the filter that no *narrative* document cites
+    (SR-0112) — items referenced only by a tl:catalog mirror, or by nothing, still
+    count as unused. Requires configured [docs] paths to know what references
+    exist; without them the report cannot be computed."""
+    if not project.schema.docs_paths:
+        return ("_(no [docs] paths configured — tl:unused cannot tell which items "
+                "are referenced)_")
+    # A catalogue mirror and the report's own listing are not narrative use.
+    referenced = _scan_refs(project, exclude_kinds=frozenset({"catalog", "unused"}))
+    rows = [it for it in _matching(project, expr) if it.uid not in referenced]
+    out = ["| UID | Type | Status | Title |", "|---|---|---|---|"]
+    for it in rows:
+        out.append(f"| {it.uid} | {it.type} | {it.status} | "
+                   f"{_cell(it.title or '')} |")
+    if not rows:
+        out.append("| _(every matching item is referenced)_ |  |  |  |")
     return "\n".join(out)

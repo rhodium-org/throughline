@@ -881,7 +881,8 @@ def _scaffold_pub(tmp_path, docs_paths):
 
 def _inject_project():
     intent = Item(uid="INT-1", type="intent", status="approved",
-                  title="Ship value", text="The vision.")
+                  title="Ship value", text="The vision.",
+                  attrs={"source_ref": "V1.2.3"})
     fr = Item(uid="FR-1", type="requirement", status="approved",
               title="Wizard", text="The system shall guide setup.\nIn three steps.",
               rationale="Newcomers stall without guidance.",
@@ -973,6 +974,123 @@ def test_inject_matrix_incoming_empty_relationship_shows_dash():
     src = "<!-- tl:matrix incoming:verifies type == 'intent' -->\n<!-- tl:end -->\n"
     out = inject_text(_inject_project(), src)
     assert "| INT-1 | Ship value | — |" in out
+
+def test_inject_matrix_target_display_attribute_only():
+    """SR-0110: @<attr> renders the target's attribute instead of its UID —
+    here FR-1's derives_from target INT-1 shows its source_ref, not 'INT-1'."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix outgoing:derives_from@source_ref uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| FR-1 | Wizard | V1.2.3 |" in out
+
+def test_inject_matrix_target_display_uid_and_attribute():
+    """SR-0110: @uid(<attr>) renders 'UID (attr)'."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix outgoing:derives_from@uid(source_ref) uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| FR-1 | Wizard | INT-1 (V1.2.3) |" in out
+
+def test_inject_matrix_target_display_missing_attr_drops_brackets():
+    """SR-0110: a missing secondary attribute renders no bare brackets — TC-1's
+    verifies target FR-1 has no source_ref, so @uid(source_ref) shows just the UID."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix incoming:verifies@uid(source_ref) uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| FR-1 | Wizard | TC-1 |" in out
+
+def test_inject_matrix_default_target_is_uid_unchanged():
+    """SR-0110: with no @ suffix the cell is the UID, exactly as before the seam."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:matrix outgoing:derives_from uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "| FR-1 | Wizard | INT-1 |" in out
+
+def test_inject_matrix_custom_resolver_resolves_absent_target():
+    """SR-0110: a resolver supplied by a composing caller resolves a target that
+    is absent from the local project — a namespace-qualified borrowed clause —
+    for both liveness and attributes."""
+    from throughline.inject import inject_text, TargetResolver
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="ext:SR-9", type="satisfies")])
+    proj = _project(_doc("INT", Item(uid="INT-1", type="intent", status="approved",
+                                     title="Ship value")),
+                    _doc("FR", fr),
+                    config={"grounding": {"ground_link_types": ["derives_from"]},
+                            "links": {"types": ["derives_from", "satisfies"]}})
+
+    class _Res(TargetResolver):
+        def present(self, uid):
+            return uid == "ext:SR-9" or super().present(uid)
+        def attr(self, uid, name):
+            if uid == "ext:SR-9" and name == "source_ref":
+                return "V9.9.9"
+            return super().attr(uid, name)
+
+    src = "<!-- tl:matrix outgoing:satisfies@uid(source_ref) uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(proj, src, resolver=_Res(proj))
+    assert "| FR-1 | Wizard | ext:SR-9 (V9.9.9) |" in out
+
+def test_inject_catalog_renders_full_blocks():
+    """SR-0111: tl:catalog renders every matching item as the same full block a
+    tl:item marker produces, in UID order, separated by a blank line."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:catalog type == 'intent' or uid == 'FR-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    # both live matches appear in full — head, text, and (for FR-1) rationale
+    assert "**FR-1 — Wizard** — `requirement`, status `approved`" in out
+    assert "**INT-1 — Ship value** — `intent`, status `approved`" in out
+    assert "> The vision." in out
+    assert "*Rationale:* Newcomers stall without guidance." in out
+    # UID order: INT-1 sorts before FR-1... actually 'F' < 'I', so FR-1 first
+    assert out.index("**FR-1") < out.index("**INT-1")
+
+def test_inject_catalog_empty_placeholder():
+    """A filter matching nothing renders a clear placeholder, never an error."""
+    from throughline.inject import inject_text
+    src = "<!-- tl:catalog uid == 'NOPE-1' -->\n<!-- tl:end -->\n"
+    out = inject_text(_inject_project(), src)
+    assert "_(no matching items)_" in out
+
+def test_inject_catalog_bad_filter_is_fatal():
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError):
+        inject_text(_inject_project(),
+                    "<!-- tl:catalog nonsense syntax ( -->\n<!-- tl:end -->\n")
+
+def test_inject_unused_lists_items_no_narrative_cites(tmp_path):
+    """SR-0112: tl:unused lists matching items that no narrative directive
+    references. A tl:item pins INT-0001, so only FR-0001 is unreferenced."""
+    from throughline import load_project
+    from throughline.inject import _render_unused
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "spec.md").write_text(
+        "<!-- tl:item INT-0001 -->\n<!-- tl:end -->\n"
+        "<!-- tl:unused true -->\n<!-- tl:end -->\n", encoding="utf-8")
+    out = _render_unused(load_project(root), "true")
+    assert "| FR-0001 |" in out
+    assert "| INT-0001 |" not in out
+
+def test_inject_unused_catalog_is_not_narrative_use(tmp_path):
+    """SR-0112: a tl:catalog mirror does not count as narrative use, so a
+    full-catalogue document does not mask every item as referenced."""
+    from throughline import load_project
+    from throughline.inject import _render_unused
+    root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+    (root / "master.md").write_text(
+        "<!-- tl:catalog true -->\n<!-- tl:end -->\n"
+        "<!-- tl:unused true -->\n<!-- tl:end -->\n", encoding="utf-8")
+    out = _render_unused(load_project(root), "true")
+    assert "| INT-0001 |" in out
+    assert "| FR-0001 |" in out
+
+def test_inject_unused_needs_docs_paths(tmp_path):
+    """Without configured [docs] paths the report cannot be computed and renders a
+    clear note rather than treating all items as unused."""
+    from throughline import load_project
+    from throughline.inject import _render_unused
+    root = _scaffold_pub(tmp_path, docs_paths=None)
+    out = _render_unused(load_project(root), "true")
+    assert "no [docs] paths configured" in out
 
 def test_inject_count_renders_live_cardinality():
     """SR-0109: tl:count renders a bare integer — the number of live matches. The
