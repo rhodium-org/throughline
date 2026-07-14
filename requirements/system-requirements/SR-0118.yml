@@ -1,0 +1,26 @@
+uid: SR-0118
+type: system_requirement
+status: ratified
+title: Collapse external targets by namespace in the graph directive
+text: The tl:graph directive shall accept an optional leading collapse-external flag
+  that folds every external link target into a single node per source namespace —
+  all asvs clauses to one asvs node, all gds clauses to one gds node — instead of
+  one node per borrowed clause, with the edges into each namespace node de-duplicated
+  so one source item draws one edge to a standard however many of its clauses it
+  references. A dense graph that satisfies many borrowed clauses then renders as
+  a compact picture of how the internal items lean on a handful of external standards,
+  rather than a sprawl of clause boxes that a Mermaid renderer cannot lay out. Without
+  the flag each external target keeps its own node, as before. The flag precedes
+  the optional SR-0045 filter; a malformed filter still fails injection and an empty
+  match still renders a placeholder.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0115
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

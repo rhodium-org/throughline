@@ -1201,6 +1201,24 @@ def test_inject_graph_sets_external_targets_apart():
     assert "FR_1 -->|satisfies| asvs_SR_9" in out
     assert "classDef external " in out
 
+def test_inject_graph_collapse_external_folds_targets_by_namespace():
+    """SR-0118: with the collapse-external flag, borrowed clauses fold into one node
+    per source namespace, and a source draws a single de-duplicated edge to it."""
+    from throughline.inject import inject_text
+    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
+              links=[Link(target="asvs:SR-9", type="satisfies"),
+                     Link(target="asvs:SR-8", type="satisfies")])
+    proj = _project(_doc("FR", fr),
+                    config={"links": {"types": ["satisfies"]}})
+    out = inject_text(proj,
+                      "<!-- tl:graph collapse-external uid == 'FR-1' -->\n"
+                      "<!-- tl:end -->\n")
+    # Both asvs clauses collapse to one ASVS node with a single edge into it.
+    assert '_ns_asvs["ASVS"]:::external' in out
+    assert "FR_1 -->|satisfies| _ns_asvs" in out
+    assert "asvs_SR_9" not in out and "asvs_SR_8" not in out
+    assert out.count("FR_1 -->|satisfies| _ns_asvs") == 1
+
 def test_inject_graph_empty_and_bad_filter():
     from throughline.inject import InjectError, inject_text
     out = inject_text(_inject_project(),
