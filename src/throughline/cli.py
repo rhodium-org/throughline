@@ -505,7 +505,11 @@ def _resolve_doc_paths(project, explicit: list[str]) -> list[Path]:
     return out
 
 
-def cmd_docs(args) -> int:
+def cmd_docs(args, resolver=None) -> int:
+    """Inject the configured documents from the local project. ``resolver`` is an
+    optional target resolver (SR-0110); when a composing front end supplies one,
+    tl:matrix target cells resolve attributes and liveness through it — e.g. over
+    tl-compose's union graph — instead of the local project alone."""
     try:
         if args.at:
             project, _sha = load_project_at_ref(args.path, args.at)
@@ -534,7 +538,7 @@ def cmd_docs(args) -> int:
         if not has_markers(original):
             continue  # SR-0094/0095: a file with no tl: markers is left untouched
         try:
-            rendered = inject_text(project, original)
+            rendered = inject_text(project, original, resolver=resolver)
         except InjectError as e:
             return _err(f"{path}: {e}")
         if rendered == original:
