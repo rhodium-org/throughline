@@ -69,7 +69,7 @@ _NON_PUBLISHING = frozenset({"unused", "sourced", "graph", "chart", "stats"})
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)\s+(?P<arg>.*?)\s*-->)"
+    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)(?:\.(?P<mod>inline))?\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
@@ -229,6 +229,13 @@ def inject_text(project, text: str, resolver: "TargetResolver | None" = None) ->
     def _replace(m: re.Match) -> str:
         body = _render(project, m.group("kind").lower(), m.group("arg").strip(),
                        resolver)
+        # The default wraps the body in newlines so a block directive (item, table,
+        # graph …) renders as its own block. The tl:<kind>.inline modifier (SR-0119)
+        # omits that wrapping so a scalar directive — above all tl:count — can sit
+        # inside a sentence without a line-leading marker starting an HTML block and
+        # splitting the Markdown paragraph.
+        if (m.group("mod") or "").lower() == "inline":
+            return f"{m.group('open')}{body}{m.group('close')}"
         return f"{m.group('open')}\n{body}\n{m.group('close')}"
 
     return _BLOCK.sub(_replace, text)

@@ -1369,6 +1369,39 @@ def test_inject_count_publishes_its_filter_matches(tmp_path):
     refs = referenced_uids(load_project(root))
     assert "FR-0001" in refs
 
+def test_inject_count_inline_omits_wrapping_newlines():
+    """SR-0119: tl:<kind>.inline renders the body with no surrounding newlines, so a
+    count sits inside a sentence rather than a line-leading marker starting an HTML
+    block that splits the Markdown paragraph. The fixture has two live matches."""
+    from throughline.inject import inject_text
+    src = ("The graph holds "
+           "<!-- tl:count.inline type == 'requirement' -->x<!-- tl:end -->"
+           " requirements.\n")
+    out = inject_text(_inject_project(), src)
+    assert ("holds <!-- tl:count.inline type == 'requirement' -->2<!-- tl:end --> "
+            "requirements.") in out
+    assert "\n2\n" not in out   # the inline modifier introduced no block wrapping
+
+def test_inject_count_inline_value_matches_block_form():
+    """The modifier governs only surrounding whitespace, never the body: the inline
+    integer equals the one the block form renders."""
+    from throughline.inject import inject_text
+    inline = inject_text(_inject_project(),
+        "<!-- tl:count.inline type == 'requirement' -->x<!-- tl:end -->")
+    block = inject_text(_inject_project(),
+        "<!-- tl:count type == 'requirement' -->\nx\n<!-- tl:end -->")
+    assert "-->2<!-- tl:end -->" in inline
+    assert "-->\n2\n<!-- tl:end -->" in block
+
+def test_inject_count_inline_is_idempotent():
+    """SR-0094: re-injecting already-inline output yields identical text."""
+    from throughline.inject import inject_text
+    src = "holds <!-- tl:count.inline type == 'requirement' -->0<!-- tl:end --> now.\n"
+    once = inject_text(_inject_project(), src)
+    twice = inject_text(_inject_project(), once)
+    assert once == twice
+    assert "-->2<!-- tl:end -->" in once
+
 def test_inject_unknown_item_is_fatal():
     from throughline.inject import InjectError, inject_text
     with pytest.raises(InjectError):
