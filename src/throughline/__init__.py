@@ -22,7 +22,7 @@ from .storage import ProjectError, init_project, load_project, write_item, write
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
 from .validate import Finding, is_external, is_namespace_qualified, validate
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "Register", "Item", "Link", "Project",
