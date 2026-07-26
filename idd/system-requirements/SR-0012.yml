@@ -1,0 +1,17 @@
+uid: SR-0012
+type: system_requirement
+status: approved
+title: Soft delete with tombstone
+text: The Tool shall implement deletion as a status change to 'deleted', retaining
+  the item file with UID, deletion date, reason, and last content hash; deleted items
+  are excluded from publishing/exports by default but included in history, diffs,
+  and UID-reuse prevention.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+- target: UR-0003
+  type: implements
+attrs:
+  priority: must
+  verification: test

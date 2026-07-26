@@ -1,0 +1,24 @@
+uid: SR-0113
+type: system_requirement
+status: ratified
+title: Item blocks render their links with resolver-aware target display
+text: The full item block a tl:item marker produces — and therefore every block a
+  tl:catalog renders — shall list the item's outgoing links grouped by link type,
+  each target rendered through the optional target resolver (SR-0110). A link to
+  a local item shows its UID; a link a resolver enriches — for example a borrowed
+  clause carrying a reference number — shows that enrichment, so a reader of an item's
+  block sees what it grounds to and what external clauses it satisfies without consulting
+  a separate matrix. When the item has no outgoing links the block renders no link
+  section. When no resolver is supplied the targets render as plain UIDs, so behaviour
+  is unchanged for a project that does not compose.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0110
+  type: relates
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

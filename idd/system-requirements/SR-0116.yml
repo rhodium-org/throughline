@@ -1,0 +1,26 @@
+uid: SR-0116
+type: system_requirement
+status: ratified
+title: Bar-chart directive in documents
+text: The tl:chart document directive shall render, as a Mermaid bar chart, the number
+  of live items grouped by a caller-named key over the items matching an optional
+  SR-0045 filter. The key is an item field — type or status — an attribute name such
+  as priority, or the reserved key degree, which buckets each node by its total link
+  count so the chart becomes a node-complexity distribution. Groups are rendered
+  in a stable order with one bar per group, each bar the count of live matching items
+  in that group, so a document or README carries a picture of the graph's shape that
+  cannot silently drift. A key that no item exhibits, or a filter matching nothing,
+  renders a clear placeholder rather than an empty chart; a malformed filter or an
+  unknown reserved key fails injection. The directive counts items to chart them,
+  it does not publish them for the coverage rule (SR-0096).
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

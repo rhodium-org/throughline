@@ -1,0 +1,26 @@
+uid: SR-0110
+type: system_requirement
+status: ratified
+title: Render a link target's attribute in a traceability matrix
+text: The tl:matrix directive's <direction>:<link_type> selector shall accept an
+  optional target-display suffix of the form @<primary> or @<primary>(<secondary>),
+  where each token is either the literal uid or the name of an attribute carried
+  by the linked target. With @source_ref the relationship cell renders the target's
+  source_ref attribute; with @uid(source_ref) it renders the target UID followed
+  by that attribute in parentheses; with no suffix it renders the target UID as before.
+  A token that names an absent attribute renders empty, and an empty parenthesised
+  secondary is omitted rather than rendering bare brackets. Attribute and liveness
+  resolution shall go through an optional target resolver supplied by the caller;
+  when none is supplied the resolver reads the local project, so behaviour is unchanged.
+  This lets a composing front end (tl-compose) supply a resolver backed by the union
+  graph, so a borrowed clause referenced by a namespace-qualified link resolves its
+  own framework reference number.
+normative: true
+links:
+- target: UR-0004
+  type: implements
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

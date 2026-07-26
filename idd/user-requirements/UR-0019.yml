@@ -1,0 +1,13 @@
+uid: UR-0019
+type: user_requirement
+status: deferred
+title: Requirements-to-code traceability
+text: Users could link requirements to source code and test code locations and report
+  coverage of implementation.
+normative: true
+links:
+- target: BN-0003
+  type: derives_from
+attrs:
+  priority: could
+  verification: test

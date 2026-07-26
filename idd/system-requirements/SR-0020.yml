@@ -1,0 +1,13 @@
+uid: SR-0020
+type: system_requirement
+status: approved
+title: Custom attributes
+text: The Tool shall let each project define custom item attributes with name, type,
+  default value, and required flag.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: must
+  verification: test

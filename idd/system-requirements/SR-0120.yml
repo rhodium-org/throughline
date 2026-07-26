@@ -1,0 +1,36 @@
+uid: SR-0120
+type: system_requirement
+status: ratified
+title: Guided interactive prompting for missing details
+text: 'When a command is run without a detail it requires, the CLI shall behave by
+  the session it is in. On an interactive terminal (stdin and stderr are a TTY) it
+  shall prompt for the missing detail rather than fail, stating in plain language
+  what it needs and why it needs it, offering a sensible default or a skip where
+  one is safe, so an unsure user is guided to a correct command instead of having
+  to already know the flag grammar. When the session is not interactive — a pipe,
+  a redirect, or CI — it shall not prompt; it shall fail fast with a usage error
+  that names the missing detail and the flag that supplies it, so automation never
+  hangs waiting on input and never silently guesses. Prompting is an aid to discovery,
+  not a second way to configure the tool: every value obtainable through a prompt
+  shall remain settable by a flag, and a fully specified command shall never prompt.'
+rationale: A newcomer does not yet know the flag grammar, and forcing them to read
+  usage output for every argument is exactly the friction UR-0020 forbids; a tool
+  that asks clear questions turns the first uncertain command into a guided success.
+  But the same tool must stay a first-class automation citizen (UR-0016, SR-0060)
+  — a prompt that blocks in CI is a hang, and a default silently chosen for a piped
+  command is a wrong answer nobody agreed to. Keying the behaviour off the TTY, and
+  keeping every prompt backed by a flag, lets one code path serve both the guided
+  human and the scripted pipeline without either compromising the other.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+- target: UR-0016
+  type: relates
+- target: SR-0060
+  type: relates
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: henry

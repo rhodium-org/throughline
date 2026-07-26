@@ -1,0 +1,16 @@
+uid: UR-0023
+type: user_requirement
+status: ratified
+title: Machine-authored items require human ratification
+text: Items whose origin is machine-generated rather than human-authored shall enter
+  the graph as proposed and shall not count as accepted until a human explicitly
+  ratifies them, so accountability for every requirement rests with a person.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  origin: human
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini

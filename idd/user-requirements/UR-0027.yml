@@ -1,0 +1,16 @@
+uid: UR-0027
+type: user_requirement
+status: ratified
+title: Item identity is tamper-evident
+text: 'Users shall be able to trust that an item''s identity cannot be silently repointed
+  or relabelled: any change to which requirement a stored identifier denotes must
+  be detected by the standard validation gate.'
+normative: true
+links:
+- target: BN-0001
+  type: derives_from
+attrs:
+  priority: must
+  verification: demonstration
+  origin: hybrid
+  ratified_by: henry

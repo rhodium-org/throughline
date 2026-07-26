@@ -1,0 +1,17 @@
+uid: SR-0126
+type: system_requirement
+status: ratified
+title: GUID-backfill migration preserves review state
+text: Migrating an existing project to GUID identity shall assign every item a deterministic
+  GUID (derived from its frozen UID) and rebase every review and suspect stamp to
+  the new fingerprint basis, so the identity-basis change alone never marks an unchanged
+  item suspect. UIDs are left unchanged.
+normative: true
+links:
+- target: UR-0026
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

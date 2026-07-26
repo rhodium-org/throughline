@@ -1,0 +1,17 @@
+uid: SR-0124
+type: system_requirement
+status: ratified
+title: Human UID allocated atomically at integration
+text: A human UID shall be allocated when a branch integrates into the trunk, as
+  the next unused number over the trunk's used numbers, committed under compare-and-swap
+  on the trunk ref; a losing race re-allocates against the updated trunk and retries.
+  Items carry only a GUID until integration.
+normative: true
+links:
+- target: UR-0026
+  type: implements
+attrs:
+  priority: must
+  verification: demonstration
+  origin: hybrid
+  ratified_by: henry

@@ -1,0 +1,9 @@
+uid: NFR-0004
+type: nfr
+status: approved
+title: EU-only storage
+text: All personal data shall be stored in eu-west.
+normative: true
+links:
+- target: CON-0002
+  type: derives_from

@@ -1,0 +1,13 @@
+uid: UR-0010
+type: user_requirement
+status: approved
+title: Search and filter
+text: Users shall be able to find requirements by any combination of attribute values,
+  text search, tags, and link conditions.
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

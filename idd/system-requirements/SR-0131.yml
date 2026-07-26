@@ -1,0 +1,17 @@
+uid: SR-0131
+type: system_requirement
+status: ratified
+title: Semantic status roles are declared in configuration
+text: 'The project shall declare, in configuration, which status value fulfils each
+  semantic role the tool''s operations act on: the status a newly created item receives,
+  and the statuses meaning proposed, ratified, invalidated, suspect, and tombstoned.
+  Operations shall resolve these statuses from the declared roles rather than from
+  values fixed in code, and each declared role shall be a member of the declared
+  status set, reported as a configuration error at load time otherwise.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  origin: hybrid
+  ratified_by: henry

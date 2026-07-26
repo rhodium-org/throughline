@@ -1,0 +1,11 @@
+uid: FR-0055
+type: requirement
+status: approved
+title: Email magic-link signin
+text: The system shall support passwordless email sign-in.
+normative: true
+links:
+- target: INT-0001
+  type: derives_from
+- target: ASM-0002
+  type: assumes

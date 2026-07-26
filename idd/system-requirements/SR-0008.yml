@@ -1,0 +1,13 @@
+uid: SR-0008
+type: system_requirement
+status: deferred
+title: Human-readable aliases
+text: The Tool may support optional, non-unique display titles and searchable aliases,
+  provided all references and links use UIDs only.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+attrs:
+  priority: could
+  verification: inspection

@@ -1,0 +1,6 @@
+uid: CON-0002
+type: constraint
+status: ratified
+title: GDPR residency
+text: Personal data stays within the EU.
+normative: true

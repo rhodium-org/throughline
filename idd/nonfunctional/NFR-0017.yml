@@ -1,0 +1,13 @@
+uid: NFR-0017
+type: nfr
+status: approved
+title: Test coverage
+text: Core library statement coverage shall be >=85%, with an end-to-end test for
+  every Must SR before it is marked Verified.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: analysis

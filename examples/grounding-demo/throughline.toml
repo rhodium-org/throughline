@@ -1,0 +1,63 @@
+[project]
+name = "Grounding Demo"
+format_version = 3
+
+# Root item types may exist ungrounded; everything else must reach a root
+# through a grounding link (the scope-avalanche grounding layer).
+[grounding]
+root_types = ["intent", "business_need", "risk", "constraint", "assumption"]
+delivery_roots = ["intent", "business_need", "risk", "constraint"]
+ground_link_types = ["derives_from", "mitigates", "implements", "verifies"]
+ai_origins = ["ai", "hybrid"]
+
+[types.requirement]
+attrs.priority = { type = "enum", values = ["must", "should", "could"], normative = true }
+attrs.origin   = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[types.nfr]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[links]
+types = ["refines", "verifies", "satisfies", "implements", "relates",
+         "derives_from", "mitigates", "assumes"]
+
+# Type-level link constraints (SR-0084): a risk may only be mitigated by a
+# requirement, a test only verifies a requirement, and so on. Enforced by
+# `tl check` — the whole risk domain is expressed in configuration alone.
+[link_rules]
+mitigates    = { from = ["requirement"], to = ["risk"] }
+verifies     = { from = ["test"], to = ["requirement"] }
+assumes      = { from = ["requirement"], to = ["assumption"] }
+derives_from = { from = ["requirement", "nfr"], to = ["intent", "business_need", "constraint"] }
+
+[status]
+values = ["proposed", "draft", "approved", "ratified", "implemented",
+          "verified", "suspect", "rejected", "deleted"]
+
+# Allowed status moves (SR-0083); `tl diagram transitions` renders these.
+[transitions]
+proposed    = ["draft", "approved", "ratified", "rejected", "deleted"]
+draft       = ["approved", "rejected", "deleted"]
+approved    = ["ratified", "implemented", "suspect", "rejected", "deleted"]
+ratified    = ["implemented", "suspect", "rejected", "deleted"]
+implemented = ["verified", "suspect", "rejected", "deleted"]
+verified    = ["implemented", "suspect", "deleted"]
+suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
+rejected    = ["draft", "deleted"]
+
+# Coverage: every live requirement should be verified by a test.
+[[rules.coverage]]
+filter = "type == 'requirement' and status != 'deleted'"
+needs = "incoming:verifies"
+severity = "warning"
+
+# Semantic status roles (SR-0131): which declared status
+# plays each role the tool's operations act on. Backfilled by
+# `tl migrate`; edit to match your own status vocabulary.
+[status.roles]
+initial = "draft"
+proposed = "proposed"
+ratified = "ratified"
+invalidated = "rejected"
+suspect = "suspect"
+tombstone = "deleted"

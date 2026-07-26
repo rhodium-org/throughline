@@ -1,0 +1,13 @@
+uid: SR-0044
+type: system_requirement
+status: approved
+title: Machine-readable check output
+text: check shall optionally emit findings as JSON (rule id, severity, uid, file,
+  message) for tooling and CI annotations.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+attrs:
+  priority: must
+  verification: test

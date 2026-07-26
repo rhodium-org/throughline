@@ -1,0 +1,19 @@
+uid: UR-0025
+type: user_requirement
+status: ratified
+title: Explicit non-goals as first-class items
+text: Users shall be able to declare explicit non-goals (deliberately out-of-scope
+  statements) as first-class, traceable items, so that excluded scope is visible
+  to reviewers and agents rather than living only in prose.
+rationale: throughline can already say an item has no reason to exist (orphan) but
+  has no way to say a thing is deliberately out of scope. For a tool whose thesis
+  is scope discipline, recorded non-goals are the primary defence against scope creep.
+normative: true
+links:
+- target: BN-0003
+  type: derives_from
+attrs:
+  origin: ai
+  priority: should
+  verification: demonstration
+  ratified_by: Henry Grech-Cini

@@ -1,0 +1,19 @@
+uid: SR-0085
+type: system_requirement
+status: approved
+title: Report the graph's link shape
+text: The Tool shall be able to report the actual link shape of a project — the
+  set of distinct (source type, link type, target type) triples present in the
+  graph, with a count of each — as a first-class operation on the link index
+  rather than something a user must reconstruct by hand. The CLI shall surface
+  this report so that a maintainer can see how the graph is currently wired and
+  author or tighten `[link_rules]` (SR-0084) from observed reality. Targets that
+  are not known items (external or dangling) are reported with an empty target
+  type so the report stays total.
+normative: true
+links:
+- target: UR-0012
+  type: implements
+attrs:
+  priority: should
+  verification: test

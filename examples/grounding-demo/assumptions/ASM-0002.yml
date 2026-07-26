@@ -1,0 +1,6 @@
+uid: ASM-0002
+type: assumption
+status: ratified
+title: Users have email
+text: Every user can receive email at signup.
+normative: true

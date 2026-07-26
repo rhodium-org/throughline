@@ -1,0 +1,16 @@
+uid: SR-0006
+type: system_requirement
+status: approved
+title: Merge-safe allocation
+text: The Tool shall detect UID collisions arising from parallel branches at validation
+  time and provide a conflict-resolution command that reassigns the younger item
+  to a fresh UID and rewrites references to it.
+rationale: Detection plus an assisted single-direction fix keeps SR-0001 while making
+  merges tractable.
+normative: true
+links:
+- target: UR-0014
+  type: implements
+attrs:
+  priority: must
+  verification: test

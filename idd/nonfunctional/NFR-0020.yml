@@ -1,0 +1,13 @@
+uid: NFR-0020
+type: nfr
+status: approved
+title: Long-term maintainability
+text: Implementation shall use a mainstream language and avoid exotic runtime services,
+  per the maintainability principle in doc 01 §6.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: should
+  verification: inspection

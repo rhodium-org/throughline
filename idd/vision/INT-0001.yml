@@ -1,0 +1,9 @@
+uid: INT-0001
+type: intent
+status: approved
+title: Requirements as versioned objects; documents are views
+text: 'A requirement is a permanently identified, individually versioned object.
+  Documents are merely views over those objects. Adding, removing, and reordering
+  requirements between versions is a non-event: no identifier ever changes and any
+  two versions can be diffed meaningfully.'
+normative: false

@@ -1,0 +1,17 @@
+uid: SR-0123
+type: system_requirement
+status: ratified
+title: GUID is the normative-content fingerprint datum
+text: The normative-content fingerprint shall be computed over the item's GUID rather
+  than its UID, so that allocating, renumbering or relabelling a UID (on the item
+  or any neighbour) never perturbs any fingerprint and never spuriously flags an
+  item suspect.
+normative: true
+links:
+- target: UR-0026
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

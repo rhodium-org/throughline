@@ -1,0 +1,6 @@
+uid: RISK-0007
+type: risk
+status: ratified
+title: Account takeover
+text: Credential stuffing against the login endpoint.
+normative: true

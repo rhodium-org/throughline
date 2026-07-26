@@ -1,0 +1,16 @@
+uid: SR-0127
+type: system_requirement
+status: ratified
+title: Item filename must equal its UID
+text: The validation gate shall reject any stored item whose filename does not match
+  its UID, closing the manual file-rename path that the fingerprint (keyed on GUID,
+  not UID) cannot detect.
+normative: true
+links:
+- target: UR-0027
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

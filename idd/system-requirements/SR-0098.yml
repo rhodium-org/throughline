@@ -1,0 +1,24 @@
+uid: SR-0098
+type: system_requirement
+status: ratified
+title: Ratified_by records a genuine human identity
+text: The identity recorded by ratify (the ratified_by value) shall be a genuine
+  human identity supplied by the ratifying person. Project guidance for AI agents
+  shall direct them, when the ratifier is unknown, to ask the user rather than
+  invent, guess, or reuse a value seen elsewhere — a fabricated ratified_by is a
+  false accountability record, the exact failure the grounding layer exists to
+  prevent.
+rationale: UR-0023 makes accountability rest with a person; that guarantee is only
+  as good as the identity captured at ratification. The Tool cannot verify a name
+  is real, so the control is a documented obligation on the human and their agents,
+  reviewed rather than machine-checked. Named here so the AGENTS.md guidance has a
+  requirement to trace to instead of living only as prose.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: inspection
+  ratified_by: Henry Grech-Cini

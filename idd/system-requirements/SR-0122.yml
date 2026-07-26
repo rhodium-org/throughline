@@ -1,0 +1,16 @@
+uid: SR-0122
+type: system_requirement
+status: ratified
+title: Permanent GUID identity minted at creation
+text: Every item shall carry an immutable GUID assigned when the item is first created,
+  distinct from its human-readable UID. The GUID is the item's identity for internal
+  reference, fingerprinting and integrity; it is never changed or reused.
+normative: true
+links:
+- target: UR-0026
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

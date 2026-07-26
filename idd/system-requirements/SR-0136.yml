@@ -1,0 +1,31 @@
+uid: SR-0136
+type: system_requirement
+status: implemented
+title: Unbound status roles surface at the gate
+text: When a project declares format major 3 or later and its configuration carries
+  no [status.roles] table at all, the Tool shall report a named check finding at
+  warning severity, naming the operations that cannot run and directing the reader
+  to the migration command. Binding a role is individually optional — a project whose
+  status vocabulary has no counterpart for a role shall leave that role unbound,
+  and an unbound role shall never be inferred or defaulted at load time — so the
+  finding shall test only for the wholesale absence of the table, never for an incomplete
+  one. A configuration that declares the table and deliberately binds nothing is
+  an explicit choice and shall pass silently. The finding shall be suppressible through
+  the standard rule-severity configuration, so a project that drives every status
+  move by hand can turn it off.
+rationale: A project hand-authored at format major 3 from the init template, with
+  the roles table dropped, passed check with zero findings while every operation
+  that writes a status was inert — the defect surfaced only when someone first reached
+  for the ratifier, which failed with a message about configuration the gate had
+  already declared sound. The gate must see what the write operations need.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0131
+  type: relates
+attrs:
+  origin: hybrid
+  priority: must
+  verification: test
+  ratified_by: henry

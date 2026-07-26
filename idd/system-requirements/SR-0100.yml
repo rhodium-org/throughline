@@ -1,0 +1,35 @@
+uid: SR-0100
+type: system_requirement
+status: approved
+title: Guided starter project on init
+text: The init command shall by default seed a small, self-consistent starter graph
+  and a published document, so that a freshly initialised project passes `tl check`
+  and renders content immediately rather than presenting an empty project the user
+  must reverse-engineer from the schema. The starter shall exercise the shipped
+  default configuration end to end — a root intent, a requirement and a
+  non-functional requirement grounded to it, a test that verifies the requirement,
+  and a non-goal — plus a docs/overview.md carrying tl:item, tl:table and tl:matrix
+  regions with [docs] paths configured, so publication coverage is active and the
+  document ships already rendered. The seeded content shall be independently
+  suppressible so the newcomer default does not trap experienced users — a --no-demo
+  flag shall omit the seeded example items and rendered document while still creating
+  the default registers (an empty but scaffolded project), a --no-defaults flag shall
+  omit the default registers (and, since seeded items have nowhere to live, the demo
+  with them), and a --bare flag shall suppress all seeded content and write only
+  throughline.toml (equivalent to --no-demo and --no-defaults together). Every seeded
+  item, register, and published document is ordinary project content the user may
+  freely edit, move, or delete; the starter is a runway, not a fixture.
+rationale: An opinionated schema with no content makes a newcomer reverse-engineer
+  the grounding model from configuration alone, which is exactly the friction
+  UR-0020 forbids. Shipping a check-clean, already-rendered example turns the first
+  minute into a working demonstration of grounding, injection, and publication
+  coverage, and the --bare escape hatch keeps the empty-project workflow for those
+  who want it.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: test

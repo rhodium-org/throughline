@@ -1,0 +1,9 @@
+uid: TEST-0093
+type: test
+status: approved
+title: Magic link round-trip
+text: Emailed link authenticates the user.
+normative: true
+links:
+- target: FR-0055
+  type: verifies

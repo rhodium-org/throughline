@@ -1,0 +1,16 @@
+uid: UR-0026
+type: user_requirement
+status: ratified
+title: Conflict-free parallel identity allocation
+text: Users working independently on divergent branches shall be able to create requirements
+  in parallel and merge them without any UID collision and without silently losing
+  an item, and without a human ever hand-resolving a numbering clash.
+normative: true
+links:
+- target: BN-0002
+  type: derives_from
+attrs:
+  priority: must
+  verification: demonstration
+  origin: hybrid
+  ratified_by: henry

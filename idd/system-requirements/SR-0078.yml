@@ -1,0 +1,18 @@
+uid: SR-0078
+type: system_requirement
+status: approved
+title: Informative check summary
+text: By default in text output, the check command shall print a summary of the validated
+  graph — live item counts by type, link counts by type, and grounding health (how
+  many non-root items reach a root and how many delivery roots are served) — so a
+  run communicates what was actually validated, not only an error/warning tally.
+  A --quiet flag shall suppress the summary for CI and scripting. The --format json
+  output is the machine contract and shall be unaffected.
+normative: true
+links:
+- target: UR-0012
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: test

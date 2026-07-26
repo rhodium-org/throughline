@@ -1,0 +1,15 @@
+uid: SR-0130
+type: system_requirement
+status: ratified
+title: Status changes are validated against the configured transitions
+text: Every operation that changes an item's status shall validate the move against
+  the project's configured status transitions and refuse a move the transitions do
+  not permit, reporting a clear, actionable error. No operation shall write a status
+  the transition table forbids and rely on a later validation pass to detect it.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  origin: hybrid
+  ratified_by: henry

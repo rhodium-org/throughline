@@ -1,0 +1,13 @@
+uid: NFR-0011
+type: nfr
+status: approved
+title: Semantic versioning
+text: Tool releases shall follow SemVer; CLI flags, exit codes, the library API,
+  and the JSON export shape are the compatibility surface.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: inspection

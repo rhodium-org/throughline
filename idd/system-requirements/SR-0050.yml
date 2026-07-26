@@ -1,0 +1,13 @@
+uid: SR-0050
+type: system_requirement
+status: approved
+title: HTML publishing
+text: The Tool shall publish the project as a static HTML site with a document view,
+  per-item anchors by UID, cross-document hyperlinks, and an index.
+normative: true
+links:
+- target: UR-0008
+  type: implements
+attrs:
+  priority: must
+  verification: demonstration

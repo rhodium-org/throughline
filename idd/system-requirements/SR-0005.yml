@@ -1,0 +1,13 @@
+uid: SR-0005
+type: system_requirement
+status: approved
+title: Automatic UID allocation
+text: On item creation the Tool shall allocate the next unused number for the register's
+  prefix automatically, while also accepting an explicit unused UID.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+attrs:
+  priority: must
+  verification: test

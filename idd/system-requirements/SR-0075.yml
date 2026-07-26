@@ -1,0 +1,17 @@
+uid: SR-0075
+type: system_requirement
+status: approved
+title: Contributor environment doctor
+text: The project shall provide a contributor setup/doctor script that verifies development
+  prerequisites, runs the grounding gate, and can wire the local pre-commit grounding
+  hook on request, reporting an actionable pass/fix status per check and exiting
+  non-zero on failure. It is developer tooling maintained in the repository — not
+  part of the shipped throughline package — and may therefore be environment-specific.
+normative: true
+links:
+- target: UR-0021
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: demonstration

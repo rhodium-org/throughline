@@ -1,0 +1,13 @@
+uid: NFR-0015
+type: nfr
+status: approved
+title: Accessible HTML output
+text: 'Published HTML shall meet WCAG 2.1 AA basics: semantic headings, contrast,
+  keyboard navigation, alt text passthrough.'
+normative: true
+links:
+- target: UR-0008
+  type: implements
+attrs:
+  priority: should
+  verification: inspection

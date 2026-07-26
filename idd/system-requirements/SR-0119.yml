@@ -1,0 +1,38 @@
+uid: SR-0119
+type: system_requirement
+status: ratified
+title: Inline injection override for prose-embedded directives
+text: The Tool shall provide an optional inline modifier on an injection marker,
+  written tl:<kind>.inline, that renders the directive's body in place of its marked
+  region without the surrounding newlines the injector adds by default. The default
+  stays the block form — the opening marker, the rendered body, and tl:end each on
+  their own line — which suits tl:item, tl:table, tl:matrix, tl:catalog, tl:graph,
+  tl:chart and tl:stats, whose bodies are block content. The inline modifier suits
+  a scalar directive embedded mid-sentence, above all tl:count, which SR-0109 describes
+  as a live tally for a document's prose; without it the tl:end line begins an HTML
+  block that splits the Markdown paragraph on GitHub, so the tally cannot sit inside
+  a sentence. The modifier governs only the whitespace the injector places around
+  the rendered body, never the body itself, so a value rendered inline and the same
+  value rendered block are identical but for those newlines. It adds no new output
+  format and no filter grammar — only a per-marker layout flag — keeping the injector's
+  surface small (NG-0001). A marker that requests .inline is processed uniformly
+  with every other marker and stays idempotent under re-injection, as SR-0094 requires.
+rationale: UR-0024 promises documents that interleave the author's own narrative
+  with item content drawn from the graph. A count that must break onto its own line
+  cannot be interleaved into a sentence, so the promise fails precisely where SR-0109
+  aimed it — the inline tally in prose or a README badge. The block default was correct
+  for the original directives, which all render block content; what was missing was
+  a way to opt a scalar directive out of the block wrapping. Recorded as a refinement
+  of SR-0094 because it changes only how a marked region is laid out, not what may
+  be marked.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: refines
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: henry

@@ -1,0 +1,30 @@
+uid: SR-0088
+type: system_requirement
+status: approved
+title: Generate an agent-facing project brief
+text: The Tool shall emit, as a single Markdown document on demand, a briefing that
+  equips an AI coding agent to work in the project under its own rules — combining
+  the fixed conceptual contract of Intent-Driven Development (author a grounded
+  requirement as a draft "red test" first, implement it, flip it to approved, and
+  keep `check` green; roots justify themselves while non-roots must reach a root
+  through a grounding link; AI-origin items enter the proposed state and require
+  human ratification), the on-disk YAML item format, and the commands the agent
+  will use. The project-specific half — the declared item types and their
+  attributes (kind, whether required, whether normative, and any enum values),
+  which types are roots and delivery roots, the link vocabulary and its per-type
+  endpoint rules, the status vocabulary and the permitted transitions, the
+  grounding configuration and the AI origins, and any coverage rules — shall be
+  rendered from the loaded schema rather than restated in code, so the brief
+  cannot drift from the configuration the validator enforces and stays correct as
+  that configuration changes. The brief shall also include a live snapshot of the
+  current graph (item and link counts and the observed link shape) so the agent
+  sees the project as it actually stands. The document shall be plain text, so it
+  can be committed as an AGENTS-style file or piped straight into an agent's
+  context.
+normative: true
+links:
+- target: UR-0022
+  type: implements
+attrs:
+  priority: should
+  verification: test

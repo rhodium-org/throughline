@@ -1,0 +1,13 @@
+uid: SR-0071
+type: system_requirement
+status: approved
+title: Plugin points
+text: The Tool should define plugin interfaces for exporters, importers, and validation
+  rules, discoverable without modifying core code.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+attrs:
+  priority: should
+  verification: test

@@ -1,0 +1,31 @@
+uid: SR-0137
+type: system_requirement
+status: implemented
+title: Migration repairs a project already at the current major
+text: The migration command shall apply the current format major's configuration
+  backfill even when the project's declared major already equals the Tool's, so that
+  a project hand-authored at the current major — one that never passed through the
+  upgrade introducing a required configuration table — is repaired by the same single
+  command rather than by hand. The backfill shall remain idempotent and conservative.
+  It shall bind a semantic role only when the status that role would take is among
+  the project's declared status values, never inventing a status nor guessing a binding,
+  and it shall leave an already-declared table untouched, testing for the table's
+  presence rather than for its contents so that a deliberately empty or partial table
+  is preserved and never rewritten or duplicated. The command shall report what the
+  repair wrote rather than reporting that nothing changed.
+rationale: The migration walk runs only while the on-disk major is behind the Tool's,
+  so a project already at the current major but missing a table that major requires
+  had no repair path at all — the command answered "nothing to migrate" and left
+  the project broken. Migration answers "bring this project to what this major requires",
+  not merely "advance the version number".
+normative: true
+links:
+- target: UR-0015
+  type: implements
+- target: NFR-0010
+  type: refines
+attrs:
+  origin: hybrid
+  priority: must
+  verification: test
+  ratified_by: henry

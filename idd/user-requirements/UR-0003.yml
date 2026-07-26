@@ -1,0 +1,13 @@
+uid: UR-0003
+type: user_requirement
+status: approved
+title: Version-to-version comparison
+text: Users shall be able to see exactly which requirements were added, removed,
+  or modified between any two versions of the requirement set.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

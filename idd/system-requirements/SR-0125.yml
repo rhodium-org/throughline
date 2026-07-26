@@ -1,0 +1,16 @@
+uid: SR-0125
+type: system_requirement
+status: ratified
+title: Pre-integration references resolve by GUID
+text: Before a UID is allocated, references between newly created items shall be
+  expressed and resolved by GUID; reference resolution shall accept either a UID
+  (published items) or a GUID (pre-integration items).
+normative: true
+links:
+- target: UR-0026
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

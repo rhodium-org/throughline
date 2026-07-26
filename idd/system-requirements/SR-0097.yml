@@ -1,0 +1,21 @@
+uid: SR-0097
+type: system_requirement
+status: ratified
+title: non_goal root type
+text: The Tool's default project scaffold shall include a non_goal root item type,
+  self-justifying like other roots, and non_goals shall appear in the agent-facing
+  context brief so deliberately-excluded scope is visible to humans and agents. The
+  Tool shall not attempt to automatically detect items that violate a non_goal.
+rationale: A non_goal is the negative space of the grounding layer — the object a
+  human points at to reject a category of proposed scope with authority. Passive
+  in this cut (documents and traces) because detecting a 'violation' of a non_goal
+  is undecidable in general and would be scope creep.
+normative: true
+links:
+- target: UR-0025
+  type: implements
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

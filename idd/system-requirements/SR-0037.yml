@@ -1,0 +1,13 @@
+uid: SR-0037
+type: system_requirement
+status: approved
+title: Diff between versions
+text: The Tool shall compare two baselines, revisions, or working state and report
+  per item added/deleted/modified and links added/removed, as text/HTML and JSON.
+normative: true
+links:
+- target: UR-0003
+  type: implements
+attrs:
+  priority: must
+  verification: test

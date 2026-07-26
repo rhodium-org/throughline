@@ -1,0 +1,13 @@
+uid: UR-0005
+type: user_requirement
+status: approved
+title: Stale-link awareness
+text: When a requirement changes, users shall be alerted that items linked to it
+  may need re-examination (suspect links).
+normative: true
+links:
+- target: BN-0003
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

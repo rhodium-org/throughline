@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.12"]
+        include:
+          # Prove the supported floor (README/CONTRIBUTING say Python >= 3.11).
+          - os: ubuntu-latest
+            python-version: "3.11"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Grounding gate (demo graph must stay grounded)
+        run: tl -C examples/grounding-demo check --strict --quiet
+
+      - name: Self-host gate (throughline's own requirements must stay grounded)
+        run: tl -C idd check --strict --quiet
+
+      - name: Docs freshness gate (published docs must match the graph)
+        run: tl -C idd docs --check
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build image
+        run: docker build -t throughline:ci .
+
+      - name: Smoke-test the image against the demo project
+        run: |
+          docker run --rm -v "$PWD/examples/grounding-demo:/work" \
+            throughline:ci -C /work check --strict --quiet
+
+      - name: Smoke-test the image against throughline's own requirements
+        # Mount the whole repo (not just idd/) so the configured [docs] paths —
+        # which live one level up under docs/ — resolve; the unpublished rule
+        # globs them, so they must be present in the container.
+        run: |
+          docker run --rm -v "$PWD:/work" \
+            throughline:ci -C /work/idd check --strict --quiet

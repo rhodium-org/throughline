@@ -1,0 +1,39 @@
+uid: SR-0106
+type: system_requirement
+status: approved
+title: Link predicates in the filter grammar
+text: The filter grammar (SR-0104) shall let a filter select items by their graph
+  edges, not only by scalar fields, through a links value exposing read-only
+  predicates in the same accessor style as attrs.get. It shall provide
+  links.outgoing(type) — true when the item has an outgoing link of that type;
+  links.incoming(type) — true when another item links to it with that type; and
+  links.to(uid) — true when the item has an outgoing link to that target UID
+  (matching external targets by their literal string too). Each predicate called
+  with no type argument shall match a link of any type, so links.outgoing() means
+  "has any outgoing link" and links.incoming() means "is pointed at by anything".
+  This delivers the "link predicates" dimension SR-0045 names inside the shared
+  expression language, so a query or an exported view can match on connectivity
+  the way coverage rules (SR-0042) already can through their incoming/outgoing
+  selector — for example finding requirements with no verifying test as
+  type=='requirement' and not links.incoming('verifies'). Incoming predicates
+  read the whole graph; where a caller cannot supply it the incoming predicate
+  shall fail fast as a malformed filter rather than silently report false.
+rationale: SR-0045 lists link predicates among the filter language's dimensions,
+  and coverage rules already express incoming/outgoing link requirements, but the
+  shared expression grammar itself exposed no way to reach an item's links — so a
+  query could not ask "requirements with no verifying test" the way a coverage
+  rule can. Reusing the accessor-call shape the grammar already defines (SR-0104)
+  adds the capability without a new call form or a bespoke syntax, keeping the
+  language a small Python-expression subset.
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+- target: SR-0104
+  type: refines
+attrs:
+  origin: human
+  priority: should
+  verification: test

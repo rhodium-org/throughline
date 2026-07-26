@@ -1,0 +1,19 @@
+uid: SR-0093
+type: system_requirement
+status: ratified
+title: Tombstone permanence
+text: The Tool shall report, at validation time, any UID whose last recorded status
+  was deleted but whose item file is absent from the working tree, because a tombstone
+  is the permanent record that a UID was retired and must never be removed.
+rationale: A tombstone is the only record that a UID was retired; if it is erased
+  by a bad merge or a stray git rm, the never-reused guarantee (SR-0001) silently
+  breaks. The gate already reads each item's status at the previous commit (SR-0083),
+  so a vanished tombstone is detectable there without a redundant second ledger.
+normative: true
+links:
+- target: UR-0014
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini

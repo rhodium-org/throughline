@@ -1,0 +1,9 @@
+uid: FR-0040
+type: requirement
+status: approved
+title: Rate-limit login
+text: The system shall lock login after 5 failed attempts.
+normative: true
+links:
+- target: RISK-0007
+  type: mitigates

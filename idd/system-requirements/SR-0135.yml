@@ -1,0 +1,25 @@
+uid: SR-0135
+type: system_requirement
+status: implemented
+title: Shipped test suite passes from the published sdist
+text: When the Tool's test suite runs from the published source distribution — where
+  repo-only fixture directories, namely the self-hosted requirements spine and the
+  grounding demo, are intentionally not packaged to keep the tarball small — the
+  self-host and demo proof tests shall skip cleanly rather than error, so the shipped
+  suite passes out of the box for anyone vetting the package. The same tests shall
+  still run and gate in continuous integration, where those directories are present.
+rationale: The published 1.2.2 sdist gives 4 failed out of 253 because the self-host
+  and demo proof tests resolve directories that are not in the tarball. A red suite
+  out of the box undermines the dogfooded, gated story the README leads with; the
+  proofs must degrade gracefully off the package while still gating in CI.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0061
+  type: relates
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: henry

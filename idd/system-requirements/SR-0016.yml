@@ -1,0 +1,14 @@
+uid: SR-0016
+type: system_requirement
+status: approved
+title: Move between registers
+text: The Tool shall support moving an item to another register; the moved item keeps
+  its UID and the Tool records its new location.
+rationale: Identity outranks tidy prefixes.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+attrs:
+  priority: should
+  verification: test

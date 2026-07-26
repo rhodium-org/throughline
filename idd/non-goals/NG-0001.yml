@@ -1,0 +1,16 @@
+uid: NG-0001
+type: non_goal
+status: approved
+title: Not a document authoring or editing system
+text: 'throughline shall not become a surface for authoring, editing, or storing
+  narrative document content. It is a validator and an injector: item content lives
+  in the graph and is rendered into documents by reference, never edited through
+  the tool. Interactive editing, WYSIWYG, and web-based document management are out
+  of scope.'
+rationale: The comparable tools that started as validators and grew editing surfaces
+  became document-management systems and lost the git-native, reference-not-copy
+  property that keeps content from drifting. Recording this as a first-class non-goal
+  is the object a reviewer points at to reject that category of proposed scope.
+normative: true
+attrs:
+  origin: human

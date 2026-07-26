@@ -1,0 +1,25 @@
+uid: SR-0133
+type: system_requirement
+status: ratified
+title: Read-only load tolerates an older on-disk format major
+text: 'When a caller only reads a project — never writing or editing it — the Tool
+  shall provide a read-only load that tolerates an on-disk format major older than
+  the one the Tool implements. It shall upgrade the format in memory: apply each
+  format migration to the parsed configuration and discover registers across every
+  manifest name the Tool has ever used, without modifying the project on disk. Consuming
+  a project read-only therefore never forces it to be migrated first. The strict
+  single-major gate of NFR-0010 — which declines to load an older project until the
+  migration command rewrites it — shall continue to govern any project the Tool operates
+  on for write or edit. A major newer than the Tool understands shall still be refused,
+  so a format from the future is never mis-parsed.'
+normative: true
+links:
+- target: UR-0015
+  type: implements
+- target: NFR-0010
+  type: refines
+attrs:
+  origin: hybrid
+  priority: must
+  verification: test
+  ratified_by: henry

@@ -1,0 +1,31 @@
+uid: SR-0129
+type: system_requirement
+status: ratified
+title: The agent brief states the working discipline, not just the model
+text: 'The agent-facing brief (SR-0088) shall, in addition to the IDD contract, the
+  schema-derived model, the on-disk format and the live snapshot, state the working
+  discipline an agent must follow in the project: (a) that it shall do no work the
+  graph does not justify — every change traces to a root intent, so before writing
+  code, docs or config an agent confirms a ratified root requires it, and where none
+  does it authors and has a human ratify that intent first, or stops and asks, rather
+  than doing unjustified work; (b) that it shall mutate the graph only through the
+  CLI — creating, linking, ratifying and deleting items with the tool, never hand-editing
+  a <UID>.yml item file or a .register.yml manifest nor allocating a UID by hand,
+  because the CLI is what keeps UIDs unique, links well-typed, statuses legal and
+  the check green; and (c) that, idempotently and in whatever framework-agnostic
+  mechanism its own AI coding framework offers for durable project instructions,
+  it is encouraged to set up a reusable skill or rule that captures how to drive
+  the tool here — run the brief first, work through the CLI, keep the check green
+  — if the project does not already have one, so the discipline is inherited by future
+  agents rather than re-derived. This guidance shall be part of the generated brief''s
+  fixed contract text so it appears for every project, and shall name the project''s
+  actual command surface where it refers to commands.'
+normative: true
+links:
+- target: UR-0022
+  type: implements
+- target: SR-0088
+  type: refines
+attrs:
+  origin: hybrid
+  ratified_by: Henry Grech-Cini

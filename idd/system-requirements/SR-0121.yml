@@ -1,0 +1,35 @@
+uid: SR-0121
+type: system_requirement
+status: ratified
+title: Type-then-item selection for item arguments
+text: A command that takes an existing item by UID — ratify, link, delete, trace,
+  blast, invalidate, review, and any later command of the same shape — shall, when
+  that UID is omitted on an interactive terminal, help the user find it rather than
+  reject the command. It shall first let the user choose an item type, then choose
+  a specific item within that type, listing each candidate by UID and title so the
+  choice is made from meaning, not from memorised identifiers; where a command takes
+  two endpoints (a link source and destination) each is selected the same way in
+  turn. The picker shall reuse the non-blocking convention already established for
+  grounding — an empty answer or end-of-input cancels cleanly and never hangs — and
+  on a non-interactive session the omitted UID shall fail fast per SR-0120. Supplying
+  the UID as an argument bypasses the picker entirely, so scripts are unaffected.
+rationale: The UIDs are stable and opaque by design (SR-0004), which is a strength
+  for identity but a burden for a human who must name one from memory to ratify or
+  link it. Selecting by type and then by title turns an act of recall into an act
+  of recognition — the frictionless interaction UR-0002 asks for and the newcomer
+  approachability UR-0020 requires — while the argument form keeps the command fully
+  scriptable. Reusing the existing grounding picker's cancel-and-never-hang rule
+  keeps one interaction model across the tool.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+- target: UR-0002
+  type: relates
+- target: SR-0120
+  type: relates
+attrs:
+  origin: hybrid
+  priority: should
+  verification: test
+  ratified_by: henry

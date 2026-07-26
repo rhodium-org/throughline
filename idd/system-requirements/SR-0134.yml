@@ -1,0 +1,27 @@
+uid: SR-0134
+type: system_requirement
+status: implemented
+title: Structural load errors surface as named findings
+text: When the Tool loads an item whose structure is malformed — for example a link
+  entry that is not a mapping, or one missing its required target key — it shall
+  report a named check finding that identifies the file and the reason, and exit
+  with the standard nonzero code, rather than raising an unhandled traceback. Structural
+  load errors shall be collected and surfaced through check in the same diagnostic
+  format as other structural problems (uid collisions, orphans, unresolved namespaces),
+  so that a hand-edited or externally generated file never crashes the loader before
+  schema validation can run.
+rationale: SR-0023 promises schema violations reported with file, field, and reason,
+  but the loader indexes required link keys before schema validation runs, so a malformed
+  link crashes both tl and tl-compose with a raw KeyError. A validation tool must
+  name the offending file, not emit a stack trace.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0023
+  type: relates
+attrs:
+  origin: hybrid
+  priority: must
+  verification: test
+  ratified_by: henry

@@ -1,0 +1,13 @@
+uid: SR-0062
+type: system_requirement
+status: deferred
+title: Source-code traceability scan
+text: The Tool could scan configured source trees for UID markers in comments and
+  treat them as implements links for coverage.
+normative: true
+links:
+- target: UR-0019
+  type: implements
+attrs:
+  priority: could
+  verification: test

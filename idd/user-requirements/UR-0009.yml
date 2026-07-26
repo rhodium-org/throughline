@@ -1,0 +1,13 @@
+uid: UR-0009
+type: user_requirement
+status: approved
+title: Exchange with other tools
+text: Users shall be able to exchange requirements with other RM tools via standard
+  formats, at minimum CSV/Excel and ReqIF.
+normative: true
+links:
+- target: BN-0005
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

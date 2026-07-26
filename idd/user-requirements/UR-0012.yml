@@ -1,0 +1,13 @@
+uid: UR-0012
+type: user_requirement
+status: approved
+title: Coverage and impact analysis
+text: Users shall be able to answer 'is every requirement traced/verified?' and 'what
+  is affected if this requirement changes?' without manual inspection.
+normative: true
+links:
+- target: BN-0003
+  type: derives_from
+attrs:
+  priority: must
+  verification: demonstration

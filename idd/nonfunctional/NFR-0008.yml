@@ -1,0 +1,13 @@
+uid: NFR-0008
+type: nfr
+status: approved
+title: Startup latency
+text: CLI startup to first output on a small project (<=100 items) shall be under
+  1 second.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: should
+  verification: analysis

@@ -1,0 +1,14 @@
+uid: SR-0011
+type: system_requirement
+status: approved
+title: Register tree
+text: The Tool shall organize items into registers (a directory with a manifest defining
+  prefix, title, attribute schema, and ordering) and registers into a project tree
+  with declared parent relationships.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: must
+  verification: test

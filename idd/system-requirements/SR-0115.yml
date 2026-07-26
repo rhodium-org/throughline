@@ -1,0 +1,33 @@
+uid: SR-0115
+type: system_requirement
+status: ratified
+title: Graph-diagram directive in documents
+text: The tl:graph document directive shall render the items matching its SR-0045
+  filter as a Mermaid flowchart — one node per matching item plus each item's direct
+  outgoing-link targets, one labelled edge per link carrying its link type — so a
+  reader sees, in a rendered picture, how the graph flows from its roots through
+  internal items out to the external clauses they reference. Each node is coloured
+  by a Mermaid classDef keyed on the item's type, and a link target that is not a
+  matched item — an external or namespace-qualified reference such as a borrowed
+  standard clause — is given a distinct external class, so intent, the requirement
+  layers and the externals are told apart at a glance. The flowchart is drawn
+  top-down — the layout a Mermaid renderer such as GitHub lays out reliably; a
+  left-to-right or ELK layout is rejected there — and width is kept in check by
+  folding external targets (SR-0118) rather than by rotating the chart. Node
+  identifiers and labels
+  are sanitised so a colon in a namespace-qualified target or a special character
+  in a title cannot break the diagram. A filter matching nothing renders a clear
+  placeholder rather than an empty diagram; a malformed filter fails injection. The
+  directive selects items to picture, it does not publish them for the coverage rule
+  (SR-0096).
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: relates
+attrs:
+  origin: hybrid
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini

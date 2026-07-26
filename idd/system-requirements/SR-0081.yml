@@ -1,0 +1,16 @@
+uid: SR-0081
+type: system_requirement
+status: approved
+title: Status membership validation
+text: When a project declares a status vocabulary ([status] values), the Tool's
+  check shall validate every live item's status against it and report a finding
+  (rule 'bad-status', severity configurable per SR-0041) for any status outside
+  the declared set, so typos and stale statuses cannot silently enter the graph.
+  When no vocabulary is declared the rule is inert.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: should
+  verification: test

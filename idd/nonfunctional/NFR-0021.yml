@@ -1,0 +1,15 @@
+uid: NFR-0021
+type: nfr
+status: approved
+title: Conceptual model explained
+text: Documentation shall explain throughline's Intent-Driven Development (IDD) model
+  and how it differs from adjacent practices (notably BDD and TDD), so newcomers
+  understand why grounding-at-birth exists and adopt it deliberately rather than
+  treating check as an after-the-fact linter.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  priority: should
+  verification: inspection

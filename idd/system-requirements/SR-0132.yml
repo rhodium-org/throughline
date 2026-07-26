@@ -1,0 +1,14 @@
+uid: SR-0132
+type: system_requirement
+status: ratified
+title: Every permitted status change is reachable through an operation
+text: The tool shall provide a command to move an item to any status the configured
+  transitions permit, so that every reachable item state is reachable through a tool
+  operation and no state change ever requires hand-editing an item file.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  origin: hybrid
+  ratified_by: henry

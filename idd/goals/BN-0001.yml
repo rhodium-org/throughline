@@ -1,0 +1,9 @@
+uid: BN-0001
+type: business_need
+status: approved
+title: Stable identity
+text: Immutable, never-reused requirement UIDs fully decoupled from register position.
+normative: false
+links:
+- target: INT-0001
+  type: derives_from

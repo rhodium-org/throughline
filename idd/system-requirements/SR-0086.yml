@@ -1,0 +1,23 @@
+uid: SR-0086
+type: system_requirement
+status: approved
+title: Visual model and lifecycle diagrams
+text: The Tool shall emit a visual representation of a project's shape as Mermaid
+  diagram source — a type model (item types as nodes joined by labelled edges for
+  the links observed between them) and a status-transition state machine (the
+  declared [transitions], each move an edge between states) — so a maintainer or
+  newcomer can see how the graph is wired and how items move through their
+  lifecycle without reading the configuration by hand. Mermaid is chosen because
+  it is plain text (so a diagram lives in version control and diffs cleanly) and
+  renders directly in Markdown and on the forge. The CLI shall offer each diagram
+  and, by default, both, wrapped as fenced Markdown blocks ready to embed; a raw
+  Mermaid form shall be available for piping into a renderer. When a project
+  declares no transitions, the lifecycle diagram is reported as absent rather
+  than emitted empty.
+normative: true
+links:
+- target: UR-0012
+  type: implements
+attrs:
+  priority: could
+  verification: test

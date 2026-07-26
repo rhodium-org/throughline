@@ -1,0 +1,27 @@
+uid: SR-0089
+type: system_requirement
+status: rejected
+title: Render a requirements document as Markdown
+text: The Tool shall emit, on demand, a requirements document generated from the
+  live graph as a single Markdown text stream. The document shall carry a heading
+  with the project name, a provenance line stating the source it was rendered from,
+  and one section per register folder — each listing its live (non-tombstoned)
+  items in UID order with the item title, type, status, statement text, project
+  attributes, and outgoing grounding links so the "why" reads inline. A caller may
+  narrow the output to one register by its UID prefix. Output shall be plain
+  Markdown, deterministic, and dependency-free, so a wrapper can convert it to
+  navigable HTML or PDF while the core stays a pure text engine.
+rationale: Superseded by SR-0094 (in-place marker injection). Rendering a whole
+  document from the graph guarantees a parallel hand-maintained artifact and
+  therefore guarantees drift (UR-0024); the seam must be a reference injected into
+  a human-owned file, not a generated copy. Kept as a tombstoned decision so the
+  reasoning stays traceable rather than deleted.
+normative: true
+links:
+- target: UR-0008
+  type: implements
+- target: SR-0094
+  type: relates
+attrs:
+  priority: should
+  verification: test

@@ -1,0 +1,15 @@
+uid: SR-0003
+type: system_requirement
+status: approved
+title: No UID reuse
+text: The Tool shall never assign a UID that has ever existed in the project, including
+  UIDs of deleted items; retired numbers shall be recorded so allocation skips them.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+- target: UR-0002
+  type: implements
+attrs:
+  priority: must
+  verification: test

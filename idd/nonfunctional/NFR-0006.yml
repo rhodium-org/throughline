@@ -1,0 +1,14 @@
+uid: NFR-0006
+type: nfr
+status: approved
+title: Reference scale
+text: 'On the reference project (10,000 items, 25 registers, 30,000 links) and reference
+  hardware, the Tool shall complete: full check <=10 s, query <=1 s, full HTML publish
+  <=60 s, incremental publish of one document <=5 s.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+attrs:
+  priority: must
+  verification: analysis

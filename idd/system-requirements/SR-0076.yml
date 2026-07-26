@@ -1,0 +1,15 @@
+uid: SR-0076
+type: system_requirement
+status: approved
+title: CLI version reporting
+text: The Tool's CLI shall report its own version via a --version flag, printing
+  the installed package version and exiting 0, so users and CI can record which build
+  produced a result (supports the SemVer compatibility surface, NFR-0011).
+normative: true
+links:
+- target: UR-0016
+  type: implements
+attrs:
+  origin: human
+  priority: should
+  verification: test

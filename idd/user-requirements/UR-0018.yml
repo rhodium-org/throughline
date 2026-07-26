@@ -1,0 +1,13 @@
+uid: UR-0018
+type: user_requirement
+status: approved
+title: Migration path in
+text: Users shall be able to import an existing requirements list (spreadsheet or
+  CSV export from another tool) and have stable IDs assigned or preserved.
+normative: true
+links:
+- target: BN-0006
+  type: derives_from
+attrs:
+  priority: must
+  verification: test

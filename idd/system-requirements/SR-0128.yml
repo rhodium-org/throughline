@@ -1,0 +1,17 @@
+uid: SR-0128
+type: system_requirement
+status: ratified
+title: UID-GUID binding is frozen and baseline-verified
+text: Once allocated, an item's UID-to-GUID binding shall be immutable. The validation
+  gate shall flag, against the git baseline, any changed UID-GUID binding or any
+  reissued retired UID, and shall require deletion to be a tombstone rather than
+  a file removal so that retired UIDs remain visible and are never reused.
+normative: true
+links:
+- target: UR-0027
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: hybrid
+  ratified_by: henry

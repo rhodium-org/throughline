@@ -1,0 +1,9 @@
+uid: TEST-0091
+type: test
+status: approved
+title: Wizard completes
+text: New user completes the 3-step wizard.
+normative: true
+links:
+- target: FR-0022
+  type: verifies

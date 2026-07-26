@@ -1,0 +1,14 @@
+uid: SR-0038
+type: system_requirement
+status: approved
+title: Review workflow states
+text: The Tool shall record a per-item reviewed fingerprint set by an explicit review
+  command, and validation shall list items whose current fingerprint differs from
+  it.
+normative: true
+links:
+- target: UR-0006
+  type: implements
+attrs:
+  priority: must
+  verification: test
