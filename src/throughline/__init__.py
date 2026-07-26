@@ -29,7 +29,7 @@ from .storage import (
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
 from .validate import Finding, is_external, is_namespace_qualified, validate
 
-__version__ = "1.2.4"
+__version__ = "1.2.5"
 
 __all__ = [
     "Register", "Item", "Link", "Project",
