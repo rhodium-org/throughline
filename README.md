@@ -264,7 +264,7 @@ vulnerability, see [`SECURITY.md`](https://github.com/rhodium-org/throughline/bl
 
 ## License
 
-Copyright © 2026 Time Back Solutions Limited (Company No. 12938914), authored by
-Henry J Grech-Cini ([ORCID 0009-0007-1565-7530](https://orcid.org/0009-0007-1565-7530)). Released under the
+Created by Henry J Grech-Cini ([ORCID 0009-0007-1565-7530](https://orcid.org/0009-0007-1565-7530)).
+Copyright © 2026 Henry J Grech-Cini. Released under the
 **Apache License 2.0** — see [`LICENSE`](https://github.com/rhodium-org/throughline/blob/main/LICENSE) and [`NOTICE`](https://github.com/rhodium-org/throughline/blob/main/NOTICE). Provenance
 and prior-art are recorded in [`PROVENANCE.md`](https://github.com/rhodium-org/throughline/blob/main/PROVENANCE.md).
