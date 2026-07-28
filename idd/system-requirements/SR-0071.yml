@@ -2,12 +2,16 @@ uid: SR-0071
 type: system_requirement
 status: approved
 title: Plugin points
-text: The Tool should define plugin interfaces for exporters, importers, and validation
-  rules, discoverable without modifying core code.
+text: The Tool should define a plugin interface for custom validation rules,
+  discoverable without modifying core code. Exporter and importer plugins are out
+  of scope (NG-0005); third-party tooling integrates through the documented JSON
+  dump (SR-0055) instead.
 normative: true
 links:
 - target: UR-0015
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: should
   verification: test

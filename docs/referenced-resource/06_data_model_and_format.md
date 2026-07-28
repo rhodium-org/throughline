@@ -41,6 +41,16 @@ number  = DIGIT{width}                       ; zero-padded, width per register (
 ```
 Regex (width 4): `^[A-Z][A-Z0-9]{1,15}-[0-9]{4,}$`
 
+**A prefix is at least two characters** — the grammar requires an opening
+letter *followed by* one to fifteen more characters, so a single-character
+prefix (e.g. `R`) is deliberately invalid and is rejected when the register is
+created (SR-0140). This is not an arbitrary limit: `number` is matched greedily,
+so with a one-letter prefix a UID like `R-0001` is ambiguous — the parser cannot
+tell the prefix character from a leading digit of the number. Historically every
+item of such a register failed to parse, which silently reset allocation to `1`
+and minted duplicate UIDs. Refusing the prefix up front turns that silent
+corruption into a clear error at the point you can still fix it.
+
 Allocation rule: next number = 1 + max(number ever used for prefix), where
 "ever used" includes deleted/retired items and the reserved list in the
 register manifest (enforces SR-0003).

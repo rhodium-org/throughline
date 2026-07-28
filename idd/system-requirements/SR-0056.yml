@@ -1,14 +1,19 @@
 uid: SR-0056
 type: system_requirement
-status: approved
+status: rejected
 title: ReqIF exchange
 text: The Tool shall export registers to ReqIF preserving hierarchy, attributes,
   and links, and should import ReqIF including iterative re-import preserving UIDs
   via stored foreign IDs.
+rationale: Rejected as out of scope under NG-0005. ReqIF is an RM-vendor interchange
+  format; supporting it would pull throughline into the round-tripping it explicitly
+  disclaims. Tombstoned, never reused.
 normative: true
 links:
 - target: UR-0009
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: should
   verification: test

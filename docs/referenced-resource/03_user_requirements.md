@@ -10,7 +10,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 ---
 
 <!-- tl:item UR-0001 -->
-**UR-0001 — Stable requirement identity** — `user_requirement`, status `approved`
+**UR-0001 — Stable requirement identity** — `user_requirement`, status `ratified`
 
 > Users shall be able to refer to any requirement by an identifier that never changes for the life of the project, regardless of edits to any register.
 
@@ -18,61 +18,61 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0001
 
-**priority**: must · **verification**: demonstration
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0002 -->
-**UR-0002 — Frictionless add/remove** — `user_requirement`, status `approved`
+**UR-0002 — Frictionless add/remove** — `user_requirement`, status `ratified`
 
 > Users shall be able to add and remove requirements anywhere in a register without affecting the identifiers, links, or history of other requirements.
 
 *Derives from:* BN-0001
 
-**priority**: must · **verification**: demonstration
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0003 -->
-**UR-0003 — Version-to-version comparison** — `user_requirement`, status `approved`
+**UR-0003 — Version-to-version comparison** — `user_requirement`, status `ratified`
 
 > Users shall be able to see exactly which requirements were added, removed, or modified between any two versions of the requirement set.
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0004 -->
-**UR-0004 — Traceability** — `user_requirement`, status `approved`
+**UR-0004 — Traceability** — `user_requirement`, status `ratified`
 
 > Users shall be able to link requirements to parent requirements, tests, design artifacts, and external references, and navigate those links in both directions.
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0005 -->
-**UR-0005 — Stale-link awareness** — `user_requirement`, status `approved`
+**UR-0005 — Stale-link awareness** — `user_requirement`, status `ratified`
 
 > When a requirement changes, users shall be alerted that items linked to it may need re-examination (suspect links).
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0006 -->
-**UR-0006 — Review state** — `user_requirement`, status `approved`
+**UR-0006 — Review state** — `user_requirement`, status `ratified`
 
 > Users shall be able to mark requirements as reviewed and detect any requirement that changed after its last review.
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0007 -->
-**UR-0007 — Plain text under version control** — `user_requirement`, status `approved`
+**UR-0007 — Plain text under version control** — `user_requirement`, status `ratified`
 
 > Users shall be able to store all requirement data as human-readable text files in Git, using branches, merges, and pull requests as the change workflow.
 
@@ -80,13 +80,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0002
 
-**priority**: must · **verification**: inspection
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0008 -->
 **UR-0008 — Stakeholder-quality publishing** — `user_requirement`, status `approved`
 
-> Users shall be able to publish requirement documents as navigable HTML and as PDF suitable for customers, auditors, and reviewers who don't use the tool.
+> Users shall be able to publish requirement documents as portable Markdown — rendered from the graph by reference — suitable for customers, auditors, and reviewers who don't use the tool, and convertible by external tools (pandoc, mdBook) to navigable HTML or PDF. The tool renders Markdown; it does not itself produce HTML or PDF (NG-0005).
 
 *Derives from:* BN-0005
 
@@ -94,101 +94,107 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0009 -->
-**UR-0009 — Exchange with other tools** — `user_requirement`, status `approved`
+**UR-0009 — Exchange with other tools** — `user_requirement`, status `rejected`
 
 > Users shall be able to exchange requirements with other RM tools via standard formats, at minimum CSV/Excel and ReqIF.
 
+*Rationale:* Rejected as out of scope under NG-0005. Exchange with RM vendors via their formats is a class of scope throughline declines; the open, documented JSON dump (SR-0055) plus the git-native YAML files are the interchange story. Tombstoned, never reused.
+
 *Derives from:* BN-0005
+*Relates:* NG-0005
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
 
 <!-- tl:item UR-0010 -->
-**UR-0010 — Search and filter** — `user_requirement`, status `approved`
+**UR-0010 — Search and filter** — `user_requirement`, status `ratified`
 
 > Users shall be able to find requirements by any combination of attribute values, text search, tags, and link conditions.
 
 *Derives from:* BN-0008
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0011 -->
-**UR-0011 — Project-specific data model** — `user_requirement`, status `approved`
+**UR-0011 — Project-specific data model** — `user_requirement`, status `ratified`
 
 > Users shall be able to define their own item types, attributes (with types and allowed values), and link types per project.
 
 *Derives from:* BN-0008
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0012 -->
-**UR-0012 — Coverage and impact analysis** — `user_requirement`, status `approved`
+**UR-0012 — Coverage and impact analysis** — `user_requirement`, status `ratified`
 
 > Users shall be able to answer 'is every requirement traced/verified?' and 'what is affected if this requirement changes?' without manual inspection.
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: demonstration
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0013 -->
-**UR-0013 — Baselines** — `user_requirement`, status `approved`
+**UR-0013 — Baselines** — `user_requirement`, status `ratified`
 
 > Users shall be able to freeze a named snapshot of the requirement set and later compare against it or reproduce it exactly.
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0014 -->
-**UR-0014 — Team collaboration without a server** — `user_requirement`, status `approved`
+**UR-0014 — Team collaboration without a server** — `user_requirement`, status `ratified`
 
 > Multiple users shall be able to work on the same requirement set concurrently via Git, with merge conflicts rare and resolvable at the level of individual requirements.
 
 *Derives from:* BN-0002
 
-**priority**: must · **verification**: analysis
+**priority**: must · **verification**: analysis · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0015 -->
-**UR-0015 — No lock-in** — `user_requirement`, status `approved`
+**UR-0015 — No lock-in** — `user_requirement`, status `ratified`
 
 > Users shall be able to read, migrate, and process their data with ordinary tools using a documented open format, offline, under an OSI-approved license.
 
 *Derives from:* BN-0006
 
-**priority**: must · **verification**: inspection
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0016 -->
-**UR-0016 — CI automation** — `user_requirement`, status `approved`
+**UR-0016 — CI automation** — `user_requirement`, status `ratified`
 
 > Users shall be able to run the tool's validation in continuous integration so that broken traceability or invalid data fails the build.
 
 *Derives from:* BN-0007
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0017 -->
-**UR-0017 — Requirement quality support** — `user_requirement`, status `approved`
+**UR-0017 — Requirement quality support** — `user_requirement`, status `ratified`
 
 > Users should be offered assistance writing well-formed requirements (EARS templates, lint warnings for ambiguity, missing rationale, compound statements).
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: test
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0018 -->
-**UR-0018 — Migration path in** — `user_requirement`, status `approved`
+**UR-0018 — Migration path in** — `user_requirement`, status `rejected`
 
 > Users shall be able to import an existing requirements list (spreadsheet or CSV export from another tool) and have stable IDs assigned or preserved.
 
+*Rationale:* Rejected as out of scope under NG-0005. Ingesting a foreign requirements list is the import counterpart of the format generation the tool declines; a throughline graph is started natively (tl init/new), not migrated in from a spreadsheet. Tombstoned, never reused.
+
 *Derives from:* BN-0006
+*Relates:* NG-0005
 
 **priority**: must · **verification**: test
 <!-- tl:end -->
@@ -204,13 +210,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0020 -->
-**UR-0020 — Comprehensible to newcomers** — `user_requirement`, status `approved`
+**UR-0020 — Comprehensible to newcomers** — `user_requirement`, status `ratified`
 
-> A new user shall be able to initialize a project, add three linked requirements, validate, and publish HTML within 15 minutes using only the quick-start guide.
+> A new user shall be able to initialize a project, add three linked requirements, validate, and render a Markdown document within 15 minutes using only the quick-start guide.
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: demonstration
+**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0021 -->
@@ -224,13 +230,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0022 -->
-**UR-0022 — Comprehensible to AI agents** — `user_requirement`, status `approved`
+**UR-0022 — Comprehensible to AI agents** — `user_requirement`, status `ratified`
 
 > An AI coding agent joining a project shall be able to obtain, from the tool itself, everything it needs to work correctly under this project's rules — the Intent-Driven Development contract, the project's own item types and their attributes, the link and status vocabularies and their constraints, and the on-disk YAML format — without a human hand-authoring an agent guide or the agent reverse-engineering the configuration. Because the configuration is the source of truth and may change, this material shall be derived from the live project rather than restated by hand, so it can never drift from the rules the validator actually enforces.
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: demonstration
+**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0023 -->

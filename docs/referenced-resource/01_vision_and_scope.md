@@ -35,8 +35,10 @@ and any two versions of the requirement set can be diffed meaningfully.
   detection, coverage and impact analysis. (→ UR-0004, UR-0005, UR-0012)
 - **G4 — Change management.** Reviews, fingerprints, baselines, and
   version-to-version diffs. (→ UR-0003, UR-0006, UR-0013)
-- **G5 — Publishable.** Stakeholder-quality HTML/PDF output and standard
-  exchange formats (ReqIF, CSV/Excel, JSON). (→ UR-0008, UR-0009)
+- **G5 — Publishable.** Requirements rendered by reference into portable
+  Markdown for stakeholders who don't use the tool (external tools convert it to
+  HTML/PDF), with a documented JSON dump as the interchange surface. The tool does
+  not itself generate presentation or RM-vendor formats. (→ UR-0008, NG-0005)
 - **G6 — No lock-in.** Documented, versioned, open file format; OSI-approved
   license; offline operation. (→ UR-0015)
 - **G7 — Automatable.** CLI + library API designed for CI gates. (→ UR-0016)
@@ -59,33 +61,33 @@ or agent sees the boundary — and its rationale — rather than inferring it fr
 absence. The entries below are **generated from the graph** by `tl docs`:
 
 <!-- tl:item NG-0001 -->
-**NG-0001 — Not a document authoring or editing system** — `non_goal`, status `approved`
+**NG-0001 — Not a document authoring or editing system** — `non_goal`, status `ratified`
 
 > throughline shall not become a surface for authoring, editing, or storing narrative document content. It is a validator and an injector: item content lives in the graph and is rendered into documents by reference, never edited through the tool. Interactive editing, WYSIWYG, and web-based document management are out of scope.
 
 *Rationale:* The comparable tools that started as validators and grew editing surfaces became document-management systems and lost the git-native, reference-not-copy property that keeps content from drifting. Recording this as a first-class non-goal is the object a reviewer points at to reject that category of proposed scope.
 
-**origin**: human
+**origin**: human · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NG-0002 -->
-**NG-0002 — No separate documentation license** — `non_goal`, status `approved`
+**NG-0002 — No separate documentation license** — `non_goal`, status `ratified`
 
 > throughline shall not maintain a separate or dual license for its documentation. All artifacts in the repository — code, the specification under docs/referenced-resource/, and the guides — ship under the single repository license, Apache-2.0. The project deliberately does not adopt a distinct documentation license (for example CC-BY-4.0).
 
 *Rationale:* An earlier draft suggested CC-BY-4.0 for the specification while the code is Apache-2.0, which contradicted the single LICENSE/NOTICE the repository already declares and forced readers to reason about which license applies to which file. Recording a single-license stance as an explicit non-goal removes that ambiguity and gives the license-alignment change a ratified intent to trace to.
 
-**origin**: human
+**origin**: human · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NG-0003 -->
-**NG-0003 — Item content is not sanitized against prompt injection** — `non_goal`, status `approved`
+**NG-0003 — Item content is not sanitized against prompt injection** — `non_goal`, status `ratified`
 
 > throughline stores and renders human- and machine-authored natural-language content — titles, text, rationale, and attribute values. It shall not attempt to detect, strip, or neutralize adversarial instructions embedded in that content that target a downstream AI agent reading the graph, the tl context brief, an injected document, or the YAML files directly. Stored content is untrusted data; the responsibility to sandbox, delimit, or otherwise defend against prompt injection rests with the consuming agent or integration. throughline's guarantee is structural and provenance-level (the graph is well-formed, links resolve, and who authored/ratified what is honest), not semantic (that the words are safe for an agent to act on).
 
 *Rationale:* Trying to filter natural language for "malicious instructions" is both undecidable and a false promise that would invite exactly the trust it cannot earn — the same reason NG-0001 keeps the tool out of content authoring. Naming the boundary explicitly tells integrators where the tool's guarantees stop, so they wrap graph content as untrusted data rather than assuming throughline made it safe. Structural safety is covered separately and positively by NFR-0022.
 
-**origin**: human
+**origin**: human · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NG-0004 -->
@@ -94,6 +96,16 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 > throughline does not provide, and does not require, an online counter or coordinating service to allocate UIDs. Allocation atomicity derives solely from compare-and-swap on the trunk ref, keeping identity allocation viable for fully offline and zero-backend (e.g. in-browser) clients.
 
 **origin**: hybrid · **ratified_by**: henry
+<!-- tl:end -->
+
+<!-- tl:item NG-0005 -->
+**NG-0005 — No presentation or exchange format generation** — `non_goal`, status `ratified`
+
+> throughline shall not generate presentation or exchange formats, and shall not import them. It does not produce HTML sites, PDF, CSV/XLSX, or ReqIF, and it does not ingest a foreign requirements list (a spreadsheet or a CSV export from another tool). The core stays a pure text engine — item content lives in the graph and is rendered into Markdown documents by reference (SR-0094); converting that Markdown to navigable HTML or PDF is a wrapper's job, delegated to external tools such as pandoc or mdBook. A single documented JSON dump of the whole project (SR-0055) is the sanctioned interchange surface for third-party tooling; round-tripping through presentation or RM-vendor formats is not.
+
+*Rationale:* Every tool that started as a validator and grew a renderer for stakeholder formats acquired a rendering engine to maintain and drifted from the git-native, reference-not-copy discipline that keeps content from going stale — the same failure NG-0001 guards against, one layer out. HTML/PDF/CSV/ReqIF generation and foreign-list import were carried as approved-but-unratified scope that contradicted the ratified architecture (SR-0094 injects Markdown; SR-0089 rejected even a whole-document Markdown generator so the core could stay pure). Recording the boundary as a first-class non-goal is the object a reviewer points at to reject that scope, and the ratified intent the withdrawals trace to.
+
+**origin**: hybrid · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 ## 5. Target users
@@ -137,6 +149,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 - A user can add and delete requirements across 50 document revisions with
   zero identifier churn (demonstrable via the tombstone + gap model).
 - `check` runs in CI and fails on broken/suspect links or schema violations.
-- Round-trip: publish HTML, export ReqIF and CSV, re-import CSV losslessly
-  for core fields.
+- Documents render deterministically: item content injected into Markdown by
+  reference, and the whole project dumps to a documented JSON structure
+  losslessly (NG-0005 keeps HTML/PDF/CSV/ReqIF generation out of the core).
 - The project's own requirements (this set) are self-hosted in the tool.

@@ -1,15 +1,21 @@
 uid: SR-0054
 type: system_requirement
-status: approved
+status: rejected
 title: CSV/Excel round-trip
 text: The Tool shall export any register or filter result to CSV and XLSX and import
   CSV/XLSX, matching on UID and assigning fresh UIDs to rows without one.
+rationale: Rejected as out of scope under NG-0005 — both halves. throughline neither
+  exports to nor imports from CSV/XLSX; the JSON dump (SR-0055) is the sanctioned
+  interchange surface and a graph is started natively rather than migrated in from
+  a spreadsheet. Tombstoned, never reused.
 normative: true
 links:
 - target: UR-0009
   type: implements
 - target: UR-0018
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: must
   verification: test

@@ -1,0 +1,26 @@
+uid: NG-0005
+type: non_goal
+status: ratified
+title: No presentation or exchange format generation
+text: throughline shall not generate presentation or exchange formats, and shall
+  not import them. It does not produce HTML sites, PDF, CSV/XLSX, or ReqIF, and it
+  does not ingest a foreign requirements list (a spreadsheet or a CSV export from
+  another tool). The core stays a pure text engine — item content lives in the graph
+  and is rendered into Markdown documents by reference (SR-0094); converting that
+  Markdown to navigable HTML or PDF is a wrapper's job, delegated to external tools
+  such as pandoc or mdBook. A single documented JSON dump of the whole project (SR-0055)
+  is the sanctioned interchange surface for third-party tooling; round-tripping through
+  presentation or RM-vendor formats is not.
+rationale: Every tool that started as a validator and grew a renderer for stakeholder
+  formats acquired a rendering engine to maintain and drifted from the git-native,
+  reference-not-copy discipline that keeps content from going stale — the same failure
+  NG-0001 guards against, one layer out. HTML/PDF/CSV/ReqIF generation and foreign-list
+  import were carried as approved-but-unratified scope that contradicted the ratified
+  architecture (SR-0094 injects Markdown; SR-0089 rejected even a whole-document
+  Markdown generator so the core could stay pure). Recording the boundary as a first-class
+  non-goal is the object a reviewer points at to reject that scope, and the ratified
+  intent the withdrawals trace to.
+normative: true
+attrs:
+  origin: hybrid
+  ratified_by: Henry Grech-Cini

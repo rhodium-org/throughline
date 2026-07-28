@@ -1,12 +1,17 @@
 uid: SR-0053
 type: system_requirement
-status: approved
+status: rejected
 title: PDF output
 text: The Tool should produce PDF from the HTML document view.
+rationale: Rejected as out of scope under NG-0005. PDF is a downstream conversion of
+  the injected Markdown, delegated to external tools (pandoc), not something the pure
+  text core produces. Tombstoned, never reused.
 normative: true
 links:
 - target: UR-0008
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: should
   verification: demonstration

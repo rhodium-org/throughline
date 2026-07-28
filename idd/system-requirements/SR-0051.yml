@@ -1,15 +1,20 @@
 uid: SR-0051
 type: system_requirement
-status: approved
+status: ratified
 title: Traceability views
-text: 'Publishing shall include generated traceability views: a table view, a traceability
-  matrix between two registers/link types, and a link-graph export (DOT/Graphviz).'
+text: 'Publishing shall include generated traceability views rendered into Markdown
+  by reference: a table view and a traceability matrix between two registers/link
+  types. Graphical exports (e.g. DOT/Graphviz) are out of scope (NG-0005); a
+  wrapper may derive them from the JSON dump (SR-0055).'
 normative: true
 links:
 - target: UR-0004
   type: implements
 - target: UR-0012
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

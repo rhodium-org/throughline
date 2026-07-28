@@ -1,13 +1,18 @@
 uid: SR-0050
 type: system_requirement
-status: approved
+status: rejected
 title: HTML publishing
 text: The Tool shall publish the project as a static HTML site with a document view,
   per-item anchors by UID, cross-document hyperlinks, and an index.
+rationale: Rejected as out of scope under NG-0005. Generating an HTML site would make
+  the core a rendering engine; throughline injects Markdown (SR-0094) and delegates
+  HTML to external tools such as pandoc or mdBook. Tombstoned, never reused.
 normative: true
 links:
 - target: UR-0008
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: must
   verification: demonstration

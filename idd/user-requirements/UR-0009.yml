@@ -1,13 +1,19 @@
 uid: UR-0009
 type: user_requirement
-status: approved
+status: rejected
 title: Exchange with other tools
 text: Users shall be able to exchange requirements with other RM tools via standard
   formats, at minimum CSV/Excel and ReqIF.
+rationale: Rejected as out of scope under NG-0005. Exchange with RM vendors via their
+  formats is a class of scope throughline declines; the open, documented JSON dump
+  (SR-0055) plus the git-native YAML files are the interchange story. Tombstoned,
+  never reused.
 normative: true
 links:
 - target: BN-0005
   type: derives_from
+- target: NG-0005
+  type: relates
 attrs:
   priority: must
   verification: test

@@ -1,13 +1,19 @@
 uid: UR-0018
 type: user_requirement
-status: approved
+status: rejected
 title: Migration path in
 text: Users shall be able to import an existing requirements list (spreadsheet or
   CSV export from another tool) and have stable IDs assigned or preserved.
+rationale: Rejected as out of scope under NG-0005. Ingesting a foreign requirements
+  list is the import counterpart of the format generation the tool declines; a
+  throughline graph is started natively (tl init/new), not migrated in from a
+  spreadsheet. Tombstoned, never reused.
 normative: true
 links:
 - target: BN-0006
   type: derives_from
+- target: NG-0005
+  type: relates
 attrs:
   priority: must
   verification: test

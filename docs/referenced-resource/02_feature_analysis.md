@@ -22,7 +22,7 @@ file in a directory; directories form documents; documents form a tree.
 | Import/export CSV, TSV, XLSX | **Adopt** | SR-0054 |
 | `doorstop reorder` to reorganize document structure | **Adapt** | Reordering must never touch UIDs |
 | UID-reservation REST server for concurrent teams | **Adapt** | We solve allocation offline first (SR-0006); server is out of scope |
-| Tkinter GUI | **Reject** | CLI + published HTML; web editor out of scope |
+| Tkinter GUI | **Reject** | CLI + rendered Markdown docs; web editor out of scope |
 
 Sources: github.com/doorstop-dev/doorstop · doorstop.readthedocs.io ·
 PyPI changelog (review/clear/reorder/server features) · RTEMS Software
@@ -87,8 +87,8 @@ public** and it is explicitly designed for Git/SVN storage.
 | Filters to find **missing links** and **suspect flags** | **Adopt** | Coverage rules + suspect queries (SR-0035, SR-0052) |
 | Change management: requirements history, deleted objects retained and excluded from export | **Adopt** | Tombstones (SR-0012) |
 | Baselining via Git; branch/merge collaboration documented | **Adopt** | Baselines as tags (SR-0036) |
-| Import: Word, Excel/CSV, ReqIF (iterative re-import preserving IDs) | **Adapt** | CSV/ReqIF; Word import out of scope (Pandoc) |
-| Export: DOCX, XLSX, PDF, HTML, CSV, ReqIF; custom Handlebars templates | **Adapt** | HTML/CSV/ReqIF/JSON; template engine optional |
+| Import: Word, Excel/CSV, ReqIF (iterative re-import preserving IDs) | **Reject** | Foreign-list import out of scope (NG-0005); start a graph natively |
+| Export: DOCX, XLSX, PDF, HTML, CSV, ReqIF; custom Handlebars templates | **Adapt** | Markdown render (SR-0057/SR-0094) + JSON dump (SR-0055) only; presentation/RM-vendor formats out of scope (NG-0005), delegated to pandoc/mdBook |
 | Templates based on ISO/IEC/IEEE 29148 | **Adopt** | Ship starter register templates (SR-0014) |
 | Linked projects (cross-project requirement reuse) | **Exclude** | Out of scope |
 

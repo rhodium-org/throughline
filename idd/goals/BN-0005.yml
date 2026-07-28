@@ -2,8 +2,11 @@ uid: BN-0005
 type: business_need
 status: approved
 title: Publishable
-text: Stakeholder-quality HTML/PDF output and standard exchange formats (ReqIF, CSV/Excel,
-  JSON).
+text: The graph's content is publishable to people who do not use the tool — rendered
+  by reference into portable Markdown documents (which external tools convert to
+  HTML or PDF), with a single documented JSON dump as the interchange surface for
+  third-party tooling. The tool itself does not generate presentation or RM-vendor
+  formats (NG-0005).
 normative: false
 links:
 - target: INT-0001

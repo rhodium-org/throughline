@@ -1,13 +1,18 @@
 uid: NFR-0015
 type: nfr
-status: approved
+status: rejected
 title: Accessible HTML output
 text: 'Published HTML shall meet WCAG 2.1 AA basics: semantic headings, contrast,
   keyboard navigation, alt text passthrough.'
+rationale: Rejected as out of scope under NG-0005. This NFR only existed to constrain
+  the HTML output of SR-0050, which is itself withdrawn; accessibility of the rendered
+  site is the concern of the external tool that renders it. Tombstoned, never reused.
 normative: true
 links:
 - target: UR-0008
   type: implements
+- target: NG-0005
+  type: relates
 attrs:
   priority: should
   verification: inspection
