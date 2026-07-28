@@ -1,13 +1,12 @@
 uid: SR-0080
 type: system_requirement
-status: approved
+status: ratified
 title: Deferred (parked) status
 text: The Tool's default status set shall include a 'deferred' status for an item
-  that is acknowledged and grounded but deliberately not scheduled — a parked
-  backlog item, distinct from 'draft' (actively moving toward approval). Deferred
-  items remain live (they are not tombstoned like 'deleted') so they still ground
-  and appear in queries, letting authors separate the active work-front from the
-  wish-list.
+  that is acknowledged and grounded but deliberately not scheduled — a parked backlog
+  item, distinct from 'draft' (actively moving toward approval). Deferred items remain
+  live (they are not tombstoned like 'deleted') so they still ground and appear in
+  queries, letting authors separate the active work-front from the wish-list.
 normative: true
 links:
 - target: UR-0011
@@ -15,3 +14,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

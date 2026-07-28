@@ -1,6 +1,6 @@
 uid: BN-0002
 type: business_need
-status: approved
+status: ratified
 title: Plain text, Git native
 text: All data in human-readable text files that merge, branch, diff, and review
   like source code.
@@ -8,3 +8,5 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

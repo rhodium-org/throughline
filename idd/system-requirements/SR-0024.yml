@@ -1,6 +1,6 @@
 uid: SR-0024
 type: system_requirement
-status: approved
+status: ratified
 title: Status vocabulary and transitions
 text: The Tool shall provide a default status set that projects can replace, and
   should support declaring allowed transitions which validation enforces.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

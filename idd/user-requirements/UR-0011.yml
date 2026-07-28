@@ -1,6 +1,6 @@
 uid: UR-0011
 type: user_requirement
-status: approved
+status: ratified
 title: Project-specific data model
 text: Users shall be able to define their own item types, attributes (with types
   and allowed values), and link types per project.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

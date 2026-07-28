@@ -1,6 +1,6 @@
 uid: NFR-0020
 type: nfr
-status: approved
+status: ratified
 title: Long-term maintainability
 text: Implementation shall use a mainstream language and avoid exotic runtime services,
   per the maintainability principle in doc 01 §6.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: should
   verification: inspection
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: SR-0060
 type: system_requirement
-status: approved
+status: ratified
 title: CLI
 text: 'The Tool shall expose all capabilities through a scriptable CLI with stable
   exit codes: 0 ok, 1 validation errors, 2 usage/internal error.'
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

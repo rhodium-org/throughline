@@ -1,9 +1,11 @@
 uid: BN-0003
 type: business_need
-status: approved
+status: ratified
 title: Traceability as a first-class feature
 text: Typed links, suspect-link detection, coverage and impact analysis.
 normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

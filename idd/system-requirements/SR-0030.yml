@@ -1,6 +1,6 @@
 uid: SR-0030
 type: system_requirement
-status: approved
+status: ratified
 title: Typed, directed links
 text: The Tool shall support links from item to item carrying a project-defined type/role,
   stored on the source item and indexed in both directions.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: SR-0072
 type: system_requirement
-status: approved
+status: ratified
 title: Deterministic file writes
 text: All Tool writes shall be deterministic and minimal-diff (stable key order,
   stable quoting, trailing newline, no timestamp churn) so Git diffs show only real
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: UR-0014
 type: user_requirement
-status: approved
+status: ratified
 title: Team collaboration without a server
 text: Multiple users shall be able to work on the same requirement set concurrently
   via Git, with merge conflicts rare and resolvable at the level of individual requirements.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: analysis
+  ratified_by: Henry Grech-Cini

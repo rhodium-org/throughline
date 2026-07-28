@@ -1,6 +1,6 @@
 uid: NFR-0021
 type: nfr
-status: approved
+status: ratified
 title: Conceptual model explained
 text: Documentation shall explain throughline's Intent-Driven Development (IDD) model
   and how it differs from adjacent practices (notably BDD and TDD), so newcomers
@@ -13,3 +13,4 @@ links:
 attrs:
   priority: should
   verification: inspection
+  ratified_by: Henry Grech-Cini

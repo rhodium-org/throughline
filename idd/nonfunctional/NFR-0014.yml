@@ -1,6 +1,6 @@
 uid: NFR-0014
 type: nfr
-status: approved
+status: ratified
 title: Actionable errors
 text: Every validation and CLI error shall state the offending file/UID, the rule
   violated, and where applicable a suggested fix.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini

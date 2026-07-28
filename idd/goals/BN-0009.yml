@@ -1,6 +1,6 @@
 uid: BN-0009
 type: business_need
-status: approved
+status: ratified
 title: Trustworthy, maintainable implementation
 text: Boring, mainstream technology; deterministic, safe, well-tested, cross-platform.
   The tool must be dependable and long-lived (doc 01 §6 principle 6, §8).
@@ -8,3 +8,5 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

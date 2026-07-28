@@ -1,6 +1,6 @@
 uid: SR-0079
 type: system_requirement
-status: approved
+status: ratified
 title: CLI query command
 text: The CLI shall provide a query command (alias ls) that lists the items matching
   an SR-0045 filter expression over type, status, register, attributes, normative
@@ -16,3 +16,4 @@ attrs:
   origin: human
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,9 +1,11 @@
 uid: BN-0001
 type: business_need
-status: approved
+status: ratified
 title: Stable identity
 text: Immutable, never-reused requirement UIDs fully decoupled from register position.
 normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

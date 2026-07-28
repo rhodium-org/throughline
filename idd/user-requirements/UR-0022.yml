@@ -1,16 +1,15 @@
 uid: UR-0022
 type: user_requirement
-status: approved
+status: ratified
 title: Comprehensible to AI agents
 text: An AI coding agent joining a project shall be able to obtain, from the tool
   itself, everything it needs to work correctly under this project's rules — the
-  Intent-Driven Development contract, the project's own item types and their
-  attributes, the link and status vocabularies and their constraints, and the
-  on-disk YAML format — without a human hand-authoring an agent guide or the
-  agent reverse-engineering the configuration. Because the configuration is the
-  source of truth and may change, this material shall be derived from the live
-  project rather than restated by hand, so it can never drift from the rules the
-  validator actually enforces.
+  Intent-Driven Development contract, the project's own item types and their attributes,
+  the link and status vocabularies and their constraints, and the on-disk YAML format
+  — without a human hand-authoring an agent guide or the agent reverse-engineering
+  the configuration. Because the configuration is the source of truth and may change,
+  this material shall be derived from the live project rather than restated by hand,
+  so it can never drift from the rules the validator actually enforces.
 normative: true
 links:
 - target: BN-0008
@@ -18,3 +17,4 @@ links:
 attrs:
   priority: should
   verification: demonstration
+  ratified_by: Henry Grech-Cini

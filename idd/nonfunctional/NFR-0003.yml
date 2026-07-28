@@ -1,6 +1,6 @@
 uid: NFR-0003
 type: nfr
-status: approved
+status: ratified
 title: Offline and private
 text: All specified functionality shall work with no network access, and the Tool
   shall send no telemetry or project data anywhere by default.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: NFR-0009
 type: nfr
-status: approved
+status: ratified
 title: No silent data loss
 text: 'The Tool shall never discard or rewrite user content it does not understand:
   unknown fields are preserved on read-modify-write, and destructive operations require
@@ -12,3 +12,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

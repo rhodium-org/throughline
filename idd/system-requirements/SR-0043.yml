@@ -1,6 +1,6 @@
 uid: SR-0043
 type: system_requirement
-status: approved
+status: ratified
 title: Requirement quality lint
 text: 'The Tool should provide optional lint rules for statement quality: missing
   shall/should/may, multiple shall in one statement, vague terms, empty rationale
@@ -12,3 +12,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

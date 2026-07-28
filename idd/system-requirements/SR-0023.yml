@@ -1,6 +1,6 @@
 uid: SR-0023
 type: system_requirement
-status: approved
+status: ratified
 title: Schema validation
 text: The Tool shall validate every item against the project schema (types, required
   fields, enum membership, ID regex) and report violations with file, field, and
@@ -12,3 +12,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

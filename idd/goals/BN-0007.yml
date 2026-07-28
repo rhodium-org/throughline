@@ -1,9 +1,11 @@
 uid: BN-0007
 type: business_need
-status: approved
+status: ratified
 title: Automatable
 text: CLI + library API designed for CI gates.
 normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

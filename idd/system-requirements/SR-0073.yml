@@ -1,6 +1,6 @@
 uid: SR-0073
 type: system_requirement
-status: approved
+status: ratified
 title: Grounding-assisted authoring
 text: When creating a non-root item, the Tool should help the author attach it to
   a valid parent at creation time (offering the existing roots and grounding candidates
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: should
   verification: demonstration
+  ratified_by: Henry Grech-Cini

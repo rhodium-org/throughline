@@ -1,6 +1,6 @@
 uid: SR-0074
 type: system_requirement
-status: approved
+status: ratified
 title: CLI invocation must not silently collide with existing tools
 text: The Tool's installed command shall not silently shadow, or be shadowed by,
   a standard system utility of the same name (e.g. the POSIX 'rmt' tape tool). The
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: should
   verification: inspection
+  ratified_by: Henry Grech-Cini

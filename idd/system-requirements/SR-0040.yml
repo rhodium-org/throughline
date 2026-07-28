@@ -1,6 +1,6 @@
 uid: SR-0040
 type: system_requirement
-status: approved
+status: ratified
 title: Single check command
 text: The Tool shall provide a check command running all validations with a non-zero
   exit code on error, suitable for CI.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

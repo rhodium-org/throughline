@@ -1,6 +1,6 @@
 uid: NFR-0005
 type: nfr
-status: approved
+status: ratified
 title: Simple installation
 text: Installation shall require a single standard package-manager command with no
   database or service setup.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: demonstration
+  ratified_by: Henry Grech-Cini

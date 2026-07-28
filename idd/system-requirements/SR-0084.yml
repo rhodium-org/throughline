@@ -1,20 +1,19 @@
 uid: SR-0084
 type: system_requirement
-status: approved
+status: ratified
 title: Type-constrained links
-text: The Tool shall let a project declare, per link type, the item types
-  permitted at each end of that link — the set of source types it may originate
-  from and the set of target types it may point to — and validation shall report
-  a clear, actionable finding when a link's endpoints violate the declared shape
-  (for example a `mitigates` link whose source is not a risk-bearing type, or
-  that points at something other than a risk). A link type with no declared rule
-  is unconstrained, and the target-side check is skipped when the target is
-  external or absent, matching the tool's other optional vocabularies. A rule may
-  constrain only the source, only the target, or both. Any link type named in a
-  rule must be a member of the declared link vocabulary, reported as a
-  configuration error at load time otherwise. This lets a new domain concept — a
-  `risk` type that only requirements may mitigate, say — be expressed and its
-  graph shape enforced through configuration alone, without code changes.
+text: The Tool shall let a project declare, per link type, the item types permitted
+  at each end of that link — the set of source types it may originate from and the
+  set of target types it may point to — and validation shall report a clear, actionable
+  finding when a link's endpoints violate the declared shape (for example a `mitigates`
+  link whose source is not a risk-bearing type, or that points at something other
+  than a risk). A link type with no declared rule is unconstrained, and the target-side
+  check is skipped when the target is external or absent, matching the tool's other
+  optional vocabularies. A rule may constrain only the source, only the target, or
+  both. Any link type named in a rule must be a member of the declared link vocabulary,
+  reported as a configuration error at load time otherwise. This lets a new domain
+  concept — a `risk` type that only requirements may mitigate, say — be expressed
+  and its graph shape enforced through configuration alone, without code changes.
 normative: true
 links:
 - target: UR-0011
@@ -22,3 +21,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: BN-0010
 type: business_need
-status: approved
+status: ratified
 title: Contributable
 text: As an open-source project, throughline should let an outside contributor establish
   a correct, invariant-enforcing development environment quickly and confirm it is
@@ -12,3 +12,4 @@ links:
   type: derives_from
 attrs:
   origin: human
+  ratified_by: Henry Grech-Cini

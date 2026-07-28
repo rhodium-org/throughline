@@ -1,20 +1,19 @@
 uid: NFR-0022
 type: nfr
-status: approved
+status: ratified
 title: Safe handling of untrusted project data
-text: 'Project files are untrusted input. The Tool shall parse all YAML with a safe
-  loader that cannot construct arbitrary Python objects or execute code (no
-  yaml.load without SafeLoader; no !!python/... tags honoured), and shall write
-  every field value through a YAML emitter so that no field value — for example a
-  crafted ratified_by, title, or text — can alter document structure or inject
-  sibling keys. Malformed input shall fail fast with an error rather than be
-  silently coerced or partially applied.'
-rationale: A requirements graph is edited by many hands and, increasingly, by
-  machines; a single hostile or malformed value must not become code execution or
-  silent structural corruption. The tool already parses with safe_load and emits
-  through a SafeDumper — this NFR pins that guarantee so a future refactor to a
-  convenience loader fails the gate instead of quietly reopening the classic
-  deserialization RCE.
+text: Project files are untrusted input. The Tool shall parse all YAML with a safe
+  loader that cannot construct arbitrary Python objects or execute code (no yaml.load
+  without SafeLoader; no !!python/... tags honoured), and shall write every field
+  value through a YAML emitter so that no field value — for example a crafted ratified_by,
+  title, or text — can alter document structure or inject sibling keys. Malformed
+  input shall fail fast with an error rather than be silently coerced or partially
+  applied.
+rationale: A requirements graph is edited by many hands and, increasingly, by machines;
+  a single hostile or malformed value must not become code execution or silent structural
+  corruption. The tool already parses with safe_load and emits through a SafeDumper
+  — this NFR pins that guarantee so a future refactor to a convenience loader fails
+  the gate instead of quietly reopening the classic deserialization RCE.
 normative: true
 links:
 - target: BN-0009
@@ -22,3 +21,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

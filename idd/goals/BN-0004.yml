@@ -1,9 +1,11 @@
 uid: BN-0004
 type: business_need
-status: approved
+status: ratified
 title: Change management
 text: Reviews, fingerprints, baselines, and version-to-version diffs.
 normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

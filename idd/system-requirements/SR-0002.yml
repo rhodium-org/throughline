@@ -1,6 +1,6 @@
 uid: SR-0002
 type: system_requirement
-status: approved
+status: ratified
 title: UID format
 text: The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning register's
   configured prefix and NUMBER is a zero-padded positive integer of configured width
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

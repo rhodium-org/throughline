@@ -1,6 +1,6 @@
 uid: SR-0035
 type: system_requirement
-status: approved
+status: ratified
 title: Impact analysis
 text: Given a UID, the Tool shall report the transitive set of items reachable via
   incoming links, grouped by link type and depth.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

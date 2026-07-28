@@ -1,6 +1,6 @@
 uid: SR-0075
 type: system_requirement
-status: approved
+status: ratified
 title: Contributor environment doctor
 text: The project shall provide a contributor setup/doctor script that verifies development
   prerequisites, runs the grounding gate, and can wire the local pre-commit grounding
@@ -15,3 +15,4 @@ attrs:
   origin: human
   priority: should
   verification: demonstration
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: BN-0008
 type: business_need
-status: approved
+status: ratified
 title: Approachable
 text: Usable by a single engineer in minutes; scales to a regulated multi-register
   project.
@@ -8,3 +8,5 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

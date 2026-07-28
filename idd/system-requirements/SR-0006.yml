@@ -1,6 +1,6 @@
 uid: SR-0006
 type: system_requirement
-status: approved
+status: ratified
 title: Merge-safe allocation
 text: The Tool shall detect UID collisions arising from parallel branches at validation
   time and provide a conflict-resolution command that reassigns the younger item
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,24 +1,23 @@
 uid: SR-0101
 type: system_requirement
-status: approved
+status: ratified
 title: Unique register prefixes
 text: Each register's UID prefix shall be unique across the project. The register
-  new command shall refuse to create a register whose prefix another register
-  already declares, changing nothing and exiting with a usage error; and
-  validation shall report a prefix-collision error when two registers on disk
-  declare the same prefix. A prefix names the register that owns a UID namespace
-  (SR-0002), so if two registers share one their UID numbering overlaps and the
-  loader would silently drop one register's items — a data-loss trap — therefore
-  the clash shall fail fast rather than corrupt the graph. Registers remain
-  orthogonal to item types (a register owns a prefix and numbering, not a type),
-  so this rule constrains prefixes only and never restricts which item types a
-  register may contain.
-rationale: The loader keys registers by prefix, so a second register reusing a
-  prefix silently clobbers the first and its items vanish from the graph while
-  UID allocation collides — a corruption that undermines stable identity
-  (UR-0001) invisibly. register new already guards one folder against a repeated
-  manifest; extending that guard to prefixes, with a validation backstop for
-  clashes introduced by a merge or a hand edit, closes the gap fail-fast.
+  new command shall refuse to create a register whose prefix another register already
+  declares, changing nothing and exiting with a usage error; and validation shall
+  report a prefix-collision error when two registers on disk declare the same prefix.
+  A prefix names the register that owns a UID namespace (SR-0002), so if two registers
+  share one their UID numbering overlaps and the loader would silently drop one register's
+  items — a data-loss trap — therefore the clash shall fail fast rather than corrupt
+  the graph. Registers remain orthogonal to item types (a register owns a prefix
+  and numbering, not a type), so this rule constrains prefixes only and never restricts
+  which item types a register may contain.
+rationale: The loader keys registers by prefix, so a second register reusing a prefix
+  silently clobbers the first and its items vanish from the graph while UID allocation
+  collides — a corruption that undermines stable identity (UR-0001) invisibly. register
+  new already guards one folder against a repeated manifest; extending that guard
+  to prefixes, with a validation backstop for clashes introduced by a merge or a
+  hand edit, closes the gap fail-fast.
 normative: true
 links:
 - target: UR-0001
@@ -27,3 +26,4 @@ attrs:
   origin: human
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: UR-0010
 type: user_requirement
-status: approved
+status: ratified
 title: Search and filter
 text: Users shall be able to find requirements by any combination of attribute values,
   text search, tags, and link conditions.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: SR-0078
 type: system_requirement
-status: approved
+status: ratified
 title: Informative check summary
 text: By default in text output, the check command shall print a summary of the validated
   graph — live item counts by type, link counts by type, and grounding health (how
@@ -16,3 +16,4 @@ attrs:
   origin: human
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

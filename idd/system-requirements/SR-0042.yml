@@ -1,6 +1,6 @@
 uid: SR-0042
 type: system_requirement
-status: approved
+status: ratified
 title: Coverage rules
 text: Projects shall be able to declare coverage rules of the form 'every item of
   type/register X with status in S must have >=1 link of type T to register Y', which
@@ -12,3 +12,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

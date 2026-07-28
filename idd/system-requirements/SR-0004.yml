@@ -1,6 +1,6 @@
 uid: SR-0004
 type: system_requirement
-status: approved
+status: ratified
 title: Identity independent of position
 text: The Tool shall not derive, change, or validate any UID based on an item's section,
   order, level, or file location; moving or reordering items shall leave UIDs untouched.
@@ -13,3 +13,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

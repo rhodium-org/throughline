@@ -1,6 +1,6 @@
 uid: NFR-0007
 type: nfr
-status: approved
+status: ratified
 title: Memory bound
 text: Peak memory for the reference project shall not exceed 1 GB.
 normative: true
@@ -10,3 +10,4 @@ links:
 attrs:
   priority: should
   verification: analysis
+  ratified_by: Henry Grech-Cini

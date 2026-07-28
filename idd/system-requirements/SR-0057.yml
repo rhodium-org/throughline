@@ -1,6 +1,6 @@
 uid: SR-0057
 type: system_requirement
-status: approved
+status: ratified
 title: Markdown export
 text: The Tool shall export each register as standalone Markdown (for wikis and code
   review).
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

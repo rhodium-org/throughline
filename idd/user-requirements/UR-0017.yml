@@ -1,6 +1,6 @@
 uid: UR-0017
 type: user_requirement
-status: approved
+status: ratified
 title: Requirement quality support
 text: Users should be offered assistance writing well-formed requirements (EARS templates,
   lint warnings for ambiguity, missing rationale, compound statements).
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

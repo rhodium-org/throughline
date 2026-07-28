@@ -1,6 +1,6 @@
 uid: SR-0022
 type: system_requirement
-status: approved
+status: ratified
 title: Built-in core fields
 text: 'The Tool shall reserve and manage these fields on every item: uid, type, status,
   text, title, links, order/level, normative, derived, reviewed, created, modified.'
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini

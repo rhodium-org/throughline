@@ -1,6 +1,6 @@
 uid: NFR-0004
 type: nfr
-status: approved
+status: ratified
 title: Cross-platform
 text: The Tool shall run on current Linux, macOS, and Windows, treating paths, line
   endings (store LF), and Unicode identically on all three.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: NFR-0001
 type: nfr
-status: approved
+status: ratified
 title: Open-source license
 text: All Tool code shall be released under an OSI-approved permissive license (Apache-2.0
   recommended), with no proprietary components required for any capability.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: NG-0001
 type: non_goal
-status: approved
+status: ratified
 title: Not a document authoring or editing system
 text: 'throughline shall not become a surface for authoring, editing, or storing
   narrative document content. It is a validator and an injector: item content lives
@@ -14,3 +14,4 @@ rationale: The comparable tools that started as validators and grew editing surf
 normative: true
 attrs:
   origin: human
+  ratified_by: Henry Grech-Cini

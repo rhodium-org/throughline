@@ -1,6 +1,6 @@
 uid: SR-0052
 type: system_requirement
-status: approved
+status: ratified
 title: Coverage report
 text: The Tool shall generate a coverage report per coverage rule (SR-0042) with
   counts, percentages, and the list of uncovered UIDs.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

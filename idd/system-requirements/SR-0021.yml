@@ -1,6 +1,6 @@
 uid: SR-0021
 type: system_requirement
-status: approved
+status: ratified
 title: Item types
 text: The Tool shall support project-defined item types with per-type attribute schemas;
   UID prefixes remain per register, not per type.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

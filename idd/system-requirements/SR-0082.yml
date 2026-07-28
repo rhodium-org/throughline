@@ -1,20 +1,19 @@
 uid: SR-0082
 type: system_requirement
-status: approved
+status: ratified
 title: Single validated project schema
-text: The Tool shall load a project's configuration into one validated schema
-  object when the project is opened, reporting a clear, actionable error for
-  malformed or internally inconsistent configuration (for example a rule that
-  references an unknown type, or a grounding link type absent from the declared
-  link set) instead of silently mis-behaving. The schema object shall expose a
-  stable set of typed accessor and predicate helpers (for example the attributes
-  and normative attributes of a type, whether a status or link type is declared,
-  and the grounding and root types) so that each lookup, check, and indirection
-  is defined once and reused. All components — validation, fingerprinting, UID
-  allocation, publishing, and the CLI — shall derive their behaviour from these
-  helpers rather than reading configuration ad hoc, so that new domain concepts
-  (types, link types, statuses, and rules) can be introduced through
-  configuration alone without code changes.
+text: The Tool shall load a project's configuration into one validated schema object
+  when the project is opened, reporting a clear, actionable error for malformed or
+  internally inconsistent configuration (for example a rule that references an unknown
+  type, or a grounding link type absent from the declared link set) instead of silently
+  mis-behaving. The schema object shall expose a stable set of typed accessor and
+  predicate helpers (for example the attributes and normative attributes of a type,
+  whether a status or link type is declared, and the grounding and root types) so
+  that each lookup, check, and indirection is defined once and reused. All components
+  — validation, fingerprinting, UID allocation, publishing, and the CLI — shall derive
+  their behaviour from these helpers rather than reading configuration ad hoc, so
+  that new domain concepts (types, link types, statuses, and rules) can be introduced
+  through configuration alone without code changes.
 normative: true
 links:
 - target: UR-0011
@@ -22,3 +21,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

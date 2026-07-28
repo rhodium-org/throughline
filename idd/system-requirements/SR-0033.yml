@@ -1,6 +1,6 @@
 uid: SR-0033
 type: system_requirement
-status: approved
+status: ratified
 title: Content fingerprints
 text: The Tool shall compute a SHA-256 fingerprint of each item's normative content
   (fields in doc 06 §5; excludes ordering, comments, and non-normative metadata).
@@ -13,3 +13,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

@@ -1,6 +1,6 @@
 uid: SR-0041
 type: system_requirement
-status: approved
+status: ratified
 title: Severity configuration
 text: Projects shall be able to set each validation rule to error, warning, or off,
   and the Tool shall support promoting all warnings to errors for CI.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

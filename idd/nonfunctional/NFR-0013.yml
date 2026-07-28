@@ -1,6 +1,6 @@
 uid: NFR-0013
 type: nfr
-status: approved
+status: ratified
 title: Quick start
 text: Documentation shall include a quick start achieving UR-0020's 15-minute scenario,
   plus a complete CLI and format reference.
@@ -13,3 +13,4 @@ links:
 attrs:
   priority: must
   verification: demonstration
+  ratified_by: Henry Grech-Cini

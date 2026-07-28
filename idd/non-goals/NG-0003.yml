@@ -1,23 +1,23 @@
 uid: NG-0003
 type: non_goal
-status: approved
+status: ratified
 title: Item content is not sanitized against prompt injection
-text: 'throughline stores and renders human- and machine-authored natural-language
+text: throughline stores and renders human- and machine-authored natural-language
   content — titles, text, rationale, and attribute values. It shall not attempt to
   detect, strip, or neutralize adversarial instructions embedded in that content
-  that target a downstream AI agent reading the graph, the tl context brief, an
-  injected document, or the YAML files directly. Stored content is untrusted data;
-  the responsibility to sandbox, delimit, or otherwise defend against prompt
-  injection rests with the consuming agent or integration. throughline''s guarantee
-  is structural and provenance-level (the graph is well-formed, links resolve, and
-  who authored/ratified what is honest), not semantic (that the words are safe for
-  an agent to act on).'
+  that target a downstream AI agent reading the graph, the tl context brief, an injected
+  document, or the YAML files directly. Stored content is untrusted data; the responsibility
+  to sandbox, delimit, or otherwise defend against prompt injection rests with the
+  consuming agent or integration. throughline's guarantee is structural and provenance-level
+  (the graph is well-formed, links resolve, and who authored/ratified what is honest),
+  not semantic (that the words are safe for an agent to act on).
 rationale: Trying to filter natural language for "malicious instructions" is both
-  undecidable and a false promise that would invite exactly the trust it cannot
-  earn — the same reason NG-0001 keeps the tool out of content authoring. Naming
-  the boundary explicitly tells integrators where the tool's guarantees stop, so
-  they wrap graph content as untrusted data rather than assuming throughline made
-  it safe. Structural safety is covered separately and positively by NFR-0022.
+  undecidable and a false promise that would invite exactly the trust it cannot earn
+  — the same reason NG-0001 keeps the tool out of content authoring. Naming the boundary
+  explicitly tells integrators where the tool's guarantees stop, so they wrap graph
+  content as untrusted data rather than assuming throughline made it safe. Structural
+  safety is covered separately and positively by NFR-0022.
 normative: true
 attrs:
   origin: human
+  ratified_by: Henry Grech-Cini

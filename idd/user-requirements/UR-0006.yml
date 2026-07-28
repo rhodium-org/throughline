@@ -1,6 +1,6 @@
 uid: UR-0006
 type: user_requirement
-status: approved
+status: ratified
 title: Review state
 text: Users shall be able to mark requirements as reviewed and detect any requirement
   that changed after its last review.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

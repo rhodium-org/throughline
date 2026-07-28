@@ -1,6 +1,6 @@
 uid: SR-0013
 type: system_requirement
-status: approved
+status: ratified
 title: Ordering as metadata
 text: The Tool shall represent presentation order with an explicit per-register ordering
   that can be edited freely without touching item identity or content fingerprints.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

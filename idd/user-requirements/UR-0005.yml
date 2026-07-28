@@ -1,6 +1,6 @@
 uid: UR-0005
 type: user_requirement
-status: approved
+status: ratified
 title: Stale-link awareness
 text: When a requirement changes, users shall be alerted that items linked to it
   may need re-examination (suspect links).
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

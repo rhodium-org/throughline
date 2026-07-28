@@ -1,6 +1,6 @@
 uid: UR-0015
 type: user_requirement
-status: approved
+status: ratified
 title: No lock-in
 text: Users shall be able to read, migrate, and process their data with ordinary
   tools using a documented open format, offline, under an OSI-approved license.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini

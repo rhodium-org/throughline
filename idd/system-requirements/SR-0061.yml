@@ -1,6 +1,6 @@
 uid: SR-0061
 type: system_requirement
-status: approved
+status: ratified
 title: Library API and self-hosting
 text: The Tool shall expose its core as a documented library API, and the project
   shall manage its own requirements with itself before 1.0.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini

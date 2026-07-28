@@ -1,6 +1,6 @@
 uid: SR-0014
 type: system_requirement
-status: approved
+status: ratified
 title: Project initialization and templates
 text: The Tool shall provide an init operation creating a valid empty project, and
   should ship starter templates aligned with ISO/IEC/IEEE 29148 register types.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: demonstration
+  ratified_by: Henry Grech-Cini

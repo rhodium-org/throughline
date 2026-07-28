@@ -1,6 +1,6 @@
 uid: UR-0001
 type: user_requirement
-status: approved
+status: ratified
 title: Stable requirement identity
 text: Users shall be able to refer to any requirement by an identifier that never
   changes for the life of the project, regardless of edits to any register.
@@ -12,3 +12,4 @@ links:
 attrs:
   priority: must
   verification: demonstration
+  ratified_by: Henry Grech-Cini

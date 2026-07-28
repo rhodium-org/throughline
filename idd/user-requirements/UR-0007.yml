@@ -1,6 +1,6 @@
 uid: UR-0007
 type: user_requirement
-status: approved
+status: ratified
 title: Plain text under version control
 text: Users shall be able to store all requirement data as human-readable text files
   in Git, using branches, merges, and pull requests as the change workflow.
@@ -13,3 +13,4 @@ links:
 attrs:
   priority: must
   verification: inspection
+  ratified_by: Henry Grech-Cini
