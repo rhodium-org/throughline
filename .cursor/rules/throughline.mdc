@@ -1,0 +1,9 @@
+---
+description: throughline / IDD requirements guidance
+alwaysApply: true
+---
+
+Agent guidance for this repository is maintained in `AGENTS.md` at the repository
+root — follow it. In short: run `tl -C idd context` for the generated,
+authoritative brief; ground every requirement upward before you build it; and
+**only a named human ratifies** machine-proposed items.
