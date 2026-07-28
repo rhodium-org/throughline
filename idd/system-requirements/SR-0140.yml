@@ -1,0 +1,25 @@
+uid: SR-0140
+type: system_requirement
+status: ratified
+title: Register prefix must satisfy the UID grammar
+text: When a register is created the Tool shall reject a prefix that does not satisfy
+  the UID prefix grammar — an uppercase letter followed by one to fifteen uppercase
+  letters or digits — and shall state that grammar in the error. A single-character
+  prefix is therefore refused at registration rather than accepted and left to fail
+  later.
+rationale: A one-character prefix parses ambiguously against the greedily matched
+  number, so every existing item of such a register failed to parse and allocation
+  silently reset to 1, minting duplicate UIDs on the next create. Rejecting the prefix
+  at registration turns that silent corruption into a loud, early error the author
+  can act on.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+- target: SR-0002
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

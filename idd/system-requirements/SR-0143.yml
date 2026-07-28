@@ -1,0 +1,23 @@
+uid: SR-0143
+type: system_requirement
+status: ratified
+title: Remove and retype links
+text: The Tool shall let an author remove a link between two items and re-type an
+  existing link in place, so a mislabelled or obsolete edge is corrected without
+  hand-editing YAML. A remove or a retype shall name the single matching edge unambiguously,
+  and shall fail clearly when no such edge exists or when the target is joined by
+  several links of differing type and none is named.
+rationale: Links could only ever be added, so a wrong link type could be fixed only
+  by editing the file by hand — the precise manual editing the CLI exists to spare
+  the author, and a step that risks corrupting the surrounding structure.
+normative: true
+links:
+- target: UR-0004
+  type: implements
+- target: SR-0030
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

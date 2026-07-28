@@ -16,6 +16,7 @@ import time
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from pathlib import Path
 
+from .dump import build_dump
 from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
@@ -39,7 +40,7 @@ from .storage import (
     write_item,
     write_manifest,
 )
-from .uid import UidError, next_uid, parse_uid
+from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
 from .validate import ERROR, FilterError, eval_filter, validate
 
 OK, FINDINGS, USAGE = 0, 1, 2
@@ -55,6 +56,27 @@ def _version() -> str:
 def _err(msg: str) -> int:
     print(f"tl: {msg}", file=sys.stderr)
     return USAGE
+
+
+def force_utf8_io() -> None:
+    """Emit UTF-8 regardless of the console's default codec (SR-0139).
+
+    A Windows console commonly defaults to cp1252, which raises
+    ``UnicodeEncodeError`` the instant tl prints a glyph outside Latin-1 — the
+    ``->`` arrow (U+2192) in grounding output is the usual trigger. Reconfiguring
+    the standard streams to UTF-8 makes tl's output portable so callers no longer
+    have to set ``PYTHONIOENCODING=utf-8`` on every invocation. Shared so the
+    compose / ratify front-ends can apply the same guard from their own entry
+    points.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:  # pragma: no cover - stream is not a TextIOWrapper
+            continue
+        try:
+            reconfigure(encoding="utf-8")
+        except (ValueError, OSError):  # pragma: no cover - stream not reconfigurable
+            pass
 
 
 # --------------------------------------------------------------------- commands
@@ -157,6 +179,12 @@ def cmd_register_new(args) -> int:
         project = load_project(root)
     except ProjectError as e:
         return _err(str(e))
+    # The prefix must satisfy the UID grammar (doc 06 §3, SR-0140). A prefix that
+    # does not — a single character, say — would be silently accepted here and
+    # then break UID allocation for every item it owns, so we reject it up front.
+    if not valid_prefix(args.prefix):
+        return _err(f"prefix '{args.prefix}' is not a valid UID prefix — expected "
+                    f"{PREFIX_GRAMMAR}; see doc 06 §3")
     # Prefixes own a UID namespace and must be unique across the project (SR-0101);
     # a duplicate would make the loader silently drop one register's items.
     existing = project.registers.get(args.prefix)
@@ -332,6 +360,45 @@ def _resolve_value(value, purpose: str, flag: str, *, options=None, default=None
     return raw
 
 
+def _coerce_attr(schema, item_type: str, key: str, raw: str):
+    """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
+    the attribute (SR-0142). An undeclared attribute is stored verbatim as a
+    string; a declared int/float/bool is converted so it round-trips as the right
+    YAML scalar rather than a quoted string. A value that cannot be coerced is a
+    hard error at creation (fail-fast), not a surprise the loader raises later."""
+    spec = schema.attr(item_type, key)
+    kind = spec.kind if spec is not None else "string"
+    try:
+        if kind == "int":
+            return int(raw)
+        if kind == "float":
+            return float(raw)
+        if kind == "bool":
+            low = raw.strip().lower()
+            if low in ("true", "1", "yes"):
+                return True
+            if low in ("false", "0", "no"):
+                return False
+            raise ValueError(f"expected a boolean, got '{raw}'")
+    except ValueError as e:
+        raise UidError(f"--attr {key}={raw}: {e}") from e
+    return raw
+
+
+def _parse_attrs(schema, item_type: str, pairs: list[str] | None) -> dict:
+    """Parse repeated ``--attr KEY=VALUE`` options into a coerced attrs dict."""
+    attrs: dict = {}
+    for pair in pairs or []:
+        if "=" not in pair:
+            raise UidError(f"--attr expects KEY=VALUE, got '{pair}'")
+        key, raw = pair.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise UidError(f"--attr expects a non-empty key, got '{pair}'")
+        attrs[key] = _coerce_attr(schema, item_type, key, raw)
+    return attrs
+
+
 def cmd_new(args) -> int:
     try:
         project = load_project(args.path)
@@ -353,20 +420,46 @@ def cmd_new(args) -> int:
     else:
         uid = next_uid(reg)
     from .model import Item
-    # The birth status comes from the project's 'initial' role, never a value
-    # fixed in code (SR-0131); --status overrides it explicitly.
-    status = args.status if args.status is not None \
-        else project.schema.status_role("initial")
+    schema = project.schema
+    try:
+        attrs = _parse_attrs(schema, args.type, args.attr)
+    except UidError as e:
+        return _err(str(e))
+    # --origin is the canonical way to set provenance, but honour origin given via
+    # --attr too so birth status stays consistent with what actually lands on the
+    # item.
+    origin = args.origin or attrs.get("origin")
+    # Birth status comes from the project's status roles, never a value fixed in
+    # code (SR-0131); --status overrides it explicitly. A machine-origin item is
+    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
+    # actually engages and a named human must ratify it before it counts; without
+    # this a machine-authored item would enter the ordinary initial status and
+    # silently escape the gate the tool exists to enforce (SR-0141). If the
+    # project declares no 'proposed' role we fall back to 'initial'.
+    has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
+    if args.status is not None:
+        status = args.status
+    elif origin in schema.ai_origins and has_proposed_role:
+        status = schema.status_role("proposed")
+    else:
+        status = schema.status_role("initial")
     item = Item(uid=uid, type=args.type, status=status,
                 title=args.title or "", text=args.text or "")
+    item.attrs.update(attrs)
     if args.origin:
         item.attrs["origin"] = args.origin
+    # Apply schema-declared attribute defaults (SR-0138): a default only ever
+    # lands at birth on an attribute the author did not set, so a schema sentinel
+    # (e.g. a priority meaning "no human has decided yet") appears automatically
+    # without overwriting an explicit value.
+    for name, spec in schema.attrs_for(args.type).items():
+        if spec.default is not None and name not in item.attrs:
+            item.attrs[name] = spec.default
     item._register_prefix = reg.prefix
 
     # Grounding-assisted authoring (SR-0073): attach a parent at birth so the
     # item is justified the moment it exists, rather than being created orphaned
     # and only caught later by `check`. Roots are exempt — they *are* the 'why'.
-    schema = project.schema
     default_type = args.ground_type or "derives_from"
     grounds: list[tuple[str, str]] = []
     if args.ground:
@@ -419,10 +512,69 @@ def cmd_link(args) -> int:
     if ltype is None:
         return USAGE
     stamp = fingerprint(dst, project.schema) if args.stamp else None
+    if getattr(args, "retype", False):
+        # Retype changes an existing edge in place rather than adding a parallel
+        # one (SR-0143), so the semantic-link review the tool is built for — e.g.
+        # narrowing a mitigates to a relates — needs no hand-editing.
+        existing = [ln for ln in src.links if ln.target == dst_uid]
+        if not existing:
+            return _err(f"no existing link {src_uid} -> {dst_uid} to retype "
+                        f"(drop --retype to add a new one)")
+        present_types = {ln.type for ln in existing}
+        if len(present_types) > 1:
+            return _err(f"multiple link types {src_uid} -> {dst_uid} "
+                        f"({', '.join(sorted(present_types))}); remove the "
+                        f"unwanted one with `tl unlink` first")
+        old_type = existing[0].type
+        for ln in existing:
+            ln.type = ltype
+            if args.stamp:
+                ln.stamp = stamp
+        write_item(src, project.register_of(src.uid))
+        print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
+              + (" (stamped)" if args.stamp else ""))
+        return OK
     src.links.append(Link(target=dst_uid, type=ltype, stamp=stamp))
     write_item(src, project.register_of(src.uid))
     print(f"linked {src_uid} --{ltype}--> {dst_uid}"
           + (" (stamped)" if stamp else ""))
+    return OK
+
+
+def cmd_unlink(args) -> int:
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    # Removing a link is the inverse of `tl link` (SR-0143); the semantic-link
+    # review needs to drop an edge (e.g. a spurious TEST -> REQ) without editing
+    # YAML by hand.
+    src_uid = _resolve_uid(project, args.src, "unlink from (source)", "SRC")
+    if src_uid is None:
+        return USAGE
+    dst_uid = _resolve_uid(project, args.dst, "unlink to (destination)", "DST")
+    if dst_uid is None:
+        return USAGE
+    src = project.get(src_uid)
+    if src is None:
+        return _err(f"source {src_uid} does not exist")
+
+    def _matches(ln) -> bool:
+        return ln.target == dst_uid and (args.type is None or ln.type == args.type)
+
+    matched = [ln for ln in src.links if _matches(ln)]
+    if not matched:
+        what = f" of type '{args.type}'" if args.type else ""
+        return _err(f"no link {src_uid} -> {dst_uid}{what} to remove")
+    present_types = {ln.type for ln in matched}
+    if args.type is None and len(present_types) > 1:
+        return _err(f"multiple link types {src_uid} -> {dst_uid} "
+                    f"({', '.join(sorted(present_types))}); pass --type to "
+                    f"choose which to remove")
+    src.links = [ln for ln in src.links if not _matches(ln)]
+    write_item(src, project.register_of(src.uid))
+    for ltype in sorted(present_types):
+        print(f"unlinked {src_uid} --{ltype}--> {dst_uid}")
     return OK
 
 
@@ -562,6 +714,25 @@ def cmd_query(args) -> int:
             print(f"{it.uid}  [{it.type}/{it.status}]{title}")
         sys.stdout.flush()
         print(f"\n{len(matched)} item(s)", file=sys.stderr)
+    return OK
+
+
+def cmd_dump(args) -> int:
+    """Export the whole project as one documented JSON structure (SR-0055).
+
+    This is the sanctioned interchange surface for third-party tooling; the
+    tool itself generates no presentation or exchange formats (NG-0005)."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    data = build_dump(project, _version())
+    text = json.dumps(data, indent=2, default=str, sort_keys=False)
+    if args.output:
+        Path(args.output).write_text(text + "\n", encoding="utf-8")
+        print(f"wrote {args.output}", file=sys.stderr)
+    else:
+        print(text)
     return OK
 
 
@@ -938,6 +1109,7 @@ _CTX_COMMANDS = (
     "tl trace <UID> [--direction in|out]     # walk an item to its 'why'\n"
     "tl blast <UID>                          # what depends on an item\n"
     "tl shape [--format json]                # observed (from)-[link]->(to) triples\n"
+    "tl dump [-o FILE]                        # whole project as one documented JSON structure\n"
     "tl diagram [types|transitions|both]     # Mermaid of the model / lifecycle\n"
     "tl docs [FILE ...] [--at REF]           # inject graph content into marked Markdown regions\n"
     "tl docs [FILE ...] --check              # CI gate: fail if a document is out of date\n"
@@ -1230,6 +1402,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--title", default="")
     s.add_argument("--text", default="")
     s.add_argument("--origin", default=None, help="human|ai|hybrid")
+    s.add_argument("--attr", action="append", metavar="KEY=VALUE",
+                   help="set a project-declared attribute at creation, e.g. "
+                        "--attr priority=must (repeatable; coerced to the "
+                        "attribute's declared type)")
     s.add_argument("--ground", action="append", metavar="UID",
                    help="parent to ground against at creation (repeatable)")
     s.add_argument("--ground-type", default=None,
@@ -1247,7 +1423,20 @@ def build_parser() -> argparse.ArgumentParser:
                    help="link type (omit on a terminal to choose one)")
     s.add_argument("--stamp", action="store_true",
                    help="record target fingerprint (suspect tracking)")
+    s.add_argument("--retype", action="store_true",
+                   help="change the type of the existing SRC -> DST link in "
+                        "place instead of adding a new one")
     s.set_defaults(func=cmd_link)
+
+    s = sub.add_parser("unlink", help="remove a typed link SRC -> DST")
+    s.add_argument("src", nargs="?", default=None,
+                   help="source UID (omit on a terminal to pick one)")
+    s.add_argument("dst", nargs="?", default=None,
+                   help="destination UID (omit on a terminal to pick one)")
+    s.add_argument("--type", default=None,
+                   help="only remove the link of this type (required when "
+                        "several types link the same pair)")
+    s.set_defaults(func=cmd_unlink)
 
     s = sub.add_parser("delete", help="tombstone an item (never erased)")
     s.add_argument("uid", nargs="?", default=None,
@@ -1285,6 +1474,14 @@ def build_parser() -> argparse.ArgumentParser:
                        help="report the graph's (from)-[link]->(to) type shape")
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.set_defaults(func=cmd_shape)
+
+    s = sub.add_parser(
+        "dump",
+        help="export the whole project as one documented JSON structure "
+             "(SR-0055) — the sanctioned interchange surface")
+    s.add_argument("-o", "--output", default=None, metavar="FILE",
+                   help="write to FILE (default: stdout)")
+    s.set_defaults(func=cmd_dump)
 
     s = sub.add_parser("diagram",
                        help="emit Mermaid diagrams of the type model and status lifecycle")
@@ -1348,6 +1545,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    force_utf8_io()
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

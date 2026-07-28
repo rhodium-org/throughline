@@ -2663,3 +2663,259 @@ def test_render_trace_expand_and_uid_display_seams(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "ns:FR-0002" in out and "ns:FR-0001" in out  # display seam applied to both
     assert "INT-0001" not in out                          # boundary stop honored
+
+
+# --------------------------------------------------------------------- SR-0139..0143
+# Regressions for the CLI-ergonomics + integrity fixes (out-of-hours batch).
+
+def test_force_utf8_io_reconfigures_streams(monkeypatch):
+    """`force_utf8_io` (SR-0139) makes stdout/stderr emit UTF-8 so tl's arrow
+    glyphs (U+2192) never crash a cp1252 console. We assert it calls reconfigure
+    with encoding='utf-8' on both streams."""
+    from throughline.cli import force_utf8_io
+
+    class _Stream:
+        def __init__(self):
+            self.encoding = None
+        def reconfigure(self, encoding=None, **kw):
+            self.encoding = encoding
+
+    out, err = _Stream(), _Stream()
+    monkeypatch.setattr("sys.stdout", out)
+    monkeypatch.setattr("sys.stderr", err)
+    force_utf8_io()
+    assert out.encoding == "utf-8" and err.encoding == "utf-8"
+
+
+def test_force_utf8_io_tolerates_unreconfigurable_stream(monkeypatch):
+    """A stream without reconfigure (e.g. a plain StringIO) must not raise."""
+    import io
+    from throughline.cli import force_utf8_io
+    monkeypatch.setattr("sys.stdout", io.StringIO())
+    monkeypatch.setattr("sys.stderr", io.StringIO())
+    force_utf8_io()  # no exception
+
+
+def test_register_new_rejects_single_char_prefix(tmp_path, capsys):
+    """A one-character prefix violates the UID grammar (doc 06 §3): the number is
+    matched greedily so its items never parse, silently resetting allocation to 1.
+    `register new` must reject it up front rather than accept it and corrupt
+    numbering (SR-0140)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "register", "new", "R", "risks"]) == 2
+    err = capsys.readouterr().err
+    assert "not a valid UID prefix" in err and "doc 06" in err
+    # The register was not created.
+    assert not (root / "risks").exists()
+
+
+def test_register_new_accepts_two_char_prefix(tmp_path):
+    """The shortest legal prefix (two chars) is accepted (SR-0140)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "register", "new", "RK", "risks"]) == 0
+
+
+def test_new_machine_origin_is_born_proposed(tmp_path):
+    """A machine-origin item is born 'proposed', not 'initial', so the SR-0092
+    ratification gate engages and a human must ratify before it counts (SR-0141)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "m", "--ground", "INT-0001", "--origin", "ai",
+                 "--no-interactive"]) == 0
+    project = load_project(str(root))
+    born = project.get("FR-0001")
+    assert born.status == project.schema.status_role("proposed") == "proposed"
+
+
+def test_new_human_origin_is_born_initial(tmp_path):
+    """A human-origin item keeps the ordinary 'initial' birth status (SR-0141)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "h", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    project = load_project(str(root))
+    assert project.get("FR-0001").status \
+        == project.schema.status_role("initial") == "draft"
+
+
+def test_new_attr_sets_declared_enum_attribute(tmp_path):
+    """`--attr KEY=VALUE` sets a project-declared attribute at creation so a typed
+    attr no longer needs hand-editing the YAML afterwards (SR-0142)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "p", "--ground", "INT-0001", "--origin", "human",
+                 "--attr", "priority=must", "--no-interactive"]) == 0
+    assert load_project(str(root)).get("FR-0001").attrs["priority"] == "must"
+
+
+def test_new_attr_coerces_declared_int(tmp_path):
+    """A declared int attribute is coerced from the CLI string so it round-trips as
+    an int scalar, not a quoted string (SR-0142)."""
+    root = _scaffold(tmp_path)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        "[types.requirement]\n",
+        '[types.requirement]\nattrs.weight = { type = "int" }\n', 1),
+        encoding="utf-8")
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "w", "--ground", "INT-0001", "--origin", "human",
+                 "--attr", "weight=5", "--no-interactive"]) == 0
+    weight = load_project(str(root)).get("FR-0001").attrs["weight"]
+    assert weight == 5 and isinstance(weight, int)
+
+
+def _with_tier_default(root):
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        "[types.requirement]\n",
+        '[types.requirement]\nattrs.tier = { type = "enum", '
+        'values = ["a", "b", "unset"], default = "unset" }\n', 1),
+        encoding="utf-8")
+
+
+def test_new_applies_schema_declared_default(tmp_path):
+    """A schema-declared attribute default lands at birth on an attribute the
+    author did not set (SR-0138)."""
+    root = _scaffold(tmp_path)
+    _with_tier_default(root)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "d", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert load_project(str(root)).get("FR-0001").attrs["tier"] == "unset"
+
+
+def test_new_attr_overrides_schema_default(tmp_path):
+    """An explicit --attr wins over the schema default (SR-0138/SR-0142)."""
+    root = _scaffold(tmp_path)
+    _with_tier_default(root)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "d", "--ground", "INT-0001", "--origin", "human",
+                 "--attr", "tier=a", "--no-interactive"]) == 0
+    assert load_project(str(root)).get("FR-0001").attrs["tier"] == "a"
+
+
+def test_new_attr_rejects_malformed_pair(tmp_path, capsys):
+    """A `--attr` without '=' is a hard error at creation, not a silent skip
+    (SR-0142, fail-fast)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "x", "--ground", "INT-0001", "--origin", "human",
+                 "--attr", "bogus", "--no-interactive"]) == 2
+    assert "KEY=VALUE" in capsys.readouterr().err
+
+
+def _linked_pair(tmp_path):
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "a", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "b", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", str(root), "link", "FR-0002", "FR-0001",
+                 "--type", "relates"]) == 0
+    return root
+
+
+def test_link_retype_changes_type_in_place(tmp_path):
+    """`tl link --retype` changes an existing edge's type rather than adding a
+    parallel one, so a semantic-link review needs no YAML hand-editing (SR-0143)."""
+    root = _linked_pair(tmp_path)
+    assert _cli(["-C", str(root), "link", "FR-0002", "FR-0001",
+                 "--type", "refines", "--retype"]) == 0
+    links = [ln for ln in load_project(str(root)).get("FR-0002").links
+             if ln.target == "FR-0001"]
+    assert len(links) == 1 and links[0].type == "refines"
+
+
+def test_link_retype_without_existing_link_errors(tmp_path, capsys):
+    """`--retype` with no existing SRC -> DST link is an error, not a silent add
+    (SR-0143). FR-0001 and FR-0002 both ground to INT-0001 but are not linked to
+    each other, so retyping between them has nothing to change."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "a", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "b", "--ground", "INT-0001", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", str(root), "link", "FR-0001", "FR-0002",
+                 "--type", "relates", "--retype"]) == 2
+    assert "no existing link" in capsys.readouterr().err
+
+
+def test_unlink_removes_link(tmp_path):
+    """`tl unlink SRC DST` removes the edge without touching other links (SR-0143)."""
+    root = _linked_pair(tmp_path)
+    assert _cli(["-C", str(root), "unlink", "FR-0002", "FR-0001"]) == 0
+    remaining = load_project(str(root)).get("FR-0002").links
+    assert all(ln.target != "FR-0001" for ln in remaining)
+    # The grounding link to INT-0001 survives.
+    assert any(ln.target == "INT-0001" for ln in remaining)
+
+
+def test_unlink_missing_link_errors(tmp_path, capsys):
+    """Unlinking an edge that does not exist is an error (SR-0143)."""
+    root = _linked_pair(tmp_path)
+    assert _cli(["-C", str(root), "unlink", "FR-0001", "FR-0002"]) == 2
+    assert "no link" in capsys.readouterr().err
+
+
+# ---------------------------------------------- whole-project JSON dump (SR-0055)
+
+def test_dump_structure_is_complete_and_deterministic():
+    """build_dump projects the whole project — schema, registers, and every item
+    (live and tombstoned) with links embedded — into one documented structure,
+    and serializes reproducibly (SR-0055)."""
+    import json
+    from throughline.dump import DUMP_SCHEMA_VERSION, build_dump
+
+    live = Item(uid="SR-0001", type="requirement", title="live",
+                links=[Link(target="INT-0001", type="implements")])
+    tomb = Item(uid="SR-0002", type="requirement", status="deleted",
+                deleted={"date": "2026-07-28", "reason": "obsolete"})
+    doc = _doc("SR", live, tomb)
+    project = _project(doc)
+
+    dump = build_dump(project, tool_version="9.9.9")
+
+    assert list(dump) == ["throughline_dump", "config", "registers", "items"]
+    meta = dump["throughline_dump"]
+    assert meta["dump_schema_version"] == DUMP_SCHEMA_VERSION
+    assert meta["format_version"] == FORMAT_VERSION
+    assert meta["tool_version"] == "9.9.9"
+    # The schema (config) travels with the dump.
+    assert dump["config"] == project.config
+    # Registers carry their manifest plus an item count.
+    assert dump["registers"][0]["prefix"] == "SR"
+    assert dump["registers"][0]["item_count"] == 2
+    # Every item is present, tombstones included, links embedded.
+    uids = [it["uid"] for it in dump["items"]]
+    assert uids == ["SR-0001", "SR-0002"]          # sorted by uid
+    assert dump["items"][0]["links"][0]["target"] == "INT-0001"
+    assert dump["items"][1]["deleted"]["reason"] == "obsolete"
+    # No wall-clock field: two dumps of the same graph are byte-identical.
+    a = json.dumps(build_dump(project, "9.9.9"), sort_keys=False, default=str)
+    b = json.dumps(build_dump(project, "9.9.9"), sort_keys=False, default=str)
+    assert a == b
+
+
+def test_dump_cli_emits_valid_json(tmp_path, capsys):
+    """`tl dump` writes the documented structure to stdout as valid JSON."""
+    import json
+    root = _scaffold(tmp_path)  # ships intent INT-0001
+    capsys.readouterr()         # discard scaffold output; keep only the dump
+    assert _cli(["-C", str(root), "dump"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert set(data) == {"throughline_dump", "config", "registers", "items"}
+    assert any(it["uid"] == "INT-0001" for it in data["items"])
+
+
+def test_dump_cli_writes_to_output_file(tmp_path, capsys):
+    """`tl dump -o FILE` writes to a file instead of stdout (SR-0055)."""
+    import json
+    root = _scaffold(tmp_path)
+    out = tmp_path / "project.json"
+    assert _cli(["-C", str(root), "dump", "-o", str(out)]) == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["throughline_dump"]["format_version"] == FORMAT_VERSION

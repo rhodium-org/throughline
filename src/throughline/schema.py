@@ -53,6 +53,7 @@ class AttrSpec:
     required: bool = False
     normative: bool = False            # feeds the content fingerprint (SR-0033)
     values: tuple[str, ...] = ()       # allowed members when kind == 'enum'
+    default: object = None             # declared default applied at creation (SR-0138)
 
 
 @dataclass(frozen=True)
@@ -109,7 +110,7 @@ class Schema:
                     name=aname, kind=kind,
                     required=bool(meta.get("required", False)),
                     normative=bool(meta.get("normative", False)),
-                    values=values)
+                    values=values, default=meta.get("default"))
             types[tname] = specs
 
         link_types = frozenset((config.get("links") or {}).get("types", [])) or None

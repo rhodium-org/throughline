@@ -1,0 +1,22 @@
+uid: SR-0142
+type: system_requirement
+status: ratified
+title: Set attributes at item creation
+text: The Tool shall accept repeated key=value attribute arguments when an item is
+  created, coercing each value to the kind the schema declares for that attribute
+  and rejecting a value the schema cannot accept, so an author sets typed attributes
+  in one step instead of creating the item and then hand-editing its YAML.
+rationale: Setting a declared attribute such as a priority meant opening the freshly
+  created file and editing it by hand — an avoidable second step that invited typos
+  in exactly the typed fields the schema exists to police.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0020
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

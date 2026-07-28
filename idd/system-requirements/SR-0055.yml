@@ -1,6 +1,6 @@
 uid: SR-0055
 type: system_requirement
-status: approved
+status: implemented
 title: Canonical JSON export
 text: The Tool shall export the entire project (items, schema, links, baselines)
   as a single documented JSON structure for third-party tooling.

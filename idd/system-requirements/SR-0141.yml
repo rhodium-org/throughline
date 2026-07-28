@@ -1,0 +1,24 @@
+uid: SR-0141
+type: system_requirement
+status: ratified
+title: Machine-origin items are born proposed
+text: When the Tool creates an item whose origin is in the configured machine-origin
+  set, and the schema binds a proposed status role, the item shall be born in that
+  proposed status rather than the initial draft status, so a machine-authored item
+  enters the graph already awaiting human ratification. An explicit status argument
+  overrides this, and an item with a human origin is unaffected.
+rationale: The guidance tells agents that machine-authored items enter proposed and
+  must be ratified, but tl new created every item as draft, so the ratification gate
+  never engaged and the documented discipline was silently unenforced. An item's
+  birth status must match the promise made about it.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0092
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

@@ -1,0 +1,27 @@
+uid: SR-0138
+type: system_requirement
+status: ratified
+title: Schema-declared attribute defaults are applied at item creation
+text: SR-0020 lets a project declare a default value for a custom attribute, but
+  the Tool does not yet apply it. This refinement fixes the behaviour — when an item
+  is created, any attribute the schema declares with a default and that the new item
+  does not set is populated with that declared default, so a schema sentinel (for
+  example a priority value meaning "a human has not decided yet") lands on every
+  new item automatically instead of being added by hand. A default is only ever applied
+  at birth to an unset attribute; it never overwrites a value the author supplied
+  and never rewrites existing items on later reads.
+rationale: SR-0020 promised a declarable default, but the Tool never applied one,
+  so a schema sentinel meaning a human has not yet decided had to be typed onto every
+  new item by hand. The omission left the feature half-built and the stated contract
+  unmet.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0020
+  type: refines
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini

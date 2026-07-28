@@ -1,0 +1,24 @@
+uid: SR-0139
+type: system_requirement
+status: ratified
+title: UTF-8 console output
+text: The Tool shall force UTF-8 encoding on its standard output and standard error
+  streams before it emits any text, so that a non-ASCII character the Tool prints
+  — the arrow glyph in a grounding summary, an em dash in a finding — renders on
+  every platform instead of aborting the command. On a console whose stream cannot
+  be reconfigured the Tool shall leave it unchanged and carry on.
+rationale: On a Windows console left at the legacy cp1252 code page, tl context aborted
+  with a UnicodeEncodeError the first time it reached the arrow glyph, so the one
+  command an agent is told to run first could not run at all. Forcing the stream
+  encoding turns a hard crash into correct output.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0060
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

@@ -11,11 +11,29 @@ from __future__ import annotations
 import re
 
 # prefix = UPPER (UPPER|DIGIT){1,15} ; number = DIGIT{width}, grows past width.
+PREFIX_RE = re.compile(r"^[A-Z][A-Z0-9]{1,15}$")
 UID_RE = re.compile(r"^([A-Z][A-Z0-9]{1,15})-([0-9]+)$")
+
+# Human-readable statement of the prefix grammar, reused in the error a caller
+# sees when a register prefix is rejected (doc 06 §3, SR-0002/SR-0140).
+PREFIX_GRAMMAR = ("2-16 characters, an uppercase letter followed by uppercase "
+                  "letters or digits (e.g. UR, SR, REQ2)")
 
 
 class UidError(ValueError):
     pass
+
+
+def valid_prefix(prefix: str) -> bool:
+    """True when ``prefix`` satisfies the UID grammar (doc 06 §3).
+
+    A single-character prefix is deliberately *invalid*: the number in a UID is
+    matched greedily, so a one-letter prefix would be indistinguishable from a
+    prefix character borrowed from the number and, historically, every existing
+    item of such a register failed to parse — silently resetting allocation to
+    1. Rejecting it at registration (SR-0140) turns that silent corruption into
+    a loud, early error."""
+    return bool(PREFIX_RE.match(prefix))
 
 
 def parse_uid(uid: str) -> tuple[str, int]:
