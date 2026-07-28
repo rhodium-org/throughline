@@ -31,6 +31,12 @@ These are named in the spec (`docs/referenced-resource/07_*`) but not implemente
   Jama, Polarion, ReqView).
 - **Integrations** — e.g. syncing requirement UIDs with an issue tracker (Jira /
   GitHub / Forgejo) so delivery tickets trace to requirement nodes.
+- **Editor integration (VS Code extension)** — meet developers where they work: a
+  VS Code plugin that surfaces throughline in the editor (inline node/link status,
+  suspect & unreviewed warnings, quick create/ratify, jump-to-grounding) so using
+  throughline is a natural part of the coding loop rather than a separate CLI chore.
+  The goal is adoption — lowering the friction that keeps developers from grounding
+  their work.
 
 ## Exploratory / parked (post-M1)
 
@@ -63,6 +69,11 @@ Good first contributions — small, well-scoped, and real:
 - Pick a **Known rough edge** above, or anything labelled `good first issue`.
 - Try throughline on a *real* requirements set and report where the model or the CLI
   fights you — friction reports are as valuable as code.
+- **Measure throughline's effect on token usage.** Deliver the same project
+  end-to-end twice from the same user description — once with throughline (grounded,
+  IDD loop) and once without — and compare total LLM token usage across the two runs.
+  Quantifies whether the grounding discipline pays for itself in tokens and where the
+  overhead (or saving) lands.
 - Work follows **Intent-Driven Development**: write or update the grounded
   requirement first, keep the grounding gate green, then implement. See
   [`CONTRIBUTING.md`](CONTRIBUTING.md) and
