@@ -243,6 +243,9 @@ def validate(project, strict: bool = False,
             elif item.status == roles.get("ratified"):
                 why = ("sits in the ratified status but names no ratifier — a status "
                        "can be set directly; only `tl ratify` records who accepted it")
+            elif item.status == roles.get("initial"):
+                why = (f"is still '{item.status}' and was never proposed for "
+                       "ratification — a machine-authored item is born proposed")
             else:
                 why = (f"is '{item.status}', yet no human ever ratified it — it left "
                        "the proposed status without passing the gate")

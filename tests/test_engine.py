@@ -399,16 +399,19 @@ def test_unratified_ai_origin_proposed_item():
     assert ("FR-1", "unratified") in _rules(validate(_project(_doc("INT", intent),
                                                               _doc("FR", fr))))
 
-_ROLES = {"status": {"roles": {"proposed": "proposed", "ratified": "ratified",
+_ROLES = {"status": {"roles": {"initial": "draft", "proposed": "proposed",
+                               "ratified": "ratified",
                                "invalidated": "rejected", "tombstone": "deleted"}}}
 
-def _ai_item(status, **attrs):
+def _ai_findings(status, **attrs):
     intent = Item(uid="INT-1", type="intent", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status=status,
               attrs={"origin": "ai", **attrs},
               links=[Link(target="INT-1", type="derives_from")])
-    return _rules(validate(_project(_doc("INT", intent), _doc("FR", fr),
-                                    config=_ROLES)))
+    return validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES))
+
+def _ai_item(status, **attrs):
+    return _rules(_ai_findings(status, **attrs))
 
 def test_ai_origin_item_that_left_proposed_is_still_unratified():
     """SR-0149 — moving out of `proposed` by any route other than ratification
@@ -424,6 +427,12 @@ def test_ai_origin_item_with_a_ratifier_is_accepted_in_any_status():
     for status in ("proposed", "approved", "implemented"):
         assert ("FR-1", "unratified") not in _ai_item(
             status, ratified_by="A Human"), status
+
+def test_initial_status_item_is_not_accused_of_leaving_proposed():
+    """SR-0149 — an item still in the initial status was never proposed, so the
+    finding must say that rather than claim it escaped the proposed status."""
+    msg = next(f.message for f in _ai_findings("draft") if f.rule == "unratified")
+    assert "never proposed" in msg and "left the proposed status" not in msg
 
 def test_terminal_status_ai_item_needs_no_ratifier():
     """Dead scope never reaches a reader, so it needs no accountability record."""
