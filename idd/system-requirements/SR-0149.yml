@@ -1,0 +1,44 @@
+uid: SR-0149
+type: system_requirement
+status: ratified
+title: A machine-origin item that never passed ratification fails the gate
+text: The Tool shall report a named check finding for any live item whose origin
+  is in the configured machine-origin set and which carries no record of the human
+  who ratified it, whatever its status — not only while that status is proposed.
+  Leaving the proposed status by any route other than ratification shall not make
+  a machine-authored item accepted. An item in a terminal status is excluded as dead
+  scope, and the finding shall be suppressible through the standard rule-severity
+  configuration.
+rationale: UR-0023 promises two things — that a machine-authored item enters the
+  graph as proposed, and that it does not count as accepted until a human ratifies
+  it. SR-0092 implements only the first. It reports while the status is proposed
+  and stops watching the moment the item leaves it, so the second promise is carried
+  by nothing. The transition table the Tool's own `tl init` ships allows proposed
+  to approved directly, so a single legal command moves an ai-origin requirement
+  into a live accepted status, after which `tl check --strict` prints that the graph
+  is sound and exits 0 over scope no human ever accepted. UR-0023 is defeated by
+  one command, with no diagnostic anywhere in the tool. Status is also the wrong
+  thing to key on. `tl status <uid> ratified` moves an item into the ratified status
+  without recording who ratified it, so the status alone is not evidence that a person
+  took accountability — only the record `tl ratify` writes is. Keying this check
+  on that record closes both routes at once, and agrees with SR-0148, which binds
+  the same record to the content it accepted. Measured before proposing — 48 items
+  across 9 graphs in the estate would newly report, every one genuinely machine-authored
+  and unratified. No published standard source carries a machine-origin item at all
+  (0 of 577 across asvs, gds, wcag and slsa), so this finding cannot redden a consumer's
+  CI over a borrowed file it has no power to edit.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0092
+  type: refines
+- target: SR-0148
+  type: relates
+- target: SR-0033
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

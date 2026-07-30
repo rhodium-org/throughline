@@ -229,13 +229,24 @@ def validate(project, strict: bool = False,
                 f"{item.type} has nothing deriving from / mitigating it — unserved")
 
         # Provenance — generated volume must not masquerade as ratified (SR-0020 attr).
-        # The 'proposed' status is resolved from the project's roles (SR-0131),
-        # so the check is inert until a project declares one.
-        proposed = (schema.status_roles or {}).get("proposed")
-        if (proposed is not None and item.status == proposed
-                and item.attrs.get("origin") in schema.ai_origins):
-            add("unratified", item.uid, f,
-                f"{item.attrs['origin']}-origin item awaiting human ratification")
+        # Keyed on the ratification RECORD rather than the status (SR-0149): a status
+        # says where an item sits, not that a person accepted it. Leaving `proposed`
+        # by any route other than `tl ratify` skips the gate entirely, and setting the
+        # ratified status directly names nobody — only the record `tl ratify` writes
+        # is evidence. A terminal-status item is dead scope and needs no ratifier.
+        origin = item.attrs.get("origin")
+        if (origin in schema.ai_origins and not item.attrs.get("ratified_by")
+                and item.status not in schema.dead_statuses()):
+            roles = schema.status_roles or {}
+            if item.status == roles.get("proposed"):
+                why = "awaiting human ratification"
+            elif item.status == roles.get("ratified"):
+                why = ("sits in the ratified status but names no ratifier — a status "
+                       "can be set directly; only `tl ratify` records who accepted it")
+            else:
+                why = (f"is '{item.status}', yet no human ever ratified it — it left "
+                       "the proposed status without passing the gate")
+            add("unratified", item.uid, f, f"{origin}-origin item {why}")
 
         # Publication coverage (SR-0096): a live normative item referenced by no
         # published document is scope that can justify itself but cannot reach

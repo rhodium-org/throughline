@@ -399,6 +399,45 @@ def test_unratified_ai_origin_proposed_item():
     assert ("FR-1", "unratified") in _rules(validate(_project(_doc("INT", intent),
                                                               _doc("FR", fr))))
 
+_ROLES = {"status": {"roles": {"proposed": "proposed", "ratified": "ratified",
+                               "invalidated": "rejected", "tombstone": "deleted"}}}
+
+def _ai_item(status, **attrs):
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status=status,
+              attrs={"origin": "ai", **attrs},
+              links=[Link(target="INT-1", type="derives_from")])
+    return _rules(validate(_project(_doc("INT", intent), _doc("FR", fr),
+                                    config=_ROLES)))
+
+def test_ai_origin_item_that_left_proposed_is_still_unratified():
+    """SR-0149 — moving out of `proposed` by any route other than ratification
+    does not make machine-authored scope accepted."""
+    assert ("FR-1", "unratified") in _ai_item("approved")
+
+def test_ratified_status_without_a_named_ratifier_is_unratified():
+    """SR-0149 — `tl status <uid> ratified` sets the status while naming nobody,
+    so the status alone is not evidence a person took accountability."""
+    assert ("FR-1", "unratified") in _ai_item("ratified")
+
+def test_ai_origin_item_with_a_ratifier_is_accepted_in_any_status():
+    for status in ("proposed", "approved", "implemented"):
+        assert ("FR-1", "unratified") not in _ai_item(
+            status, ratified_by="A Human"), status
+
+def test_terminal_status_ai_item_needs_no_ratifier():
+    """Dead scope never reaches a reader, so it needs no accountability record."""
+    for status in ("rejected", "deleted"):
+        assert ("FR-1", "unratified") not in _ai_item(status), status
+
+def test_human_origin_item_is_never_chased_for_ratification():
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              attrs={"origin": "human"},
+              links=[Link(target="INT-1", type="derives_from")])
+    assert ("FR-1", "unratified") not in _rules(validate(
+        _project(_doc("INT", intent), _doc("FR", fr), config=_ROLES)))
+
 def test_bad_status_flagged_against_declared_vocabulary():
     cfg = {"status": {"values": ["draft", "approved"]}}
     fr = Item(uid="FR-1", type="requirement", status="wip",
