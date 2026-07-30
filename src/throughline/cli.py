@@ -364,11 +364,16 @@ def _coerce_attr(schema, item_type: str, key: str, raw: str):
     """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
     the attribute (SR-0142). An undeclared attribute is stored verbatim as a
     string; a declared int/float/bool is converted so it round-trips as the right
-    YAML scalar rather than a quoted string. A value that cannot be coerced is a
-    hard error at creation (fail-fast), not a surprise the loader raises later."""
+    YAML scalar rather than a quoted string, and a declared enum is checked for
+    membership (SR-0023). A value the schema cannot accept is a hard error at
+    creation (fail-fast), not a surprise the loader raises later."""
     spec = schema.attr(item_type, key)
     kind = spec.kind if spec is not None else "string"
     try:
+        if kind == "enum":
+            if raw not in spec.values:
+                raise ValueError(f"not in {list(spec.values)}")
+            return raw
         if kind == "int":
             return int(raw)
         if kind == "float":

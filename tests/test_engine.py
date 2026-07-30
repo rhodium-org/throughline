@@ -2794,6 +2794,18 @@ def test_new_attr_overrides_schema_default(tmp_path):
     assert load_project(str(root)).get("FR-0001").attrs["tier"] == "a"
 
 
+def test_new_attr_rejects_value_outside_declared_enum(tmp_path, capsys):
+    """A value the enum does not declare is refused at creation rather than written
+    and left for `check` to find later (SR-0142, fail-fast; SR-0023 membership)."""
+    root = _scaffold(tmp_path)
+    _with_tier_default(root)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "d", "--ground", "INT-0001", "--origin", "human",
+                 "--attr", "tier=nope", "--no-interactive"]) == 2
+    assert "['a', 'b', 'unset']" in capsys.readouterr().err
+    assert load_project(str(root)).get("FR-0001") is None
+
+
 def test_new_attr_rejects_malformed_pair(tmp_path, capsys):
     """A `--attr` without '=' is a hard error at creation, not a silent skip
     (SR-0142, fail-fast)."""
