@@ -41,7 +41,7 @@ class Finding:
 _DEFAULT_SEVERITY = {
     "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
     "malformed-link": ERROR,
-    "schema": ERROR,
+    "schema": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
     "namespace-unresolved": ERROR,
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
@@ -49,6 +49,7 @@ _DEFAULT_SEVERITY = {
     "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
     "no-status-roles": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
+    "ratified-stale": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING,
 }
@@ -88,6 +89,22 @@ def validate(project, strict: bool = False,
             "[status.roles] — the statuses `tl new`, `ratify`, `invalidate` and "
             "`delete` write are resolved by role, so those operations (and "
             "tl-ratify) cannot run; run `tl migrate` to backfill the table")
+
+    # A run that discovered nothing is not a sound graph (SR-0146). Items live only
+    # beneath a register manifest, so a project whose manifests are missing, misnamed
+    # or unmigrated loads zero items — and every rule below then passes vacuously,
+    # reporting "sound" while nothing at all was validated.
+    if next(project.items(), None) is None:
+        if not project.registers:
+            why = ("no register was found beneath this project — items are only "
+                   "loaded from a folder holding a .register.yml manifest; run "
+                   "`tl register new` to create one, or `tl migrate` if this "
+                   "project predates the current format")
+        else:
+            why = ("its registers hold no items — run `tl new <PREFIX>` to author "
+                   "one")
+        add("empty-graph", "", str(project.path),
+            f"no items were discovered, so this check validated nothing: {why}")
 
     # Malformed structure tolerated at load time (SR-0134): a link entry that is
     # not a mapping or is missing its target would once have crashed the loader
@@ -134,6 +151,18 @@ def validate(project, strict: bool = False,
         # UID grammar + filename agreement (SR-0002, doc 06 §11.1).
         if not UID_RE.match(item.uid):
             add("uid-grammar", item.uid, f, "UID does not match <PREFIX>-<NUMBER>")
+
+        # Top-level keys are the reserved core fields (SR-0022); everything a
+        # project defines belongs under `attrs` (SR-0020). Anything else is read
+        # by nothing, so a misplaced key fails silently — `origin` at the top
+        # level parses cleanly and exempts a machine-authored item from the
+        # unratified gate (SR-0092). The value is still round-tripped, never
+        # discarded; it is reported so the author learns it is inert (SR-0147).
+        for key in sorted(item.extra):
+            add("unknown-key", item.uid, f,
+                f"unknown top-level key '{key}' is read by nothing — either a core "
+                "field is misspelt, or it is a project attribute and belongs "
+                "under `attrs`")
 
         # Status membership against the declared vocabulary (SR-0081).
         if not schema.is_status(item.status):
@@ -239,6 +268,18 @@ def validate(project, strict: bool = False,
         # Review drift (SR-0038): reviewed fingerprint != current.
         if item.reviewed is not None and fingerprint(item, schema) != item.reviewed:
             add("unreviewed", item.uid, f, "content changed since last review")
+
+        # Ratification drift (SR-0148): the words a human accepted have been
+        # rewritten since they accepted them, so `ratified_by` now vouches for
+        # content nobody agreed to. An item ratified before the stamp existed
+        # carries none and cannot be judged, so the rule stays silent for it
+        # rather than accusing the whole back catalogue.
+        stamp = item.attrs.get("ratified_fingerprint")
+        if stamp and fingerprint(item, schema) != stamp:
+            who = item.attrs.get("ratified_by") or "a human"
+            add("ratified-stale", item.uid, f,
+                f"normative content changed since {who} ratified it — re-ratify "
+                "to accept the new wording, or revert it")
 
     out.extend(_coverage_rules(project, idx, strict))
     return out

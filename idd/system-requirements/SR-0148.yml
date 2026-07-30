@@ -1,0 +1,37 @@
+uid: SR-0148
+type: system_requirement
+status: ratified
+title: Ratification is bound to the content that was ratified
+text: The Tool shall record, at ratification, the fingerprint of the content the
+  ratifier accepted, and validation shall report any item whose current fingerprint
+  differs from it — the accepted content has been rewritten since a human took accountability
+  for it. Ratifying an item that is already ratified and unchanged shall be refused
+  rather than silently rewriting the recorded identity, so an accountability record
+  is never replaced without the graph showing that it changed.
+rationale: ratified_by is evidence that a named person accepted specific words (SR-0098),
+  and today it is bound to neither the words nor the person. An item's normative
+  text can be rewritten wholesale after ratification and the graph still reports
+  it ratified, under the original name, with no finding raised — which makes the
+  record a claim the tool cannot support and inverts the one thing the grounding
+  layer exists to prevent. A second ratify call on an already-ratified item also
+  overwrites the recorded identity outright, so who accepted an item can be replaced
+  without trace. Review state already has exactly this property — SR-0038 lists any
+  item whose current fingerprint differs from the reviewed one, over the fingerprint
+  SR-0033 computes — so ratification, which carries the greater weight, currently
+  has the weaker protection. Reusing that machinery rather than inventing a second
+  one keeps one mechanism for one idea.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0033
+  type: relates
+- target: SR-0038
+  type: relates
+- target: SR-0098
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

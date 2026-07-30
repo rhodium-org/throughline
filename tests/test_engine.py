@@ -1,6 +1,7 @@
 """throughline M0 test suite — model, UID allocation, fingerprint, storage
 round-trip, the validation pipeline, and the grounding operations.
 """
+import shutil
 from pathlib import Path
 
 import pytest
@@ -272,6 +273,34 @@ def _grounded_project(config=None):
     fr = Item(uid="FR-1", type="requirement", status="approved",
               links=[Link(target="INT-1", type="derives_from")])
     return _project(_doc("INT", intent), _doc("FR", fr), config=config)
+
+def test_empty_graph_fails_rather_than_passing_vacuously(tmp_path):
+    """A run that discovered nothing validated nothing — it must not report the
+    graph sound (SR-0146). Items load only from a folder holding a manifest, so a
+    project whose manifests are gone loads zero items and every other rule passes
+    vacuously."""
+    root = _scaffold(tmp_path)
+    for manifest in root.rglob(".register.yml"):
+        shutil.rmtree(manifest.parent)
+    p = load_project(str(root))
+    assert next(p.items(), None) is None
+    findings = validate(p, strict=True)
+    assert "empty-graph" in {f.rule for f in findings}
+    assert _errors(findings)
+    assert "register" in next(f.message for f in findings if f.rule == "empty-graph")
+
+def test_unknown_top_level_key_is_reported(tmp_path):
+    """A key that is neither a core field nor `attrs` is read by nothing, so a
+    misplaced one fails silently — most damagingly `origin`, which at the top level
+    exempts a machine-authored item from the unratified gate (SR-0147)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="proposed",
+              links=[Link(target="INT-1", type="derives_from")])
+    fr.extra["origin"] = "ai"          # written at the top level, not under attrs
+    p = _project(_doc("INT", intent), _doc("FR", fr))
+    findings = validate(p)
+    assert ("FR-1", "unknown-key") in _rules(findings)
+    assert "origin" in next(f.message for f in findings if f.rule == "unknown-key")
 
 def test_orphan_flagged_when_no_grounding_link():
     fr = Item(uid="FR-1", type="requirement")
@@ -1527,6 +1556,43 @@ def test_ratify_succeeds_and_records_accountability():
     item = ratify(p, "FR-1", by="j.doe")
     assert item.status == "ratified"
     assert item.attrs["ratified_by"] == "j.doe"
+
+def test_ratify_refuses_an_unchanged_already_ratified_item():
+    """A second ratify of unchanged content accepts nothing and would overwrite the
+    record of who accepted it, leaving no trace that it changed (SR-0148)."""
+    p = _grounded_project()
+    ratify(p, "FR-1", by="alice")
+    with pytest.raises(GroundingError, match="already ratified by alice"):
+        ratify(p, "FR-1", by="bob")
+    assert p.get("FR-1").attrs["ratified_by"] == "alice"
+
+def test_ratify_after_content_changed_is_allowed_and_restamps():
+    """Re-ratifying content that HAS moved is the legitimate case — a human accepts
+    the new wording, and the stamp follows it (SR-0148)."""
+    p = _grounded_project()
+    item = ratify(p, "FR-1", by="alice")
+    first = item.attrs["ratified_fingerprint"]
+    item.text = "a materially different requirement"
+    again = ratify(p, "FR-1", by="bob")
+    assert again.attrs["ratified_by"] == "bob"
+    assert again.attrs["ratified_fingerprint"] != first
+
+def test_rewritten_content_after_ratification_is_reported():
+    """ratified_by must not vouch for words nobody agreed to: rewriting normative
+    text after ratification is a named finding (SR-0148)."""
+    p = _grounded_project()
+    ratify(p, "FR-1", by="alice")
+    p.get("FR-1").text = "something else entirely"
+    assert ("FR-1", "ratified-stale") in _rules(validate(p))
+
+def test_ratified_before_the_stamp_existed_is_not_accused():
+    """An item ratified before the fingerprint stamp existed carries none and cannot
+    be judged, so the rule stays silent rather than accusing the back catalogue
+    (SR-0148)."""
+    p = _grounded_project()
+    p.get("FR-1").status = "ratified"
+    p.get("FR-1").attrs["ratified_by"] = "alice"
+    assert ("FR-1", "ratified-stale") not in _rules(validate(p))
 
 def test_invalidate_cascades_suspect_to_blast_radius():
     intent = Item(uid="INT-1", type="intent", status="ratified")

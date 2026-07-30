@@ -1,0 +1,33 @@
+uid: SR-0147
+type: system_requirement
+status: ratified
+title: Unknown top-level keys in an item file are an error
+text: The Tool shall report a named check finding at error severity for any top-level
+  key in an item file that is neither a reserved core field nor the attrs mapping,
+  naming the key and the file it appears in. A project-defined attribute belongs
+  under attrs; a key sitting at the top level is either a typo or a misplacement,
+  and in both cases the value it carries is never read.
+rationale: An unrecognised top-level key is currently kept verbatim so the file round-trips,
+  and read by nothing — the author's intent is discarded in silence. The sharpest
+  case is origin. Written under attrs it marks an item machine-authored and holds
+  it to the unratified gate (SR-0092); written at the top level it parses cleanly,
+  is ignored, and the item passes as though a human had authored it. The human-accountability
+  guarantee of UR-0023 is then defeated by a two-space indentation error, with no
+  diagnostic anywhere in the tool. The same silence swallows a mistyped links or
+  attrs key, dropping an item's entire grounding or attribute set while check reports
+  the graph sound. SR-0022 reserves the core fields and SR-0020 puts everything else
+  under attrs; between them the legal shape of an item file is already decided, and
+  this is the tool holding files to it.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0022
+  type: refines
+- target: SR-0092
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

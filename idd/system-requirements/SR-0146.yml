@@ -1,0 +1,32 @@
+uid: SR-0146
+type: system_requirement
+status: ratified
+title: A graph that discovers no items fails the gate
+text: When a check run discovers no items at all, the Tool shall report a named finding
+  at error severity rather than reporting the graph sound, naming the likely cause
+  — no register manifest was found beneath the project directory — and directing
+  the reader to the command that creates one. The finding shall be suppressible through
+  the standard rule-severity configuration, so a project deliberately starting from
+  nothing can silence it.
+rationale: A gate whose green means nothing is worse than no gate at all. Items are
+  discovered only beneath a register manifest, so a project whose manifests are missing,
+  misnamed, or not yet migrated loads zero items and check --strict prints "graph
+  is sound (strict)" and exits 0 — every CI run green while nothing whatsoever was
+  validated. This is not hypothetical; it was observed against a real graph, where
+  every green check before the manifests were repaired had been meaningless. SR-0136
+  already establishes the principle for the configuration side, that a gap which
+  disables validation must surface at the gate rather than pass quietly; this applies
+  the same principle to the items themselves.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0136
+  type: relates
+- target: SR-0078
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

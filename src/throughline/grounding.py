@@ -13,6 +13,7 @@ attrs.last_validated / attrs.confidence) alongside their content.
 """
 from __future__ import annotations
 
+from .fingerprint import fingerprint
 from .graph import Index
 from .model import Item, Link
 
@@ -54,8 +55,20 @@ def ratify(project, uid: str, by: str) -> Item:
     idx = Index.build(project)
     if not schema.is_root(item) and not reaches_root(idx, schema, uid):
         raise GroundingError(f"{uid} is not grounded to a root and cannot be ratified")
+    # Ratifying an already-ratified item whose content has not moved accepts
+    # nothing, and would replace the record of who accepted it leaving no trace
+    # that it changed (SR-0148). An item ratified before the stamp existed has
+    # none to compare against, so that first call is allowed through and stamps it.
+    current = fingerprint(item, schema)
+    if (item.status == schema.status_role("ratified")
+            and item.attrs.get("ratified_fingerprint") == current):
+        raise GroundingError(
+            f"{uid} is already ratified by "
+            f"{item.attrs.get('ratified_by', 'a human')} and its content has not "
+            "changed since — there is nothing to accept")
     set_status(schema, item, schema.status_role("ratified"))
     item.attrs["ratified_by"] = by
+    item.attrs["ratified_fingerprint"] = current
     return item
 
 
