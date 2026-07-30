@@ -1,12 +1,12 @@
 uid: UR-0008
 type: user_requirement
-status: approved
+status: ratified
 title: Stakeholder-quality publishing
 text: Users shall be able to publish requirement documents as portable Markdown —
-  rendered from the graph by reference — suitable for customers, auditors, and
-  reviewers who don't use the tool, and convertible by external tools (pandoc,
-  mdBook) to navigable HTML or PDF. The tool renders Markdown; it does not itself
-  produce HTML or PDF (NG-0005).
+  rendered from the graph by reference — suitable for customers, auditors, and reviewers
+  who don't use the tool, and convertible by external tools (pandoc, mdBook) to navigable
+  HTML or PDF. The tool renders Markdown; it does not itself produce HTML or PDF
+  (NG-0005).
 normative: true
 links:
 - target: BN-0005
@@ -14,3 +14,4 @@ links:
 attrs:
   priority: must
   verification: demonstration
+  ratified_by: Henry Grech-Cini

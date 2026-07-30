@@ -1,6 +1,6 @@
 uid: SR-0031
 type: system_requirement
-status: approved
+status: ratified
 title: External references
 text: 'The Tool shall support links to external targets: URLs and repository file
   paths (optionally with line ranges).'
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

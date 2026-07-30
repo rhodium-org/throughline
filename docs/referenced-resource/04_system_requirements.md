@@ -91,7 +91,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0001
 
-**priority**: could · **verification**: inspection
+**priority**: could · **verification**: inspection · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0093 -->
@@ -169,7 +169,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0016 -->
-**SR-0016 — Move between registers** — `system_requirement`, status `approved`
+**SR-0016 — Move between registers** — `system_requirement`, status `rejected`
 
 > The Tool shall support moving an item to another register; the moved item keeps its UID and the Tool records its new location.
 
@@ -345,13 +345,13 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0031 -->
-**SR-0031 — External references** — `system_requirement`, status `approved`
+**SR-0031 — External references** — `system_requirement`, status `ratified`
 
 > The Tool shall support links to external targets: URLs and repository file paths (optionally with line ranges).
 
 *Implements:* UR-0004
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0032 -->
@@ -423,33 +423,33 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0036 -->
-**SR-0036 — Baselines** — `system_requirement`, status `approved`
+**SR-0036 — Baselines** — `system_requirement`, status `ratified`
 
 > The Tool shall create named baselines pinning the exact state of all items, list baselines, and check out or read any baseline.
 
 *Implements:* UR-0013
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0037 -->
-**SR-0037 — Diff between versions** — `system_requirement`, status `approved`
+**SR-0037 — Diff between versions** — `system_requirement`, status `ratified`
 
 > The Tool shall compare two baselines, revisions, or working state and report per item added/deleted/modified and links added/removed, as text and JSON.
 
 *Implements:* UR-0003
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0038 -->
-**SR-0038 — Review workflow states** — `system_requirement`, status `approved`
+**SR-0038 — Review workflow states** — `system_requirement`, status `ratified`
 
 > The Tool shall record a per-item reviewed fingerprint set by an explicit review command, and validation shall list items whose current fingerprint differs from it.
 
 *Implements:* UR-0006
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0084 -->
@@ -515,13 +515,13 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0044 -->
-**SR-0044 — Machine-readable check output** — `system_requirement`, status `approved`
+**SR-0044 — Machine-readable check output** — `system_requirement`, status `ratified`
 
 > check shall optionally emit findings as JSON (rule id, severity, uid, file, message) for tooling and CI annotations.
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0078 -->
@@ -666,13 +666,13 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0090 -->
-**SR-0090 — Reproduce a document at a past revision** — `system_requirement`, status `approved`
+**SR-0090 — Reproduce a document at a past revision** — `system_requirement`, status `ratified`
 
 > The Tool shall render the requirements document as the graph stood at a named git revision, so a stakeholder can reproduce exactly what a baseline said. Given a commit-ish, the Tool shall reconstruct the project from that revision's tracked files without touching the working tree, render the document from it, and stamp the provenance line with the revision and its resolved commit hash. Because items are plain YAML under version control, this makes any past state addressable by commit rather than only the current checkout. When the project is not inside a git work tree, or the revision cannot be resolved, the Tool shall fail with a clear message rather than silently render the working tree.
 
 *Implements:* UR-0013
 
-**priority**: should · **verification**: test
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 ## 8. Import and export
@@ -697,7 +697,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0056 -->
@@ -746,9 +746,11 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0062 -->
-**SR-0062 — Source-code traceability scan** — `system_requirement`, status `deferred`
+**SR-0062 — Source-code traceability scan** — `system_requirement`, status `rejected`
 
 > The Tool could scan configured source trees for UID markers in comments and treat them as implements links for coverage.
+
+*Rationale:* Withdrawn with the requirement it implements (UR-0019). Requirement-to-code linking is already served by external references (SR-0031), leaving this item as the only unserved residue — and it is a materially different capability from the one its parent advertised, because it makes the tool read arbitrary source trees and infer links rather than validate the ones the graph declares. If coverage over source code is wanted later it should be proposed on its own terms and grounded under UR-0012, where coverage and impact analysis already live.
 
 *Implements:* UR-0019
 
@@ -756,11 +758,12 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0063 -->
-**SR-0063 — Local web viewer** — `system_requirement`, status `deferred`
+**SR-0063 — Local web viewer** — `system_requirement`, status `rejected`
 
 > The Tool could serve the published site with live reload for authoring; web-UI editing is out of scope for 1.0.
 
 *Implements:* UR-0020
+*Relates:* NG-0006
 
 **priority**: could · **verification**: demonstration
 <!-- tl:end -->
@@ -808,14 +811,14 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0071 -->
-**SR-0071 — Plugin points** — `system_requirement`, status `approved`
+**SR-0071 — Plugin points** — `system_requirement`, status `ratified`
 
 > The Tool should define a plugin interface for custom validation rules, discoverable without modifying core code. Exporter and importer plugins are out of scope (NG-0005); third-party tooling integrates through the documented JSON dump (SR-0055) instead.
 
 *Implements:* UR-0015
 *Relates:* NG-0005
 
-**priority**: should · **verification**: test
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item SR-0072 -->
@@ -841,7 +844,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0091 -->
-**SR-0091 — Grounding flags must never fail silently** — `system_requirement`, status `approved`
+**SR-0091 — Grounding flags must never fail silently** — `system_requirement`, status `ratified`
 
 > When 'tl new' is invoked with a --ground flag, the Tool shall either attach the requested grounding link or, if it declines to add it, reject the command with a clear, actionable error. It shall never create the item while silently discarding the requested link — including for root-type sources, which may legitimately carry an explicit grounding link (e.g. a business_need that derives_from the vision). Rationale: a silently dropped grounding link yields an item the author believes is grounded but which surfaces only later as an orphan or unserved-root check failure — a fail-fast violation and a silent loss of authoring intent. Observed in throughline 0.1.0 (2026-07-10): 'tl new BN --ground INT-0001 --ground-type derives_from' created the business_need with no links block because the grounding block was skipped for root types, and the delivery-root intent then reported unserved-root under 'tl check'.
 

@@ -1,0 +1,41 @@
+uid: SR-0144
+type: system_requirement
+status: ratified
+title: Amend an existing item's content through the tool
+text: The Tool shall let an author change an existing item's title, text, rationale,
+  and declared attributes in place, so that correcting an item never requires hand-editing
+  its YAML. The operation shall accept the same typed attribute arguments that item
+  creation accepts (SR-0142), coercing each value to the kind the schema declares
+  for that attribute and rejecting a value the schema cannot accept. It shall refuse
+  to change uid, type, status, or links — identity is immutable, and the other three
+  each have their own verb — and shall fail clearly when the named item does not
+  exist or when a named attribute is not one the item's type declares. Amending content
+  shall update the item's stored fingerprint, so that changing normative text marks
+  dependents suspect (SR-0034) and clears the item's review state (SR-0038) rather
+  than leaving a stale confirmation standing.
+rationale: An item's title, text, rationale and attributes were write-once at creation,
+  so every later correction — wording that turned out to be wrong, an attribute that
+  became false once the facts were known — could be made only by opening the YAML
+  and editing it. That is the manual editing the CLI exists to spare the author,
+  and it is unsafe in a way the tool cannot catch, because a colon followed by a
+  space inside a plain scalar silently reparses the field and surfaces much later
+  as a loader error naming an unrelated file. It also leaves the last hole in an
+  otherwise complete principle — status moves (SR-0132), link corrections (SR-0143)
+  and attributes at creation (SR-0142) are each reachable through an operation, and
+  item content alone is not, so a project cannot honestly adopt the rule that the
+  graph changes only through the tool.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0142
+  type: refines
+- target: SR-0132
+  type: relates
+- target: SR-0143
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

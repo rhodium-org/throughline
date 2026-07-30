@@ -1,6 +1,6 @@
 uid: BN-0005
 type: business_need
-status: approved
+status: ratified
 title: Publishable
 text: The graph's content is publishable to people who do not use the tool — rendered
   by reference into portable Markdown documents (which external tools convert to
@@ -11,3 +11,5 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini

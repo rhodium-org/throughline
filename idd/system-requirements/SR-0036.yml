@@ -1,6 +1,6 @@
 uid: SR-0036
 type: system_requirement
-status: approved
+status: ratified
 title: Baselines
 text: The Tool shall create named baselines pinning the exact state of all items,
   list baselines, and check out or read any baseline.
@@ -11,3 +11,4 @@ links:
 attrs:
   priority: must
   verification: test
+  ratified_by: Henry Grech-Cini

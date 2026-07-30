@@ -1,6 +1,6 @@
 uid: UR-0021
 type: user_requirement
-status: approved
+status: ratified
 title: Verifiable development environment
 text: A contributor shall be able to run a single command that diagnoses their development
   environment — Python version, an importable/installed throughline, the test runner,
@@ -14,3 +14,4 @@ attrs:
   origin: human
   priority: should
   verification: demonstration
+  ratified_by: Henry Grech-Cini

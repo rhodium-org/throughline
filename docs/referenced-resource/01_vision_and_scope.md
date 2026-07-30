@@ -108,6 +108,16 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 **origin**: hybrid · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
+<!-- tl:item NG-0006 -->
+**NG-0006 — No server or long-running process in the core** — `non_goal`, status `ratified`
+
+> throughline shall not ship a server, a daemon, or any long-running process that exposes a network endpoint. The tool is a command-line program and a Python library — it runs against the files, does its work, and exits. It shall not serve a preview or a published site, expose an HTTP or socket interface, or hold state between invocations. Where a browser-based experience is wanted — viewing, authoring, or administering a graph — it belongs in a separate product built on the core, for example throughline-web, which composes the library at a pinned version rather than growing a runtime inside it.
+
+*Rationale:* A local preview server with live reload was carried as deferred scope (SR-0063) from before this boundary was drawn. A server is never a small addition — it brings a port, a process lifecycle to supervise, an asset pipeline, and a second route to the graph that must then be kept behaving identically to the CLI forever. It also pulls the core one layer further toward what NG-0001 and NG-0005 already refuse, a web document-management surface and HTML site generation. The estate already answers browser-shaped needs with separate products that compose the library — throughline-editor, throughline-ratify, throughline-console — so a runtime can be deployed, versioned and secured on its own terms while the core keeps no network surface to defend. Recording the boundary as a first-class non-goal is the object a reviewer points at to reject the next proposal to add a serve command, and the ratified intent that SR-0063's withdrawal traces to.
+
+**origin**: ai · **ratified_by**: Henry Grech-Cini
+<!-- tl:end -->
+
 ## 5. Target users
 
 - **The requirements author** — writes and restructures specs frequently;

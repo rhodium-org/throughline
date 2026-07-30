@@ -84,13 +84,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0008 -->
-**UR-0008 — Stakeholder-quality publishing** — `user_requirement`, status `approved`
+**UR-0008 — Stakeholder-quality publishing** — `user_requirement`, status `ratified`
 
 > Users shall be able to publish requirement documents as portable Markdown — rendered from the graph by reference — suitable for customers, auditors, and reviewers who don't use the tool, and convertible by external tools (pandoc, mdBook) to navigable HTML or PDF. The tool renders Markdown; it does not itself produce HTML or PDF (NG-0005).
 
 *Derives from:* BN-0005
 
-**priority**: must · **verification**: demonstration
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0009 -->
@@ -200,11 +200,14 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0019 -->
-**UR-0019 — Requirements-to-code traceability** — `user_requirement`, status `deferred`
+**UR-0019 — Requirements-to-code traceability** — `user_requirement`, status `rejected`
 
 > Users could link requirements to source code and test code locations and report coverage of implementation.
 
+*Rationale:* Withdrawn as redundant. The linking half of this requirement is already delivered by SR-0031, which is ratified and priority must — an item may link to an external target, including a repository file path with an optional line range, so pointing a requirement at the source or test code that realises it needs nothing new. What remained was the second clause, reporting implementation coverage by scanning source trees for UID markers (SR-0062), which is a different capability wearing this requirement's name — it inverts the direction of reference, making the tool read arbitrary source trees and discover links rather than the graph declaring them. Carrying a could-priority requirement whose principal clause is already met invites a reader to conclude the need is unserved when it is not. Should coverage over source ever be wanted, it returns as its own item grounded under UR-0012, not by reviving this one.
+
 *Derives from:* BN-0003
+*Relates:* SR-0031
 
 **priority**: could · **verification**: test
 <!-- tl:end -->
@@ -220,13 +223,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:end -->
 
 <!-- tl:item UR-0021 -->
-**UR-0021 — Verifiable development environment** — `user_requirement`, status `approved`
+**UR-0021 — Verifiable development environment** — `user_requirement`, status `ratified`
 
 > A contributor shall be able to run a single command that diagnoses their development environment — Python version, an importable/installed throughline, the test runner, and whether the local grounding gate is wired — and reports, per check, either pass or a specific remediation, exiting non-zero if the environment is not ready.
 
 *Derives from:* BN-0010
 
-**origin**: human · **priority**: should · **verification**: demonstration
+**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item UR-0022 -->

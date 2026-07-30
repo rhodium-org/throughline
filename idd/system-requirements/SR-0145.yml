@@ -1,0 +1,54 @@
+uid: SR-0145
+type: system_requirement
+status: ratified
+title: Reclassify an item by supersession, never by moving it
+text: The Tool shall reclassify an item — into another register, another type, or
+  both — by superseding it, never by relocating or renumbering it. The operation
+  shall allocate a new item in the target register, carrying forward the superseded
+  item's content, so the new item's UID bears the target register's prefix from birth
+  and is allocated by that register's own manifest. The superseded item shall keep
+  its UID and its file, move to the status bound to the superseded role, and carry
+  a superseded_by link to its replacement. Every link that pointed at the superseded
+  item shall be repointed to the replacement; repointing shall not count as a normative
+  change to the item that holds the link, so the holder's fingerprint, review state
+  and suspect flags are preserved — the referent has been renamed, not altered. The
+  superseded UID shall remain resolvable for the life of the project — trace, blast
+  and any lookup shall find it and report the supersession rather than reporting
+  it missing — and shall never be reused. A superseded item shall not be counted
+  as live for grounding, coverage or ratification purposes.
+rationale: A UID's prefix is its register binding — a register owns a prefix and
+  allocates from its own manifest (SR-0011), and an item is stored under its UID
+  inside that register's directory (SR-0010). Moving an item across registers therefore
+  has only two outcomes, and both are worse than supersession. Keeping the UID leaves
+  a foreign-prefixed file in the target register, invisible to that register's allocator
+  and permanently mislabelled to every reader — observed in practice, where a retyped
+  constraint was left sitting in the intents register under an INT prefix and had
+  to be reindexed and rewired by hand. Renumbering breaks the permanent, never-reused
+  identity that UR-0001 exists to guarantee, along with every inbound link and every
+  citation made outside this repository. Supersession mutates nothing — the old UID
+  goes on meaning exactly what it always meant, and the reclassification becomes
+  an auditable fact rather than an erasure. The practice is already in use but unmodelled,
+  recorded only as prose in a rationale (SR-0089 was superseded by SR-0094 with no
+  machine-readable trace), so neither trace nor blast can follow it. This requirement
+  replaces SR-0016, which chose to move the item and keep its UID on the grounds
+  that identity outranks tidy prefixes; the decision here is that supersession preserves
+  identity strictly better than a move does. The superseded status and the superseded_by
+  link type are declared in the project's configuration and resolved through the
+  status role table (SR-0131), never hardcoded.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+- target: SR-0012
+  type: refines
+- target: SR-0010
+  type: relates
+- target: SR-0016
+  type: relates
+- target: SR-0131
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini

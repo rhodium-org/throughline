@@ -1,13 +1,27 @@
 uid: UR-0019
 type: user_requirement
-status: deferred
+status: rejected
 title: Requirements-to-code traceability
 text: Users could link requirements to source code and test code locations and report
   coverage of implementation.
+rationale: Withdrawn as redundant. The linking half of this requirement is already
+  delivered by SR-0031, which is ratified and priority must — an item may link to
+  an external target, including a repository file path with an optional line range,
+  so pointing a requirement at the source or test code that realises it needs nothing
+  new. What remained was the second clause, reporting implementation coverage by
+  scanning source trees for UID markers (SR-0062), which is a different capability
+  wearing this requirement's name — it inverts the direction of reference, making
+  the tool read arbitrary source trees and discover links rather than the graph
+  declaring them. Carrying a could-priority requirement whose principal clause is
+  already met invites a reader to conclude the need is unserved when it is not.
+  Should coverage over source ever be wanted, it returns as its own item grounded
+  under UR-0012, not by reviving this one.
 normative: true
 links:
 - target: BN-0003
   type: derives_from
+- target: SR-0031
+  type: relates
 attrs:
   priority: could
   verification: test

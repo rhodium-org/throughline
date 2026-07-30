@@ -1,9 +1,16 @@
 uid: SR-0062
 type: system_requirement
-status: deferred
+status: rejected
 title: Source-code traceability scan
 text: The Tool could scan configured source trees for UID markers in comments and
   treat them as implements links for coverage.
+rationale: Withdrawn with the requirement it implements (UR-0019). Requirement-to-code
+  linking is already served by external references (SR-0031), leaving this item as
+  the only unserved residue — and it is a materially different capability from the
+  one its parent advertised, because it makes the tool read arbitrary source trees
+  and infer links rather than validate the ones the graph declares. If coverage over
+  source code is wanted later it should be proposed on its own terms and grounded
+  under UR-0012, where coverage and impact analysis already live.
 normative: true
 links:
 - target: UR-0019

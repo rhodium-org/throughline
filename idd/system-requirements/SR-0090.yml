@@ -1,6 +1,6 @@
 uid: SR-0090
 type: system_requirement
-status: approved
+status: ratified
 title: Reproduce a document at a past revision
 text: The Tool shall render the requirements document as the graph stood at a named
   git revision, so a stakeholder can reproduce exactly what a baseline said. Given
@@ -9,8 +9,8 @@ text: The Tool shall render the requirements document as the graph stood at a na
   the provenance line with the revision and its resolved commit hash. Because items
   are plain YAML under version control, this makes any past state addressable by
   commit rather than only the current checkout. When the project is not inside a
-  git work tree, or the revision cannot be resolved, the Tool shall fail with a
-  clear message rather than silently render the working tree.
+  git work tree, or the revision cannot be resolved, the Tool shall fail with a clear
+  message rather than silently render the working tree.
 normative: true
 links:
 - target: UR-0013
@@ -18,3 +18,4 @@ links:
 attrs:
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini

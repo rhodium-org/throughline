@@ -1,6 +1,6 @@
 uid: SR-0091
 type: system_requirement
-status: approved
+status: ratified
 title: Grounding flags must never fail silently
 text: 'When ''tl new'' is invoked with a --ground flag, the Tool shall either attach
   the requested grounding link or, if it declines to add it, reject the command with
