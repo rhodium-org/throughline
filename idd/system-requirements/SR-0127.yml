@@ -14,3 +14,5 @@ attrs:
   verification: test
   origin: hybrid
   ratified_by: henry
+  ratified_fingerprint: sha256:f43d48dd6ea2a521cc952b53125e3a1076f1f1925887934b32b03de81a408be3
+  ratified_backfilled: true

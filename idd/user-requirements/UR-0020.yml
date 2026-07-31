@@ -3,8 +3,8 @@ type: user_requirement
 status: ratified
 title: Comprehensible to newcomers
 text: A new user shall be able to initialize a project, add three linked requirements,
-  validate, and render a Markdown document within 15 minutes using only the
-  quick-start guide.
+  validate, and render a Markdown document within 15 minutes using only the quick-start
+  guide.
 normative: true
 links:
 - target: BN-0008
@@ -13,3 +13,5 @@ attrs:
   priority: should
   verification: demonstration
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e
+  ratified_backfilled: true

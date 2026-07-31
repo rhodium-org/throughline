@@ -42,3 +42,5 @@ attrs:
   verification: test
   origin: ai
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d27b523aa9f5a74f0a494eff9cdd8181f5e648e9fedcebb5fbe77487de44ca61
+  ratified_backfilled: true

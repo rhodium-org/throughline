@@ -12,3 +12,5 @@ attrs:
   priority: should
   verification: inspection
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6e7e9b461e3ab465b7c4c35d6d0cd567e0e3eb908571da1551628432e6caa78f
+  ratified_backfilled: true

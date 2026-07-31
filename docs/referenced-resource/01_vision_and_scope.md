@@ -67,7 +67,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 *Rationale:* The comparable tools that started as validators and grew editing surfaces became document-management systems and lost the git-native, reference-not-copy property that keeps content from drifting. Recording this as a first-class non-goal is the object a reviewer points at to reject that category of proposed scope.
 
-**origin**: human · **ratified_by**: Henry Grech-Cini
+**origin**: human · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:32a0fcd84dcba445e7785aa380208009029d3070ff75f2e20611e1226f5371b3 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item NG-0002 -->
@@ -77,7 +77,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 *Rationale:* An earlier draft suggested CC-BY-4.0 for the specification while the code is Apache-2.0, which contradicted the single LICENSE/NOTICE the repository already declares and forced readers to reason about which license applies to which file. Recording a single-license stance as an explicit non-goal removes that ambiguity and gives the license-alignment change a ratified intent to trace to.
 
-**origin**: human · **ratified_by**: Henry Grech-Cini
+**origin**: human · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a150812336105b51774908eb804f226b805e05c8fd05bd971a0608ad774ed4ae · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item NG-0003 -->
@@ -87,7 +87,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 *Rationale:* Trying to filter natural language for "malicious instructions" is both undecidable and a false promise that would invite exactly the trust it cannot earn — the same reason NG-0001 keeps the tool out of content authoring. Naming the boundary explicitly tells integrators where the tool's guarantees stop, so they wrap graph content as untrusted data rather than assuming throughline made it safe. Structural safety is covered separately and positively by NFR-0022.
 
-**origin**: human · **ratified_by**: Henry Grech-Cini
+**origin**: human · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:21399c25134bc77c4f605c299520e5bf422064e964a4f541badcd100e1005e11 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item NG-0004 -->
@@ -95,7 +95,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 > throughline does not provide, and does not require, an online counter or coordinating service to allocate UIDs. Allocation atomicity derives solely from compare-and-swap on the trunk ref, keeping identity allocation viable for fully offline and zero-backend (e.g. in-browser) clients.
 
-**origin**: hybrid · **ratified_by**: henry
+**origin**: hybrid · **ratified_by**: henry · **ratified_fingerprint**: sha256:4aca0877318b77f7a4563ecd4e84bb8d9efff5c1a4691247947bf4ddc0bcc2d0 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item NG-0005 -->
@@ -105,7 +105,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 *Rationale:* Every tool that started as a validator and grew a renderer for stakeholder formats acquired a rendering engine to maintain and drifted from the git-native, reference-not-copy discipline that keeps content from going stale — the same failure NG-0001 guards against, one layer out. HTML/PDF/CSV/ReqIF generation and foreign-list import were carried as approved-but-unratified scope that contradicted the ratified architecture (SR-0094 injects Markdown; SR-0089 rejected even a whole-document Markdown generator so the core could stay pure). Recording the boundary as a first-class non-goal is the object a reviewer points at to reject that scope, and the ratified intent the withdrawals trace to.
 
-**origin**: hybrid · **ratified_by**: Henry Grech-Cini
+**origin**: hybrid · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:b561f9b71646b36c9311b485fb58ba5dcbc9544006fcae43ecb21f16e92760f6 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item NG-0006 -->
@@ -115,7 +115,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 *Rationale:* A local preview server with live reload was carried as deferred scope (SR-0063) from before this boundary was drawn. A server is never a small addition — it brings a port, a process lifecycle to supervise, an asset pipeline, and a second route to the graph that must then be kept behaving identically to the CLI forever. It also pulls the core one layer further toward what NG-0001 and NG-0005 already refuse, a web document-management surface and HTML site generation. The estate already answers browser-shaped needs with separate products that compose the library — throughline-editor, throughline-ratify, throughline-console — so a runtime can be deployed, versioned and secured on its own terms while the core keeps no network surface to defend. Recording the boundary as a first-class non-goal is the object a reviewer points at to reject the next proposal to add a serve command, and the ratified intent that SR-0063's withdrawal traces to.
 
-**origin**: ai · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c01a6cdc13f9ea74b540fd5e2da84d90a30330277c7f99a3d5bfbdf86f2a6277 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 5. Target users

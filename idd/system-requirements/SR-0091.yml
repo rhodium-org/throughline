@@ -25,3 +25,5 @@ attrs:
   verification: test
   origin: ai
   ratified_by: henry
+  ratified_fingerprint: sha256:50662fb750e06c10eecac66cf9a1b691f0dc19773eed95f94deeb6155b9d8e89
+  ratified_backfilled: true

@@ -9,3 +9,5 @@ links:
   type: derives_from
 attrs:
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:fd4587ef0ed7edf4decbffd1ad41770577e725f045c41a9a198d206cdb900bc7
+  ratified_backfilled: true

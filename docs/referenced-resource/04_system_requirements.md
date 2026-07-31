@@ -20,7 +20,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0001
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2404f590f4ccc0231bae2517ed856b6ab701aeae38c636927ac1ee1248ee719b · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0002 -->
@@ -32,7 +32,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0001
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a4fe2abd2b9bf418db648eee3966fb61512749da3b311797fb569b8dd2b9aaf0 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0003 -->
@@ -42,7 +42,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0001, UR-0002
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8fd1cb950252f998f404ea09fb19a97c6299e05c9fc53749590007adaa84c5f4 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0004 -->
@@ -52,7 +52,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0001, UR-0002
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2d42489883ca2ed7f400d8f3c9bdf28272f822a8b0fadb2463f0e5984f6df48a · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0005 -->
@@ -62,7 +62,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0002
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:5cd2b38368cc47515629a1f75cc0b812ddca6931c263dd06bd555e71eb762cd9 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0006 -->
@@ -74,7 +74,7 @@ example of the tombstone convention.
 
 *Implements:* UR-0014
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d9a77df47ae94d2b3697b07294254d5f8247f720f04d134a9c84a5a44666edee · **ratified_backfilled**: True
 <!-- tl:end -->
 
 **SR-0007 — RETIRED (tombstone).**
@@ -91,7 +91,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0001
 
-**priority**: could · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: could · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:247711573ee75264493d80cdbe7c770f565abbbcd697434455e23fc989b8b076 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0093 -->
@@ -103,7 +103,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0014
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:75b09645e76acb7972e2e4020d5d03112046ef25192d3f637dc69798b009bc2c · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 2. Data model, storage, and editing
@@ -115,7 +115,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0007, UR-0014
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c0ecede6febc1bfa138a6ce24e42045da7349d87d54ec207868c4da08dfbb681 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0011 -->
@@ -125,7 +125,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8b1008f776ba9f70795731e1ebfa020ad407f72d07e450adcde9c352612f3994 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0012 -->
@@ -135,7 +135,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0002, UR-0003
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:1183069c7bcd45f72aef059bb38644aae215e2aabefe3104ad1738737611abc6 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0013 -->
@@ -145,7 +145,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0002
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d61c7959cb92a7d12946e144ab7e4f0bc9b66f58beedb539c4fc6b0f829a166f · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0014 -->
@@ -155,7 +155,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0020
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:9c57baeb8c11090b6fe3123251fff9f07935849f43f295b9d13f1bde566cb510 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0015 -->
@@ -165,7 +165,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:0df5bd702b78df1b61b0a316ab3c1ded895e033ee3918ad2e035def890d9290a · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0016 -->
@@ -187,7 +187,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0020
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:47dbb7c71293204deda80d520711e92762ffe9511403177e5e9e8463c1c6de85 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0100 -->
@@ -199,7 +199,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0020
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c81aac555ebecbaa6cc3fc21291cba6366ef483a9aa8e5c82fbb4a148072a9d8 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0101 -->
@@ -211,7 +211,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0001
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:6b4384c61935dd3bac85ec3d269185ec15d85b7884a188ea9e497817140518f2 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0102 -->
@@ -223,7 +223,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0020, UR-0022
 
-**origin**: human · **priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a51d44ec51422f216e2ef91906db40ae29c2d61e977ad2abb99cd2e39099fa8a · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0103 -->
@@ -237,7 +237,7 @@ kept as a live example of the tombstone convention.)*
 *Refines:* SR-0045
 *Relates:* NFR-0022
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:ce2066654165e79188642214cb1ced3607aa66c44be241a35ac96d597a90ba15 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 3. Attributes and schema
@@ -249,7 +249,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8bace9eff43299439cf6bc2bbb84c6b93e4db645ba006491781761e37b590c05 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0021 -->
@@ -259,7 +259,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:944f23197b32c7e06f0ee88cc4ff0f3f7e0d63dd79f3610e95ea00634310edb0 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0022 -->
@@ -269,7 +269,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:16fa361a8e716ad860313cd24e7af8682fb55f9622dbe1f970ac75ea4e15892f · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0023 -->
@@ -279,7 +279,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e18cd4d7d6e558b5571c11ebfb06ec3b382780ab96c640921a28a8fb4822dcaa · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0024 -->
@@ -289,7 +289,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:864eb58286b6ed59e50c170ecc6e3ab9384c887668b58989c39955366542dfbe · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0080 -->
@@ -299,7 +299,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:1a41f10e6d85d469d42f36aef562cf8adaf9601cbb4dfba0e320e36fd3c725fa · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0081 -->
@@ -309,7 +309,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d9998bdad111c61259852cad8e43991b4893774fad6e500cc486dd54ec138ae7 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0082 -->
@@ -319,7 +319,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:64389d43aca69d7dc0b4a9f54d12284df11cbed5e9934927dd0df14b044db9e9 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0083 -->
@@ -329,7 +329,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c6b9c98992e3737bdc3c7d56ec0d8571fa93cf684fa592b97c245858b8568b6e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 4. Links and traceability
@@ -341,7 +341,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0004
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:dc2e50624803c7100c9fb3537af59a1db592ac68c7749c36db31f655eaaed5ff · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0031 -->
@@ -351,7 +351,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0004
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:4e8eda2bf38a2b9034d6b7afaae01b687b5caf2673036305805e945db82b5cbe · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0032 -->
@@ -361,7 +361,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0004, UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:3ea9b09db3c5faa0c2e0bffd35264cb4da4d651eff65d91c95146a93549c8e01 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0107 -->
@@ -375,7 +375,7 @@ kept as a live example of the tombstone convention.)*
 *Refines:* SR-0032
 *Relates:* SR-0031
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:02525c21bb3a60c1b3d82a71b0611c1dffde952e5b79c5b5df3de192f524a8e9 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0108 -->
@@ -389,7 +389,7 @@ kept as a live example of the tombstone convention.)*
 *Refines:* SR-0107
 *Relates:* SR-0031
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:ca3c3910954dc8b7962d40d40ccd5835a4f2fda2a47fa142466f43d7ca48ca1a · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0033 -->
@@ -399,7 +399,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0005, UR-0006
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:66c9383dee91822a2819ca9646631ff38217cae8d86bdcd6994d3597917fa771 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0034 -->
@@ -409,7 +409,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0005
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8093147342e18ed00c7e6c7a839a47997497806305ce4bb63c0e29ae2dc2484e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0035 -->
@@ -419,7 +419,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d60e16789f16a4e6c68df9150ec3a9e0bb0177ffb86b494b1e118b3246186c96 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0036 -->
@@ -429,7 +429,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0013
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:f3e8553441932ec0703fa401d7d3b9e20052d0675dc9cbd9f13696cffd8b7127 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0037 -->
@@ -439,7 +439,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0003
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:81400df5cc81833f0a1e2e9cc09653ec2f6ec830563fa562edc24b0a8e1d285e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0038 -->
@@ -449,7 +449,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0006
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:700249574dc916887cb64c79a85d30d1d72dd839004b4df449c866bc31b47bc0 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0084 -->
@@ -459,7 +459,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:3553c92f9a0997f0e2418c34a16302cbeecb6212812f623a5798bc4c3f7857f5 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0085 -->
@@ -469,7 +469,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:018c5dda6da033568664012bf21dd2df885100ae1cb52c73740e03cc2e776606 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 5. Validation, quality, and CI
@@ -481,7 +481,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e0c77a33097df3f371ee9945f29188da06110338a0ee16dc3e99e9b267f8cc07 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0041 -->
@@ -491,7 +491,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:9be79ddbaad4c85bd81c8efbceafff0bafe4ebea11d8bd356143c0636dfea457 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0042 -->
@@ -501,7 +501,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:f2b818075f87cf68eae7c05ce3da1241e276aba4557b9d0ee581788a07e56ec1 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0043 -->
@@ -511,7 +511,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0017
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:ffb01fced4b5b6d2cc3e948807f3c0074474589fe0d43a78b420e06fd2e8ddef · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0044 -->
@@ -521,7 +521,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c56ce4c3ec404534f5c35742e74c33a5d68279dbf93c0e029ab0c49e6de6a6f2 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0078 -->
@@ -531,7 +531,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:9372a977ff049f98562f9b6c80c02915e5fe4f51d89349dc53a57bf1526b30fc · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 6. Search, filter, and query
@@ -543,7 +543,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0010
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c052063548a289eae98266972c638eb12fbc4d2f53e14aa6d8d58989ac5e901d · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0104 -->
@@ -557,7 +557,7 @@ kept as a live example of the tombstone convention.)*
 *Refines:* SR-0045
 *Relates:* SR-0103
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d8899288ed9b814ff340d69b9d5d2b6f0c1a99f189ee27c18e4667a65abf46df · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0105 -->
@@ -570,7 +570,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0010
 *Refines:* SR-0045
 
-**origin**: human · **priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:1638d8fe12d46fb24e9e829a0b7033f39d038cac709fc0832625d025142d22fe · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0106 -->
@@ -583,7 +583,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0010
 *Refines:* SR-0045, SR-0104
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:714ae90129c44383fb0dab36f056879f31e5448c2294396984095cae350875ad · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0046 -->
@@ -593,7 +593,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0010
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:86fd0ed4e56ce53010a7491c4fb8136a8894bb71bfa69a0b48185dd9f568de81 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0079 -->
@@ -603,7 +603,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0010
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:127a078b4a273033330bd2e437ec84b02c55b612f38c63537868ded6054fc7eb · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 7. Publishing and reporting
@@ -629,7 +629,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0004, UR-0012
 *Relates:* NG-0005
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:fcd02f4ba9d1981a775822c98bb879ecb7e3555f3224b240199d4e6c9a790f1b · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0052 -->
@@ -639,7 +639,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8f4f0a1b4a22eab51d7c29cb95de5d5f8611307ad0ea771460a0e4515df634c8 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0053 -->
@@ -662,7 +662,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8462ce80df53046f13f99f41451a3f40dfc6ec9bfad6cfcbeb121f64dec5d5fd · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0090 -->
@@ -672,7 +672,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0013
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:bce559288995b9d5009d119914cb5a7502870b5ae0c6b76593e8e000d5ffe763 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 8. Import and export
@@ -697,7 +697,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:12b9fa2fc0ba0b5fe0819c8adf1804fb515f7c1c59c4dcd36d889344913d97a1 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0056 -->
@@ -720,7 +720,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0008
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:3d18f193b32c34d3cc62813d06538949dd2dc5d89b31bc297b7236feaaad5163 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 9. Interfaces
@@ -732,7 +732,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:333b511351a6d9f6d3ef5aac34ab093d51489e3bc55cf6b813cd753145117f58 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0061 -->
@@ -742,7 +742,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e86d704215478c423afd404a994efe988b41f608aa86bee7ae066e63add034be · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0062 -->
@@ -754,7 +754,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0019
 
-**priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: could · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:bc8b485bbe649cac0b082a271c89391572678ac2a08166037f9ca150b89d88b8 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0063 -->
@@ -775,7 +775,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0020
 
-**priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:9a9656e336207111efd34be68a5569956e9c31391bb1820ebd72aa8ff789ee66 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0075 -->
@@ -785,7 +785,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0021
 
-**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:f67fbe1fefd9d1ec9ac1db61bccdf8eece65ad26ceebee2eba4864117b6f6429 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0076 -->
@@ -795,7 +795,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0016
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:41d300c860435d5e439fe4f775cee5643d6c1a1524b11a4d06530c8dc4a5836e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 10. Configuration and extensibility
@@ -807,7 +807,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d4327fc79a699b244ba1233c55afd71634ed21160d28c9ce57f2f00317568e07 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0071 -->
@@ -818,7 +818,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0015
 *Relates:* NG-0005
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2599060d60ad782991d72fbbfe44f7bca7ee2ec195668e230b3c22b5ca7e4fa5 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0072 -->
@@ -828,7 +828,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0007, UR-0014
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d788e88c5e0b745b6ba432266bdf5c98df33d7f054fdfeb910259cc80f6768e2 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 11. Grounding and intent-driven development
@@ -840,7 +840,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0017
 
-**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:04bd3bae10ef7068fe3935774ca0f280db20fb120325a82279e6b7e79d64ace2 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0091 -->
@@ -851,7 +851,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0017
 *Relates:* SR-0073
 
-**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: henry
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: henry · **ratified_fingerprint**: sha256:50662fb750e06c10eecac66cf9a1b691f0dc19773eed95f94deeb6155b9d8e89 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0092 -->
@@ -861,7 +861,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0023
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a9c5cb97184eb22dc6aeea12f2069950976a2e20646af92416b0a5f4c0a908da · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0097 -->
@@ -873,7 +873,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0025
 
-**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:90e09a148ff3e230b4a6ab1266879c348e77baca08b3d825c42f921908d8643e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0098 -->
@@ -885,7 +885,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0023
 
-**origin**: ai · **priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:76d4678387b7f4a443f80970c16db903b65648d5292457ba6244c5d4d062ad3d · **ratified_backfilled**: True
 <!-- tl:end -->
 
 ## 12. Narrative documents and agent interfaces
@@ -897,7 +897,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0022
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e349de33a5c4e77d6c2d1d700a84d48cc1179485d2b3bbea3317d824f2e2c675 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0094 -->
@@ -909,7 +909,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0024
 
-**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8390cdf39d9ebfe1c5ad091774440c5402b7b55c6c4b733c663f2aee3ae2292f · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0095 -->
@@ -921,7 +921,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0024
 
-**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:0455527bd05536468184605bb738ec8933bd174d9d7bfa23351cf9a89ea09e4d · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0096 -->
@@ -933,7 +933,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0012
 
-**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:38b3088e8164fe298c36a008ea98a185ae09638e08accec0498a58551bbb55e3 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0099 -->
@@ -945,7 +945,7 @@ kept as a live example of the tombstone convention.)*
 
 *Implements:* UR-0004
 
-**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2252f42a35a747f0f4279aaf309dde23c322069c9c57bd587ba99c25b58d6dc7 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0109 -->
@@ -958,7 +958,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0024
 *Refines:* SR-0094
 
-**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:dd969e05c3489fdc024b498515f7b2bec267e60a4f78de1e6315b1979381b733 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0138 -->
@@ -971,7 +971,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0011
 *Refines:* SR-0020
 
-**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:cbe42d0673cf1dda1811c75110072adc4ff045bca167e3c7e9be7b6e7b173603 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0139 -->
@@ -984,7 +984,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0016
 *Refines:* SR-0060
 
-**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e4533a89e1e38814029ba94a54efcf66e101d911a09c659d5b51c9a45ec48f85 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0140 -->
@@ -997,7 +997,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0001
 *Refines:* SR-0002
 
-**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:5b7fcd4f7b9eef1312919f729c8586034cea52dc7b85b68b21ff861e9903a6b5 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0141 -->
@@ -1010,7 +1010,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0023
 *Relates:* SR-0092
 
-**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c2f6c55d3a409179eb3ddea61549ae175fbf0fb953d1e26dcb7ead64161ef248 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0142 -->
@@ -1023,7 +1023,7 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0011
 *Refines:* SR-0020
 
-**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:5f459f2950b354b24f3f2034c456bf2a1a9bfeddd5062be746493f01722d82bc · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item SR-0143 -->
@@ -1036,5 +1036,5 @@ kept as a live example of the tombstone convention.)*
 *Implements:* UR-0004
 *Refines:* SR-0030
 
-**priority**: should · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:b5158a6e3ac7224387bacd4882d04ddc535f4c0c5535e470a1145c11cde08e57 · **ratified_backfilled**: True
 <!-- tl:end -->

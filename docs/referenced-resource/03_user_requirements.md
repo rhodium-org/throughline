@@ -18,7 +18,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0001
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:b3eeba01ea0e28e2b95daf75f0f343dc81a4177aae4a6ca0207ae9ff8f19befc · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0002 -->
@@ -28,7 +28,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0001
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0003 -->
@@ -38,7 +38,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:7e5180cb8813d61f4d77490a595398d4aeb7f319e3cc9cf2884cde4aa6eb1847 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0004 -->
@@ -48,7 +48,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:8127d87c75bef2180ebf1a9a582f3ba89815c9b9c135b372230287f1a5a9f19d · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0005 -->
@@ -58,7 +58,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:622befb765b1d84b41de0eebdf636473bd88090331ff16f80904593514256666 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0006 -->
@@ -68,7 +68,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c563b661cdb2a94406e7bbb5c6cf7d909d8af2b6a30365133ee1464778059478 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0007 -->
@@ -80,7 +80,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0002
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a142dc26e095a614394ccaabb32235f72c3d8928efa386fdf10fc720f4eed001 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0008 -->
@@ -90,7 +90,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0005
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:33387e612660a23f123a1a1709f3d2dedf40d20065a2e6cac1dab30ea15b54cd · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0009 -->
@@ -113,7 +113,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a3eac3ac57b6a12fe478218c00ef06674f1654405607364ad9bf53434f6e6395 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0011 -->
@@ -123,7 +123,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:12a2bf79cfbb5778fde33bab6be4db7948813f1c834a5bd498c6275727c9d228 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0012 -->
@@ -133,7 +133,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0003
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a1d81cfa3672f6bf2fc99e519986c8144f68a9df445526ba2b6f8136832d6320 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0013 -->
@@ -143,7 +143,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0004
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:87f6eadcadd03f5734f0e53c6fcdf930cba7e135237f6fa7999b6ef31c68da03 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0014 -->
@@ -153,7 +153,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0002
 
-**priority**: must · **verification**: analysis · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: analysis · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:18e7df8d1dd5bd3f56b8add85faf141ea7a9cd6af84827efd6e56719a12385c6 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0015 -->
@@ -163,7 +163,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0006
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:12e5411c13dd4a0d3af1e4ef5211bda7029deb57e1e4c1924bc35193b88a9033 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0016 -->
@@ -173,7 +173,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0007
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d6b8e3d3df4f70a813778c3c4c46b383ed1539ca61d524e53d5eb2dc15f675f8 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0017 -->
@@ -183,7 +183,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:05fe66b71560b76d313c4c922073f7105c2f4ce1f12fb2d0e4cdda6aadbb3110 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0018 -->
@@ -219,7 +219,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0021 -->
@@ -229,7 +229,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0010
 
-**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:bf5565fe37c70954cc310bc061e6718cedc7fee5f969c565e733f157cb90563d · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0022 -->
@@ -239,7 +239,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0008
 
-**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:25aa29e88040289648e9527d78083b224ac7750d49e4a59b9be0004b61a93e5b · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0023 -->
@@ -249,7 +249,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:b7702ba187402b838e970a22cdf45dbdc81a52d62e48a15871ce30c73cc111be · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0024 -->
@@ -261,7 +261,7 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0005
 
-**origin**: ai · **priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:6bd289507d64c1f76a85e1abc80011907b103ec52bb6c637b099858b5dcac728 · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0025 -->
@@ -273,5 +273,5 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0003
 
-**origin**: ai · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini
+**origin**: ai · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:d0027a121c44d10491bc5b043d2c83eba0294fc96f6331fe2ce94bf0f758369a · **ratified_backfilled**: True
 <!-- tl:end -->

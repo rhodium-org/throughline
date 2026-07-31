@@ -9,3 +9,5 @@ text: 'A requirement is a permanently identified, individually versioned object.
 normative: false
 attrs:
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f075e0cfb318ffafbb89c2ae4ecf7925f8ac61f0cba9d99839f7c6871534d205
+  ratified_backfilled: true

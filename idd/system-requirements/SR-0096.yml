@@ -2,12 +2,12 @@ uid: SR-0096
 type: system_requirement
 status: ratified
 title: Publication coverage (unpublished)
-text: The Tool shall report, as unpublished, any live normative item referenced by no
-  published document, once published-document paths are configured. The finding shall
-  default to warning severity and be inert when no document paths are configured. A
-  terminal-status item (rejected or deleted) is not live scope — it need never reach a
-  reader — and shall be excluded from the rule, using the same terminal-status set as
-  the invalidate cascade so "live" means one thing across the tool.
+text: The Tool shall report, as unpublished, any live normative item referenced by
+  no published document, once published-document paths are configured. The finding
+  shall default to warning severity and be inert when no document paths are configured.
+  A terminal-status item (rejected or deleted) is not live scope — it need never
+  reach a reader — and shall be excluded from the rule, using the same terminal-status
+  set as the invalidate cascade so "live" means one thing across the tool.
 rationale: The publication analogue of orphan — scope that cannot justify itself
   and also cannot hide from the reader. Doorstop, StrictDoc and Sphinx-Needs all
   transclude but none gate on it; this is the differentiator.
@@ -20,3 +20,5 @@ attrs:
   priority: should
   verification: test
   ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:38b3088e8164fe298c36a008ea98a185ae09638e08accec0498a58551bbb55e3
+  ratified_backfilled: true
