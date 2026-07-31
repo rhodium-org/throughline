@@ -157,19 +157,29 @@ def cmd_migrate(args) -> int:
         return _err(str(e))
     if result.start != result.end:
         print(f"migrated project from format version {result.start} to {result.end}")
-        return OK
-    if result.repaired is None:
-        print(f"already at format version {result.end} — nothing to migrate")
-        return OK
-    # Already at this major, but missing configuration the major requires —
-    # repaired in place. Name every binding written so the change is never
-    # silent and the operator can correct it (SR-0137).
-    print(f"already at format version {result.end} — backfilled [status.roles]")
-    for role, status in result.repaired.items():
-        print(f'  {role} = "{status}"')
-    if not result.repaired:
-        print("  (no declared status matched a role — bind them yourself, and "
-              "leave out any role your statuses have no honest counterpart for)")
+    elif result.repaired is None:
+        print(f"already at format version {result.end}"
+              + ("" if result.bound else " — nothing to migrate"))
+    else:
+        # Already at this major, but missing configuration the major requires —
+        # repaired in place. Name every binding written so the change is never
+        # silent and the operator can correct it (SR-0137).
+        print(f"already at format version {result.end} — backfilled [status.roles]")
+        for role, status in result.repaired.items():
+            print(f'  {role} = "{status}"')
+        if not result.repaired:
+            print("  (no declared status matched a role — bind them yourself, and "
+                  "leave out any role your statuses have no honest counterpart for)")
+    # Records the repair completed. Named for the same reason the config bindings
+    # are, and more so: this wrote to an accountability record, so an operator who
+    # disagrees with a stamp must be able to see which item carries it (SR-0152).
+    if result.bound:
+        print(f"bound {len(result.bound)} ratification record(s) that named a "
+              "ratifier but carried no fingerprint — each marked "
+              "`ratified_backfilled` because it attests to the content as it "
+              "stands now, not to what the ratifier read:")
+        for uid, stamp in result.bound.items():
+            print(f"  {uid} = {stamp}")
     return OK
 
 

@@ -2577,6 +2577,150 @@ def test_migrate_leaves_declared_empty_status_roles_untouched(tmp_path):
     assert cfg.read_text(encoding="utf-8") == before  # not rewritten or duplicated
 
 
+# -- migration binds an unstamped ratification record (SR-0152) -------------- #
+
+def _legacy_ratified(root: Path, uid: str, by: str, *, status: str | None = None,
+                     **attrs) -> None:
+    """Put an item into the shape a graph ratified before the fingerprint existed
+    carries on disk (SR-0148 arrived after the signature): a status and a named
+    ratifier, but no stamp binding that name to what was signed."""
+    project = load_project(root)
+    item = project.get(uid)
+    item.status = status or project.schema.status_role("ratified")
+    item.attrs["ratified_by"] = by
+    item.attrs.update(attrs)
+    item.attrs.pop("ratified_fingerprint", None)
+    write_item(item)
+
+
+def _unstamped_project(tmp_path, by: str = "alice") -> Path:
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init"]) == 0
+    _legacy_ratified(root, "REQ-0001", by)
+    return root
+
+
+def test_migrate_binds_a_ratification_record_that_has_no_fingerprint(tmp_path):
+    """A record naming a ratifier but carrying no stamp proves who accepted the item
+    and not what they accepted. `tl migrate` — the command that already repairs the
+    rest of the major — completes it, and marks it as bound retrospectively so it
+    stays distinguishable from a stamp written at sign-off (SR-0152)."""
+    root = _unstamped_project(tmp_path)
+    result = migrate_project(root)
+
+    assert list(result.bound) == ["REQ-0001"]
+    item = load_project(root).get("REQ-0001")
+    assert item.attrs["ratified_fingerprint"] == result.bound["REQ-0001"]
+    assert item.attrs["ratified_fingerprint"].startswith("sha256:")
+    assert item.attrs["ratified_backfilled"] is True
+
+
+def test_the_bound_stamp_is_the_fingerprint_of_the_content_on_disk(tmp_path):
+    """It is a real fingerprint of the item, not a placeholder — so the drift rule
+    that was silent over the whole back catalogue starts working on it (SR-0152)."""
+    root = _unstamped_project(tmp_path)
+    migrate_project(root)
+    project = load_project(root)
+    item = project.get("REQ-0001")
+    assert item.attrs["ratified_fingerprint"] == fingerprint(item, project.schema)
+
+    findings = validate(project, strict=True)
+    assert not [f for f in findings if f.rule == "ratified-stale"]
+    item.text = "materially different wording nobody signed off"
+    write_item(item)
+    stale = [f for f in validate(load_project(root), strict=True)
+             if f.rule == "ratified-stale"]
+    assert [f.uid for f in stale] == ["REQ-0001"]
+
+
+def test_migrate_reuses_the_recorded_ratifier_and_never_reattributes(tmp_path):
+    """The repair completes an accountability record; it must not author one. The
+    ratifier already on the item is reused verbatim and there is no way to pass a
+    substitute — a sweep that stamped everything with one name would silently
+    reattribute hundreds of sign-offs (SR-0152)."""
+    root = _unstamped_project(tmp_path, by="j.doe@example.org")
+    migrate_project(root)
+    assert load_project(root).get("REQ-0001").attrs["ratified_by"] == "j.doe@example.org"
+    with pytest.raises(SystemExit):     # no seam through which to name anyone else
+        _cli(["-C", str(root), "migrate", "--by", "someone.else"])
+
+
+def test_migrate_leaves_an_already_bound_record_untouched(tmp_path):
+    """Idempotent, like every repair the chain runs (SR-0137): a bound record carries
+    a fingerprint, so it never matches again — and a second pass cannot restamp a
+    record whose content moved after sign-off, which would bless the drift."""
+    root = _unstamped_project(tmp_path)
+    first = migrate_project(root).bound["REQ-0001"]
+    assert migrate_project(root).bound == {}
+
+    project = load_project(root)
+    item = project.get("REQ-0001")
+    item.text = "changed after the human signed it off"
+    write_item(item)
+    assert migrate_project(root).bound == {}
+    assert load_project(root).get("REQ-0001").attrs["ratified_fingerprint"] == first
+
+
+def test_migrate_does_not_bind_an_item_it_could_not_legitimately_ratify(tmp_path):
+    """Legitimacy is decided by the same predicate `ratify` refuses on, so the repair
+    cannot complete a record the Tool would not have written in the first place — an
+    ambiguous item is passed over, stamp and all (SR-0152)."""
+    root = _unstamped_project(tmp_path)
+    _legacy_ratified(root, "REQ-0001", "alice", ambiguous=True)
+    assert migrate_project(root).bound == {}
+    item = load_project(root).get("REQ-0001")
+    assert "ratified_fingerprint" not in item.attrs
+    assert item.attrs["ratified_by"] == "alice"   # the record is left exactly as found
+
+
+def test_migrate_binds_a_record_whose_item_has_moved_past_ratification(tmp_path):
+    """An item that went on to `implemented` still carries the signature it was given,
+    and that signature is just as unbound. The repair writes no status, so the record
+    is completed without moving the item — the fingerprint covers normative content,
+    which the workflow move did not touch (SR-0152)."""
+    root = _unstamped_project(tmp_path)
+    _legacy_ratified(root, "REQ-0001", "alice", status="implemented")
+    assert list(migrate_project(root).bound) == ["REQ-0001"]
+    assert load_project(root).get("REQ-0001").status == "implemented"
+
+
+def test_migrate_ignores_an_item_that_names_no_ratifier(tmp_path):
+    """Nothing is inferred about who signed off. An item with no ratifier has no
+    record to complete, so the repair invents neither a name nor a stamp (SR-0152)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init"]) == 0
+    assert migrate_project(root).bound == {}
+    assert "ratified_fingerprint" not in load_project(root).get("REQ-0001").attrs
+
+
+def test_migrate_names_every_record_it_bound_on_the_cli(tmp_path, capsys):
+    """The change is never silent: it wrote to an accountability record, so the
+    operator must be able to see which item now carries a backfilled stamp and say
+    so if they disagree (SR-0152, mirroring SR-0137)."""
+    root = _unstamped_project(tmp_path)
+    assert _cli(["-C", str(root), "migrate"]) == 0
+    out = capsys.readouterr().out
+    assert "REQ-0001 = sha256:" in out
+    assert "ratified_backfilled" in out
+    assert "nothing to migrate" not in out   # something *was* done
+
+
+def test_migrate_binds_records_on_a_project_that_also_needs_upgrading(tmp_path):
+    """The two halves of the repair run in order on one command: a project still on
+    an older major is upgraded, its [status.roles] backfilled, and its unbound
+    records completed in the same pass — which is the whole estate's case (SR-0152)."""
+    root = _unstamped_project(tmp_path)
+    _strip_status_roles(root)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        f"format_version = {FORMAT_VERSION}", "format_version = 2"), encoding="utf-8")
+
+    result = migrate_project(root)
+    assert (result.start, result.end) == (2, FORMAT_VERSION)
+    assert list(result.bound) == ["REQ-0001"]
+    assert load_project(root).schema.status_role("ratified") == "ratified"
+
+
 def _v3_project(config_extra: dict | None = None) -> Project:
     """An empty in-memory project pinned to the current major, with no [status.roles]
     unless the caller adds one — the shape the gate must flag (SR-0136)."""

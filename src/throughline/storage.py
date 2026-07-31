@@ -22,6 +22,9 @@ from typing import NamedTuple
 
 import yaml
 
+from .fingerprint import fingerprint
+from .graph import Index
+from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
 
@@ -195,6 +198,73 @@ def _append_status_roles(cfg_file: Path, roles: dict[str, str]) -> None:
     cfg_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _backfill_ratification_stamps(root: Path) -> dict[str, str]:
+    """Bind a ratification record that names a ratifier but carries no
+    fingerprint (SR-0152). Returns ``uid -> fingerprint`` for every record bound.
+
+    The stamp tying a signature to the content signed (SR-0148) arrived after most
+    graphs were already written, so an item ratified before it proves *who*
+    accepted the item but not *what* they accepted, and the drift finding stays
+    silent over it forever. This heals that backlog through the one command that
+    already repairs the rest of the major's configuration, so a consumer gets it
+    by upgrading rather than by knowing some script exists.
+
+    Three things it will not do:
+
+    * **Reattribute.** The ratifier already recorded on the item is reused
+      verbatim and no substitute is accepted, so the repair can only *complete* an
+      accountability record, never author one or move it to someone else.
+    * **Sign the unsignable.** Legitimacy is decided by
+      :func:`~throughline.grounding.ratification_refusal` — the same predicate
+      ``ratify`` refuses on — so an ambiguous or ungrounded item is passed over.
+    * **Move an item.** No status is written. An item whose status has since moved
+      on past ratification keeps both its record and its current state; the
+      fingerprint covers normative content only, which the move did not touch.
+
+    Every record it writes is marked ``ratified_backfilled``, and that marking is
+    what keeps the repair honest: the Tool can fingerprint only the content as it
+    stands the day migration runs, and cannot know that is the content the ratifier
+    read. A stamp written at sign-off attests to words a human saw; this one
+    attests to what was on disk. Were the text to have drifted in between, an
+    unmarked backfill would quietly bless the drift — precisely the failure the
+    stamp exists to catch — so the two must stay distinguishable forever.
+
+    Idempotent: a bound record carries a fingerprint and so never matches again.
+    """
+    project = load_project(root)
+    schema = project.schema
+    idx = Index.build(project)
+    bound: dict[str, str] = {}
+    for item in project.items():
+        if not item.attrs.get("ratified_by") or item.attrs.get("ratified_fingerprint"):
+            continue
+        if ratification_refusal(schema, idx, item) is not None:
+            continue
+        stamp = fingerprint(item, schema)
+        item.attrs["ratified_fingerprint"] = stamp
+        item.attrs["ratified_backfilled"] = True
+        write_item(item)
+        bound[item.uid] = stamp
+    return bound
+
+
+class RepairResult(NamedTuple):
+    """What a major's repair wrote: the configuration bindings it backfilled
+    (SR-0137), and the ratification records it bound (SR-0152)."""
+    config: dict[str, str] | None
+    stamps: dict[str, str]
+
+
+def _repair_status_roles_major(root: Path) -> RepairResult:
+    """The repair for the major that requires [status.roles] (SR-0137, SR-0152).
+
+    Ordered, not merely grouped: the record backfill resolves the project's
+    schema, so the configuration the major requires has to be in place before it
+    runs. Both halves are idempotent, so the pair is."""
+    return RepairResult(_backfill_status_roles(root),
+                        _backfill_ratification_stamps(root))
+
+
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
 # the project tree in place to the next major. `tl migrate` walks this chain from
 # the on-disk major to the current one (NFR-0010).
@@ -206,8 +276,8 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 # through the upgrade that introduces the major's required configuration, so the
 # chain above cannot reach it; the repair brings it to what the major requires.
 # Each must be idempotent — it runs on every `tl migrate`, sound project or not.
-_REPAIRS: dict[int, Callable[[Path], dict | None]] = {
-    STATUS_ROLES_MAJOR: _backfill_status_roles}
+_REPAIRS: dict[int, Callable[[Path], RepairResult]] = {
+    STATUS_ROLES_MAJOR: _repair_status_roles_major}
 
 
 def _rewrite_format_version(cfg_file: Path, version: int) -> None:
@@ -233,10 +303,18 @@ class MigrationResult(NamedTuple):
     destination major applied on the way (SR-0137). ``repaired`` is ``None`` when
     no repair wrote anything — the project was already sound — and otherwise the
     bindings written, which may legitimately be empty when no declared status
-    matched a role and the repair recorded that as an empty table."""
+    matched a role and the repair recorded that as an empty table.
+
+    ``bound`` maps ``uid -> fingerprint`` for every ratification record the repair
+    completed (SR-0152), and is empty when there was nothing to bind. It is
+    reported separately from ``repaired`` because the two are different kinds of
+    change — one corrects configuration, the other writes to an accountability
+    record — and an operator reading the output should never have to guess which
+    they are looking at."""
     start: int
     end: int
     repaired: dict[str, str] | None
+    bound: dict[str, str]
 
 
 def migrate_project(path: str | Path) -> MigrationResult:
@@ -275,8 +353,8 @@ def migrate_project(path: str | Path) -> MigrationResult:
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
-    repaired = repair(root) if repair is not None else None
-    return MigrationResult(start, current, repaired)
+    result = repair(root) if repair is not None else RepairResult(None, {})
+    return MigrationResult(start, current, result.config, result.stamps)
 
 
 # ------------------------------------------------------------------- YAML dump

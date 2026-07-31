@@ -1,0 +1,47 @@
+uid: SR-0152
+type: system_requirement
+status: ratified
+title: Migration binds an unstamped ratification record, marked as backfilled
+text: The migration command's repair for the current format major shall bind any
+  ratification record that names a ratifier but carries no fingerprint, so a project
+  ratified before the stamp existed is repaired by the same single command that repairs
+  the rest of the major's configuration. The repair shall reuse the ratifier already
+  recorded on each item verbatim and shall accept no substitute, so no accountability
+  record is reattributed. A record it binds shall be marked as bound retrospectively
+  and remain distinguishable from one written at sign-off, because the Tool can fingerprint
+  only the content as it stands at migration and cannot know that is the content
+  the ratifier read. The repair shall remain idempotent, shall leave an already-bound
+  record untouched, shall not bind an item it could not legitimately ratify, and
+  shall name every item it bound so the change is never silent.
+rationale: The stamp binding a signature to the content signed arrived after most
+  graphs were already written (SR-0148), so every item ratified before it proves
+  who accepted the item but not what they accepted — hundreds of them in a mature
+  estate. Left alone that backlog never heals and the finding SR-0148 introduced
+  stays quiet over it forever, which is the same silence the stamp was built to end.
+  The repair belongs in migration rather than in a script beside it. Migration already
+  applies the current major's backfill to a project that never passed through the
+  upgrade introducing it (SR-0137), already guarantees idempotence, and already names
+  what it wrote so an operator can correct it. A script outside the Tool would be
+  a second implementation of decisions the Tool owns — which status counts as ratified,
+  and whether an item may be ratified at all — and throughline-ratify SR-0022 records
+  what becomes of those; they drift, and the record silently falls behind. Marking
+  a backfilled stamp is what keeps the repair honest. A fingerprint written at sign-off
+  attests to content a human read; one inferred at migration attests only to what
+  was on disk that day, and were the text to have drifted in between, an unmarked
+  backfill would bless the drift — precisely the failure the stamp exists to catch.
+  Recording which kind of stamp it is costs one field and preserves a distinction
+  that cannot be recovered later.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0137
+  type: refines
+- target: SR-0148
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:fddc97bac2d1e21467391e0eec49eed8cefd808c6ff5828d13562b841669ba66

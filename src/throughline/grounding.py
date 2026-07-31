@@ -43,6 +43,23 @@ def set_status(schema, item: Item, to: str) -> None:
     item.status = to
 
 
+def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
+    """Why ``item`` may not be signed off, or ``None`` when it may — the two
+    states that must not be ratified (scope-avalanche briefing §5).
+
+    Split out of :func:`ratify` so the migration repair that binds an unstamped
+    record (SR-0152) can decide what it may legitimately bind using *this*
+    implementation rather than a copy of it. A second copy of "what may be
+    accepted" is the same drift the ratification record exists to prevent, and
+    a repair that ran ahead of these rules would complete records the Tool would
+    refuse to write in the first place."""
+    if item.attrs.get("ambiguous"):
+        return f"{item.uid} is flagged ambiguous and cannot be ratified until clarified"
+    if not schema.is_root(item) and not reaches_root(idx, schema, item.uid):
+        return f"{item.uid} is not grounded to a root and cannot be ratified"
+    return None
+
+
 def ratify(project, uid: str, by: str, *, index: Index | None = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
@@ -60,11 +77,10 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None) -> Item:
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
-    if item.attrs.get("ambiguous"):
-        raise GroundingError(f"{uid} is flagged ambiguous and cannot be ratified until clarified")
     idx = index if index is not None else Index.build(project)
-    if not schema.is_root(item) and not reaches_root(idx, schema, uid):
-        raise GroundingError(f"{uid} is not grounded to a root and cannot be ratified")
+    refusal = ratification_refusal(schema, idx, item)
+    if refusal is not None:
+        raise GroundingError(refusal)
     # Ratifying an already-ratified item whose content has not moved accepts
     # nothing, and would replace the record of who accepted it leaving no trace
     # that it changed (SR-0148). An item ratified before the stamp existed has
