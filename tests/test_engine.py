@@ -280,7 +280,9 @@ def test_empty_graph_fails_rather_than_passing_vacuously(tmp_path):
     project whose manifests are gone loads zero items and every other rule passes
     vacuously."""
     root = _scaffold(tmp_path)
-    for manifest in root.rglob(".register.yml"):
+    # finish the walk before removing anything — deleting a directory out from
+    # under a live rglob raises FileNotFoundError on Python 3.11
+    for manifest in list(root.rglob(".register.yml")):
         shutil.rmtree(manifest.parent)
     p = load_project(str(root))
     assert next(p.items(), None) is None
