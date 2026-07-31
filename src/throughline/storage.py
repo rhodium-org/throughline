@@ -198,7 +198,8 @@ def _append_status_roles(cfg_file: Path, roles: dict[str, str]) -> None:
     cfg_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _backfill_ratification_stamps(root: Path) -> dict[str, str]:
+def _backfill_ratification_stamps(root: Path, *,
+                                  index: Index | None = None) -> dict[str, str]:
     """Bind a ratification record that names a ratifier but carries no
     fingerprint (SR-0152). Returns ``uid -> fingerprint`` for every record bound.
 
@@ -230,10 +231,22 @@ def _backfill_ratification_stamps(root: Path) -> dict[str, str]:
     stamp exists to catch — so the two must stay distinguishable forever.
 
     Idempotent: a bound record carries a fingerprint and so never matches again.
+
+    ``index`` supplies a prebuilt grounding index in place of the one built from
+    the project on disk (SR-0153), the same seam :func:`~throughline.grounding.ratify`
+    carries for the same reason (SR-0151). An item that reaches a root only through
+    a composed source reads as orphaned to the bare Tool, so the refusal above
+    rightly declines to complete its record — refusing to bind what it cannot
+    justify is this repair working, not failing. A composing tool *can* justify it,
+    and this is its route to the same result; without it, the only route would be a
+    copy of this function, and a repair that heals unbound records would be a
+    bitter thing to fork into a second implementation that writes them. Note what
+    the seam deliberately does not offer: the grounding view is all a caller may
+    vary, so it gains the completed record in full and cannot obtain a partial one.
     """
     project = load_project(root)
     schema = project.schema
-    idx = Index.build(project)
+    idx = index if index is not None else Index.build(project)
     bound: dict[str, str] = {}
     for item in project.items():
         if not item.attrs.get("ratified_by") or item.attrs.get("ratified_fingerprint"):
@@ -255,14 +268,18 @@ class RepairResult(NamedTuple):
     stamps: dict[str, str]
 
 
-def _repair_status_roles_major(root: Path) -> RepairResult:
+def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152).
 
     Ordered, not merely grouped: the record backfill resolves the project's
     schema, so the configuration the major requires has to be in place before it
-    runs. Both halves are idempotent, so the pair is."""
+    runs. Both halves are idempotent, so the pair is.
+
+    ``index`` reaches only the record backfill (SR-0153): a grounding view has
+    nothing to say about which declared status plays which role, so passing it to
+    the configuration half would imply an influence it does not have."""
     return RepairResult(_backfill_status_roles(root),
-                        _backfill_ratification_stamps(root))
+                        _backfill_ratification_stamps(root, index=index))
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -276,7 +293,7 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 # through the upgrade that introduces the major's required configuration, so the
 # chain above cannot reach it; the repair brings it to what the major requires.
 # Each must be idempotent — it runs on every `tl migrate`, sound project or not.
-_REPAIRS: dict[int, Callable[[Path], RepairResult]] = {
+_REPAIRS: dict[int, Callable[[Path, "Index | None"], RepairResult]] = {
     STATUS_ROLES_MAJOR: _repair_status_roles_major}
 
 
@@ -317,7 +334,8 @@ class MigrationResult(NamedTuple):
     bound: dict[str, str]
 
 
-def migrate_project(path: str | Path) -> MigrationResult:
+def migrate_project(path: str | Path, *,
+                    index: Index | None = None) -> MigrationResult:
     """Bring a project's on-disk format to what the current major requires
     (NFR-0010).
 
@@ -330,6 +348,12 @@ def migrate_project(path: str | Path) -> MigrationResult:
     introduces the major's required configuration, so the destination major's
     repair runs either way. Every repair is idempotent, so a sound project is
     still left untouched and reports nothing.
+
+    ``index`` is passed through to the destination major's repair (SR-0153), so a
+    composing caller can have a record judged against the union it grounds over
+    while migration still writes only to the project at ``path``. Omitted, the
+    index is built from that project and the behaviour is exactly as without the
+    argument.
     """
     root = Path(path)
     cfg_file = root / CONFIG_NAME
@@ -353,7 +377,7 @@ def migrate_project(path: str | Path) -> MigrationResult:
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
-    result = repair(root) if repair is not None else RepairResult(None, {})
+    result = repair(root, index) if repair is not None else RepairResult(None, {})
     return MigrationResult(start, current, result.config, result.stamps)
 
 

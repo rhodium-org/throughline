@@ -1,0 +1,41 @@
+uid: SR-0153
+type: system_requirement
+status: ratified
+title: The migration repair accepts a supplied grounding index
+text: The repair that binds an unstamped ratification record shall accept an optional
+  prebuilt grounding index and use it in place of the one it would build from the
+  project, so a tool that grounds an item over a wider graph than the one it writes
+  to can reuse the repair instead of reimplementing it. With no index supplied the
+  behaviour shall be exactly as now, the index being built from the project handed
+  to it. Every other decision the repair takes shall remain its own — which records
+  it may complete, reusing the recorded ratifier verbatim, marking a stamp as backfilled,
+  writing no status, and naming what it bound — so a caller gains the completed record
+  in full and has no way to obtain a partial one.
+rationale: SR-0151 opened exactly this seam on ratify, for exactly this reason, and
+  the repair introduced by SR-0152 is a second writer to the same accountability
+  record that does not yet have it. An item whose grounding chain reaches a root
+  only through a composed source reads as orphaned to the bare Tool, so the repair
+  rightly declines to complete its record — the Tool must not bind what it cannot
+  justify, and refusing is the requirement working rather than failing. But a composing
+  tool can justify it, and without this parameter its only route to the same result
+  is to copy the repair's body. That copy is what SR-0151 was written to prevent
+  — the ratify copy in throughline-ratify kept writing the ratifier alone after the
+  fingerprint arrived, leaving every item it signed bound to nothing. A repair that
+  heals unbound records would be a bitter thing to fork into a second implementation
+  that writes them. The seam is the smallest change that removes the reason to copy
+  — the grounding view is the only thing a composing caller needs to vary, and it
+  is not the composing tool's business to decide what a completed record contains.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0151
+  type: refines
+- target: SR-0152
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:e350049113c4435ebb931bf1311b56c9dc4cf3d7790ae488ab8b15c584f98d2e

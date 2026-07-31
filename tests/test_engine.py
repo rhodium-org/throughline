@@ -2721,6 +2721,107 @@ def test_migrate_binds_records_on_a_project_that_also_needs_upgrading(tmp_path):
     assert load_project(root).schema.status_role("ratified") == "ratified"
 
 
+# -- the repair accepts a supplied grounding index (SR-0153) ----------------- #
+
+def _grounded_through_a_source(root: Path, by: str = "alice", **attrs) -> Item:
+    """An item whose only path to a root leaves this graph — a consumer item
+    grounded on a clause of a standard it composes. On disk it is indistinguishable
+    from an orphan, which is why the bare Tool declines to complete its record."""
+    project = load_project(root)
+    reg = next(r for r in project.registers.values() if "REQ-0001" in r.items)
+    item = Item(uid="REQ-0002", type="requirement",
+                status=project.schema.status_role("ratified"),
+                title="Grounded on a borrowed clause",
+                text="Something this system shall do to satisfy a composed standard.",
+                links=[Link(target="base:RISK-0001", type="implements")],
+                attrs={"ratified_by": by, **attrs})
+    write_item(item, reg)
+    return item
+
+
+def _union_index(root: Path) -> Index:
+    """The grounding view a composing tool holds: this project's own items plus the
+    source items they borrow, indexed as one graph (SR-0153)."""
+    project = load_project(root)
+    reg = next(iter(project.registers.values()))
+    reg.items["base:RISK-0001"] = Item(
+        uid="base:RISK-0001", type="risk", status="approved",
+        title="A risk carried by the composed source")
+    return Index.build(project)
+
+
+def test_migrate_declines_a_record_it_cannot_justify_from_this_graph_alone(tmp_path):
+    """The bare Tool cannot see the borrowed parent, so the item reads as orphaned
+    and its record is passed over. This is the refusal working, not failing — and it
+    is the reason a composing caller needs a seam rather than a copy (SR-0153)."""
+    root = _unstamped_project(tmp_path)
+    _grounded_through_a_source(root)
+
+    bound = migrate_project(root).bound
+    assert "REQ-0002" not in bound          # declined
+    assert "REQ-0001" in bound              # everything justifiable still bound
+    assert "ratified_fingerprint" not in load_project(root).get("REQ-0002").attrs
+
+
+def test_migrate_binds_that_record_when_given_the_union_it_grounds_over(tmp_path):
+    """Supplied a grounding index that reaches the borrowed parent, the repair
+    completes the very record it declined without one — the composing tool reuses
+    the repair instead of reimplementing it (SR-0153)."""
+    root = _unstamped_project(tmp_path)
+    _grounded_through_a_source(root)
+
+    result = migrate_project(root, index=_union_index(root))
+    assert "REQ-0002" in result.bound
+    item = load_project(root).get("REQ-0002")
+    assert item.attrs["ratified_fingerprint"] == result.bound["REQ-0002"]
+
+
+def test_omitting_the_index_is_exactly_the_behaviour_without_the_argument(tmp_path):
+    """The seam is additive: with no index supplied the repair builds one from the
+    project handed to it, and binds precisely what it bound before (SR-0153)."""
+    plain = migrate_project(_unstamped_project(tmp_path / "a")).bound
+    explicit = migrate_project(_unstamped_project(tmp_path / "b"), index=None).bound
+    assert list(plain) == list(explicit) == ["REQ-0001"]
+
+
+def test_a_supplied_index_buys_the_whole_record_and_nothing_partial(tmp_path):
+    """The grounding view is all a caller may vary. Every other decision stays inside
+    the repair, so the record it gains is complete on the repair's terms: the recorded
+    ratifier verbatim, marked as backfilled, and no status written (SR-0153)."""
+    root = _unstamped_project(tmp_path)
+    _grounded_through_a_source(root, by="j.doe@example.org")
+
+    migrate_project(root, index=_union_index(root))
+    project = load_project(root)
+    item = project.get("REQ-0002")
+    assert item.attrs["ratified_by"] == "j.doe@example.org"
+    assert item.attrs["ratified_backfilled"] is True
+    assert item.status == project.schema.status_role("ratified")
+
+
+def test_a_supplied_index_cannot_make_the_repair_sign_the_unsignable(tmp_path):
+    """A wider grounding view answers only the grounding question. An item flagged
+    ambiguous is refused on the same predicate as before, so a composing caller
+    cannot widen its way past a refusal that was never about grounding (SR-0153)."""
+    root = _unstamped_project(tmp_path)
+    _grounded_through_a_source(root, ambiguous=True)
+
+    assert "REQ-0002" not in migrate_project(root, index=_union_index(root)).bound
+    assert "ratified_fingerprint" not in load_project(root).get("REQ-0002").attrs
+
+
+def test_migration_writes_only_to_the_project_it_was_given(tmp_path):
+    """Grounding over the union, writing to the consumer: the borrowed item is in the
+    index the repair judges by, and gains no file and no stamp of its own — the same
+    division of labour SR-0151 gave ratify (SR-0153)."""
+    root = _unstamped_project(tmp_path)
+    _grounded_through_a_source(root)
+
+    result = migrate_project(root, index=_union_index(root))
+    assert "base:RISK-0001" not in result.bound
+    assert not list(root.rglob("*RISK-0001*"))
+
+
 def _v3_project(config_extra: dict | None = None) -> Project:
     """An empty in-memory project pinned to the current major, with no [status.roles]
     unless the caller adds one — the shape the gate must flag (SR-0136)."""
