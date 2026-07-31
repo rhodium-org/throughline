@@ -806,10 +806,13 @@ tombstone = "deleted"
 # Allowed status moves (SR-0083). `tl check` compares each item against its
 # status in the previous commit and flags any change these do not permit. Delete
 # this table to leave every status freely reachable.
+# Every live status keeps a route to 'ratified' (SR-0150) — in particular the two
+# statuses below 'proposed' can move back to it, so scope that was authored or
+# parked without ratification can still be put forward for a human to accept.
 [transitions]
 proposed    = ["draft", "approved", "ratified", "deferred", "rejected", "deleted"]
-draft       = ["approved", "deferred", "rejected", "deleted"]
-deferred    = ["draft", "approved", "rejected", "deleted"]
+draft       = ["proposed", "approved", "deferred", "rejected", "deleted"]
+deferred    = ["proposed", "draft", "approved", "rejected", "deleted"]
 approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]

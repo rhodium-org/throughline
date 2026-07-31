@@ -1681,6 +1681,54 @@ def test_scout_ingest_proposes_roots_and_flags_ambiguity():
 
 # --------------------------------------------- config-driven status ops (SR-0130/0131/0132)
 
+def test_shipped_lifecycle_leaves_every_live_status_a_route_to_ratified(tmp_path):
+    """SR-0150 — a newly initialised project must not be able to strand an item in
+    a status from which no human can accept it. Walking the shipped [transitions]
+    table, every live status reaches the ratified role; a dead status is exempt."""
+    init_project(tmp_path, name="Example")
+    project = load_project(tmp_path)
+    schema = Schema.from_config(project.config)
+    moves = schema.transitions
+    ratified, dead = schema.status_role("ratified"), schema.dead_statuses()
+
+    def reaches_ratified(start: str) -> bool:
+        seen, queue = {start}, [start]
+        while queue:
+            here = queue.pop()
+            if here == ratified:
+                return True
+            for nxt in moves.get(here, ()):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    queue.append(nxt)
+        return False
+
+    stranded = [s for s in sorted(schema.statuses or ())
+                if s not in dead and not reaches_ratified(s)]
+    assert not stranded, f"no route to '{ratified}' from: {stranded}"
+
+
+def test_shipped_lifecycle_can_put_a_below_proposed_item_forward(tmp_path):
+    """SR-0150 — the binding clause, and the one the old table broke. A status
+    below `proposed` (one `proposed` can drop into, which cannot itself reach
+    `ratified` in a single move) must be able to go back to `proposed`. Otherwise
+    the only way on is via a status that reaches `ratified` without the gate —
+    exactly the escape SR-0149 reports. The set is derived from the table, not
+    named here, so the property survives a project renaming its statuses."""
+    init_project(tmp_path, name="Example")
+    schema = Schema.from_config(load_project(tmp_path).config)
+    moves, dead = schema.transitions, schema.dead_statuses()
+    proposed, ratified = (schema.status_role("proposed"),
+                          schema.status_role("ratified"))
+
+    below = {s for s in moves.get(proposed, ())
+             if s not in dead and s not in (proposed, ratified)
+             and ratified not in moves.get(s, ())}
+    assert below, "expected the shipped table to have statuses below proposed"
+    stranded = sorted(s for s in below if proposed not in moves.get(s, ()))
+    assert not stranded, f"cannot be put forward for ratification: {stranded}"
+
+
 def test_status_roles_resolve_and_report_dead(tmp_path):
     """A project binds each semantic role to one of its statuses; the tool reads
     status VALUES through the role, never a literal (SR-0131). The 'dead' set is

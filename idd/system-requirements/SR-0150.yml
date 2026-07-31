@@ -1,0 +1,42 @@
+uid: SR-0150
+type: system_requirement
+status: ratified
+title: The shipped lifecycle always leaves a route to ratification
+text: The status lifecycle the Tool ships with a new project shall leave every live
+  status a route to the ratified status, so that no item can reach a state from which
+  a human is unable to accept it. In particular the statuses below proposed — the
+  initial status an item is authored in, and any status an item is parked in — shall
+  permit a move back to the proposed status, so scope that was authored or parked
+  without ratification can be put forward for it.
+rationale: A lifecycle that can strand an item is a lifecycle that quietly decides
+  the item's fate. The table `tl init` ships allows draft to reach only approved,
+  deferred, rejected or deleted, and deferred to reach only draft, approved, rejected
+  or deleted — neither offers proposed or ratified. A machine-authored item that
+  lands in either therefore has no legal route to ratification at all; `tl ratify`
+  refuses it with "status change 'draft' -> 'ratified' is not an allowed transition",
+  and so does `tl status <uid> proposed`. The only exits left are rejection, deletion,
+  or approved — and approved is exactly the escape SR-0149 now reports, so the shipped
+  lifecycle pushes the user toward the one move that defeats UR-0023. This is the
+  structural cause of a measured 70 stranded items across 9 graphs in the estate,
+  every one machine-authored and unratifiable without editing the project's own configuration
+  by hand. SR-0141 stops new machine items being born below proposed, but says nothing
+  about the ones already there or about an item deliberately parked; only the transition
+  table can give those a way back. The Tool cannot promise human ratification (UR-0023)
+  and then ship a lifecycle in which ratification is unreachable.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0100
+  type: relates
+- target: SR-0141
+  type: relates
+- target: SR-0149
+  type: relates
+- target: SR-0083
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
