@@ -1,0 +1,33 @@
+uid: SR-0154
+type: system_requirement
+status: ratified
+title: A fingerprint identifies an item by the identity it was authored under
+text: The Tool shall compute an item's fingerprint over the identity that item was
+  authored under in its own graph, and shall let a tool that re-labels a borrowed
+  item — to merge it into a wider graph — declare that authored identity, so the
+  label a consumer chooses cannot change the fingerprint. A ratification recorded
+  in an item's own graph shall therefore read as current wherever that item is composed,
+  and a drift finding shall be raised only where the content itself has moved.
+rationale: The fingerprint covers the item's UID, so re-labelling a borrowed item
+  — which composition must do to keep identity unique across sources — changes the
+  fingerprint of content nobody has touched. Every ratification stamped in a source
+  graph then reports as stale in every consumer of that source, and a finding that
+  fires where nothing has changed teaches the reader to ignore the one finding that
+  says a signed requirement has been rewritten. The consumer chose that label for
+  its own convenience and has no standing to invalidate another graph's accountability
+  record — the ratifier signed the item as it stands in the graph they signed it
+  in, and that is the thing the stamp must go on identifying.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0033
+  type: relates
+- target: SR-0148
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:7ac372df26abfcc9f2dd541d5b51a47575d36196b2b517e820791838e7c2242d

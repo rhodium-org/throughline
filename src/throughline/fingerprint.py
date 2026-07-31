@@ -9,6 +9,12 @@ that reordering and workflow changes never raise false suspects.
 
 The set of normative attributes comes from the project :class:`Schema`
 (``schema.normative_attrs``) — this module does not re-read the config itself.
+
+The uid it takes is the one the item was *authored* under (SR-0154). A tool that
+composes several graphs must re-label borrowed items to keep identity unique in
+the merged graph, and that label belongs to the consumer: were it to reach the
+fingerprint, every stamp written in a source graph would read as drifted in every
+consumer of that source, on content nobody had touched.
 """
 from __future__ import annotations
 
@@ -29,7 +35,7 @@ def _norm(value: str) -> str:
 
 def fingerprint(item, schema: Schema | None = None) -> str:
     parts = [
-        ("uid", item.uid),
+        ("uid", item.authored_uid),
         ("type", item.type),
         ("text", _norm(item.text)),
         ("normative", str(item.normative)),

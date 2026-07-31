@@ -60,6 +60,18 @@ class Item:
     # entry missing its target). Carried here so the loader can surface them as
     # named `check` findings instead of the loader crashing (SR-0134).
     _load_errors: list[str] = field(default_factory=list)
+    # The UID this item was authored under in its own graph, set only by a tool
+    # that re-labels a borrowed item to merge it into a wider graph (SR-0154).
+    # `fingerprint` identifies the item by this when present, so the label a
+    # consumer chooses cannot invalidate a stamp written where it was authored.
+    _authored_uid: str | None = None
+
+    @property
+    def authored_uid(self) -> str:
+        """The identity this item was authored under — its own UID unless a
+        composing tool re-labelled it, in which case the UID it holds in the
+        graph it came from (SR-0154)."""
+        return self._authored_uid or self.uid
 
     @property
     def is_deleted(self) -> bool:

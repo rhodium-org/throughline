@@ -190,6 +190,27 @@ def test_fingerprint_tracks_text_and_normative_attrs():
     c = Item(uid="SR-1", type="requirement", text="bar", attrs={"priority": "must"})
     assert fingerprint(c, schema) != fingerprint(a, schema)
 
+def test_fingerprint_follows_the_uid_the_item_was_authored_under():
+    """A composing tool must re-label a borrowed item to keep identity unique in
+    the merged graph. That label is the consumer's own, and a stamp written where
+    the item was authored has to survive it (SR-0154)."""
+    authored = Item(uid="SR-1", type="requirement", text="The system shall foo.")
+    relabelled = Item(uid="BASESR-1", type="requirement",
+                      text="The system shall foo.", _authored_uid="SR-1")
+    assert fingerprint(relabelled) == fingerprint(authored)
+
+def test_fingerprint_still_moves_when_a_relabelled_item_changes():
+    """The seam must not blind the drift check — only the label is excused."""
+    original = Item(uid="BASESR-1", type="requirement", text="foo",
+                    _authored_uid="SR-1")
+    edited = Item(uid="BASESR-1", type="requirement", text="bar",
+                  _authored_uid="SR-1")
+    assert fingerprint(edited) != fingerprint(original)
+
+def test_authored_uid_defaults_to_the_items_own_uid():
+    """Nothing changes for an item nobody re-labelled."""
+    assert Item(uid="SR-1", type="requirement").authored_uid == "SR-1"
+
 
 # --------------------------------------------------------------------- storage
 
