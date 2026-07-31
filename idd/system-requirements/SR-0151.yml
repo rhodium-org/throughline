@@ -1,0 +1,35 @@
+uid: SR-0151
+type: system_requirement
+status: ratified
+title: A composing tool can reuse ratify without reimplementing the record
+text: The ratify operation shall accept an optional prebuilt grounding index and
+  use it in place of the one it would build from the project, so a caller that grounds
+  an item over a wider graph than the one it writes to can reuse the operation instead
+  of reimplementing it. With no index supplied the behaviour shall be exactly as
+  now, the index being built from the project it was handed. Everything else the
+  operation does shall remain its own — refusing an ambiguous or ungrounded item,
+  refusing a re-ratification of content that has not changed, moving the status through
+  the configured transitions, and stamping both the ratifier and the content fingerprint
+  — so a caller gains the accountability record in full and has no way to obtain
+  a partial one.
+rationale: A composing consumer must ground an item over the union of its own graph
+  and its sources while writing only to its own registers. Ratify built its index
+  from the project it was given, which left any such caller — throughline-compose's
+  own ratify, and the throughline-ratify cockpit — no way to call it, so both copied
+  its body instead. A copied accountability record drifts. When SR-0148 added the
+  content fingerprint, the copy in throughline-ratify carried on writing the ratifier
+  alone, and every item ratified through that cockpit now holds a signature bound
+  to nothing. Making the index a parameter is the smallest seam that removes the
+  reason to copy — the grounding view is the only thing a composing caller needs
+  to vary, and keeping every other decision inside the operation means a caller cannot
+  reach a state where it has recorded who signed off without also recording what
+  they signed.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini

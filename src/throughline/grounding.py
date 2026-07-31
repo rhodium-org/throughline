@@ -43,16 +43,26 @@ def set_status(schema, item: Item, to: str) -> None:
     item.status = to
 
 
-def ratify(project, uid: str, by: str) -> Item:
+def ratify(project, uid: str, by: str, *, index: Index | None = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
-    the two states that must not be signed off (scope-avalanche briefing §5)."""
+    the two states that must not be signed off (scope-avalanche briefing §5).
+
+    ``index`` lets a caller supply a prebuilt grounding index in place of the one
+    built from ``project`` (SR-0151). A composing consumer grounds an item over the
+    *union* of its own graph and its sources while writing only to its own
+    registers; without this seam such a caller had to reimplement this function's
+    body, and a copied accountability record drifts — which is exactly how items
+    ratified through throughline-ratify came to carry a signature with no
+    fingerprint. The grounding view is the only thing a composing caller may vary:
+    every other decision here — what may be signed off, and what gets recorded —
+    stays inside this function, so a caller cannot obtain a partial record."""
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
     if item.attrs.get("ambiguous"):
         raise GroundingError(f"{uid} is flagged ambiguous and cannot be ratified until clarified")
-    idx = Index.build(project)
+    idx = index if index is not None else Index.build(project)
     if not schema.is_root(item) and not reaches_root(idx, schema, uid):
         raise GroundingError(f"{uid} is not grounded to a root and cannot be ratified")
     # Ratifying an already-ratified item whose content has not moved accepts

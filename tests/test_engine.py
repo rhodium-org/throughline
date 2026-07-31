@@ -1625,6 +1625,69 @@ def test_ratify_after_content_changed_is_allowed_and_restamps():
     assert again.attrs["ratified_by"] == "bob"
     assert again.attrs["ratified_fingerprint"] != first
 
+# -- the composing seam (SR-0151) ------------------------------------------- #
+
+def _consumer_and_union():
+    """A consumer whose only grounding link points at a clause it does not hold —
+    the shape of a composed project, where the parent is borrowed from a source.
+    Returns (consumer, union); the consumer alone cannot see FR-1 reach a root."""
+    borrowed = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="approved",
+              links=[Link(target="INT-1", type="derives_from")])
+    consumer = _project(_doc("FR", fr))
+    union = _project(_doc("INT", borrowed), _doc("FR", fr))
+    return consumer, union
+
+def test_ratify_over_a_consumer_alone_cannot_see_a_borrowed_parent():
+    """The premise of the seam: grounding judged over the writable graph alone
+    refuses an item whose chain leaves it (SR-0151)."""
+    consumer, _union = _consumer_and_union()
+    with pytest.raises(GroundingError, match="not grounded to a root"):
+        ratify(consumer, "FR-1", by="j.doe")
+
+def test_a_supplied_index_grounds_over_the_wider_graph():
+    """A composing caller hands in the union's index and writes to its own graph —
+    the case that previously forced it to copy this function's body (SR-0151)."""
+    consumer, union = _consumer_and_union()
+    item = ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+    assert item.status == "ratified"
+    assert item.attrs["ratified_by"] == "j.doe"
+    # the whole point: the caller gets the full record, fingerprint included
+    assert item.attrs["ratified_fingerprint"].startswith("sha256:")
+
+def test_omitting_the_index_leaves_behaviour_exactly_as_before():
+    p = _grounded_project()
+    item = ratify(p, "FR-1", by="j.doe")
+    assert item.status == "ratified" and item.attrs["ratified_fingerprint"]
+
+def test_a_supplied_index_is_only_a_grounding_view_not_a_way_past_the_gates():
+    """The index varies *where grounding is judged* and nothing else — a caller
+    must not be able to reach a state the operation itself would refuse."""
+    consumer, union = _consumer_and_union()
+    idx = Index.build(union)
+
+    consumer.get("FR-1").attrs["ambiguous"] = True
+    with pytest.raises(GroundingError, match="ambiguous"):
+        ratify(consumer, "FR-1", by="j.doe", index=idx)
+    del consumer.get("FR-1").attrs["ambiguous"]
+
+    ratify(consumer, "FR-1", by="alice", index=idx)
+    with pytest.raises(GroundingError, match="already ratified by alice"):
+        ratify(consumer, "FR-1", by="bob", index=idx)
+
+def test_a_supplied_index_still_obeys_the_projects_transitions():
+    """Grounding is the only thing handed in; the status move remains the config's
+    to permit or refuse (SR-0130)."""
+    borrowed = Item(uid="INT-1", type="intent", status="ratified")
+    fr = Item(uid="FR-1", type="requirement", status="draft",
+              links=[Link(target="INT-1", type="derives_from")])
+    cfg = {"transitions": {"draft": ["proposed"], "proposed": ["ratified"]}}
+    consumer = _project(_doc("FR", fr), config=cfg)
+    union = _project(_doc("INT", borrowed), _doc("FR", fr), config=cfg)
+    with pytest.raises(GroundingError, match="not an allowed transition"):
+        ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+
+
 def test_rewritten_content_after_ratification_is_reported():
     """ratified_by must not vouch for words nobody agreed to: rewriting normative
     text after ratification is a named finding (SR-0148)."""
