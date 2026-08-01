@@ -45,6 +45,14 @@ MIN_PYTHON = (3, 11)
 # the working tree rather than a published release standing in for it (UR-0021).
 TOOLCHAIN = ("throughline", "throughline-compose", "throughline-ratify")
 
+# The console script each package puts on PATH. Under pipx these live in a venv per
+# application, so the build behind a CLI need not be the one this script can see.
+CLI_FOR = {
+    "throughline": "tl",
+    "throughline-compose": "tl-compose",
+    "throughline-ratify": "tl-ratify",
+}
+
 # ANSI colour, disabled when not a TTY so logs stay clean.
 _TTY = sys.stdout.isatty()
 GREEN = "\033[32m" if _TTY else ""
@@ -139,6 +147,102 @@ def _install_kind(dist_name: str) -> tuple[str, str]:
     return ("published", dist.version)
 
 
+def _checkout_for(dist_name: str) -> Path:
+    """Where this contributor would have ``dist_name`` checked out, if they do."""
+    return REPO_ROOT if dist_name == REPO_ROOT.name else REPO_ROOT.parent / dist_name
+
+
+def _checked_out() -> list[str]:
+    """Toolchain packages with a working tree beside this one — the signal that the
+    contributor is working on them."""
+    return [d for d in TOOLCHAIN if (_checkout_for(d) / "pyproject.toml").is_file()]
+
+
+def _kinds_here() -> dict[str, list[str]]:
+    """Install kind of every toolchain package, in the *current* interpreter."""
+    return {d: list(_install_kind(d)) for d in TOOLCHAIN}
+
+
+def _kinds_in(python: Path) -> dict[str, list[str]] | None:
+    """Install kinds inside *another* interpreter, by asking this same script.
+
+    Re-running ``doctor.py --probe`` under the target interpreter keeps one
+    implementation of the rule and runs it where the answer differs, rather than
+    reimplementing the PEP 610 read for each environment. The script imports only
+    the standard library, so any interpreter can execute it.
+    """
+    try:
+        proc = subprocess.run(
+            [str(python), str(Path(__file__).resolve()), "--probe"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        return json.loads(proc.stdout)
+    except ValueError:
+        return None
+
+
+def _chain_remediation(unchained: list[str]) -> str:
+    # Name the siblings first and this repo last, matching the recipe in AGENTS.md so
+    # a contributor reading both sees one command, not two that differ cosmetically.
+    present = _checked_out()
+    installs = " ".join(
+        [f"-e ../{d}" for d in present if d != REPO_ROOT.name]
+        + (['-e ".[dev]"'] if REPO_ROOT.name in present else [])
+    )
+    return (
+        "You have these checked out but are running the published build, so your "
+        "edits are not what executes:"
+        f"\n      {', '.join(unchained)}"
+        "\nChain them in a single command so the resolver never reaches PyPI:"
+        f"\n      python -m pip install {installs}"
+        "\nThen confirm every path is your checkout, not site-packages:"
+        "\n      python -c \"import throughline as m; print(m.__file__)\""
+    )
+
+
+def _chain_verdict(name: str, kinds: dict[str, list[str]]) -> Result:
+    """Judge one environment: is every checked-out package the copy that runs?"""
+    unchained: list[str] = []
+    detail: list[str] = []
+    present = _checked_out()
+    for dist_name in present:
+        kind, where = (kinds.get(dist_name) or ["absent", ""])[:2]
+        if kind == "absent":
+            continue  # not in this environment at all; other checks cover throughline
+        if kind == "published":
+            unchained.append(dist_name)
+            detail.append(f"{dist_name}: published {where}")
+        else:
+            same = (
+                Path(where).resolve() == _checkout_for(dist_name).resolve()
+                if where
+                else False
+            )
+            detail.append(f"{dist_name}: editable" + ("" if same else f" {where} (!)"))
+
+    if not detail:
+        # Either this is the only package checked out, or none of them are installed
+        # in this environment at all — which the import and CLI checks already report.
+        summary = "single package" if len(present) <= 1 else "none installed here"
+        return Result(name, True, detail=summary)
+    if not unchained:
+        return Result(name, True, detail="; ".join(detail))
+    return Result(
+        name,
+        False,
+        detail="; ".join(detail),
+        remediation=_chain_remediation(unchained),
+    )
+
+
 def check_toolchain_chained() -> Result:
     """Every toolchain package the contributor has checked out must be the one that
     actually runs (UR-0021).
@@ -151,59 +255,83 @@ def check_toolchain_chained() -> Result:
     that the package is being worked on; that is drawn from disk rather than from
     anything the contributor has to remember to declare.
     """
-    unchained: list[str] = []
+    return _chain_verdict("toolchain chained editable", _kinds_here())
+
+
+def _venv_python_for(cli: str) -> Path | None:
+    """The interpreter that actually runs ``cli``, following the console script."""
+    exe = shutil.which(cli)
+    if not exe:
+        return None
+    real = Path(exe).resolve()  # pipx puts symlinks on PATH pointing into its venvs
+    for candidate in ("python", "python3"):
+        python = real.parent / candidate
+        if python.exists():
+            return python
+    return None
+
+
+def check_cli_toolchain_chained() -> Result:
+    """The CLIs on PATH must be chained too, not just the interpreter running this.
+
+    Every other check here inspects the environment the doctor happens to run in.
+    pipx — the documented way to install these CLIs, and how they are used day to
+    day — gives each application its own venv, so ``tl``, ``tl-compose`` and
+    ``tl-ratify`` can each resolve a different build, and none of them need be the
+    one the doctor can see. That is not a corner case; it is the configuration that
+    produced the failure UR-0021 was written from, where a cockpit and a validator
+    disagreed because they were different software. So each CLI is asked in its own
+    environment, by running this script there.
+    """
+    name = "CLI toolchain chained editable"
     detail: list[str] = []
-    checked_out = 0
+    unchained: set[str] = set()
+    seen: set[Path] = set()
     for dist_name in TOOLCHAIN:
-        checkout = (
-            REPO_ROOT if dist_name == REPO_ROOT.name else REPO_ROOT.parent / dist_name
-        )
-        if not (checkout / "pyproject.toml").is_file():
-            continue  # not checked out here — nothing to chain
-        checked_out += 1
-        kind, where = _install_kind(dist_name)
-        if kind == "absent":
-            continue  # not in this environment at all; other checks cover throughline
-        if kind == "published":
-            unchained.append(dist_name)
-            detail.append(f"{dist_name}: published {where}, but checked out at {checkout}")
-        else:
-            same = Path(where).resolve() == checkout.resolve() if where else False
-            detail.append(f"{dist_name}: editable {where}" + ("" if same else " (!)"))
+        cli = CLI_FOR[dist_name]
+        python = _venv_python_for(cli)
+        if python is None:
+            continue  # not on PATH; the 'tl CLI on PATH' check covers the one we need
+        # Identify the environment by its venv root, never by resolving the
+        # interpreter: a venv's bin/python is a symlink to the base interpreter, so
+        # resolving it collapses every distinct venv onto the same binary and the
+        # separate environments this check exists to find all look like this one.
+        venv_root = python.parent.parent
+        if venv_root == Path(sys.prefix) or venv_root in seen:
+            continue  # already judged by the in-process check, or a shared venv
+        seen.add(venv_root)
+        kinds = _kinds_in(python)
+        if kinds is None:
+            detail.append(f"{cli}: could not inspect")
+            continue
+        verdict = _chain_verdict(name, kinds)
+        detail.append(f"{cli} → {verdict.detail}")
+        if not verdict.ok:
+            unchained.update(
+                d
+                for d in _checked_out()
+                if (kinds.get(d) or ["absent"])[0] == "published"
+            )
 
     if not detail:
-        # Either this is the only package checked out, or none of them are installed
-        # in this interpreter at all — which the import and CLI checks already report.
-        summary = "single package" if checked_out <= 1 else "none installed here"
-        return Result("toolchain chained editable", True, detail=summary)
+        return Result(name, True, detail="no separate CLI environments")
     if not unchained:
-        return Result("toolchain chained editable", True, detail="; ".join(detail))
-
-    # Name the siblings first and this repo last, matching the recipe in AGENTS.md so
-    # a contributor reading both sees one command, not two that differ cosmetically.
-    present = [
-        d
-        for d in TOOLCHAIN
-        if (REPO_ROOT if d == REPO_ROOT.name else REPO_ROOT.parent / d)
-        .joinpath("pyproject.toml")
-        .is_file()
-    ]
-    installs = " ".join(
-        [f"-e ../{d}" for d in present if d != REPO_ROOT.name]
-        + (['-e ".[dev]"'] if REPO_ROOT.name in present else [])
-    )
+        return Result(name, True, detail="; ".join(detail))
     return Result(
-        "toolchain chained editable",
+        name,
         False,
         detail="; ".join(detail),
         remediation=(
-            "You have these checked out but are running the published build, so your "
-            "edits are not what executes:"
-            f"\n      {', '.join(unchained)}"
-            "\nChain them in a single command so the resolver never reaches PyPI:"
-            f"\n      python -m pip install {installs}"
-            "\nThen confirm every path is your checkout, not site-packages:"
-            "\n      python -c \"import throughline as m; print(m.__file__)\""
+            "The CLI you actually run is not your working tree. pipx keeps a venv per "
+            "application, so each needs the editable chain of its own — and injecting "
+            "the core LAST, because injecting a dependent afterwards silently pulls "
+            "the published core back over it:"
+            "\n      pipx uninstall throughline && pipx install --editable ./throughline"
+            "\n      pipx inject --force --editable throughline-compose ./throughline"
+            "\n      pipx inject --force --editable throughline-ratify ./throughline-compose"
+            "\n      pipx inject --force --editable throughline-ratify ./throughline"
+            "\nNote that 'pipx install --force --editable' does NOT convert an existing "
+            "venv — it reports success and leaves the published copy in place."
         ),
     )
 
@@ -374,12 +502,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="wire the local pre-commit grounding hook if it is missing",
     )
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=argparse.SUPPRESS,  # internal: report install kinds for this interpreter
+    )
     args = parser.parse_args(argv)
+
+    if args.probe:
+        # Run inside another environment by check_cli_toolchain_chained, so the rule
+        # lives in one place and is merely executed where the answer differs.
+        print(json.dumps(_kinds_here()))
+        return 0
 
     results = [
         check_python(),
         check_throughline_import(),
         check_toolchain_chained(),
+        check_cli_toolchain_chained(),
         check_cli(),
         check_pytest(),
         check_precommit_hook(fix=args.fix),

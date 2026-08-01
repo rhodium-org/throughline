@@ -13,6 +13,7 @@ than passing it quietly.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -121,3 +122,69 @@ def test_a_package_absent_from_the_environment_is_not_a_failure(monkeypatch):
     )
 
     assert doctor.check_toolchain_chained().ok
+
+
+# --- the CLI environments, which are not the one this script runs in --------------
+
+def _fake_cli_venv(tmp_path: Path, name: str) -> Path:
+    """A venv laid out as pipx builds one: bin/python symlinked to the base
+    interpreter, with the console script beside it."""
+    bindir = tmp_path / name / "bin"
+    bindir.mkdir(parents=True)
+    (bindir / "python").symlink_to(sys.executable)
+    script = bindir / "tl"
+    script.write_text("#!/bin/sh\n")
+    return script
+
+
+def test_a_cli_in_its_own_venv_is_inspected_not_skipped(tmp_path, monkeypatch):
+    """The regression that silently disabled this check.
+
+    A venv's bin/python is a symlink to the base interpreter, so resolving it to
+    decide "is this a different environment?" collapses every venv onto the same
+    binary — and every separate environment looks like the current one and is
+    skipped. Environments must be identified by their venv root instead.
+    """
+    script = _fake_cli_venv(tmp_path, "pipx-tl")
+    monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
+    monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor.shutil, "which", lambda _c: str(script))
+    monkeypatch.setattr(Path, "is_file", lambda self: self.name == "pyproject.toml")
+    monkeypatch.setattr(
+        doctor, "_kinds_in", lambda _p: {"throughline": ["published", "1.9.0"]}
+    )
+
+    result = doctor.check_cli_toolchain_chained()
+
+    assert not result.ok, "a separate CLI venv was skipped instead of inspected"
+    assert "published" in result.detail
+    # pipx has its own remediation: the two traps that both fail silently.
+    assert "pipx inject" in result.remediation
+    assert "does NOT convert an existing venv" in result.remediation
+
+
+def test_the_current_environment_is_not_reported_twice(monkeypatch):
+    """The in-process check already judges it; naming it again as a CLI environment
+    would report one divergence as two."""
+    monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
+    monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(
+        doctor.shutil, "which", lambda _c: str(Path(sys.prefix) / "bin" / "tl")
+    )
+    monkeypatch.setattr(doctor, "_kinds_in", lambda _p: pytest.fail("re-probed self"))
+
+    result = doctor.check_cli_toolchain_chained()
+
+    assert result.ok
+    assert result.detail == "no separate CLI environments"
+
+
+def test_probe_mode_reports_this_interpreter_as_json(capsys):
+    """The probe is how one implementation of the rule is run in another environment
+    — so it must stay machine-readable and stdout-clean."""
+    assert doctor.main(["--probe"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert set(payload) == set(doctor.TOOLCHAIN)
+    kind, _where = payload["throughline"]
+    assert kind in {"absent", "editable", "published"}
