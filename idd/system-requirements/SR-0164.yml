@@ -1,0 +1,30 @@
+uid: SR-0164
+type: system_requirement
+status: proposed
+title: The library reports the version of the distribution installed, never a literal
+text: The version the package exports shall be read from the installed distribution's
+  metadata rather than restated in source, so the version a caller imports cannot
+  disagree with the version that was released. Run from a source tree with no distribution
+  installed, it shall report a value that is plainly not a release rather than guess
+  at one.
+rationale: 1.9.0 was published carrying a hand-written 1.8.0 — the release bumped
+  the packaging metadata and left the literal behind. Nothing failed; the wrong answer
+  was simply returned to whoever asked, which is the worse outcome, because a version
+  is consulted precisely when someone is trying to establish what they are running.
+  A version written down twice is a claim nothing checks, and the copy that drifts
+  is the one callers read. The CLI already resolves its --version this way (SR-0076);
+  this puts the library attribute under the same discipline, and SemVer names that
+  attribute as part of the compatibility surface (NFR-0011). The alternative — a
+  release-checklist step, or a test pinning the literal to the packaging metadata
+  — keeps both copies and asks a person or a test to catch the divergence; deriving
+  the value deletes the second copy instead.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0076
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test

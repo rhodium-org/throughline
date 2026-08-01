@@ -25,6 +25,7 @@ from throughline import (
     write_item,
     write_manifest,
 )
+import throughline as throughline_pkg
 from throughline import identity
 from throughline.identity import IdentityError
 from throughline.grounding import GroundingError, scout_ingest
@@ -3662,3 +3663,33 @@ def test_writing_a_ratification_needs_no_network(monkeypatch):
     monkeypatch.setattr(identity.subprocess, "run", _refuse)
     p = _grounded_project()
     assert ratify(p, "FR-1", by="Ada Lovelace", by_id="github:ada")
+
+
+# --- the reported version (SR-0164) ------------------------------------------
+
+def test_the_reported_version_is_the_installed_distributions():
+    """1.9.0 shipped saying "1.8.0" because the release bumped the packaging
+    metadata and not the literal beside it. Deriving the value is what makes that
+    class of drift impossible rather than merely unlikely."""
+    from importlib.metadata import version as dist_version
+
+    assert throughline_pkg.__version__ == dist_version("throughline")
+
+
+def test_an_uninstalled_source_tree_declines_to_name_a_release(monkeypatch):
+    """The other half of the obligation. Asked from a tree that was never
+    installed, the honest answer is that this is not a release — guessing at the
+    nearest one would recreate, from the other direction, the very claim the
+    literal used to make."""
+    import importlib
+    import importlib.metadata
+
+    def _absent(name):
+        raise importlib.metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(importlib.metadata, "version", _absent)
+    try:
+        assert importlib.reload(throughline_pkg).__version__ == "0.0.0+unknown"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(throughline_pkg)

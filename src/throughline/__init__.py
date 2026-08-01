@@ -8,6 +8,8 @@ CLI (``throughline.cli``) is the primary entry point.
 """
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version as _dist_version
+
 from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
@@ -29,7 +31,15 @@ from .storage import (
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
 from .validate import Finding, is_external, is_namespace_qualified, validate
 
-__version__ = "1.8.0"
+# Read from the installed distribution, never restated here (SR-0164). Held as a
+# literal it is a second copy of a fact that already lives in pyproject.toml, and
+# the two drift in silence: 1.9.0 shipped reporting "1.8.0" because the release
+# bumped one and not the other, and nothing failed — the wrong answer was simply
+# returned to whoever asked.
+try:
+    __version__ = _dist_version("throughline")
+except PackageNotFoundError:  # a source tree that was never installed
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "Register", "Item", "Link", "Project",
