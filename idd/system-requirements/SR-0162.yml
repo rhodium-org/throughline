@@ -1,0 +1,44 @@
+uid: SR-0162
+type: system_requirement
+status: ratified
+title: A fingerprint is computed over the normative attributes of the graph that
+  authored the item
+text: The Tool shall compute an item's fingerprint over the normative attributes
+  declared by the graph that authored the item, and shall let a tool that merges
+  a borrowed item into a wider graph declare that authoring set, so the attributes
+  a consuming graph happens to declare cannot change the fingerprint of content it
+  did not write. A ratification recorded in an item's own graph shall therefore read
+  as current wherever that item is composed, whatever the consuming graph marks normative,
+  and no consumer shall be obliged to mirror a source's normative flags in order
+  to compose it.
+rationale: The fingerprint covers every attribute the schema marks normative, and
+  a union is governed by the consuming graph's schema, so the set of attributes hashed
+  changes the moment an item is borrowed. Composing throughline's own graph into
+  throughline-ratify showed there is no configuration that satisfies both sides —
+  leaving the consumer's flags alone reported all 177 of the source's ratified items
+  as drifted, and mirroring the source's flags reported all 29 of the consumer's
+  own ratified items as drifted instead, on wording nobody had touched in either
+  direction. That is not a tuning problem to be solved in a consumer's config; it
+  is the defect SR-0154 fixed for the UID, still unfixed for the attribute set, and
+  the argument there carries over unchanged — a consumer has no standing to invalidate
+  another graph's accountability record, and a finding that fires where nothing has
+  changed teaches the reader to ignore the one finding that says a signed requirement
+  has been rewritten. It also carries a cost SR-0154 did not. A consumer forced to
+  mirror a source's normative flags in order to compose it is being made to adopt
+  the source's opinion about what counts as a requirement change — a judgement about
+  its own graph that it should be making for itself — so the defect does not merely
+  produce noise, it quietly exports one project's model into another.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0154
+  type: refines
+- target: SR-0033
+  type: relates
+- target: SR-0148
+  type: relates
+attrs:
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a4aa7039837933e3bdb6a01399d65395c2a34d36f42767bc8876ffd8c25f03d4

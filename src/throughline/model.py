@@ -65,6 +65,13 @@ class Item:
     # `fingerprint` identifies the item by this when present, so the label a
     # consumer chooses cannot invalidate a stamp written where it was authored.
     _authored_uid: str | None = None
+    # The normative attribute names declared by the graph that authored this item,
+    # set only by a tool that merges a borrowed item into a wider graph (SR-0162).
+    # `fingerprint` hashes these when present, so the attributes a consuming graph
+    # happens to mark normative cannot invalidate a stamp written elsewhere. An
+    # empty tuple is meaningful — "that graph marked none" — so this is None when
+    # unset rather than defaulting to ().
+    _authored_normative_attrs: tuple[str, ...] | None = None
 
     @property
     def authored_uid(self) -> str:

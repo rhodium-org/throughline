@@ -954,12 +954,13 @@ def _ctx_idd(schema) -> str:
 
 def _ctx_working(schema) -> str:
     """The working discipline an agent must follow in the project (SR-0129): stay
-    inside the graph, change it only through the CLI, and leave a reusable rule for
-    the next agent. Fixed contract text — it holds for every project — with the root
-    types named so the scope rule reads accurately."""
+    inside the graph, change it only through the CLI, write items that stay readable
+    (SR-0163), and leave a reusable rule for the next agent. Fixed contract text —
+    it holds for every project — with the root types named so the scope rule reads
+    accurately."""
     return (
         "## How to work here\n\n"
-        "This is a discipline, not just a data model. Three rules govern how you "
+        "This is a discipline, not just a data model. Four rules govern how you "
         "work, whatever the task:\n\n"
         f"- **Do only work the graph justifies.** throughline exists to keep scope "
         f"honest: every change should trace to a root ({_fmt_set(schema.root_types)}). "
@@ -975,6 +976,12 @@ def _ctx_working(schema) -> str:
         "on legal transitions, and `check` green — a hand-edit silently breaks those "
         "invariants and the files stop being a product you can trust. Run `tl check` "
         "after any change.\n"
+        "- **Write an item short, and rewrite rather than append.** State "
+        "the obligation in the fewest words that still bind — a requirement nobody "
+        "finishes reading does not bind. A `rationale` records the decision taken "
+        "and the alternatives rejected, not the history of your own drafting. When "
+        "you revise an item you wrote earlier, **rewrite it**; appending is the "
+        "cheaper edit and it is how a clear requirement becomes an unread one.\n"
         "- **Leave a reusable rule for the next agent (idempotent).** If your AI "
         "coding framework has a mechanism for durable, auto-loaded project "
         "instructions — a skill, a rules file, an `AGENTS.md`, or the equivalent — "

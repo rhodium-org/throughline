@@ -1,0 +1,35 @@
+uid: SR-0163
+type: system_requirement
+status: ratified
+title: The brief tells an agent to write an item short, and to rewrite rather than
+  accrete
+text: The agent-facing brief shall tell an agent how to write an item, alongside
+  how to work (SR-0129). It shall say that an item states its obligation in the fewest
+  words that still bind, that a rationale records the decision taken and the alternatives
+  rejected rather than the history of its own drafting, and that a revision rewrites
+  the item rather than appending to it. This shall be part of the brief's fixed contract
+  text, so it holds for every project.
+rationale: An agent revising an item it wrote minutes earlier appends, because appending
+  is the cheaper edit and each addition answers a fair point. Nothing pushes back,
+  so the item swells until nobody reads it to the end, and a requirement nobody finishes
+  reading does not bind. The failure is particular to machine authorship in this
+  format — a person editing prose feels the length, an agent editing a YAML scalar
+  does not — and the brief is the one place the tool can say so before the item is
+  written rather than after. Observed while authoring throughline-compose SR-0026,
+  which reached roughly nine hundred words across text and rationale over four revisions
+  in one sitting, half of it a record of the drafting itself, and halved once read
+  as a whole. The guidance is stated as three concrete acts rather than an exhortation
+  to be concise, because an agent can check whether it appended or rewrote and cannot
+  check whether it was brief enough. It belongs in the generated brief rather than
+  in a project's own rules file so that every project inherits it without anyone
+  remembering to write it down (UR-0022).
+normative: true
+links:
+- target: UR-0017
+  type: implements
+- target: SR-0129
+  type: relates
+attrs:
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d4b3b7ddd8cfba0acc08961e7998202e0753ac7af5fb73568d65a39a59492a7f

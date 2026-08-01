@@ -213,6 +213,53 @@ def test_authored_uid_defaults_to_the_items_own_uid():
     """Nothing changes for an item nobody re-labelled."""
     assert Item(uid="SR-1", type="requirement").authored_uid == "SR-1"
 
+def test_fingerprint_follows_the_normative_attrs_of_the_authoring_graph():
+    """A union is validated under the *consumer's* schema, so the set of attributes
+    hashed would otherwise change the moment an item is borrowed — and every stamp
+    written in the source would read as drifted on content nobody touched
+    (SR-0162)."""
+    source_schema = Schema.from_config(
+        {"types": {"requirement": {"attrs": {"priority": {"normative": True}}}}})
+    consumer_schema = Schema.from_config({"types": {"requirement": {}}})
+    authored = Item(uid="SR-1", type="requirement", text="foo",
+                    attrs={"priority": "must"})
+    borrowed = Item(uid="BASESR-1", type="requirement", text="foo",
+                    attrs={"priority": "must"}, _authored_uid="SR-1",
+                    _authored_normative_attrs=("priority",))
+    # read under the consumer's schema, which marks nothing normative
+    assert fingerprint(borrowed, consumer_schema) == fingerprint(authored,
+                                                                source_schema)
+
+def test_a_consumer_need_not_mirror_a_sources_normative_flags():
+    """The reverse direction of the same defect. A consumer that marks *more*
+    normative than the source must not stale the source's stamps either, so no
+    consumer is forced to adopt a source's opinion about what counts as a change
+    in order to compose it (SR-0162)."""
+    source_schema = Schema.from_config({"types": {"requirement": {}}})
+    consumer_schema = Schema.from_config(
+        {"types": {"requirement": {"attrs": {"priority": {"normative": True}}}}})
+    authored = Item(uid="SR-1", type="requirement", text="foo",
+                    attrs={"priority": "must"})
+    borrowed = Item(uid="BASESR-1", type="requirement", text="foo",
+                    attrs={"priority": "must"}, _authored_uid="SR-1",
+                    _authored_normative_attrs=())
+    assert fingerprint(borrowed, consumer_schema) == fingerprint(authored,
+                                                                source_schema)
+
+def test_a_borrowed_items_own_normative_attr_still_moves_its_fingerprint():
+    """The seam must not blind the drift check: what the *authoring* graph called
+    normative is still watched, so a genuine rewrite of borrowed content is still
+    reported."""
+    consumer_schema = Schema.from_config({"types": {"requirement": {}}})
+    before = Item(uid="BASESR-1", type="requirement", text="foo",
+                  attrs={"priority": "must"}, _authored_uid="SR-1",
+                  _authored_normative_attrs=("priority",))
+    after = Item(uid="BASESR-1", type="requirement", text="foo",
+                 attrs={"priority": "should"}, _authored_uid="SR-1",
+                 _authored_normative_attrs=("priority",))
+    assert fingerprint(after, consumer_schema) != fingerprint(before,
+                                                             consumer_schema)
+
 
 # --------------------------------------------------------------------- storage
 
