@@ -225,11 +225,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:item UR-0021 -->
 **UR-0021 — Verifiable development environment** — `user_requirement`, status `ratified`
 
-> A contributor shall be able to run a single command that diagnoses their development environment — Python version, an importable/installed throughline, the test runner, and whether the local grounding gate is wired — and reports, per check, either pass or a specific remediation, exiting non-zero if the environment is not ready.
+> A contributor shall be able to run a single command that diagnoses their development environment — Python version, an importable/installed throughline, the test runner, whether the local grounding gate is wired, and whether each package of the toolchain they have checked out is the one actually being run rather than a published release standing in for it — and reports, per check, either pass or a specific remediation, exiting non-zero if the environment is not ready.
+
+*Rationale:* The checks are the ones whose failure is silent. A missing interpreter or test runner announces itself the moment work starts, but an environment that runs a published package while the contributor edits its source announces nothing at all — the code imports, the tests pass, and the version string names the release it is not. A full day was lost to that here, comparing a cockpit against a validator that were different builds of the same toolchain. Checking out a sibling package is the signal that it is being worked on, so the diagnosis is drawn from what the contributor has on disk rather than from anything they must remember to declare.
 
 *Derives from:* BN-0010
 
-**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:bf5565fe37c70954cc310bc061e6718cedc7fee5f969c565e733f157cb90563d · **ratified_backfilled**: True
+**origin**: human · **priority**: should · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e7bacdcd4c0016f9a0ac2f7b66a9c7c229e8f53fa12a74237ada2ac011ae106c · **ratified_backfilled**: True
 <!-- tl:end -->
 
 <!-- tl:item UR-0022 -->
