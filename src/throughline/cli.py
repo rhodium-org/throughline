@@ -9,7 +9,6 @@ storage layer so the on-disk format stays deterministic (SR-0072).
 from __future__ import annotations
 
 import argparse
-import getpass
 import json
 import sys
 import time
@@ -26,6 +25,7 @@ from .grounding import (
     reaches_root,
     set_status,
 )
+from .identity import RATIFIED_ID_ATTR, IdentityError, default_ratifier
 from .inject import InjectError, has_markers, inject_text, referenced_uids
 from .model import Link, Register
 from .schema import SchemaError
@@ -1062,15 +1062,32 @@ def _ctx_status(schema) -> str:
 
 
 def _ctx_grounding(schema) -> str:
-    return (
-        "## Grounding configuration\n\n"
-        f"- **Root types** (may be ungrounded): {_fmt_set(schema.root_types)}\n"
+    out = [
+        "## Grounding configuration\n",
+        f"- **Root types** (may be ungrounded): {_fmt_set(schema.root_types)}",
         f"- **Delivery roots** (must be *served* — something must derive from / "
-        f"mitigate them): {_fmt_set(schema.delivery_roots)}\n"
-        f"- **Grounding link types:** {_fmt_set(schema.ground_link_types)}\n"
+        f"mitigate them): {_fmt_set(schema.delivery_roots)}",
+        f"- **Grounding link types:** {_fmt_set(schema.ground_link_types)}",
+    ]
+    # The cascade is the one thing `tl` does that restatuses items the caller did
+    # not name, so an agent that had read only the rest of this brief would be
+    # surprised by it (SR-0161). Both branches are stated: a project that
+    # declared nothing here has not switched the mechanic off, it has narrowed
+    # it, and "nothing extra" is itself the fact worth knowing.
+    if schema.suspect_link_types:
+        out.append(
+            f"- **Withdrawing link types:** {_fmt_set(schema.suspect_link_types)} "
+            f"— these confer no grounding, but `tl invalidate` marks an item "
+            f"suspect when a link of this type points at what was invalidated, "
+            f"just as it does along a grounding link.")
+    else:
+        out.append(
+            "- **Withdrawing link types:** none declared — `tl invalidate` "
+            "spreads suspicion along the grounding links above and nothing else.")
+    out.append(
         f"- **AI origins** (items with these origins enter `proposed` and need "
-        f"human ratification): {_fmt_set(schema.ai_origins)}"
-    )
+        f"human ratification): {_fmt_set(schema.ai_origins)}")
+    return "\n".join(out)
 
 
 def _ctx_coverage(schema) -> str:
@@ -1114,23 +1131,100 @@ _CTX_FORMAT = (
     "Never invent a UID or edit a manifest by hand — let the CLI allocate."
 )
 
-_CTX_COMMANDS = (
-    "## Commands you will use\n\n"
-    "```\n"
-    "tl new <PREFIX> --type <T> [--title …] [--text …] --ground <PARENT_UID>\n"
-    "tl link <SRC> <DST> --type <kind>       # add a typed link\n"
-    "tl check [--strict] [--format json]     # THE GATE — run before committing\n"
-    "tl ratify <UID> --by <who>              # a human accepts a proposed item\n"
-    "tl trace <UID> [--direction in|out]     # walk an item to its 'why'\n"
-    "tl blast <UID>                          # what depends on an item\n"
-    "tl shape [--format json]                # observed (from)-[link]->(to) triples\n"
-    "tl dump [-o FILE]                        # whole project as one documented JSON structure\n"
-    "tl diagram [types|transitions|both]     # Mermaid of the model / lifecycle\n"
-    "tl docs [FILE ...] [--at REF]           # inject graph content into marked Markdown regions\n"
-    "tl docs [FILE ...] --check              # CI gate: fail if a document is out of date\n"
-    "tl context                              # regenerate this brief\n"
-    "```"
-)
+# Usage lines worth spelling out beyond what the parser's own help says — the
+# arguments an agent will otherwise have to discover. Commands absent from this
+# table are still listed; they are rendered from the parser alone. This table may
+# never *decide* which commands appear (SR-0161): the command surface is the
+# parser's, so a capability the tool gains is described without anyone remembering
+# to describe it, and _ctx_commands_uncovered() fails the build if one slips past.
+_CTX_COMMAND_USAGE = {
+    "new": "tl new <PREFIX> --type <T> [--title …] [--text …] --ground <PARENT_UID>",
+    "link": "tl link <SRC> <DST> --type <kind>",
+    "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
+    "check": "tl check [--strict] [--format json]",
+    "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>]",
+    "trace": "tl trace <UID> [--direction in|out]",
+    "blast": "tl blast <UID>",
+    "shape": "tl shape [--format json]",
+    "dump": "tl dump [-o FILE]",
+    "diagram": "tl diagram [types|transitions|both]",
+    "docs": "tl docs [FILE ...] [--at REF] [--check]",
+    "status": "tl status <UID> <STATUS>",
+    "invalidate": "tl invalidate <UID> [--reason …]",
+    "delete": "tl delete <UID>",
+    "query": "tl query [--type T] [--status S] [--format json]",
+    "register": "tl register new <PREFIX> <FOLDER> --title <…>",
+    "migrate": "tl migrate",
+    "review": "tl review",
+    "init": "tl init [--demo]",
+    "context": "tl context",
+}
+
+# Commands whose importance is not evident from a one-line help string, and which
+# an agent that had read only the rest of the brief would be surprised by.
+_CTX_COMMAND_EMPHASIS = {
+    "check": "THE GATE — run before committing",
+    "ratify": "a human accepts a proposed item; never run this for a human",
+    "migrate": "idempotent repairs; extend this, never a script beside it",
+    "invalidate": "retires an item and cascades suspicion — see grounding, below",
+    "delete": "tombstones an item; the file stays, the item stops counting",
+}
+
+
+def _subcommands() -> list[tuple[str, tuple[str, ...], str]]:
+    """(name, aliases, help) for every subcommand the CLI exposes, read off the
+    parser itself so the brief cannot fall behind the tool (SR-0161).
+
+    Aliases are folded into the command they alias rather than listed as commands
+    of their own — ``tl ls`` is a second spelling of ``tl query``, not a second
+    capability, and presenting it as one would overstate the surface."""
+    actions = [a for a in build_parser()._actions
+               if isinstance(a, argparse._SubParsersAction)]
+    if not actions:                                  # pragma: no cover — defensive
+        return []
+    sub = actions[0]
+    primary = {c.dest for c in sub._choices_actions}
+    helps = {c.dest: (c.help or "").strip() for c in sub._choices_actions}
+    aliases: dict[str, list[str]] = {}
+    for name, parser in sub.choices.items():
+        if name in primary:
+            continue
+        owner = next((n for n in primary if sub.choices[n] is parser), None)
+        if owner:
+            aliases.setdefault(owner, []).append(name)
+    return sorted(
+        (name, tuple(sorted(aliases.get(name, ()))), helps.get(name, ""))
+        for name in primary
+    )
+
+
+def _ctx_commands_uncovered() -> list[str]:
+    """Subcommands the brief would describe from the parser alone, with no usage
+    line of their own. Returned rather than raised so a caller — the test that
+    gates this — decides how loudly to fail (SR-0161)."""
+    return [name for name, _, _ in _subcommands() if name not in _CTX_COMMAND_USAGE]
+
+
+def _ctx_commands() -> str:
+    """The command section, derived from the live parser rather than a hand-kept
+    list. A hand-kept list drifts precisely when someone is moving fast, and the
+    commands that went missing from this brief for months — delete, invalidate,
+    migrate, query, register, review, status, unlink — were exactly the ones an
+    agent most needed to be told about."""
+    rows = []
+    for name, aliases, help_text in _subcommands():
+        usage = _CTX_COMMAND_USAGE.get(name, f"tl {name}")
+        note = _CTX_COMMAND_EMPHASIS.get(name) or help_text.split(" — ")[0]
+        if aliases:
+            note = f"{note} (also: {', '.join(aliases)})" if note else \
+                   f"also: {', '.join(aliases)}"
+        rows.append((usage, note))
+    width = min(max((len(u) for u, _ in rows), default=0) + 2, 58)
+    # a usage line wider than the column still keeps a gap before its note
+    body = "\n".join(
+        f"{u.ljust(max(width, len(u) + 2))}# {n}".rstrip() if n else u
+        for u, n in rows)
+    return "## Commands (every command this tool exposes)\n\n```\n" + body + "\n```"
 
 
 def _ctx_snapshot(project) -> str:
@@ -1189,7 +1283,7 @@ def _context_markdown(project) -> str:
         _ctx_grounding(schema),
         _ctx_coverage(schema),
         _CTX_FORMAT,
-        _CTX_COMMANDS,
+        _ctx_commands(),
         _ctx_snapshot(project),
     ]
     non_goals = _ctx_non_goals(project)
@@ -1308,15 +1402,22 @@ def cmd_ratify(args) -> int:
     uid = _resolve_uid(project, args.uid, "ratify", "UID")
     if uid is None:
         return USAGE
-    by = _resolve_value(args.by, "ratifier", "--by", default=getpass.getuser())
+    # Offer the identity this repository already signs commits with (SR-0156). It
+    # is only ever a default: _resolve_value shows it and takes it on assent, and a
+    # non-interactive session that names no ratifier is refused, not signed for.
+    by = _resolve_value(args.by, "ratifier", "--by",
+                        default=default_ratifier(args.path))
     if by is None:
         return USAGE
     try:
-        item = ratify(project, uid, by=by)
+        item = ratify(project, uid, by=by, by_id=getattr(args, "by_id", None))
+    except IdentityError as e:
+        return _err(str(e))
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
     write_item(item, project.register_of(item.uid))
-    print(f"{uid} ratified by {by}")
+    identifier = item.attrs.get(RATIFIED_ID_ATTR)
+    print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
     return OK
 
 
@@ -1539,7 +1640,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("uid", nargs="?", default=None,
                    help="UID to ratify (omit on a terminal to pick one)")
     s.add_argument("--by", default=None,
-                   help="ratifier identity (omit on a terminal to be prompted)")
+                   help="ratifier name (omit on a terminal to be prompted; "
+                        "defaults to the identity this repository signs with)")
+    s.add_argument("--by-id", default=None, metavar="SCHEME:VALUE",
+                   help="optional stable identifier for that human, e.g. "
+                        "github:octocat or email:ada@example.com")
     s.set_defaults(func=cmd_ratify)
 
     s = sub.add_parser("invalidate", help="falsify an item; cascade suspect")

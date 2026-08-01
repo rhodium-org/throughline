@@ -1,0 +1,40 @@
+uid: SR-0155
+type: system_requirement
+status: rejected
+title: One human ratifier is one recorded identity
+text: A project shall be able to declare the humans who may ratify in it — each canonical
+  identity together with the spellings its records have used — and the Tool shall
+  resolve a ratifier's name to that canonical form when it writes a ratification
+  record, so one human is one identity in the record however they were named at the
+  keyboard. A name the project has not declared shall be recorded exactly as given,
+  and migration shall bring existing records onto a declared identity wherever one
+  covers them. A project that declares no ratifiers shall behave exactly as it does
+  today.
+rationale: SR-0098 puts the truth of a name beyond the Tool's reach and leaves it
+  to the human; it does not follow that the Tool must also leave the same human scattered
+  across several names. Measured across this estate — nine hundred and eighteen ratification
+  records carrying five spellings, of which three are one person and two are another.
+  Accountability that cannot be counted is weak evidence, and asking who signed a
+  body of work becomes a text-matching exercise the reader has to get right. The
+  mapping from spelling to identity is declared by a human in the project's own configuration
+  and never inferred, so the Tool gains no power to decide who someone is — it only
+  stops recording the same person twice. An undeclared name is still recorded, because
+  refusing one would put the Tool between a human and the record of what they accepted,
+  and would make the declaration a roster every contributor must append to before
+  they may sign — one shared file turned into a point of contention in a tool whose
+  storage is one file per item precisely to avoid that. Left as an alias table for
+  the spellings a project has already accumulated, it stays small and rarely edited.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0098
+  type: refines
+- target: SR-0152
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  invalidated_reason: No need to introduce friction to being able to ratify. This
+    really depends on how strict a project wnats/needs to be.

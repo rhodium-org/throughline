@@ -1,0 +1,40 @@
+uid: SR-0159
+type: system_requirement
+status: implemented
+title: Suspicion travels only along links that carry justification
+text: When an item is invalidated, the Tool shall mark as suspect only those items
+  that reach it through a grounding link or through an assumption, and shall leave
+  untouched any item whose only path to it is a link of another kind. Reporting a
+  blast radius on request shall continue to follow every incoming link, since a reader
+  asking what touches an item is asking a wider question than the Tool asking whose
+  justification has just been withdrawn.
+rationale: The invalidation cascade computes its set with the same unfiltered call
+  the impact report uses, so suspicion currently travels along every link type —
+  including relates, which this project's own configuration describes as a loose
+  "see also" and deliberately leaves unconstrained in the endpoint rules. The code
+  has never matched its own comment, which says the set is incoming grounding and
+  assumes edges; the filter it describes is simply not applied. That makes a cross-reference
+  as invalidating as a justification, which is not what a cross-reference means —
+  an item that merely points at another for a reader's benefit has not lost any ground
+  to stand on when that other is withdrawn. Measured on this graph, sixty-eight items
+  would suspect further items through non-grounding links alone, one of them a dozen,
+  and relates accounts for fifty-nine of two hundred and eighty-seven links. Suspicion
+  at that reach is noise, and a suspect flag that is usually undeserved trains the
+  reader to clear it without looking, which costs the mechanism the one thing it
+  has. Assumptions are included because an item resting on a falsified assumption
+  genuinely has lost its footing, which is the same claim a grounding link makes.
+  The two uses of the reachable set are kept distinct rather than unified — one answers
+  what a human should re-examine, the other decides what the Tool may restatus on
+  its own, and only the second should be narrow.
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0035
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:2ac14362ac9c887322bbb73e501a109707351f6bf11ca8512df0e3cdc7952305

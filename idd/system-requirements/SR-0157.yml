@@ -1,0 +1,36 @@
+uid: SR-0157
+type: system_requirement
+status: implemented
+title: A ratification record may carry a stable identifier beside the name
+text: A ratification record shall be able to carry, alongside the ratifier's name,
+  a stable identifier for that human, recorded in its own field and never conflated
+  with the name. The identifier shall state the scheme it belongs to — a forge account
+  such as GitHub, or an email address — and shall be optional. Writing a ratification
+  shall never require a network call or a platform credential to succeed. The Tool
+  shall never invent an identifier for a record that lacks one.
+rationale: A name is not an identifier. Two people may share one, one person may
+  change theirs, and neither event should silently rewrite who accepted what. An
+  identifier is what makes "one human is one identity" answerable by machine rather
+  than by text matching, which is the weakness SR-0155 names. It belongs in its own
+  field because a record that fuses the two expresses neither cleanly — the name
+  is what a reader recognises, the identifier is what a counter can trust. Naming
+  the scheme costs nothing and buys the ability to hold a GitHub account, which is
+  where this estate's work actually lives and which there is no reason to hold at
+  arm's length. The one firm constraint is availability, not neutrality — ratification
+  happens at a terminal and in CI runners, so a record that cannot be written without
+  an API token would fail exactly where accountability matters most. A forge login
+  is therefore read from what is already to hand and treated as absent when it is
+  not, rather than fetched. Existing records cannot be given an identifier retrospectively,
+  because inventing one would fabricate the evidence the record exists to hold.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0155
+  type: relates
+attrs:
+  origin: ai
+  priority: could
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:c70b2072d3e14f058811bcdd28d23437b2be6deac8f40ca46881958fb70ee2a4

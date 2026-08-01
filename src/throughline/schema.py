@@ -28,6 +28,14 @@ _GROUNDING_DEFAULTS = {
     "delivery_roots": ["intent", "business_need", "risk", "constraint"],
     "ground_link_types": ["derives_from", "mitigates", "implements", "verifies"],
     "ai_origins": ["ai", "hybrid"],
+    # Link types that withdraw the source's footing when their target is
+    # invalidated, *without* conferring grounding (SR-0160). Empty by default: a
+    # project that declares none cascades suspicion over its grounding links
+    # alone, which is the narrow reading, because a cascade that surprises is the
+    # failure this exists to end. 'assumes' is the archetype — an item resting on
+    # a falsified assumption has genuinely lost its footing — but it is one string
+    # in a vocabulary any project may redefine, so it is declared, never assumed.
+    "suspect_link_types": [],
 }
 
 # Attribute value kinds a project may declare (SR-0020).
@@ -76,6 +84,7 @@ class Schema:
     root_types: frozenset[str]
     delivery_roots: frozenset[str]
     ground_link_types: frozenset[str]
+    suspect_link_types: frozenset[str]     # extra links that withdraw footing (SR-0160)
     ai_origins: frozenset[str]
     coverage: tuple[dict, ...]
     rule_overrides: dict                   # rule name -> configured severity
@@ -160,6 +169,8 @@ class Schema:
             g.get("delivery_roots", _GROUNDING_DEFAULTS["delivery_roots"]))
         ground_link_types = frozenset(
             g.get("ground_link_types", _GROUNDING_DEFAULTS["ground_link_types"]))
+        suspect_link_types = frozenset(
+            g.get("suspect_link_types", _GROUNDING_DEFAULTS["suspect_link_types"]))
         ai_origins = frozenset(g.get("ai_origins", _GROUNDING_DEFAULTS["ai_origins"]))
 
         rules = config.get("rules") or {}
@@ -173,7 +184,8 @@ class Schema:
             status_roles=status_roles,
             transitions=transitions, link_rules=link_rules,
             root_types=root_types, delivery_roots=delivery_roots,
-            ground_link_types=ground_link_types, ai_origins=ai_origins,
+            ground_link_types=ground_link_types,
+            suspect_link_types=suspect_link_types, ai_origins=ai_origins,
             coverage=coverage, rule_overrides=rule_overrides,
             docs_paths=docs_paths,
         )
@@ -209,6 +221,11 @@ class Schema:
         if missing:
             raise SchemaError(
                 f"[grounding] ground_link_types {sorted(missing)} are not in "
+                "the declared [links] types")
+        stray = self.suspect_link_types - self.link_types
+        if stray:
+            raise SchemaError(
+                f"[grounding] suspect_link_types {sorted(stray)} are not in "
                 "the declared [links] types")
         unruled = set(self.link_rules) - self.link_types
         if unruled:
@@ -268,6 +285,22 @@ class Schema:
                 f"no status is bound to the '{role}' role — declare it under "
                 "[status.roles] in the project configuration")
         return self.status_roles[role]
+
+    def withdrawing_link_types(self) -> frozenset[str]:
+        """Link types along which invalidation withdraws the source's footing, and so
+        the only ones suspicion travels down (SR-0159/SR-0160).
+
+        The grounding links, because an item that grounds in a withdrawn item has lost
+        the ground it stood on, plus whatever further types the project has declared
+        under ``suspect_link_types`` — typically its assumption link. Everything else is
+        left out: a cross-reference is not a justification, and an item that merely
+        points at another for a reader's benefit has lost nothing when that other goes.
+
+        Deliberately *not* what :meth:`Index.impact` reports. A reader asking what
+        touches an item is asking a wider question than the tool asking whose
+        justification has just been withdrawn, and only the second may restatus items
+        on its own — so the two uses of the reachable set stay distinct."""
+        return self.ground_link_types | self.suspect_link_types
 
     def dead_statuses(self) -> frozenset[str]:
         """Statuses that mean the item is no longer live — the 'invalidated' and

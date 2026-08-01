@@ -11,6 +11,12 @@ format_version = 3
 root_types = ["intent", "business_need", "non_goal"]
 delivery_roots = ["intent", "business_need"]
 ground_link_types = ["derives_from", "implements", "verifies", "mitigates"]
+# Links that withdraw footing without conferring grounding (SR-0160). An item
+# resting on a falsified assumption has genuinely lost the ground it stood on, so
+# suspicion follows 'assumes' here. 'relates' is deliberately absent: a "see also"
+# is not a justification, and a flag that is usually undeserved trains the reader
+# to clear it without looking.
+suspect_link_types = ["assumes"]
 ai_origins = ["ai", "hybrid"]
 
 [types.user_requirement]

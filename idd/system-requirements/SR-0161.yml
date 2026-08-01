@@ -1,0 +1,41 @@
+uid: SR-0161
+type: system_requirement
+status: implemented
+title: The brief covers every mechanic an agent must know, and stays complete
+text: The agent-facing brief shall describe every mechanic of the Tool an agent must
+  be aware of to work correctly — each command it may need, including those that
+  repair, invalidate, review or remove; each configured vocabulary that governs what
+  it may write; and any behaviour that would surprise an agent that had read only
+  the rest of the brief. The brief shall derive that coverage from the Tool's own
+  command surface and the loaded configuration wherever it can, rather than from
+  a list maintained by hand, so that a capability the Tool gains is described without
+  anyone remembering to describe it. Where a mechanic cannot be derived, the omission
+  shall be made to fail a check rather than pass silently.
+rationale: SR-0088 and SR-0129 say what the brief must contain and that the schema-derived
+  half must be rendered rather than restated; neither obliges the brief to stay complete
+  as the Tool grows, and it has not. Nine of the Tool's twenty commands are absent
+  from the brief it generates — among them migrate, invalidate, review, delete and
+  unlink. The gaps are not incidental. An agent that does not know migrate exists
+  writes a repair script beside the tool instead of extending it, which is the failure
+  this estate has already had to correct by hand; an agent that does not know invalidate
+  exists has no sanctioned way to withdraw an item, and one that has never been told
+  what suspicion cascades along cannot predict what its own rejection will do. A
+  brief that is authoritative on some mechanics and silent on others is worse than
+  one that is plainly partial, because an agent instructed to trust it over any other
+  source — as this brief instructs — will read silence as absence and act accordingly.
+  The requirement is therefore on the derivation rather than the wording. A hand-maintained
+  list drifts the moment someone adds a command in a hurry, which is exactly how
+  these nine came to be missing, and a check that fails on an undescribed mechanic
+  is what makes the obligation hold without depending on anyone's diligence.
+normative: true
+links:
+- target: UR-0022
+  type: implements
+- target: SR-0088
+  type: refines
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:703311c0ca55f02d9a67f579e1aefc86ac015e69fe5c7347512ed2e5423e0714

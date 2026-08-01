@@ -25,6 +25,8 @@ from throughline import (
     write_item,
     write_manifest,
 )
+from throughline import identity
+from throughline.identity import IdentityError
 from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
 from throughline.storage import (
@@ -932,6 +934,50 @@ def test_context_omits_non_goal_section_when_none(tmp_path):
     assert "## Non-goals" not in doc
 
 
+def test_every_subcommand_reaches_the_brief(tmp_path):
+    """SR-0161: the brief describes the whole command surface, and a command added
+    without one is made to fail here rather than pass silently.
+
+    This is the check the requirement asks for. The commands are read off the
+    parser, so a new subcommand appears in the brief automatically; what cannot be
+    derived is the worked usage line, and *that* omission is what this gates. If
+    it fails, add an entry to ``_CTX_COMMAND_USAGE`` for the name it prints."""
+    from throughline.cli import _ctx_commands, _ctx_commands_uncovered, _subcommands
+    missing = _ctx_commands_uncovered()
+    assert missing == [], (
+        f"subcommands with no usage line in the context brief: {missing}")
+    rendered = _ctx_commands()
+    for name, aliases, _ in _subcommands():
+        assert f"tl {name}" in rendered, f"{name} is absent from the brief"
+        for alias in aliases:
+            # An alias is folded into the command it aliases, never presented as
+            # a capability of its own.
+            assert f"tl {alias} " not in rendered
+            assert alias in rendered
+
+
+def test_context_states_how_suspicion_spreads(tmp_path):
+    """SR-0161: `tl invalidate` restatuses items the caller never named, so the
+    vocabulary governing that cascade is stated either way — a project that
+    declared none has narrowed the mechanic, not switched it off."""
+    from throughline.cli import _context_markdown
+    base = {"links": {"types": ["derives_from", "assumes"]},
+            "grounding": {"root_types": ["intent"],
+                          "ground_link_types": ["derives_from"]}}
+    quiet = _context_markdown(_project(_doc("INT", Item(uid="INT-1", type="intent")),
+                                       config=base))
+    assert "Withdrawing link types:** none declared" in quiet
+    assert "grounding links above and nothing else" in quiet
+
+    loud_cfg = {**base, "grounding": {**base["grounding"],
+                                      "suspect_link_types": ["assumes"]}}
+    loud = _context_markdown(_project(_doc("INT", Item(uid="INT-1", type="intent")),
+                                      config=loud_cfg))
+    assert "Withdrawing link types:** `assumes`" in loud
+    assert "confer no grounding" in loud
+    assert "tl invalidate" in loud
+
+
 # ------------------------------------------------------- docs at-ref (SR-0090)
 
 def test_load_project_at_ref_reproduces_committed_state(tmp_path):
@@ -1728,7 +1774,13 @@ def test_ratified_before_the_stamp_existed_is_not_accused():
     p.get("FR-1").attrs["ratified_by"] = "alice"
     assert ("FR-1", "ratified-stale") not in _rules(validate(p))
 
-def test_invalidate_cascades_suspect_to_blast_radius():
+# --------------------------------------------------------------------------- #
+# SR-0159 / SR-0160 — suspicion travels only along links that carry justification
+# --------------------------------------------------------------------------- #
+
+def _assumption_graph(config: dict | None = None) -> Project:
+    """INT-1 <- FR-1 <- NFR-1 by derives_from; FR-1 also assumes ASM-1, and NFR-1
+    merely relates to a note. Invalidating ASM-1 is the interesting case."""
     intent = Item(uid="INT-1", type="intent", status="ratified")
     asm = Item(uid="ASM-1", type="assumption", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status="ratified",
@@ -1736,13 +1788,85 @@ def test_invalidate_cascades_suspect_to_blast_radius():
                      Link(target="ASM-1", type="assumes")])
     nfr = Item(uid="NFR-1", type="nfr", status="ratified",
                links=[Link(target="FR-1", type="derives_from")])
-    p = _project(_doc("INT", intent), _doc("ASM", asm),
-                 _doc("FR", fr), _doc("NFR", nfr))
+    return _project(_doc("INT", intent), _doc("ASM", asm),
+                    _doc("FR", fr), _doc("NFR", nfr), config=config)
+
+
+_ASSUMES_WITHDRAWS = {"grounding": {"suspect_link_types": ["assumes"]}}
+
+
+def test_invalidate_cascades_suspect_along_a_declared_assumption():
+    """An item resting on a falsified assumption has genuinely lost its footing, so a
+    project that says so gets the cascade — transitively, through the grounding links
+    beyond it (SR-0159)."""
+    p = _assumption_graph(_ASSUMES_WITHDRAWS)
     affected = invalidate(p, "ASM-1", reason="measured false")
-    assert asm.status == "rejected"
+    assert p.get("ASM-1").status == "rejected"
     assert set(affected) == {"FR-1", "NFR-1"}
-    assert fr.status == "suspect"
-    assert nfr.status == "suspect"
+    assert p.get("FR-1").status == "suspect"
+    assert p.get("NFR-1").status == "suspect"
+
+
+def test_an_undeclared_assumption_link_does_not_cascade():
+    """The tool holds no link type in that set by name. 'assumes' is one string in a
+    vocabulary any project may redefine, so a project that declares nothing cascades
+    over its grounding links alone — the narrow default (SR-0160)."""
+    p = _assumption_graph()
+    assert invalidate(p, "ASM-1", reason="measured false") == []
+    assert p.get("ASM-1").status == "rejected", "the item itself is still retired"
+    assert p.get("FR-1").status == "ratified", "untouched"
+
+
+def test_grounding_links_always_cascade_without_being_declared():
+    """Grounding is justification by definition; it needs no opting in."""
+    p = _assumption_graph()
+    affected = invalidate(p, "INT-1", reason="withdrawn")
+    assert set(affected) == {"FR-1", "NFR-1"}
+    assert p.get("FR-1").status == p.get("NFR-1").status == "suspect"
+
+
+def test_a_cross_reference_does_not_withdraw_footing():
+    """A 'see also' is not a justification. An item that points at another for a
+    reader's benefit has lost no ground to stand on when that other is withdrawn —
+    and suspicion at that reach is noise that trains a reader to clear the flag
+    without looking, which costs the mechanism the one thing it has (SR-0159)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    note = Item(uid="FR-2", type="requirement", status="ratified",
+                links=[Link(target="INT-1", type="derives_from")])
+    fr = Item(uid="FR-1", type="requirement", status="ratified",
+              links=[Link(target="INT-1", type="derives_from"),
+                     Link(target="FR-2", type="relates")])
+    p = _project(_doc("INT", intent), _doc("FR", note, fr),
+                 config=_ASSUMES_WITHDRAWS)
+    assert invalidate(p, "FR-2", reason="superseded") == []
+    assert p.get("FR-1").status == "ratified"
+
+
+def test_the_blast_radius_report_still_follows_every_link():
+    """The two uses of the reachable set stay distinct. A reader asking what touches
+    an item is asking a wider question than the tool asking whose justification has
+    just been withdrawn, and only the second may restatus items on its own."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    note = Item(uid="FR-2", type="requirement", status="ratified",
+                links=[Link(target="INT-1", type="derives_from")])
+    fr = Item(uid="FR-1", type="requirement", status="ratified",
+              links=[Link(target="INT-1", type="derives_from"),
+                     Link(target="FR-2", type="relates")])
+    p = _project(_doc("INT", intent), _doc("FR", note, fr))
+    assert "FR-1" in Index.build(p).impact("FR-2"), "the report is unchanged"
+
+
+def test_suspect_link_types_must_be_declared_link_types():
+    """A typo in the declaration is caught at load, not discovered as a cascade that
+    quietly never fires."""
+    with pytest.raises(SchemaError, match="suspect_link_types"):
+        Schema.from_config({
+            "links": {"types": ["derives_from", "assumes"]},
+            "grounding": {
+                "ground_link_types": ["derives_from"],
+                "suspect_link_types": ["assums"],
+            },
+        })
 
 def test_scout_ingest_proposes_roots_and_flags_ambiguity():
     intent = Item(uid="INT-1", type="intent", status="ratified")
@@ -3424,3 +3548,70 @@ def test_dump_cli_writes_to_output_file(tmp_path, capsys):
     assert _cli(["-C", str(root), "dump", "-o", str(out)]) == 0
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["throughline_dump"]["format_version"] == FORMAT_VERSION
+
+
+# --------------------------------------------------------------------------- #
+# SR-0156 / SR-0157 — who signed
+# --------------------------------------------------------------------------- #
+
+def test_default_ratifier_offers_the_identity_the_repo_signs_with(monkeypatch):
+    """The repository already knows who is working in it. Offering the OS account
+    name instead is how the same person ends up under several spellings."""
+    monkeypatch.setattr(identity, "_git_config",
+                        lambda key, path: "Ada Lovelace" if key == "user.name" else None)
+    assert identity.default_ratifier() == "Ada Lovelace"
+
+
+def test_default_ratifier_falls_back_to_the_account_name(monkeypatch):
+    """Only where no signing identity is configured — the fallback is the old
+    behaviour, not a guess layered on top of it."""
+    monkeypatch.setattr(identity, "_git_config", lambda key, path: None)
+    monkeypatch.setattr(identity.getpass, "getuser", lambda: "ada")
+    assert identity.default_ratifier() == "ada"
+
+
+def test_git_identity_is_silent_when_git_is_absent(monkeypatch):
+    """No git, no repository, nothing configured — all the same answer, and never
+    an exception in the middle of a ratification."""
+    def _boom(*a, **k):
+        raise OSError("no git here")
+    monkeypatch.setattr(identity.subprocess, "run", _boom)
+    assert identity.git_identity() == (None, None)
+
+
+def test_ratify_records_an_identifier_in_its_own_field():
+    p = _grounded_project()
+    item = ratify(p, "FR-1", by="Ada Lovelace", by_id="github:ada")
+    assert item.attrs["ratified_by"] == "Ada Lovelace"
+    assert item.attrs["ratified_id"] == "github:ada", "never conflated with the name"
+
+
+def test_ratify_invents_no_identifier():
+    """A record given none keeps none. An invented identifier is worse than an
+    absent one: it looks like evidence."""
+    p = _grounded_project()
+    assert "ratified_id" not in ratify(p, "FR-1", by="Ada Lovelace").attrs
+
+
+def test_an_identifier_must_state_its_scheme():
+    """'ada' is not stable, merely opaque — there is no way to resolve it later."""
+    p = _grounded_project()
+    with pytest.raises(IdentityError, match="scheme"):
+        ratify(p, "FR-1", by="Ada Lovelace", by_id="ada")
+
+
+@pytest.mark.parametrize("value", ["github:ada", "email:ada@example.com",
+                                   "gitlab:ada", "some-forge:ada"])
+def test_the_scheme_vocabulary_is_open(value):
+    """A project on a forge the tool has not heard of must not have to misfile its
+    people under one it has."""
+    assert identity.normalise_identifier(value) == value
+
+
+def test_writing_a_ratification_needs_no_network(monkeypatch):
+    """A ratification must be writable on a train. Nothing here may reach out."""
+    def _refuse(*a, **k):
+        raise AssertionError("ratifying must not run a subprocess")
+    monkeypatch.setattr(identity.subprocess, "run", _refuse)
+    p = _grounded_project()
+    assert ratify(p, "FR-1", by="Ada Lovelace", by_id="github:ada")

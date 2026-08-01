@@ -1,0 +1,36 @@
+uid: SR-0158
+type: system_requirement
+status: rejected
+title: The humans who ratify are declared as a register, not a config table
+text: A project shall be able to declare each human who ratifies in it as an item
+  in a register — one file per person, carrying that person's canonical name, the
+  spellings their records have used, and any stable identifier — in place of a table
+  in the project's configuration file. The Tool shall resolve a ratifier to that
+  person exactly as it resolves against the configuration table, and a project shall
+  be able to migrate from the table to the register without any ratification record
+  changing meaning.
+rationale: The objection that sank the first design was merge conflicts — a shared
+  table that every contributor must append to is a queue on one file. throughline
+  already answered that question once, and answered it by storing one item per file
+  precisely so that two people adding two things never collide; a configuration table
+  reintroduces the contention the storage model exists to prevent. A register also
+  gives a person somewhere to be, rather than a key in a mapping, which is what SR-0157's
+  identifier and any later provenance actually need — a table entry whose value is
+  a list of spellings has no room to grow, and growing it means a second config shape
+  the Tool must understand forever. Declaring people as items keeps one storage model
+  instead of two. The counterweight is that a person is not a claim about the system
+  — they must not need grounding to a root, must not be counted as coverage, and
+  must not be ratifiable themselves, so this is a register the graph holds but does
+  not judge, and that exemption is the part of the design most likely to be wrong.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0155
+  type: relates
+attrs:
+  origin: ai
+  priority: could
+  verification: test
+  invalidated_reason: I think this is confusing a clean seperation of what registers
+    are with how they are used by throughline. It is become function.

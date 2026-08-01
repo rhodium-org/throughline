@@ -1,0 +1,36 @@
+uid: SR-0160
+type: system_requirement
+status: implemented
+title: A project declares which links withdraw footing
+text: A project shall be able to declare, in its own configuration alongside the
+  grounding link types, the further link types whose target being invalidated withdraws
+  the source's footing without those links conferring grounding. The set that carries
+  suspicion shall be the grounding link types together with the types so declared,
+  and the Tool shall hold no link type in that set by name. A project that declares
+  none shall cascade over its grounding links alone.
+rationale: SR-0159 settles that suspicion follows justification and that an assumption
+  counts, but the Tool has nowhere to learn which link is the assumption — assumes
+  is one string among eight in a vocabulary any project may redefine, so honouring
+  that decision would mean writing the word into the cascade, and an operation that
+  knows a link type by name stops working the moment a project names its links differently.
+  Every other vocabulary here is declared rather than assumed, and this one should
+  not be the exception. Declaring it also gives the two undecided cases a principled
+  home instead of a ruling from the tool. A refinement of a withdrawn requirement,
+  and an item satisfying a standard clause that has been retracted, have both lost
+  something real — but less than a grounding link's worth, since each still reaches
+  a root by another path and never becomes ungrounded. Whether that loss deserves
+  a suspect flag depends on how a project uses those links, which is a judgement
+  the project can make and the tool cannot. The default is the narrow one, because
+  a cascade that surprises is the failure this pair of requirements exists to end.
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0159
+  type: refines
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8537189ad7c204e2fefdfdd350a3b62e1b25b9b19ee130cca8c5786066ca8d3c

@@ -15,6 +15,11 @@ from __future__ import annotations
 
 from .fingerprint import fingerprint
 from .graph import Index
+from .identity import (
+    RATIFIED_BY_ATTR,
+    RATIFIED_ID_ATTR,
+    normalise_identifier,
+)
 from .model import Item, Link
 
 
@@ -60,7 +65,8 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     return None
 
 
-def ratify(project, uid: str, by: str, *, index: Index | None = None) -> Item:
+def ratify(project, uid: str, by: str, *, index: Index | None = None,
+           by_id: str | None = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
 
@@ -93,7 +99,14 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None) -> Item:
             f"{item.attrs.get('ratified_by', 'a human')} and its content has not "
             "changed since — there is nothing to accept")
     set_status(schema, item, schema.status_role("ratified"))
-    item.attrs["ratified_by"] = by
+    item.attrs[RATIFIED_BY_ATTR] = by
+    # A stable identifier for the same human, in its own field and never conflated
+    # with the name (SR-0157). Optional, and never invented: a record given none
+    # keeps none, and one that had an identifier does not silently lose it when a
+    # later ratification is taken without one.
+    identifier = normalise_identifier(by_id)
+    if identifier is not None:
+        item.attrs[RATIFIED_ID_ATTR] = identifier
     item.attrs["ratified_fingerprint"] = current
     return item
 
@@ -106,7 +119,12 @@ def invalidate(project, uid: str, reason: str = "") -> list[str]:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
     idx = Index.build(project)
-    affected = idx.impact(uid)          # incoming grounds_in + assumes edges
+    # Only along links that carry justification (SR-0159): the project's grounding
+    # links, plus any it declared under [grounding] suspect_link_types (SR-0160).
+    # The unfiltered impact set is the blast-radius *report* (SR-0035); it answers
+    # the wider question of what touches this item, which is not the tool's warrant
+    # to restatus. No link type is named here — the set comes from configuration.
+    affected = idx.impact(uid, schema.withdrawing_link_types())
     set_status(schema, item, schema.status_role("invalidated"))
     item.attrs["invalidated_reason"] = reason or True
     suspect = schema.status_role("suspect")

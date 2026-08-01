@@ -1,0 +1,32 @@
+uid: SR-0156
+type: system_requirement
+status: implemented
+title: Ratification defaults to the identity the repository already signs with
+text: When a ratifier is not named explicitly, the Tool shall offer the identity
+  the repository is already configured to sign commits with, and shall fall back
+  to the operating-system account name only where no such identity is configured.
+  The offered value shall remain a default a human may overrule, never a value written
+  without their assent.
+rationale: The estate's two commonest ratifier spellings are not a naming accident
+  — they are its two identity sources. Four hundred and fourteen records read "Henry
+  Grech-Cini", which is what git is configured to sign as; three hundred and sixty-eight
+  read "henry", which is the operating-system account the Tool reached for when nobody
+  said otherwise. The OS account is a login on one machine, not a person; it differs
+  between a laptop, a container and a CI runner for the same human, so defaulting
+  to it manufactures exactly the scatter SR-0155 then has to repair. The signing
+  identity is the name that human already chose to be accountable under in this very
+  repository, it is under version control, it needs no network, and it makes ratification
+  agree with authorship rather than compete with it. Fixing the default is what stops
+  the problem recurring; SR-0155 only cleans up what the old default already wrote.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0155
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:324a97e42f92206a714a9ef3239525d1c5d2e14419763e24d50ad67228c62427
