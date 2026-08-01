@@ -12,7 +12,6 @@ import argparse
 import json
 import sys
 import time
-from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from pathlib import Path
 
 from .dump import build_dump
@@ -42,15 +41,15 @@ from .storage import (
 )
 from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
 from .validate import ERROR, FilterError, eval_filter, validate
+from .version import distribution_version
 
 OK, FINDINGS, USAGE = 0, 1, 2
 
 
 def _version() -> str:
-    try:
-        return _pkg_version("throughline")
-    except PackageNotFoundError:  # pragma: no cover - running from a source tree
-        return "0.0.0+unknown"
+    # One implementation of "what am I running?" serves the library and the CLI
+    # alike (SR-0164 / SR-0076), including the +editable marker for a working tree.
+    return distribution_version("throughline")
 
 
 def _err(msg: str) -> int:

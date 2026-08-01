@@ -4,20 +4,30 @@ status: ratified
 title: The library reports the version of the distribution installed, never a literal
 text: The version the package exports shall be read from the installed distribution's
   metadata rather than restated in source, so the version a caller imports cannot
-  disagree with the version that was released. Run from a source tree with no distribution
-  installed, it shall report a value that is plainly not a release rather than guess
-  at one.
+  disagree with the version that was released. Where the running code is not that
+  release — a source tree with no distribution installed, or an installation that
+  resolves back to a working tree — it shall report a value that cannot be mistaken
+  for a published edition, rather than silently naming the one it has departed from.
 rationale: 1.9.0 was published carrying a hand-written 1.8.0 — the release bumped
   the packaging metadata and left the literal behind. Nothing failed; the wrong answer
   was simply returned to whoever asked, which is the worse outcome, because a version
   is consulted precisely when someone is trying to establish what they are running.
   A version written down twice is a claim nothing checks, and the copy that drifts
-  is the one callers read. The CLI already resolves its --version this way (SR-0076);
-  this puts the library attribute under the same discipline, and SemVer names that
-  attribute as part of the compatibility surface (NFR-0011). The alternative — a
-  release-checklist step, or a test pinning the literal to the packaging metadata
-  — keeps both copies and asks a person or a test to catch the divergence; deriving
-  the value deletes the second copy instead.
+  is the one callers read. The same reasoning reaches the editable install, which
+  has genuine metadata and so answers with a clean release number for code that may
+  be arbitrarily far from it. That is not hypothetical — a full day was lost to an
+  operator and an agent running editable and published builds of these three packages
+  side by side, comparing output from a cockpit and a validator that were simply
+  different software, with every version string agreeing. An install is marked editable
+  in its own metadata (PEP 610 direct_url), so this is read rather than guessed,
+  and a local version segment is the natural way to say it because the packaging
+  rules forbid such a value on a published artifact — the marker cannot collide with
+  a real release. The CLI already resolves its --version this way (SR-0076); this
+  puts the library attribute under the same discipline, and SemVer names that attribute
+  as part of the compatibility surface (NFR-0011). The alternative — a release-checklist
+  step, or a test pinning the literal to the packaging metadata — keeps both copies
+  and asks a person or a test to catch the divergence; deriving the value deletes
+  the second copy instead.
 normative: true
 links:
 - target: UR-0016
@@ -29,4 +39,4 @@ attrs:
   priority: should
   verification: test
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:549e73f0ade865c2484f01e98c6287163c8afa521cd3abeb8eecda867e63153a
+  ratified_fingerprint: sha256:1257b6664cb882b18e936f82cd3b3ced38ca051f2296474c99326e0b130db211

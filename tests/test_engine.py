@@ -2,6 +2,7 @@
 round-trip, the validation pipeline, and the grounding operations.
 """
 import shutil
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -3673,7 +3674,9 @@ def test_the_reported_version_is_the_installed_distributions():
     class of drift impossible rather than merely unlikely."""
     from importlib.metadata import version as dist_version
 
-    assert throughline_pkg.__version__ == dist_version("throughline")
+    # The base version is always the distribution's own; a working tree adds a
+    # marker to it, and never substitutes a different number.
+    assert throughline_pkg.__version__.split("+")[0] == dist_version("throughline")
 
 
 def test_an_uninstalled_source_tree_declines_to_name_a_release(monkeypatch):
@@ -3681,15 +3684,60 @@ def test_an_uninstalled_source_tree_declines_to_name_a_release(monkeypatch):
     installed, the honest answer is that this is not a release — guessing at the
     nearest one would recreate, from the other direction, the very claim the
     literal used to make."""
-    import importlib
-    import importlib.metadata
+    from throughline import version as version_mod
 
     def _absent(name):
-        raise importlib.metadata.PackageNotFoundError(name)
+        raise metadata.PackageNotFoundError(name)
 
-    monkeypatch.setattr(importlib.metadata, "version", _absent)
-    try:
-        assert importlib.reload(throughline_pkg).__version__ == "0.0.0+unknown"
-    finally:
-        monkeypatch.undo()
-        importlib.reload(throughline_pkg)
+    monkeypatch.setattr(version_mod.metadata, "distribution", _absent)
+    assert version_mod.distribution_version("throughline") == "0.0.0+unknown"
+
+
+def test_a_working_tree_install_is_not_reported_as_a_clean_release(monkeypatch):
+    """An editable install has genuine metadata, so it answers with a release number
+    for code that may be arbitrarily far from that release. A full day was lost to
+    exactly that — a cockpit and a validator that were different software, with every
+    version string agreeing. The marker is what makes the difference visible."""
+    from throughline import version as version_mod
+
+    monkeypatch.setattr(version_mod, "_editable_from_direct_url", lambda _d: True)
+    reported = version_mod.distribution_version("throughline")
+
+    assert reported.endswith("+editable")
+    # A local version segment is forbidden on a published artifact, so the marker
+    # cannot collide with anything an index could serve.
+    assert reported != metadata.version("throughline")
+
+
+def test_the_editable_marker_respects_a_version_that_already_has_a_local_segment(
+    monkeypatch,
+):
+    """PEP 440 allows one local segment, so a second '+' would be invalid."""
+    from throughline import version as version_mod
+
+    assert version_mod._mark_editable("1.9.0") == "1.9.0+editable"
+    assert version_mod._mark_editable("1.9.0+dirty") == "1.9.0+dirty.editable"
+
+
+def test_editability_is_read_from_recorded_metadata_not_guessed(monkeypatch):
+    """PEP 610 direct_url.json is the fact pip recorded at install time, so the
+    answer holds however the environment was built — venv, pipx or uv."""
+    from throughline import version as version_mod
+
+    class _Dist:
+        version = "1.2.3"
+
+        def __init__(self, payload):
+            self._payload = payload
+
+        def read_text(self, name):
+            return self._payload if name == "direct_url.json" else None
+
+    editable = _Dist('{"url":"file:///w/tl","dir_info":{"editable":true}}')
+    published = _Dist('{"url":"https://pypi/x.whl","archive_info":{}}')
+
+    assert version_mod._editable_from_direct_url(editable)
+    assert not version_mod._editable_from_direct_url(published)
+    # Absent or unparseable metadata is not evidence of a working tree.
+    assert not version_mod._editable_from_direct_url(_Dist(None))
+    assert not version_mod._editable_from_direct_url(_Dist("{not json"))
