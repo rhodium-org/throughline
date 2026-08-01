@@ -1,6 +1,6 @@
 uid: SR-0164
 type: system_requirement
-status: proposed
+status: ratified
 title: The library reports the version of the distribution installed, never a literal
 text: The version the package exports shall be read from the installed distribution's
   metadata rather than restated in source, so the version a caller imports cannot
@@ -28,3 +28,5 @@ attrs:
   origin: ai
   priority: should
   verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:549e73f0ade865c2484f01e98c6287163c8afa521cd3abeb8eecda867e63153a
