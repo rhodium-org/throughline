@@ -19,6 +19,8 @@ Usage:
 Checks:
     * Python version (>= 3.11, per pyproject requires-python)
     * throughline importable / installed (editable install recommended)
+    * every toolchain package checked out beside this one is the copy that runs,
+      not a published release standing in for it
     * pytest test runner available
     * local grounding gate wired (pre-commit hook installed)
     * grounding gate passes (self-hosted requirements + demo graph)
@@ -27,14 +29,21 @@ Checks:
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MIN_PYTHON = (3, 11)
+
+# The packages that install one another. A checkout sitting beside this repo is the
+# signal that the contributor is working on it, so each of these is expected to be
+# the working tree rather than a published release standing in for it (UR-0021).
+TOOLCHAIN = ("throughline", "throughline-compose", "throughline-ratify")
 
 # ANSI colour, disabled when not a TTY so logs stay clean.
 _TTY = sys.stdout.isatty()
@@ -103,6 +112,100 @@ def check_throughline_import() -> Result:
     editable = str(REPO_ROOT / "src") in str(Path(where).resolve())
     detail = "editable install" if editable else f"installed at {where}"
     return Result("throughline importable", True, detail=detail)
+
+
+def _install_kind(dist_name: str) -> tuple[str, str]:
+    """Return ``(kind, where)`` for an installed distribution.
+
+    ``kind`` is ``absent``, ``editable`` or ``published``. Editability is read from
+    the install's own PEP 610 ``direct_url.json`` — the fact pip recorded at install
+    time — rather than guessed by matching paths, so it stays correct however the
+    environment was built (venv, pipx, uv).
+    """
+    try:
+        dist = metadata.distribution(dist_name)
+    except metadata.PackageNotFoundError:
+        return ("absent", "")
+    raw = dist.read_text("direct_url.json")
+    if raw:
+        try:
+            info = json.loads(raw)
+        except ValueError:
+            info = {}
+        if info.get("dir_info", {}).get("editable"):
+            url = str(info.get("url", ""))
+            path = url[len("file://"):] if url.startswith("file://") else url
+            return ("editable", path)
+    return ("published", dist.version)
+
+
+def check_toolchain_chained() -> Result:
+    """Every toolchain package the contributor has checked out must be the one that
+    actually runs (UR-0021).
+
+    These three repositories install one another, so installing one editable resolves
+    the rest from PyPI. The result is an environment that edits one package and runs
+    the published copy of the next while every version string agrees — a failure that
+    reports nothing at all until two people compare output and find they were running
+    different software. A checkout sitting beside this repo is taken as the signal
+    that the package is being worked on; that is drawn from disk rather than from
+    anything the contributor has to remember to declare.
+    """
+    unchained: list[str] = []
+    detail: list[str] = []
+    checked_out = 0
+    for dist_name in TOOLCHAIN:
+        checkout = (
+            REPO_ROOT if dist_name == REPO_ROOT.name else REPO_ROOT.parent / dist_name
+        )
+        if not (checkout / "pyproject.toml").is_file():
+            continue  # not checked out here — nothing to chain
+        checked_out += 1
+        kind, where = _install_kind(dist_name)
+        if kind == "absent":
+            continue  # not in this environment at all; other checks cover throughline
+        if kind == "published":
+            unchained.append(dist_name)
+            detail.append(f"{dist_name}: published {where}, but checked out at {checkout}")
+        else:
+            same = Path(where).resolve() == checkout.resolve() if where else False
+            detail.append(f"{dist_name}: editable {where}" + ("" if same else " (!)"))
+
+    if not detail:
+        # Either this is the only package checked out, or none of them are installed
+        # in this interpreter at all — which the import and CLI checks already report.
+        summary = "single package" if checked_out <= 1 else "none installed here"
+        return Result("toolchain chained editable", True, detail=summary)
+    if not unchained:
+        return Result("toolchain chained editable", True, detail="; ".join(detail))
+
+    # Name the siblings first and this repo last, matching the recipe in AGENTS.md so
+    # a contributor reading both sees one command, not two that differ cosmetically.
+    present = [
+        d
+        for d in TOOLCHAIN
+        if (REPO_ROOT if d == REPO_ROOT.name else REPO_ROOT.parent / d)
+        .joinpath("pyproject.toml")
+        .is_file()
+    ]
+    installs = " ".join(
+        [f"-e ../{d}" for d in present if d != REPO_ROOT.name]
+        + (['-e ".[dev]"'] if REPO_ROOT.name in present else [])
+    )
+    return Result(
+        "toolchain chained editable",
+        False,
+        detail="; ".join(detail),
+        remediation=(
+            "You have these checked out but are running the published build, so your "
+            "edits are not what executes:"
+            f"\n      {', '.join(unchained)}"
+            "\nChain them in a single command so the resolver never reaches PyPI:"
+            f"\n      python -m pip install {installs}"
+            "\nThen confirm every path is your checkout, not site-packages:"
+            "\n      python -c \"import throughline as m; print(m.__file__)\""
+        ),
+    )
 
 
 def check_cli() -> Result:
@@ -218,7 +321,10 @@ def _grounding_gate(label: str, path: str) -> Result:
 
 
 def check_grounding_selfhost() -> Result:
-    return _grounding_gate("throughline's own requirements", "requirements")
+    # The graph lives in idd/ (the estate convention); it was at requirements/ when
+    # this doctor was written, and the move left this check failing for every
+    # contributor who ran it.
+    return _grounding_gate("throughline's own requirements", "idd")
 
 
 def check_grounding_demo() -> Result:
@@ -273,6 +379,7 @@ def main(argv: list[str] | None = None) -> int:
     results = [
         check_python(),
         check_throughline_import(),
+        check_toolchain_chained(),
         check_cli(),
         check_pytest(),
         check_precommit_hook(fix=args.fix),
