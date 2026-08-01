@@ -276,9 +276,21 @@ tl diagram [types|transitions|both]            # Mermaid of the model / lifecycl
 tl docs [FILE ...] [--at REF]                  # inject graph content into marked Markdown regions
 tl docs [FILE ...] --check                      # CI gate: fail if any document is out of date
 tl context                                     # agent-facing brief (IDD + this project's model)
-tl ratify <UID> --by <who>                     # a human takes accountability
+tl ratify <UID> --by <who> [--by-id <scheme:value>]   # a human takes accountability
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
 ```
+
+Omit `--by` on a terminal and you are offered the identity this repository already
+signs its commits with, to accept or overrule; a non-interactive run that names no
+ratifier is refused, never signed for. `--by-id` is optional and never invented — a
+scheme-qualified identifier (`github:octocat`, `email:ada@example.com`) recorded in
+its own field, because a name is not stable and two people share one.
+
+`invalidate` marks dependents suspect along the links that carry justification: the
+grounding links, plus any the project declares under `[grounding]
+suspect_link_types`. A "see also" is not a justification, so nothing spreads through
+one unless you say it should. To see everything that merely *touches* an item —
+a wider question — use `tl blast`.
 
 ### What `check` enforces
 
