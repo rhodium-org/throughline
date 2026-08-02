@@ -1,0 +1,25 @@
+uid: UR-0028
+type: user_requirement
+status: ratified
+title: A stale item shows what changed before it asks to be re-ratified
+text: Where an item is reported stale against its ratification, a user shall be able
+  to see which normative content changed since it was last ratified, from the same
+  tool that is asking them to accept it.
+rationale: |-
+  Re-ratifying is taking accountability afresh, so a signature given for a change the signer never saw is the same false record as a signature given on someone else's behalf — the one thing this tool exists to prevent. Today the report proves only that content moved; the fingerprint is a one-way digest and says nothing about what moved, so the person must leave the tool and reconstruct it from history. That makes accepting blind the cheapest action available at exactly the moment care is being asked for.
+  Rejected — printing the stored and current digests. It is evidence that something changed, not a description of what, so it does not let anyone decide whether to accept it. Rejected — treating the graph's version control as sufficient. The prior content is recoverable there (BN-0002), and that is what makes this satisfiable at all, but requiring the reader to go and find it is precisely what leaves blind re-ratification the path of least resistance.
+  This states the obligation, not its mechanism. The content that was ratified is not retained, only its digest, so where the earlier wording comes from is a system-level decision; so is which surfaces carry it, noting that the tool asking for the acceptance may be the core CLI, a composing consumer, or a review cockpit, and a user only re-ratifies blind in whichever of them omits it.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0003
+  type: relates
+- target: UR-0006
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:473504fc4ef1a634f903b822a43228db1e2648b014a79e424c8ddf3e6967f030
