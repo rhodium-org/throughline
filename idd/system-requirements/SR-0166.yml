@@ -1,0 +1,23 @@
+uid: SR-0166
+type: system_requirement
+status: ratified
+title: A resolved ratification revision is cached on the record and re-verified before
+  reuse
+text: The Tool shall cache the revision it resolved for a ratification stamp on that
+  record, and shall re-verify a cached revision against the stamp before reusing
+  it, discarding and resolving again where it does not match. `tl migrate` shall
+  populate the cache for records that predate it.
+rationale: |-
+  Resolution is a walk back through an item's history, and the surfaces that need it are interactive — a reviewer moving down a worklist would pay that walk on every item they land on. Held on the record it is a single read, which is the difference between a view that redraws instantly and one that stutters on a graph of any size.
+  Verified rather than trusted, because a cache is exactly what goes wrong quietly. A hint left behind by rewritten history, a restored backup, or a hand edit would otherwise produce a confident difference against the wrong content, and SR-0165 makes that the one outcome worse than showing none. The stamp remains the authority; the revision is only ever an answer it has already agreed with.
+  Populated by migrate, not by a script beside the tool, and not at ratify time. The content being ratified is still uncommitted when ratify runs, so the revision that holds it does not exist yet — recording HEAD then would anchor to the state before the change, the wrong side of it. Migrate is the first moment the answer can be found, and repairing records in place is what it is for.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:0aea90f4c54ecde8d6dd7e0cf97aec556c8158bfeeb8551256c00c233d2bb6c8

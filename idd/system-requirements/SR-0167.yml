@@ -1,0 +1,24 @@
+uid: SR-0167
+type: system_requirement
+status: ratified
+title: Re-ratifying a stale item shows the change and requires confirmation
+text: Where ratify is asked to accept an item reported stale, the Tool shall show
+  what changed since its stamp and require the ratifier to confirm before the signature
+  is recorded. Where the change cannot be shown it shall say so and require the confirmation
+  still. Where there is no interactive terminal it shall refuse unless the caller
+  explicitly acknowledges the change.
+rationale: |-
+  UR-0028 is not satisfied by making the change discoverable. Someone who has to know to go looking is precisely the person who signs without looking, and the moment they are most likely to skip it is the moment they are being asked to take responsibility again. Putting the change in the path of the acceptance is the only placement that reaches the person who needs it.
+  A refusal rather than a warning, consistent with the refusals ratify already makes for ambiguous and ungrounded items — it declines to write the record at all rather than writing one and noting a doubt beside it. A record that exists is evidence; a warning that scrolled past is not.
+  Acknowledged explicitly rather than swept up by a general assent flag, so that an automated re-ratification says that a change was accepted unseen and can be found later, instead of inheriting permission granted for something else.
+  An unshowable change still stops here, and stops harder. When the tool cannot resolve what moved (SR-0165), passing the acceptance through quietly would make the least knowable case the easiest one to sign — the failure this requirement is built to close, arriving by the back door. The ratifier is owed the fact that nobody can say what they are accepting.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:2939895cf2deb0184a0d28d158b0d5bb63f7df9d7b9daf14964d6cc3f1b7c541

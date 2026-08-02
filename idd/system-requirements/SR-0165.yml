@@ -1,0 +1,26 @@
+uid: SR-0165
+type: system_requirement
+status: ratified
+title: The change since ratification is resolved against the stamp, never approximated
+text: The Tool shall report, field by field, the difference between an item's current
+  normative content and the content its ratification stamp was taken over. It shall
+  identify the earlier content only by reproducing that stamp, never by when a revision
+  was made, and shall offer the result as structured data through the Python API
+  as well as rendered text. Where no revision reproduces the stamp, the Tool shall
+  report that the change cannot be shown — an outcome it shall keep distinct from
+  having found no change — and shall never approximate it.
+rationale: |-
+  Only the fingerprint's own inputs are reported — uid, type, text, normative, derived, and the normative attributes — because those are the fields whose change made the item stale. Naming a moved title or status here would report something that did not cause what the reader is being asked to accept.
+  Structured, not only rendered, because every other surface that must show this would otherwise re-parse formatted output — a second copy of the rule, drifting from the first, which is what the version rule cost until it was centralised. A cockpit wants fields it can lay out, not a blob it has to take apart.
+  Refusing beats approximating, and reporting nothing is not the same as reporting no change. An empty difference is itself a claim — that the content still stands as it was ratified — and it is the one claim that would send the reader past exactly the change this item exists to put in front of them. Unable to say is therefore its own outcome, and a graver one than either answer, because nobody can then state what is being accepted. The cases are real — a stamp backfilled over content that was never a revision, rewritten history, an item not yet committed — and each is honest to name.
+  Matched by content, never by time. The shortcut here is to take the revision nearest the ratification, which is a guess wearing the clothes of an answer, and wrong precisely when history is untidy — which is when it is being asked. The stamp reproduces exactly or it does not, and this project already keeps time out of its content decisions everywhere else (SR-0072, and the fingerprint's own exclusion of timestamps).
+normative: true
+links:
+- target: UR-0028
+  type: implements
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:165a80dede2c5f84a0e6c40414532d88d011720732dac6abb3881f96653a4c17
