@@ -1,0 +1,25 @@
+uid: SR-0168
+type: system_requirement
+status: ratified
+title: A version refusal names the tl that refused and the upgrade command for how
+  it was installed
+text: When the Tool declines to load a project because the on-disk format major differs
+  from the major it implements, the refusal shall name the version of the Tool that
+  refused and the path it was loaded from, alongside both majors and the project
+  it read. Where the remedy is to upgrade the Tool, the refusal shall give an upgrade
+  command matching how that copy was installed — a pipx command where the Tool runs
+  from a pipx environment, otherwise an install directed at the running interpreter.
+rationale: |-
+  A refusal that says only that "this tl" is too old cannot be acted on, because it names neither the copy that refused nor where that copy lives. The reader sees a current version on their own machine, concludes the Tool is wrong, and looks for the fault in the project instead. That is not hypothetical — two repositories in this estate sat red for two days on this message while every workstation that ran the same commit passed, because the stale copy was on a build machine nobody thought to look at.
+  A remedy naming the wrong installer is worse than none. Telling someone who installed through pipx to run a pip install sends them to modify an environment other than the one that refused, which leaves the old copy in place and may put a second copy somewhere it will shadow the first. The command offered is therefore derived from the running installation rather than assumed.
+  Rejected — printing the version alone. It identifies the copy but still leaves the reader to work out which installer owns it, which is the step that goes wrong.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:484ce2705df9f1f7fdb8223ef9c6c0c516a1c808abb8f0f24c2a22024eed3b52

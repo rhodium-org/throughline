@@ -27,6 +27,7 @@ from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
+from .version import distribution_version
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -94,23 +95,63 @@ def _read_format_version(config: dict, root: Path) -> int:
     return raw
 
 
+def _running_tool() -> str:
+    """Describe the copy of the Tool that is executing, as `version (path)`.
+
+    A version refusal has to name *which* tl refused (SR-0168). The reader
+    usually has a current tl on their own machine, so a message that says only
+    "this tl" reads as the Tool being wrong about itself; the copy that actually
+    refused is often on another machine entirely, such as a long-lived build
+    runner.
+
+    Asks `version.distribution_version` rather than reading the metadata here, so
+    this reports the same string as `tl --version` and keeps the editable marker
+    (SR-0164) — an install resolving back to a working tree is exactly the case
+    where "which copy is this?" is being asked.
+    """
+    return (f"throughline {distribution_version('throughline')} "
+            f"at {Path(__file__).resolve().parent}")
+
+
+def _upgrade_command() -> str:
+    """The command that upgrades *this* installation of the Tool (SR-0168).
+
+    Derived from where the running interpreter lives rather than assumed, because
+    a remedy naming the wrong installer sends the reader to change an environment
+    other than the one that refused. A pipx install is laid out as
+    `<pipx home>/venvs/<name>/`, and `pip install` into it is the wrong move — it
+    either misses the venv entirely or leaves a second copy that shadows the
+    first. Anything else is upgraded through the interpreter that is running, so
+    the command cannot land in a different environment than the one that refused.
+    """
+    parts = Path(sys.prefix).resolve().parts
+    for i, part in enumerate(parts):
+        if part == "venvs" and i and parts[i - 1] == "pipx" and i + 1 < len(parts):
+            return f"pipx upgrade {parts[i + 1]}"
+    return f"{sys.executable} -m pip install --upgrade throughline"
+
+
 def _gate_format_version(config: dict, root: Path) -> None:
     """Refuse to load a project whose format major differs from ours (NFR-0010).
 
     Newer than we understand -> tell the user to upgrade the Tool rather than
     mis-parse a format from the future. Older than ours -> point at `tl migrate`
     rather than silently rewrite. An equal major reads transparently.
+
+    Both refusals name the running Tool and, where the remedy is to upgrade it,
+    the command for how that copy was installed (SR-0168).
     """
     disk = _read_format_version(config, root)
     if disk > FORMAT_VERSION:
         raise ProjectError(
             f"{root / CONFIG_NAME} declares format version {disk}, but this tl "
-            f"understands up to {FORMAT_VERSION} — upgrade tl to open this project")
+            f"({_running_tool()}) implements format {FORMAT_VERSION} — upgrade "
+            f"that installation to open this project: {_upgrade_command()}")
     if disk < FORMAT_VERSION:
         raise ProjectError(
-            f"{root / CONFIG_NAME} is at format version {disk}; this tl uses "
-            f"{FORMAT_VERSION} — run `tl migrate` to upgrade the project "
-            f"(a lossless, in-place rewrite)")
+            f"{root / CONFIG_NAME} is at format version {disk}; this tl "
+            f"({_running_tool()}) uses {FORMAT_VERSION} — run `tl migrate` to "
+            f"upgrade the project (a lossless, in-place rewrite)")
 
 
 def _migrate_1_to_2(root: Path) -> None:

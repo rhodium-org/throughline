@@ -2,6 +2,7 @@
 round-trip, the validation pipeline, and the grounding operations.
 """
 import shutil
+import sys
 from importlib import metadata
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from throughline.identity import IdentityError
 from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
 from throughline.storage import (
+    CONFIG_NAME,
     FORMAT_VERSION,
     ProjectError,
     baseline_statuses,
@@ -2650,9 +2652,63 @@ def test_load_refuses_newer_format_version(tmp_path):
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
     _set_format_version(root, FORMAT_VERSION + 1)
-    with pytest.raises(ProjectError, match="upgrade tl"):
+    with pytest.raises(ProjectError, match="upgrade that installation"):
         load_project(root)
     assert _cli(["-C", str(root), "check"]) == 2  # USAGE — refuses to run
+
+
+def test_version_refusal_names_the_tl_that_refused(tmp_path):
+    """Both version refusals identify the running copy by version and path, so a
+    reader with a current tl on their own machine can tell that the refusal came
+    from somewhere else — a build runner, say — rather than conclude the Tool is
+    wrong about itself (SR-0168)."""
+    import throughline
+
+    here = str(Path(throughline.__file__).resolve().parent)
+
+    newer = tmp_path / "newer"
+    assert _cli(["-C", str(newer), "init", "--bare"]) == 0
+    _set_format_version(newer, FORMAT_VERSION + 1)
+    with pytest.raises(ProjectError) as caught:
+        load_project(newer)
+    message = str(caught.value)
+    assert throughline.__version__ in message and here in message
+    # both majors and the project it read stay in the message
+    assert str(FORMAT_VERSION + 1) in message and str(FORMAT_VERSION) in message
+    assert str(newer / CONFIG_NAME) in message
+
+    older = tmp_path / "older"
+    _make_legacy_v1_project(older)
+    with pytest.raises(ProjectError) as caught:
+        load_project(older)
+    older_message = str(caught.value)
+    assert throughline.__version__ in older_message and here in older_message
+    # the remedy here is the project's, not the Tool's — so no upgrade command
+    assert "tl migrate" in older_message
+    assert "pip install" not in older_message and "pipx" not in older_message
+
+
+def test_upgrade_command_matches_how_the_tool_was_installed(monkeypatch, tmp_path):
+    """The remedy is derived from where the running interpreter lives, never
+    assumed. Telling someone who installed through pipx to run `pip install`
+    sends them to change an environment other than the one that refused
+    (SR-0168)."""
+    from throughline import storage
+
+    monkeypatch.setattr(sys, "prefix", "/home/u/.local/share/pipx/venvs/throughline")
+    assert storage._upgrade_command() == "pipx upgrade throughline"
+
+    # injected into a sibling's pipx venv — name the venv that actually owns it
+    monkeypatch.setattr(sys, "prefix",
+                        "/home/u/.local/share/pipx/venvs/throughline-compose")
+    assert storage._upgrade_command() == "pipx upgrade throughline-compose"
+
+    # anything else is upgraded through the interpreter that is running, so the
+    # command cannot land in a different environment than the one that refused
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / "venv"))
+    monkeypatch.setattr(sys, "executable", "/opt/venv/bin/python")
+    assert storage._upgrade_command() == (
+        "/opt/venv/bin/python -m pip install --upgrade throughline")
 
 
 def test_load_points_older_format_at_migrate(tmp_path):

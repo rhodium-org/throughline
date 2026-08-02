@@ -31,7 +31,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
 | UR-0018 | Migration path in | — |
 | UR-0019 | Requirements-to-code traceability | — |
-| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121 |
+| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168 |
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102, SR-0129, SR-0161 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162 |
