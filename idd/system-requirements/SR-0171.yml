@@ -1,0 +1,32 @@
+uid: SR-0171
+type: system_requirement
+status: implemented
+title: The brief tells an agent to name who bears the cost of a requirement that
+  binds outsiders
+text: The agent-facing brief shall tell an agent that before proposing a requirement
+  which binds someone outside the project — a contributor, a consumer, an end user
+  — it states in the rationale who bears the cost and what it costs them, and weighs
+  that against what the requirement prevents. It shall say that a clean grounding
+  chain is not an answer to that question. This shall be part of the brief's fixed
+  contract text, so it holds for every project.
+rationale: Grounding proves a requirement is wanted by someone upward. It says nothing
+  about who pays downward, and the people a requirement binds are frequently the
+  ones with no item in the graph and nobody speaking for them. The gate that would
+  otherwise catch it cannot, because a graph containing the requirement is clean
+  by construction. Observed on throughline-ratify SR-0032, a sign-off gate on every
+  commit that traced cleanly to a ratified intent, was reviewed twice for quality,
+  was improved and then mirrored to a second repository for consistency, and was
+  withdrawn only when a human asked what it cost a contributor — by which point it
+  had been built in two places. Every automated check passed at every step. The brief
+  is the one place the tool can raise the question while the item is still being
+  written, rather than after it has been built and copied.
+normative: true
+links:
+- target: UR-0022
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:c02e970c408021eca084f03229aa197554fe6a33a9ba07f2a4bf4701b2f6aed5
