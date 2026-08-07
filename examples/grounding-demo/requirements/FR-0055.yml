@@ -1,6 +1,6 @@
 uid: FR-0055
 type: requirement
-status: approved
+status: ratified
 title: Email magic-link signin
 text: The system shall support passwordless email sign-in.
 normative: true
@@ -9,3 +9,6 @@ links:
   type: derives_from
 - target: ASM-0002
   type: assumes
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:872e8d91f0d1e2e13dfb9fd5005b94980115126f84c585b45a7ae62898359b0c

@@ -1,9 +1,12 @@
 uid: FR-0040
 type: requirement
-status: approved
+status: ratified
 title: Rate-limit login
 text: The system shall lock login after 5 failed attempts.
 normative: true
 links:
 - target: RISK-0007
   type: mitigates
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:192efda9546edd5934fcfcbcbfe1a51ad9cf036c700a0c5b8f88be1dee762e2c

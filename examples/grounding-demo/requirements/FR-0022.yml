@@ -1,9 +1,12 @@
 uid: FR-0022
 type: requirement
-status: approved
+status: ratified
 title: Guided setup wizard
 text: The system shall walk new users through a 3-step setup.
 normative: true
 links:
 - target: BN-0003
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:052b1cbc96612e043a2f5633082a306266bcb2ee8043a320f7d69d8893ad4553
