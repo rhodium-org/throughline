@@ -29,6 +29,20 @@ from pathlib import Path
 RATIFIED_BY_ATTR = "ratified_by"
 RATIFIED_ID_ATTR = "ratified_id"
 
+# The ratification record, and the one command entitled to write each part of it
+# (SR-0170). Any operation that sets attributes generally reaches these too unless
+# it is stopped, which would make correcting a title and signing a name nobody gave
+# the same keystroke. The value is the command that owns the attribute, so a refusal
+# can name the route rather than only shut the door.
+RATIFICATION_ATTRS = {
+    RATIFIED_BY_ATTR: "ratify",
+    RATIFIED_ID_ATTR: "ratify",
+    "ratified_fingerprint": "ratify",
+    # Written only by the format migration that binds a pre-stamp record, and
+    # marked as attesting to content the ratifier never read (SR-0152).
+    "ratified_backfilled": "migrate",
+}
+
 # A scheme-qualified identifier: 'github:octocat', 'email:ada@example.com'. The
 # scheme is required — an identifier that does not say what kind of thing it is
 # cannot be resolved later by anything but guesswork — but the set of schemes is

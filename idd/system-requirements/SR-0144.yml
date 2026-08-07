@@ -1,6 +1,6 @@
 uid: SR-0144
 type: system_requirement
-status: ratified
+status: implemented
 title: Amend an existing item's content through the tool
 text: The Tool shall let an author change an existing item's title, text, rationale,
   and declared attributes in place, so that correcting an item never requires hand-editing

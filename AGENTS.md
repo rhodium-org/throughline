@@ -84,9 +84,13 @@ create or edit any item, and trust it over any static list (including this file)
    findings · `2` usage.
 
 > Editing content: `tl new` sets structure (uid, type, status, grounding, title);
-> rich fields (`text`, `rationale`, attributes) are edited in the YAML directly.
-> Watch for `: ` (colon-space) inside plain scalars — it breaks the YAML parser;
-> quote the scalar or reword with a dash/semicolon.
+> `tl amend <UID> [--title …] [--text …] [--rationale …] [--attr K=V]` changes it
+> afterwards (SR-0144). Amend rather than opening the file — the command quotes
+> whatever you give it, so the `: ` (colon-space) that silently reparses a plain
+> scalar and surfaces later as a loader error naming an unrelated file cannot
+> happen. It reports what the change made suspect and whether the item's review
+> and ratification records still match, and it will not write the ratification
+> record itself — `tl ratify` owns that.
 
 ## Ratification is a human act — never sign on someone's behalf
 

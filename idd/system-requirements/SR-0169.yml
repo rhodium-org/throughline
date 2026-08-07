@@ -1,0 +1,37 @@
+uid: SR-0169
+type: system_requirement
+status: implemented
+title: A content change reports what it made stale
+text: When an operation changes an item's content, the Tool shall report on completion
+  which dependent items the change has made suspect, and whether the item's own review
+  and ratification records still match its content. That report is a statement of
+  consequence and not a prompt; the operation shall neither require confirmation
+  nor refuse on account of how much it affects.
+rationale: What a content change costs is a property of the item, not of the project.
+  An item nobody has ratified, nobody has reviewed and nothing yet depends on has
+  nothing to protect, and ceremony spent defending it is the friction that sends
+  an author back to editing the YAML by hand — the practice the tool exists to end.
+  The same graph on the same day also holds items a team has signed for and a dozen
+  others cite. Reporting the consequence rather than obstructing the change serves
+  both from one behaviour, because the graph already knows which kind of item it
+  is holding; the alternative, a strictness setting in configuration, must be chosen
+  by whoever understands the graph least, leaves two behaviours to keep true, and
+  is wrong for half the items in any project that has run for a while. The gate stays
+  where it already stands — check, and the re-ratification that shows what moved
+  before it asks for a signature.
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0144
+  type: refines
+- target: SR-0034
+  type: relates
+- target: SR-0038
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:5a005d58d33e92fb387a78609f2aa7487bf849c4455e5f14d62e5568c167ab8c

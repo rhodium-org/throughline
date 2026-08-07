@@ -16,7 +16,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143 |
-| UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160 |
+| UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
 | UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
 | UR-0008 | Stakeholder-quality publishing | SR-0015, SR-0057 |
@@ -34,7 +34,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168 |
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102, SR-0129, SR-0161 |
-| UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162 |
+| UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162, SR-0170 |
 | UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0114, SR-0115, SR-0116, SR-0117, SR-0118, SR-0119 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
 | UR-0026 | Conflict-free parallel identity allocation | SR-0122, SR-0123, SR-0124, SR-0125, SR-0126 |
