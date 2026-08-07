@@ -962,6 +962,22 @@ def test_context_states_the_working_discipline():
     assert "skill" in doc.lower()
 
 
+def test_context_asks_who_bears_the_cost_of_a_requirement(tmp_path):
+    """SR-0171: the brief tells an agent that a requirement binding someone outside
+    the project must name who pays, and that a clean grounding chain is not an
+    answer to that question.
+
+    The failure this closes had every automated check passing at every step
+    (throughline-ratify SR-0032), so the brief is the only place the tool can raise
+    it — before the item is written, not after it has been built and copied."""
+    doc = _ctx()
+    assert "say who pays" in doc.lower()
+    # the people it binds, named as the ones without representation in the graph
+    assert "contributor" in doc.lower()
+    # and the specific false comfort it has to defeat
+    assert "grounding chain is not an answer" in doc
+
+
 def test_context_surfaces_non_goals(tmp_path):
     """SR-0097: deliberately-excluded scope must be visible to agents, so every
     live `non_goal` item is listed in the context brief by title and text."""

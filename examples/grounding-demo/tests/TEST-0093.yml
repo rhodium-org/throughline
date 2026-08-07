@@ -1,9 +1,12 @@
 uid: TEST-0093
 type: test
-status: approved
+status: ratified
 title: Magic link round-trip
 text: Emailed link authenticates the user.
 normative: true
 links:
 - target: FR-0055
   type: verifies
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:4779653b551ff28c0730117d59c54ef578d3ca603ff8b6364b91cfe7bc610acd

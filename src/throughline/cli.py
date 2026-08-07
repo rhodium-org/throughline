@@ -24,7 +24,12 @@ from .grounding import (
     reaches_root,
     set_status,
 )
-from .identity import RATIFIED_ID_ATTR, IdentityError, default_ratifier
+from .identity import (
+    RATIFICATION_ATTRS,
+    RATIFIED_ID_ATTR,
+    IdentityError,
+    default_ratifier,
+)
 from .inject import InjectError, has_markers, inject_text, referenced_uids
 from .model import Link, Register
 from .schema import SchemaError
@@ -399,8 +404,15 @@ def _coerce_attr(schema, item_type: str, key: str, raw: str):
     return raw
 
 
-def _parse_attrs(schema, item_type: str, pairs: list[str] | None) -> dict:
-    """Parse repeated ``--attr KEY=VALUE`` options into a coerced attrs dict."""
+def _parse_attrs(schema, item_type: str, pairs: list[str] | None,
+                 *, command: str, declared_only: bool = False) -> dict:
+    """Parse repeated ``--attr KEY=VALUE`` options into a coerced attrs dict.
+
+    ``command`` names the verb doing the setting, so a refusal can say which command
+    owns an attribute it will not write. ``declared_only`` rejects an attribute the
+    item's type does not declare instead of storing it verbatim — what `amend`
+    requires (SR-0144) and what creation deliberately does not, since an attribute
+    an evolving schema has not caught up with is a reasonable thing to author."""
     attrs: dict = {}
     for pair in pairs or []:
         if "=" not in pair:
@@ -409,6 +421,17 @@ def _parse_attrs(schema, item_type: str, pairs: list[str] | None) -> dict:
         key = key.strip()
         if not key:
             raise UidError(f"--attr expects a non-empty key, got '{pair}'")
+        # The ratification record is evidence that a named person took
+        # accountability, and evidence is worth what it costs to forge. No verb but
+        # the one that owns it may write it (SR-0170).
+        owner = RATIFICATION_ATTRS.get(key)
+        if owner is not None:
+            raise UidError(
+                f"--attr {key}: '{key}' is part of the ratification record and "
+                f"cannot be set by `tl {command}` — `tl {owner}` owns it")
+        if declared_only and schema.attr(item_type, key) is None:
+            raise UidError(
+                f"--attr {key}: '{item_type}' declares no attribute '{key}'")
         attrs[key] = _coerce_attr(schema, item_type, key, raw)
     return attrs
 
@@ -436,7 +459,7 @@ def cmd_new(args) -> int:
     from .model import Item
     schema = project.schema
     try:
-        attrs = _parse_attrs(schema, args.type, args.attr)
+        attrs = _parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
     # --origin is the canonical way to set provenance, but honour origin given via
@@ -637,6 +660,107 @@ def cmd_review(args) -> int:
             write_item(item, project.register_of(item.uid))
             n += 1
     print(f"marked {n} item(s) reviewed at current content")
+    return OK
+
+
+def _newly_suspect(project, uid: str, was: str, now: str) -> list[str]:
+    """Dependents whose confirmed link to ``uid`` this content change has just
+    invalidated (SR-0034, SR-0169).
+
+    A link carries the target's fingerprint as at the last confirmation, so what
+    makes a dependent *newly* suspect is a stamp that matched the old content and
+    does not match the new. A stamp that already disagreed was suspect before this
+    change and is not this change's doing; an unstamped link was never confirmed
+    and so has nothing to lose."""
+    if was == now:
+        return []
+    out = []
+    for it in project.items():
+        if it.is_deleted:
+            continue
+        if any(l.target == uid and l.stamp == was for l in it.links):
+            out.append(it.uid)
+    return sorted(out)
+
+
+def cmd_amend(args) -> int:
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uid = _resolve_uid(project, args.uid, "amend", "UID")
+    if uid is None:
+        return USAGE
+    item = project.get(uid)
+    if item is None:
+        return _err(f"{uid} does not exist")
+    if item.is_deleted:
+        return _err(f"{uid} is deleted — a tombstone is permanent (SR-0093)")
+    # Amending nothing is a mistake worth naming. Succeeding silently would let a
+    # typo in an option name read as a change that was made.
+    if args.title is None and args.text is None and args.rationale is None \
+            and not args.attr:
+        return _err("amend needs at least one of --title, --text, --rationale "
+                    "or --attr")
+    schema = project.schema
+    try:
+        attrs = _parse_attrs(schema, item.type, args.attr,
+                             command="amend", declared_only=True)
+    except UidError as e:
+        return _err(str(e))
+
+    before = fingerprint(item, schema)
+    was_reviewed = item.reviewed is not None
+    changed: list[str] = []
+    # None means "option not given"; an empty string is a real value that clears the
+    # field, which is the only way to withdraw a rationale without opening the YAML.
+    if args.title is not None and args.title != item.title:
+        item.title = args.title
+        changed.append("title")
+    if args.text is not None and args.text != item.text:
+        item.text = args.text
+        changed.append("text")
+    if args.rationale is not None and args.rationale != item.rationale:
+        item.rationale = args.rationale
+        changed.append("rationale")
+    for key, value in attrs.items():
+        if item.attrs.get(key) != value:
+            item.attrs[key] = value
+            changed.append(key)
+    if not changed:
+        print(f"{uid} already says that — nothing changed")
+        return OK
+
+    now = fingerprint(item, schema)
+    suspects = _newly_suspect(project, uid, before, now)
+    # A review confirms content, so content that has moved is no longer confirmed
+    # (SR-0038, SR-0144). Only a normative change can invalidate it — retitling
+    # leaves the fingerprint alone, and clearing a review it did not disturb would
+    # cost the author a re-review for nothing.
+    review_cleared = was_reviewed and now != before
+    if review_cleared:
+        item.reviewed = None
+    write_item(item, project.register_of(uid))
+
+    # What the change cost, reported and not asked about (SR-0169). The gate stays
+    # where it already stands — `check`, and the re-ratification that shows what
+    # moved before it asks for a signature.
+    print(f"amended {uid} — {', '.join(changed)}")
+    if now == before:
+        print("  normative content unchanged — nothing was made suspect")
+    else:
+        if suspects:
+            print(f"  {len(suspects)} dependent item(s) now suspect: "
+                  f"{', '.join(suspects)}")
+        else:
+            print("  no dependent item was confirmed against the old content")
+        if review_cleared:
+            print("  review record cleared — `tl review` to confirm the new wording")
+        stamp = item.attrs.get("ratified_fingerprint")
+        if stamp and stamp != now:
+            who = item.attrs.get("ratified_by") or "a human"
+            print(f"  ratification by {who} no longer matches this content — "
+                  f"`tl ratify {uid}` shows what moved and asks again")
     return OK
 
 
@@ -959,7 +1083,7 @@ def _ctx_working(schema) -> str:
     accurately."""
     return (
         "## How to work here\n\n"
-        "This is a discipline, not just a data model. Four rules govern how you "
+        "This is a discipline, not just a data model. Five rules govern how you "
         "work, whatever the task:\n\n"
         f"- **Do only work the graph justifies.** throughline exists to keep scope "
         f"honest: every change should trace to a root ({_fmt_set(schema.root_types)}). "
@@ -975,6 +1099,15 @@ def _ctx_working(schema) -> str:
         "on legal transitions, and `check` green — a hand-edit silently breaks those "
         "invariants and the files stop being a product you can trust. Run `tl check` "
         "after any change.\n"
+        "- **If it binds someone outside the project, say who pays.** Before you "
+        "propose a requirement that obliges anyone who is not you — a contributor, "
+        "a consumer, an end user — name in the `rationale` who bears the cost and "
+        "what it costs them, and weigh that against what the requirement prevents. "
+        "A clean grounding chain is not an answer to that question: grounding shows "
+        "the requirement is wanted by someone above it, and says nothing about who "
+        "pays below it. The people it binds usually have no item in the graph and "
+        "nobody arguing for them, and `check` cannot help you — a graph containing "
+        "the requirement is clean by construction.\n"
         "- **Write an item short, and rewrite rather than append.** State "
         "the obligation in the fewest words that still bind — a requirement nobody "
         "finishes reading does not bind. A `rationale` records the decision taken "
@@ -1145,6 +1278,7 @@ _CTX_FORMAT = (
 # to describe it, and _ctx_commands_uncovered() fails the build if one slips past.
 _CTX_COMMAND_USAGE = {
     "new": "tl new <PREFIX> --type <T> [--title …] [--text …] --ground <PARENT_UID>",
+    "amend": "tl amend <UID> [--title …] [--text …] [--rationale …] [--attr K=V]",
     "link": "tl link <SRC> <DST> --type <kind>",
     "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
     "check": "tl check [--strict] [--format json]",
@@ -1174,6 +1308,7 @@ _CTX_COMMAND_EMPHASIS = {
     "migrate": "idempotent repairs; extend this, never a script beside it",
     "invalidate": "retires an item and cascades suspicion — see grounding, below",
     "delete": "tombstones an item; the file stays, the item stops counting",
+    "amend": "change content through the tool, never by opening the YAML",
 }
 
 
@@ -1565,6 +1700,18 @@ def build_parser() -> argparse.ArgumentParser:
                    help="UID to tombstone (omit on a terminal to pick one)")
     s.add_argument("--reason", default="")
     s.set_defaults(func=cmd_delete)
+
+    s = sub.add_parser("amend", help="change an item's title/text/rationale/attrs")
+    s.add_argument("uid", nargs="?", default=None)
+    # default=None distinguishes "not given" from "given as empty", which is how a
+    # field is cleared without opening the YAML.
+    s.add_argument("--title", default=None)
+    s.add_argument("--text", default=None)
+    s.add_argument("--rationale", default=None)
+    s.add_argument("--attr", action="append", metavar="KEY=VALUE",
+                   help="set a declared attribute, e.g. --attr priority=must "
+                        "(repeatable; coerced to the attribute's declared type)")
+    s.set_defaults(func=cmd_amend)
 
     s = sub.add_parser("review", help="mark item(s) reviewed at current content")
     s.add_argument("uid", nargs="?", default=None)

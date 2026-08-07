@@ -1,9 +1,12 @@
 uid: TEST-0092
 type: test
-status: approved
+status: ratified
 title: Login lockout
 text: 6th failed login is rejected.
 normative: true
 links:
 - target: FR-0040
   type: verifies
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:30e38c42dc32180d9de67941fd05ad198d1667aae94aa7e1031196f43d8d59f7

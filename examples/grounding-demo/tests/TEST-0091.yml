@@ -1,9 +1,12 @@
 uid: TEST-0091
 type: test
-status: approved
+status: ratified
 title: Wizard completes
 text: New user completes the 3-step wizard.
 normative: true
 links:
 - target: FR-0022
   type: verifies
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:43592a2f9df28835acfa02d2a4c455bacf8fbbf0d9ce2225cbe917098f043826

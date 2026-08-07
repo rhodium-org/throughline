@@ -1,0 +1,35 @@
+uid: SR-0170
+type: system_requirement
+status: implemented
+title: Only ratification writes the ratification record
+text: The Tool shall refuse to set or change an item's ratification attributes —
+  the ratifier's name, any identifier recorded beside it, the stamp binding the record
+  to the content ratified, and the marking that a record was backfilled — through
+  any operation other than ratification itself. An operation that sets attributes
+  generally shall reject them by name, saying which command owns them.
+rationale: A ratification record is evidence that a named person took accountability,
+  and evidence is worth what it costs to forge. An operation that sets typed attributes
+  reaches the ratification attributes too unless it is stopped, so correcting a title
+  and signing a name nobody gave would be the same keystroke, and an agent could
+  write the one thing it must never write while doing something it was asked to do.
+  Refusing costs a genuine ratifier nothing, because re-ratifying is a single command
+  that already shows what changed before it asks; allowing it would quietly reduce
+  every ratification in the graph to the value of a comment. The refusal names the
+  attribute and the command that owns it, so the author learns the route rather than
+  only that the door is shut.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0144
+  type: refines
+- target: SR-0098
+  type: relates
+- target: SR-0148
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:1e047262f19708ceab6ea848fe05d7a4ee55b44baebb3349fdac9cb2a30febb2

@@ -1,9 +1,12 @@
 uid: NFR-0004
 type: nfr
-status: approved
+status: ratified
 title: EU-only storage
 text: All personal data shall be stored in eu-west.
 normative: true
 links:
 - target: CON-0002
   type: derives_from
+attrs:
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:0f839f890b0f875e7fd0f137fdbfeaacca562999aa6b59c6097b728eca1ba035
