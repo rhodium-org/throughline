@@ -92,13 +92,24 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # that it changed (SR-0148). An item ratified before the stamp existed has
     # none to compare against, so that first call is allowed through and stamps it.
     current = fingerprint(item, schema)
-    if (item.status == schema.status_role("ratified")
-            and item.attrs.get("ratified_fingerprint") == current):
+    # "Already ratified" is read from whatever this project uses as the durable
+    # proof (SR-0172). Where ratification advances the item, that is the status, as
+    # it always has been. Where it does not, the status says nothing about sign-off
+    # and the record itself is the only honest witness.
+    already = (item.status == schema.status_role("ratified")
+               if schema.ratify_moves_status
+               else item.attrs.get(RATIFIED_BY_ATTR) is not None)
+    if already and item.attrs.get("ratified_fingerprint") == current:
         raise GroundingError(
             f"{uid} is already ratified by "
             f"{item.attrs.get('ratified_by', 'a human')} and its content has not "
             "changed since — there is nothing to accept")
-    set_status(schema, item, schema.status_role("ratified"))
+    # Advancing is the default, and is transition-validated — an item that cannot
+    # legally reach the ratified status is refused rather than moved illegally. A
+    # project that binds the ratified role to a workflow state turns this off, and
+    # the sign-off is then recorded where the item already stands (SR-0172).
+    if schema.ratify_moves_status:
+        set_status(schema, item, schema.status_role("ratified"))
     item.attrs[RATIFIED_BY_ATTR] = by
     # A stable identifier for the same human, in its own field and never conflated
     # with the name (SR-0157). Optional, and never invented: a record given none

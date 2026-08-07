@@ -89,6 +89,13 @@ class Schema:
     coverage: tuple[dict, ...]
     rule_overrides: dict                   # rule name -> configured severity
     docs_paths: tuple[str, ...]            # [docs] paths globs (SR-0094/0096)
+    # Whether taking accountability also advances the item to the ratified status
+    # (SR-0172). True — the default, and every existing project's behaviour — moves
+    # it. False records the sign-off and leaves the status where it is, for a graph
+    # whose statuses track progress rather than agreement; there the two are
+    # orthogonal, and advancing a finished item would fabricate a history. The
+    # accountability record written is identical either way.
+    ratify_moves_status: bool = True
 
     # ------------------------------------------------------------------ build
 
@@ -179,6 +186,24 @@ class Schema:
 
         docs_paths = tuple((config.get("docs") or {}).get("paths", []) or [])
 
+        # [ratify] moves_status — what ratification does to an item's status
+        # (SR-0172). Absent means the historical behaviour, so an upgrade changes
+        # nothing; a non-boolean is a configuration error rather than a truthiness
+        # coercion, because "no" and "off" would otherwise both mean True.
+        ratify_cfg = config.get("ratify") or {}
+        if not isinstance(ratify_cfg, dict):
+            raise SchemaError("[ratify] must be a table")
+        unknown = set(ratify_cfg) - {"moves_status"}
+        if unknown:
+            raise SchemaError(
+                f"[ratify] declares unknown key(s) {sorted(unknown)} — the only key "
+                "is 'moves_status'")
+        ratify_moves_status = ratify_cfg.get("moves_status", True)
+        if not isinstance(ratify_moves_status, bool):
+            raise SchemaError(
+                "[ratify] moves_status must be true or false, not "
+                f"{ratify_moves_status!r}")
+
         schema = cls(
             name=name, types=types, link_types=link_types, statuses=statuses,
             status_roles=status_roles,
@@ -187,7 +212,7 @@ class Schema:
             ground_link_types=ground_link_types,
             suspect_link_types=suspect_link_types, ai_origins=ai_origins,
             coverage=coverage, rule_overrides=rule_overrides,
-            docs_paths=docs_paths,
+            docs_paths=docs_paths, ratify_moves_status=ratify_moves_status,
         )
         schema._check_consistency()
         return schema

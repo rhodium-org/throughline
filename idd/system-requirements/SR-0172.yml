@@ -1,0 +1,32 @@
+uid: SR-0172
+type: system_requirement
+status: ratified
+title: What ratification does to an item's status is declared per project
+text: The project shall declare, in configuration, whether taking accountability
+  for an item also moves its status. The default shall be to move the item to the
+  status bound to the ratified role, so a project that declares nothing behaves exactly
+  as it did before. A project may instead declare that ratification records the sign-off
+  and leaves the status untouched, so a graph whose statuses track progress rather
+  than agreement can be signed off without a fabricated status change. The accountability
+  record written shall be identical under both settings, and neither setting shall
+  ever be inferred from the shape of the graph.
+rationale: |-
+  Binding the ratified role to a workflow status makes the two collide. A delivery graph whose statuses are backlog, in_progress and done binds ratified to backlog, because a human accepting an AI-authored task IS the act of admitting it to the backlog. That reading is right, and it makes an item that is already done permanently unratifiable — ratify forces the ratified status and the move is transition-validated, so the sign-off is refused on exactly the items whose work is finished. The only ways out were to fabricate a shortcut transition into the status table or to walk the item through states it never occupied, and both write a history that did not happen.
+
+  Two axes are being conflated. A requirement's status describes AGREEMENT, and moving it on ratification is honest. A task's status describes PROGRESS, and agreement is orthogonal to it — signing off a finished task should no more move it than signing off an unstarted one. throughline cannot know which kind of graph it is looking at, and must not guess, so the project says.
+
+  The default is unchanged and deliberately so. Every existing graph means the first thing, the move is the behaviour their transition tables were written around, and an upgrade that silently stopped advancing items would break the meaning of every ratified status already recorded.
+
+  Who pays. The reader of a graph that turns this on. Under the default, seeing the ratified status is enough to know an item was signed off; under the alternative it is not, and the reader must look at ratified_by instead. That is a real cost and it falls on whoever inherits the project, not on whoever configured it. It is accepted because the durable proof of accountability was never the status — it is the ratified_by and ratified_fingerprint record, which is written identically either way, while the status was only ever a convenient shorthand for it. A project that keeps the default keeps the shorthand.
+
+  Refusing to ratify an overshot item was considered and rejected — it is what happens today and it is the defect. Inferring the mode from whether the transition is legal was also rejected, because a graph would then change behaviour when its transition table changed, silently, and the failure would look like a tool bug rather than a decision anybody took.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:72a9cbb64a7e18821e3ad8ab9571a60e97b546c40f7f0cabf9d2c8fe422146e4
