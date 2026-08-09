@@ -1571,15 +1571,30 @@ def cmd_invalidate(args) -> int:
     if target is None:
         return USAGE
     try:
-        affected = invalidate(project, target, reason=args.reason or "")
+        result = invalidate(project, target, reason=args.reason or "")
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
     write_item(project.get(target), project.register_of(target))
-    for uid in affected:
+    for uid in result.marked:
         write_item(project.get(uid), project.register_of(uid))
-    print(f"{target} invalidated; {len(affected)} dependent(s) marked suspect")
-    for uid in affected:
+    print(f"{target} invalidated; {len(result.marked)} dependent(s) marked suspect")
+    for uid in result.marked:
         print(f"  {uid}")
+    # A cascade that did not fully happen must not read as one that did (SR-0173).
+    # These dependents have lost the ground they stood on and carry no flag saying
+    # so, which is precisely the drift the mechanism exists to surface, so the run
+    # reports them and does not exit clean.
+    if result.refused:
+        sys.stdout.flush()
+        print(f"{len(result.refused)} dependent(s) could not be marked suspect:",
+              file=sys.stderr)
+        for r in result.refused:
+            print(f"  {r.uid}: {r.frm} -> {r.to} is not a declared transition",
+                  file=sys.stderr)
+        print("their grounding rests on an item that is now invalid and nothing "
+              "records it; declare the move under [transitions] to close the gap",
+              file=sys.stderr)
+        return FINDINGS
     return OK
 
 

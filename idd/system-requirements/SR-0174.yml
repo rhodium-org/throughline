@@ -1,0 +1,37 @@
+uid: SR-0174
+type: system_requirement
+status: ratified
+title: A status from which suspicion is unreachable surfaces at the gate
+text: When a project binds the suspect role and declares a transitions table, the
+  Tool shall report a named check finding at warning severity for each live status
+  from which the suspect status cannot be reached, naming the status and the propagation
+  it disables. A project that declares no transitions table, or binds no suspect
+  role, has nothing to report. The finding shall be suppressible through the standard
+  rule-severity configuration.
+rationale: 'A lifecycle gap that disables suspicion is invisible until someone invalidates,
+  and the graph is pronounced sound in the meantime — the same failure SR-0136 fixed
+  for unbound status roles, in the table next to it. Reporting it only at invalidation
+  time is too late: by then the item that should have been flagged is the one the
+  reader is deciding about. The check is the right place because the defect is in
+  the configuration, is detectable statically, and has one settled remedy. Warning
+  rather than error, and per-status rather than a single verdict, because partial
+  reachability is the case that actually bites: a project whose ratified items cascade
+  correctly while its proposed ones do not looks healthy from every angle except
+  the one that matters. Who pays: consumers with such a gap get new warnings, which
+  --strict promotes to errors and can redden a previously green build. The cost is
+  bounded — one line per affected status, suppressible through [rules] — and it is
+  the same bargain --strict already offers everywhere else.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0136
+  type: relates
+- target: SR-0083
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:7662f1b351e0d84651d4281dc427a8ef04f267fd30c49f0ce32e8301debee83e

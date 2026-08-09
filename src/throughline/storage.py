@@ -952,10 +952,13 @@ tombstone = "deleted"
 # Every live status keeps a route to 'ratified' (SR-0150) — in particular the two
 # statuses below 'proposed' can move back to it, so scope that was authored or
 # parked without ratification can still be put forward for a human to accept.
+# Every live status also keeps a route to 'suspect' (SR-0175), so that an item
+# whose grounding is withdrawn can be flagged wherever it currently sits — the
+# statuses below 'approved' hold the items whose grounding is least settled.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "deferred", "rejected", "deleted"]
-draft       = ["proposed", "approved", "deferred", "rejected", "deleted"]
-deferred    = ["proposed", "draft", "approved", "rejected", "deleted"]
+proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
+draft       = ["proposed", "approved", "deferred", "suspect", "rejected", "deleted"]
+deferred    = ["proposed", "draft", "approved", "suspect", "rejected", "deleted"]
 approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]

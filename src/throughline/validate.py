@@ -47,7 +47,7 @@ _DEFAULT_SEVERITY = {
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
     "bad-link-target": ERROR, "bad-status": ERROR, "bad-transition": ERROR,
     "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
-    "no-status-roles": WARNING,
+    "no-status-roles": WARNING, "suspect-unreachable": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ratified-stale": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
@@ -89,6 +89,29 @@ def validate(project, strict: bool = False,
             "[status.roles] — the statuses `tl new`, `ratify`, `invalidate` and "
             "`delete` write are resolved by role, so those operations (and "
             "tl-ratify) cannot run; run `tl migrate` to backfill the table")
+
+    # A lifecycle with no route to suspicion (SR-0174). Suspicion propagation is
+    # how the withdrawal of an item's footing becomes visible, and it is carried
+    # entirely by the transition table: a status with no declared move to suspect
+    # silently opts every item sitting in it out of the mechanism, and `invalidate`
+    # can only report the gap once it is too late to matter. Reported per status
+    # because the partial case is the one that deceives — a project whose ratified
+    # items cascade while its proposed ones do not looks healthy from every angle
+    # except the one that counts. A project that declares no transitions is
+    # unconstrained and has nothing to answer for; one that binds no suspect role
+    # has no such mechanism to disable.
+    if schema.transitions is not None and (schema.status_roles or {}).get("suspect"):
+        suspect = schema.status_roles["suspect"]
+        dead = schema.dead_statuses()
+        live = schema.statuses or set(schema.transitions)
+        for status in sorted(live):
+            if status == suspect or status in dead:
+                continue
+            if not schema.allows_transition(status, suspect):
+                add("suspect-unreachable", "", str(project.path / CONFIG_NAME),
+                    f"no declared transition moves '{status}' to '{suspect}', so an "
+                    f"item in '{status}' can never be marked suspect — invalidating "
+                    "anything it grounds in will leave it unflagged")
 
     # A run that discovered nothing is not a sound graph (SR-0146). Items live only
     # beneath a register manifest, so a project whose manifests are missing, misnamed

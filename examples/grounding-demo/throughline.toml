@@ -35,9 +35,11 @@ values = ["proposed", "draft", "approved", "ratified", "implemented",
           "verified", "suspect", "rejected", "deleted"]
 
 # Allowed status moves (SR-0083); `tl diagram transitions` renders these.
+# Every live status keeps a route to 'suspect' (SR-0175) — this demo exists to
+# show suspicion travelling, so no status may sit outside the cascade.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "rejected", "deleted"]
-draft       = ["approved", "rejected", "deleted"]
+proposed    = ["draft", "approved", "ratified", "suspect", "rejected", "deleted"]
+draft       = ["approved", "suspect", "rejected", "deleted"]
 approved    = ["ratified", "implemented", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]

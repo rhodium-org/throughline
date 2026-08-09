@@ -29,6 +29,7 @@ from throughline import (
 )
 import throughline as throughline_pkg
 from throughline import identity
+from throughline.cli import main as _cli
 from throughline.identity import IdentityError
 from throughline.grounding import GroundingError, scout_ingest
 from throughline.schema import Schema, SchemaError
@@ -1921,6 +1922,125 @@ def test_the_blast_radius_report_still_follows_every_link():
                      Link(target="FR-2", type="relates")])
     p = _project(_doc("INT", intent), _doc("FR", note, fr))
     assert "FR-1" in Index.build(p).impact("FR-2"), "the report is unchanged"
+
+
+_NO_SUSPICION_FROM_PROPOSED = {
+    "status": {"values": ["proposed", "ratified", "suspect", "rejected",
+                          "deleted"]},
+    "transitions": {"proposed": ["ratified", "rejected", "deleted"],
+                    "ratified": ["suspect", "rejected", "deleted"],
+                    "suspect": ["ratified", "rejected", "deleted"],
+                    "rejected": ["deleted"]},
+}
+
+
+def _mixed_reachability_graph() -> Project:
+    """Two dependents of one root: FR-1 is proposed, which this lifecycle gives no
+    route to suspect, and FR-2 is ratified, which it does."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    fr1 = Item(uid="FR-1", type="requirement", status="proposed",
+               links=[Link(target="INT-1", type="derives_from")])
+    fr2 = Item(uid="FR-2", type="requirement", status="ratified",
+               links=[Link(target="INT-1", type="derives_from")])
+    return _project(_doc("INT", intent), _doc("FR", fr1, fr2),
+                    config=_NO_SUSPICION_FROM_PROPOSED)
+
+
+def test_invalidate_separates_the_dependents_it_marked_from_those_it_refused():
+    """Reaching a dependent and restatusing it are different events. A lifecycle with
+    no route from the dependent's status refuses the move (SR-0130), and the run must
+    say so rather than count the reached item as flagged (SR-0173)."""
+    p = _mixed_reachability_graph()
+    result = invalidate(p, "INT-1", reason="withdrawn")
+    assert set(result) == {"FR-1", "FR-2"}, "the blast radius is unchanged"
+    assert result.marked == ["FR-2"]
+    assert result.refused == [("FR-1", "proposed", "suspect")]
+    assert p.get("FR-1").status == "proposed", "refused, so genuinely untouched"
+    assert "suspect_reasons" not in p.get("FR-1").attrs
+    assert p.get("FR-2").status == "suspect"
+
+
+def test_an_already_dead_dependent_is_neither_marked_nor_refused():
+    """Nothing was withheld from an item that has already been retired, so it is not
+    a gap in the lifecycle and must not be reported as one (SR-0173)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    gone = Item(uid="FR-1", type="requirement", status="rejected",
+                links=[Link(target="INT-1", type="derives_from")])
+    p = _project(_doc("INT", intent), _doc("FR", gone),
+                 config=_NO_SUSPICION_FROM_PROPOSED)
+    result = invalidate(p, "INT-1", reason="withdrawn")
+    assert result.marked == [] and result.refused == []
+    assert p.get("FR-1").status == "rejected"
+
+
+def test_a_refused_cascade_does_not_exit_clean(tmp_path, capsys):
+    """The reader's whole basis for not going to look is the command's summary, so a
+    cascade that did not fully happen must not read as one that did (SR-0173)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    (root / CONFIG_NAME).write_text(
+        '[project]\nname = "t"\nformat_version = 3\n\n'
+        '[grounding]\nroot_types = ["intent"]\n'
+        'ground_link_types = ["derives_from"]\n\n'
+        '[links]\ntypes = ["derives_from", "relates"]\n\n'
+        '[status]\nvalues = ["proposed", "ratified", "suspect", "rejected",'
+        ' "deleted"]\n\n[status.roles]\ninitial = "proposed"\n'
+        'proposed = "proposed"\nratified = "ratified"\n'
+        'invalidated = "rejected"\nsuspect = "suspect"\n'
+        'tombstone = "deleted"\n\n[transitions]\n'
+        'proposed = ["ratified", "rejected", "deleted"]\n'
+        'ratified = ["suspect", "rejected", "deleted"]\n'
+        'rejected = ["deleted"]\n', encoding="utf-8")
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
+                 "--title", "why"]) == 0
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "dependent", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    capsys.readouterr()
+
+    assert _cli(["-C", str(root), "invalidate", "INT-0001"]) == 1
+    captured = capsys.readouterr()
+    assert "0 dependent(s) marked suspect" in captured.out
+    assert "FR-0001" not in captured.out, "not claimed as marked"
+    assert "FR-0001: proposed -> suspect is not a declared transition" \
+        in captured.err
+    assert load_project(root).get("FR-0001").status == "proposed"
+
+
+def test_a_status_with_no_route_to_suspicion_is_reported_at_the_gate():
+    """The gap is in the configuration, is detectable statically, and has one settled
+    remedy — so it belongs at the gate, not at the invalidation that discovers it too
+    late to help (SR-0174)."""
+    findings = validate(_mixed_reachability_graph())
+    assert ("", "suspect-unreachable") in _rules(findings)
+    assert [f for f in findings if f.rule == "suspect-unreachable"
+            and "'proposed'" in f.message], "names the stranded status"
+    assert not [f for f in findings if f.rule == "suspect-unreachable"
+                and "'ratified'" in f.message], "a status with a route is silent"
+
+
+def test_suspicion_reachability_is_unreported_without_a_lifecycle_to_judge():
+    """A project that constrains nothing has nothing to answer for; the rule reads a
+    declared table, it does not invent one (SR-0174)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    p = _project(_doc("INT", intent))
+    assert "suspect-unreachable" not in {f.rule for f in validate(p)}
+
+
+def test_the_shipped_lifecycle_leaves_every_live_status_a_route_to_suspicion(
+        tmp_path):
+    """A default that disables the mechanism is not a neutral starting point, and the
+    template must not trip the gate shipped beside it on the first run (SR-0175)."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t"]) == 0
+    schema = load_project(root).schema
+    suspect = schema.status_role("suspect")
+    stranded = [s for s in schema.statuses
+                if s != suspect and s not in schema.dead_statuses()
+                and not schema.allows_transition(s, suspect)]
+    assert stranded == []
 
 
 def test_suspect_link_types_must_be_declared_link_types():

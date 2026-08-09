@@ -59,11 +59,14 @@ values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented"
 # status in the previous commit and flags any change these do not permit, so the
 # IDD lifecycle (draft -> approved -> implemented -> verified) is enforced, not
 # merely documented. Anything may be parked, rejected, or deleted; a suspect
-# item must be re-triaged before it can advance again.
+# item must be re-triaged before it can advance again. Every live status keeps a
+# route to 'suspect' (SR-0175): an item whose grounding is withdrawn must be
+# flaggable wherever it sits, and the statuses below 'approved' hold the items
+# whose grounding is least settled.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "deferred", "rejected", "deleted"]
-draft       = ["approved", "deferred", "rejected", "deleted"]
-deferred    = ["draft", "approved", "rejected", "deleted"]
+proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
+draft       = ["approved", "deferred", "suspect", "rejected", "deleted"]
+deferred    = ["draft", "approved", "suspect", "rejected", "deleted"]
 approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
