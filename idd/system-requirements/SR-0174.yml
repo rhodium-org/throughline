@@ -1,6 +1,6 @@
 uid: SR-0174
 type: system_requirement
-status: ratified
+status: implemented
 title: A status from which suspicion is unreachable surfaces at the gate
 text: When a project binds the suspect role and declares a transitions table, the
   Tool shall report a named check finding at warning severity for each live status

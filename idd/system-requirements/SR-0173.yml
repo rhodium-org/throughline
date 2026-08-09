@@ -1,6 +1,6 @@
 uid: SR-0173
 type: system_requirement
-status: ratified
+status: implemented
 title: An invalidation reports only the dependents it actually marked
 text: When the Tool invalidates an item it shall mark suspect only those dependents
   whose configured lifecycle permits the move, and shall report the dependents it

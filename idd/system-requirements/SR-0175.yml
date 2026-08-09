@@ -1,6 +1,6 @@
 uid: SR-0175
 type: system_requirement
-status: ratified
+status: implemented
 title: The shipped lifecycle always leaves a route to suspicion
 text: The status lifecycle the Tool ships with a new project shall permit every live
   status to move to the suspect status, so that no item can rest in a state where
