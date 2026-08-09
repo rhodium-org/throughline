@@ -1,0 +1,32 @@
+uid: SR-0176
+type: system_requirement
+status: ratified
+title: Release workflow actions are pinned to immutable commit SHAs
+text: Every GitHub Action referenced by the release workflow — each step on the path
+  from checked-out source to the artefact uploaded to PyPI — shall be pinned to a
+  full 40-character commit SHA carrying a trailing comment naming the version tag
+  that SHA resolves to, rather than to a mutable tag or branch.
+rationale: 'The publish step is handed an OIDC token exchangeable for upload rights
+  to the project''s own PyPI package. Referenced as a branch, the code that receives
+  that token is whatever the branch points at the moment a release runs, so an upstream
+  compromise reaches the token without anything landing in this repo or appearing
+  in its diff. The build job sits on the same path — it produces the artefact the
+  publish job uploads — so pinning the publish step alone would still leave the artefact
+  mutable upstream. The cost falls on maintainers, who bear a real one: an action
+  upgrade stops arriving silently and becomes a deliberate SHA bump, and a pinned
+  action that nobody bumps quietly stops receiving upstream security fixes, so this
+  requires a review habit rather than merely a one-off edit. Continuous-integration
+  workflow actions are deliberately outside this scope: they hold no publishing credential
+  and produce nothing that ships, and floating their major tags keeps the test toolchain
+  current at no cost to release integrity. Rejected: pinning to a version tag, which
+  is itself mutable and can be repointed by whoever owns the upstream repository.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+attrs:
+  priority: should
+  verification: inspection
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:1d0e73edd24b0ef4fb0c375d9e55a0bbc8d5e77008332b398f600a3a043f617f
