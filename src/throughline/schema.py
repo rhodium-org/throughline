@@ -345,6 +345,42 @@ class Schema:
             return True
         return to in self.transitions.get(frm, frozenset())
 
+    def birth_statuses(self) -> frozenset[str]:
+        """The statuses an item is created in — the 'initial' and 'proposed' roles
+        (SR-0131). `tl new` picks between them on the item's origin, so together
+        they are every entry point into the lifecycle."""
+        if not self.status_roles:
+            return frozenset()
+        return frozenset(
+            self.status_roles[r]
+            for r in ("initial", "proposed") if r in self.status_roles)
+
+    def reachable_statuses(self) -> frozenset[str] | None:
+        """The statuses an item can arrive at, walking the declared transitions out
+        from where items are born (SR-0177).
+
+        A project that composes from sources declares the statuses its *borrowed*
+        items carry so the union validates, and nothing local ever enters them. Such
+        a status sits in the vocabulary with no route in, and a rule that reasons
+        about "every declared status" therefore reasons about states this project
+        cannot occupy. Returns ``None`` when the answer is unknowable — no
+        transitions to walk, or no declared entry point to walk from — so a caller
+        can tell "nothing is reachable" apart from "reachability says nothing here"
+        rather than reading an empty set as the former."""
+        if self.transitions is None:
+            return None
+        seeds = self.birth_statuses()
+        if not seeds:
+            return None
+        seen = set(seeds)
+        queue = list(seeds)
+        while queue:
+            for nxt in self.transitions.get(queue.pop(), frozenset()):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    queue.append(nxt)
+        return frozenset(seen)
+
     def is_root(self, item) -> bool:
         return item.type in self.root_types
 

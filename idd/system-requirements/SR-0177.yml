@@ -1,0 +1,35 @@
+uid: SR-0177
+type: system_requirement
+status: implemented
+title: Suspicion reachability is judged only for statuses an item can hold
+text: 'When reporting the statuses from which the suspect status cannot be reached,
+  the Tool shall judge only statuses an item in the project can actually hold: those
+  reachable from a status items are created in by following the declared transitions,
+  together with those a live item currently occupies. A status that is declared but
+  is neither reachable nor occupied shall not be reported.'
+rationale: 'A project composing from sources must declare the statuses its borrowed
+  items carry so the union validates, and nothing local ever enters them. SR-0174
+  judged every declared status, so those entries were reported as suspicion gaps
+  although no item in the project can reach one. Measured across the estate this
+  was the dominant finding: on one delivery graph seven of ten flags were borrowed
+  vocabulary its own config records as unreachable by design. A warning that is mostly
+  undeserved is worse than no warning, because the reader learns to clear the whole
+  rule rather than read it, and the three real gaps on that same graph would have
+  gone with it. Reachability is the honest test of whether a gap can bite, and occupancy
+  is kept alongside it so a status set by hand or inherited from before a lifecycle
+  changed is still judged rather than excused. Who pays: a project whose lifecycle
+  declares a status it cannot reach loses a warning it was getting, and if that status
+  later becomes reachable the warning returns; the exchange is a narrower rule for
+  one that is believed.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0174
+  type: refines
+attrs:
+  origin: ai
+  verification: test
+  priority: must
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:15bc967d5eeac9045125337939a18788565e7b239e277ac4a6e6ed926c2da932

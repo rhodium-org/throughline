@@ -2029,6 +2029,59 @@ def test_suspicion_reachability_is_unreported_without_a_lifecycle_to_judge():
     assert "suspect-unreachable" not in {f.rule for f in validate(p)}
 
 
+# 'verified' is declared so borrowed items carry a valid status, and has no row in
+# the table and appears as no transition's target — nothing local can ever enter it.
+_BORROWED_STATUS_VOCABULARY = {
+    "status": {"values": ["proposed", "ratified", "suspect", "rejected", "deleted",
+                          "verified"],
+               "roles": {"initial": "proposed", "proposed": "proposed",
+                         "ratified": "ratified", "invalidated": "rejected",
+                         "suspect": "suspect", "tombstone": "deleted"}},
+    "transitions": {"proposed": ["ratified", "rejected", "deleted"],
+                    "ratified": ["suspect", "rejected", "deleted"],
+                    "suspect": ["ratified", "rejected", "deleted"],
+                    "rejected": ["deleted"]},
+}
+
+
+def test_a_status_the_project_cannot_enter_is_not_a_suspicion_gap():
+    """A composing project declares the statuses its borrowed items carry so the union
+    validates. No local item can reach one, so reporting it as a gap is noise the
+    project cannot act on — and noise is what teaches a reader to silence the rule
+    that also carries the real findings (SR-0177)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    p = _project(_doc("INT", intent), config=_BORROWED_STATUS_VOCABULARY)
+    stranded = [f for f in validate(p) if f.rule == "suspect-unreachable"]
+    assert not [f for f in stranded if "'verified'" in f.message]
+    assert [f for f in stranded if "'proposed'" in f.message], \
+        "the reachable gap is still reported"
+
+
+def test_a_status_an_item_actually_sits_in_is_judged_however_it_got_there():
+    """Reachability is not the whole answer: a status set by hand, or left behind by a
+    lifecycle that has since changed, holds real items whose suspicion is really
+    disabled. Occupancy is judged alongside reachability so those are not excused
+    (SR-0177)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    stuck = Item(uid="FR-1", type="requirement", status="verified",
+                 links=[Link(target="INT-1", type="derives_from")])
+    p = _project(_doc("INT", intent), _doc("FR", stuck),
+                 config=_BORROWED_STATUS_VOCABULARY)
+    assert [f for f in validate(p) if f.rule == "suspect-unreachable"
+            and "'verified'" in f.message]
+
+
+def test_reachability_declines_to_answer_when_there_is_nothing_to_walk():
+    """None, not an empty set — a caller must be able to tell "no status is reachable"
+    from "reachability cannot speak here", because reading the second as the first
+    would judge every status against a lifecycle that was never declared (SR-0177)."""
+    assert Schema.from_config({}).reachable_statuses() is None, "no transitions"
+    no_entry = Schema.from_config({
+        "status": {"values": ["a", "b"], "roles": {"ratified": "b"}},
+        "transitions": {"a": ["b"]}})
+    assert no_entry.reachable_statuses() is None, "no birth status to walk from"
+
+
 def test_the_shipped_lifecycle_leaves_every_live_status_a_route_to_suspicion(
         tmp_path):
     """A default that disables the mechanism is not a neutral starting point, and the
