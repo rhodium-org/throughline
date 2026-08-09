@@ -1,0 +1,40 @@
+uid: SR-0179
+type: system_requirement
+status: ratified
+title: Pinned release-workflow actions are kept current automatically
+text: The repository shall configure an automated dependency-update mechanism that
+  watches the GitHub Actions pinned by the release workflow and raises a pull request
+  proposing the updated commit SHA, together with the version comment that SHA resolves
+  to, when a pinned action has a newer release.
+rationale: 'SR-0176 accepts a cost it does not discharge: it names a review habit
+  as the price of pinning, and a habit is not a mechanism. Nothing in the repository
+  observes that a pin has aged, so a stale pin is indistinguishable from a current
+  one and the failure is silent — precisely the property that made a floating tag
+  unacceptable, reintroduced at the other end. The trailing version comment SR-0176
+  already requires is what makes this cheap: Dependabot reads it and proposes the
+  SHA and the comment together, so the convention adopted for auditability doubles
+  as the update channel. The mechanism cannot be aimed at a single workflow — it
+  scans the whole workflows directory — so the continuous-integration actions SR-0176
+  deliberately left floating will draw proposals as well; that is accepted rather
+  than intended, and costs only the dismissal of a pull request. Who pays: maintainers,
+  who receive a stream of pull requests to triage. Each release-path one deserves
+  the deliberate review a floating tag never got, but the triage is real, recurring,
+  and falls on whoever holds the merge button rather than on whoever set the policy.
+  Rejected: a calendar reminder to audit pins by hand, which is the same unobserved
+  habit with a date attached; enabling updates for every ecosystem in the repository,
+  which would bury release-path proposals in routine library churn and train the
+  reviewer to merge them unread; and suppressing the CI-workflow noise with per-action
+  ignore rules, which would silence the same actions on the release path, where they
+  are the whole point.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0176
+  type: refines
+attrs:
+  priority: should
+  verification: inspection
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8619ff5bb81651a5a54e5d4face6eb46cc1c703c8895ded32f1ebe79f11a8848
