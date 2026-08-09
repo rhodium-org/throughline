@@ -1,0 +1,38 @@
+uid: SR-0178
+type: system_requirement
+status: ratified
+title: Status occupancy is counted from locally-authored items only
+text: When judging which statuses can reach the suspect status, the Tool shall treat
+  as occupied only the statuses held by items authored in the project itself, and
+  shall disregard the statuses of items a composing tool has merged in from a source.
+rationale: 'SR-0177 stopped judging statuses no local item can reach, but it took
+  occupancy over every item the project loads. A tool that composes sources by merging
+  their items into the graph therefore reinstates exactly the vocabulary SR-0177
+  excluded: the borrowed items arrive carrying the source''s statuses, and each is
+  judged against the consumer''s transition table, which has no reason to mention
+  them. Observed on a delivery graph composing a specification source: ''approved''
+  and ''ratified'' were reported against a suspect role bound to ''blocked'', while
+  the graph''s own live items stood only in ''backlog'' and ''done''. The exclusion
+  must follow authorship rather than declaration, because whether the noise appears
+  at all depends on something the consuming project does not control -- whether the
+  tool reading its graph merges borrowed items or only their vocabulary. Occupancy
+  keeps its purpose for local items: a status set by hand, or left behind by a lifecycle
+  that has since changed, is still judged rather than excused. Who pays: nobody gains
+  an obligation, and the consumer loses a warning it could not have acted on -- a
+  borrowed status is governed by the source''s own transition table, which the consumer
+  cannot edit and the source''s own check already judges. Rejected: leaving the composing
+  tool to filter the finding afterwards, which would leave the core rule stating
+  something untrue about the graph and each composing tool to rediscover the same
+  suppression.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0177
+  type: refines
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:3d623268f1f939fd1839b3ef07f387a76c39ab3fef056a4789163e1a31d9ff10

@@ -2071,6 +2071,24 @@ def test_a_status_an_item_actually_sits_in_is_judged_however_it_got_there():
             and "'verified'" in f.message]
 
 
+def test_a_status_only_a_borrowed_item_occupies_is_not_a_suspicion_gap():
+    """A tool that composes sources merges their items into the graph, so the statuses
+    those items carry arrive as occupancy — reinstating by that route exactly the
+    vocabulary reachability excluded. Occupancy therefore counts locally-authored
+    items only, and the borrowed status is left to the table that governs it
+    (SR-0178)."""
+    intent = Item(uid="INT-1", type="intent", status="ratified")
+    borrowed = Item(uid="SRCFR-1", type="requirement", status="verified",
+                    links=[Link(target="INT-1", type="derives_from")],
+                    _authored_uid="FR-1")
+    p = _project(_doc("INT", intent), _doc("SRCFR", borrowed),
+                 config=_BORROWED_STATUS_VOCABULARY)
+    stranded = [f for f in validate(p) if f.rule == "suspect-unreachable"]
+    assert not [f for f in stranded if "'verified'" in f.message]
+    assert [f for f in stranded if "'proposed'" in f.message], \
+        "the reachable gap is still reported"
+
+
 def test_reachability_declines_to_answer_when_there_is_nothing_to_walk():
     """None, not an empty set — a caller must be able to tell "no status is reachable"
     from "reachability cannot speak here", because reading the second as the first

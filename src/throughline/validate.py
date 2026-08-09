@@ -108,8 +108,13 @@ def validate(project, strict: bool = False,
         # validates, and nothing local ever enters them; reporting those as gaps
         # buries the real ones under noise the project cannot act on. Occupancy is
         # taken alongside reachability so a status set by hand, or left behind by a
-        # lifecycle that has since changed, is still judged rather than excused.
-        occupied = {i.status for i in project.items()}
+        # lifecycle that has since changed, is still judged rather than excused —
+        # but counted over locally-authored items only (SR-0178). A tool that composes
+        # by merging borrowed items, rather than only their vocabulary, otherwise
+        # reinstates through occupancy exactly what reachability excluded; and the
+        # borrowed status answers to its own graph's transition table, which this
+        # project cannot edit and that graph's own check already judges.
+        occupied = {i.status for i in project.items() if i._authored_uid is None}
         reachable = schema.reachable_statuses()
         declared = schema.statuses or (set(schema.transitions) | occupied)
         live = declared if reachable is None else (reachable | occupied) & declared
