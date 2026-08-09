@@ -103,7 +103,16 @@ def validate(project, strict: bool = False,
     if schema.transitions is not None and (schema.status_roles or {}).get("suspect"):
         suspect = schema.status_roles["suspect"]
         dead = schema.dead_statuses()
-        live = schema.statuses or set(schema.transitions)
+        # Only statuses an item can actually hold are judged (SR-0177). A composing
+        # project declares the statuses its borrowed items carry so the union
+        # validates, and nothing local ever enters them; reporting those as gaps
+        # buries the real ones under noise the project cannot act on. Occupancy is
+        # taken alongside reachability so a status set by hand, or left behind by a
+        # lifecycle that has since changed, is still judged rather than excused.
+        occupied = {i.status for i in project.items()}
+        reachable = schema.reachable_statuses()
+        declared = schema.statuses or (set(schema.transitions) | occupied)
+        live = declared if reachable is None else (reachable | occupied) & declared
         for status in sorted(live):
             if status == suspect or status in dead:
                 continue
