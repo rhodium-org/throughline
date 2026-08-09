@@ -13,6 +13,8 @@ attrs.last_validated / attrs.confidence) alongside their content.
 """
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from .fingerprint import fingerprint
 from .graph import Index
 from .identity import (
@@ -122,9 +124,37 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     return item
 
 
-def invalidate(project, uid: str, reason: str = "") -> list[str]:
+class Refusal(NamedTuple):
+    """A dependent the cascade could not restatus, and the move that was refused."""
+    uid: str
+    frm: str
+    to: str
+
+
+class Invalidation(list):
+    """The blast radius of an invalidation, carrying what the cascade actually did.
+
+    It *is* the list of reachable dependents (SR-0035), so a caller that reads the
+    return as that list is unaffected. What it adds is the partition the operation
+    was previously unable to express (SR-0173): ``marked`` holds the dependents
+    whose status this run moved to suspect, ``refused`` those whose configured
+    lifecycle would not permit the move. Reaching an item and restatusing it are
+    different events, and reporting the first as though it were the second is the
+    defect these attributes exist to prevent — a dependent already dead is neither,
+    since nothing was withheld from it.
+    """
+
+    def __init__(self, affected: list[str], marked: list[str],
+                 refused: list[Refusal]):
+        super().__init__(affected)
+        self.marked = marked
+        self.refused = refused
+
+
+def invalidate(project, uid: str, reason: str = "") -> Invalidation:
     """Falsify an assumption (or any node): retire it and mark every transitive
-    dependent suspect. Returns the blast radius (SR-0035 reused)."""
+    dependent suspect. Returns the blast radius (SR-0035 reused), which also
+    reports which dependents were actually marked and which were refused."""
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
@@ -140,16 +170,26 @@ def invalidate(project, uid: str, reason: str = "") -> list[str]:
     item.attrs["invalidated_reason"] = reason or True
     suspect = schema.status_role("suspect")
     dead = schema.dead_statuses()
+    marked: list[str] = []
+    refused: list[Refusal] = []
     for aid in affected:
         dep = project.get(aid)
-        # A dependent that is already gone, or that cannot legally become
-        # suspect from its current state, is left untouched; suspicion only
-        # attaches to a previously-trusted item.
-        if dep and dep.status not in dead and schema.allows_transition(dep.status, suspect):
-            dep.status = suspect
-            reasons = dep.attrs.setdefault("suspect_reasons", [])
-            reasons.append(f"upstream {uid} invalidated")
-    return affected
+        # A dependent that is already gone is left untouched and is not a refusal:
+        # nothing was withheld from an item that has already been retired.
+        if dep is None or dep.status in dead:
+            continue
+        # A move the project's lifecycle does not declare is refused here rather
+        # than written (SR-0130). The refusal is recorded, not swallowed: an item
+        # whose footing was withdrawn but which carries no flag is exactly the
+        # drift suspicion exists to surface (SR-0173).
+        if not schema.allows_transition(dep.status, suspect):
+            refused.append(Refusal(aid, dep.status, suspect))
+            continue
+        dep.status = suspect
+        reasons = dep.attrs.setdefault("suspect_reasons", [])
+        reasons.append(f"upstream {uid} invalidated")
+        marked.append(aid)
+    return Invalidation(affected, marked, refused)
 
 
 def scout_ingest(project, report: dict) -> dict:

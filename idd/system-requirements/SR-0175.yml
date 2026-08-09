@@ -1,0 +1,38 @@
+uid: SR-0175
+type: system_requirement
+status: ratified
+title: The shipped lifecycle always leaves a route to suspicion
+text: The status lifecycle the Tool ships with a new project shall permit every live
+  status to move to the suspect status, so that no item can rest in a state where
+  the withdrawal of its footing cannot be recorded. In particular the statuses an
+  item is authored and parked in shall permit the move, since those hold the items
+  whose grounding is least settled.
+rationale: 'SR-0150 found the shipped table stranding items short of ratification;
+  the same table strands them short of suspicion, and for the same reason — it was
+  written to describe the forward march of approval and never asked which states
+  an item might have to be pulled back from. The statuses it denies the move are
+  proposed, draft and deferred, which is exactly where tl new places every item it
+  creates, so in a freshly initialised project suspicion propagation is inert for
+  the newest and least settled items in the graph. A default that disables a headline
+  mechanism is not a neutral starting point, and the Tool cannot ship the gate required
+  by the requirement next to this one and then ship a template that trips it on the
+  first run. Who pays: nobody is obliged to adopt the change, since an existing project
+  keeps the table it has; the cost is that suspicion now reaches items a project
+  may have thought of as not yet trusted, which is the intended correction rather
+  than a side effect.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0150
+  type: relates
+- target: SR-0100
+  type: relates
+- target: SR-0174
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:76c69e9aeb0c7e09b5f956e960ef2d7249938fbbcbfca07046632ce4fd426d5c

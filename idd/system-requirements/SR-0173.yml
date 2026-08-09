@@ -1,0 +1,36 @@
+uid: SR-0173
+type: system_requirement
+status: ratified
+title: An invalidation reports only the dependents it actually marked
+text: When the Tool invalidates an item it shall mark suspect only those dependents
+  whose configured lifecycle permits the move, and shall report the dependents it
+  marked separately from those it could not, naming each dependent it could not mark
+  together with the transition that was refused. It shall exit non-zero when any
+  dependent could not be marked, so an incomplete cascade is never reported as a
+  complete one.
+rationale: 'Suspicion propagation is what makes downstream drift visible, so a run
+  that reports it happened when it did not is worse than one that refuses: the reader
+  stops looking. The command counted the impact set and announced every member as
+  marked, while silently skipping any dependent whose status had no declared route
+  to suspect. The skip itself is sound — suspicion attaches to an item whose footing
+  was withdrawn, and refusing an undeclared transition is SR-0130 working correctly
+  — so the defect is the report, not the refusal, and the remedy is to separate the
+  two groups rather than to force the write. Who pays: a project whose lifecycle
+  has such a gap now gets a non-zero exit from a command that used to succeed, and
+  a CI step that invalidates will fail until the lifecycle admits the move. That
+  cost falls on the project owner, who settles it once in the transitions table,
+  and it buys the reader the right to trust the sentence the command prints.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0159
+  type: relates
+- target: SR-0130
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d67662fe09eb88d3cde3c9b8d8e0d4e3756c10709416bab7ddc7e30b6f407086
