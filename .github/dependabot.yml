@@ -1,0 +1,22 @@
+version: 2
+
+# Watches the actions pinned by the release workflow (SR-0176) and proposes SHA
+# bumps, so a pin cannot go stale unobserved (SR-0179). Dependabot reads the
+# trailing `# vX.Y.Z` comment on each pin and updates the SHA and the comment
+# together.
+#
+# Only `github-actions` is enabled; pip updates are left off so release-path
+# proposals are not buried in routine library churn. The ecosystem scans the whole
+# workflows directory and cannot be aimed at one file, so CI's floating tags draw
+# proposals too — harmless, and they share the actions the release path pins.
+
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "Bump"
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5
