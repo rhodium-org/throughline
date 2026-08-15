@@ -1,0 +1,43 @@
+uid: SR-0180
+type: system_requirement
+status: ratified
+title: The declared dependency range is tested at both ends on a schedule
+text: 'The repository shall run its unit tests and its graph gates on a recurring
+  schedule, independently of any commit, against two resolutions of its declared
+  dependency range: the versions the package index currently publishes, and the exact
+  declared minimums. The minimum versions installed shall be derived from the package
+  metadata rather than restated in the workflow. The schedule shall place the run
+  outside the maintainers'' working hours.'
+rationale: 'Dependencies are declared as floors rather than locked, so continuous
+  integration resolves whatever the index happens to publish and a green check is
+  only true on the day it ran. A release of a dependency can therefore turn this
+  repository red without a commit here, and nothing observes it: the failure surfaces
+  when a contributor next opens a pull request, who meets a break that has nothing
+  to do with their change and must diagnose someone else''s drift before their own
+  work can be judged. Testing the two ends catches opposite faults. The ceiling catches
+  a dependency that has moved ahead of the code. The floor catches a minimum that
+  is declared but no longer actually supported — a version number written down on
+  the strength of ''it has the API we call'' and never installed since, which is
+  a promise to every consumer whose resolver honours it. Deriving the minimums from
+  the package metadata rather than restating them keeps the workflow from drifting
+  away from the versions the package actually promises, which would leave a green
+  floor job proving nothing. Who pays: maintainers, who receive failures that no
+  commit of theirs caused, on days when nothing was being changed. That is the point
+  — the alternative is not the absence of the failure but its arrival in a contributor''s
+  pull request. The scheduled hour is offset from the top of the hour because scheduled
+  jobs queue heavily there, and placed outside working hours so a red result is waiting
+  rather than interrupting. Rejected: locking the dependencies, which would trade
+  this failure for a silent staleness that nothing observes at all, and would make
+  the package hostile to compose in a consumer''s environment; and running the ceiling
+  job alone, which leaves the declared minimum untested and so leaves the more consequential
+  of the two promises unverified.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+attrs:
+  priority: should
+  verification: inspection
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f869c96c50945d9827712d88119fcc3f192af355df08a6c5a754c1c6908e3f6d
