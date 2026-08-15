@@ -31,7 +31,9 @@ classifiers = [
   "Topic :: Software Development :: Documentation",
   "Topic :: Software Development :: Quality Assurance",
 ]
-dependencies = ["pyyaml>=6.0"]
+# 6.0.1, not 6.0: 6.0's sdist fails to build against Cython 3, so on a current
+# interpreter the declared floor cannot be installed at all.
+dependencies = ["pyyaml>=6.0.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
