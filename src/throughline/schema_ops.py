@@ -292,28 +292,10 @@ def _declare(project: Project, table: str, key: str, values: list[str],
                                                because=why))
 
 
-def _statuses_relied_on(project: Project) -> set[str]:
-    """Every status the project would strand by not declaring it — the ones its
-    items are in, and the ones the rest of the configuration already names, which
-    the schema itself refuses to build without."""
-    schema = project.schema
-    used = {i.status for i in project.items()}
-    used |= set((schema.status_roles or {}).values())
-    for frm, to in (schema.transitions or {}).items():
-        used |= {frm} | set(to)
-    return used
-
-
-def _link_types_relied_on(project: Project) -> set[str]:
-    schema = project.schema
-    used = {link.type for item in project.items() for link in item.links}
-    return (used | set(schema.ground_link_types)
-            | set(schema.suspect_link_types) | set(schema.link_rules))
-
-
 def status_add(project: Project, name: str) -> Change:
     if not _array(project.config, "status", "values"):
-        raise _undeclared("status", "status", name, _statuses_relied_on(project))
+        raise _undeclared("status", "status", name,
+                          project.relied_on_statuses())
     return _add_to(project, "status", "values", name, "status")
 
 
@@ -328,7 +310,7 @@ def status_remove(project: Project, name: str) -> Change:
 def linktype_add(project: Project, name: str) -> Change:
     if not _array(project.config, "links", "types"):
         raise _undeclared("link type", "linktype", name,
-                          _link_types_relied_on(project))
+                          project.relied_on_link_types())
     return _add_to(project, "links", "types", name, "link type")
 
 

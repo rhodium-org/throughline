@@ -1,0 +1,39 @@
+uid: SR-0185
+type: system_requirement
+status: ratified
+title: A project declares the vocabularies its items are validated against
+text: A project shall declare the vocabularies its items are validated against. The
+  Tool's check shall report a named finding, at a severity configurable per SR-0041
+  and defaulting to error, when a project declares no [status] values or no [links]
+  types, naming what the graph already relies on so that the reader can declare it.
+  The current major's configuration backfill shall declare each absent vocabulary
+  as what the project already relies on — the values its live items hold, together
+  with any the rest of its own configuration names — so that the declaration cannot
+  itself invalidate an item or leave the schema unbuildable. The backfill shall test
+  for the key's presence and never its contents, so that a deliberately declared
+  vocabulary is never rewritten, and a project this rule turns red shall be corrected
+  by the same single migration command rather than by hand.
+rationale: |-
+  An absent vocabulary is not a neutral default. It makes SR-0081's membership rule inert, so every typo and every stale status enters the graph unremarked while check reports the graph sound — a tool whose whole proposition is that the rules are stated cannot treat 'no rule' as a passing state. The estate bears this out rather than contradicting it: all 115 graphs declare their status roles and 112 declare both vocabularies. The three that do not are hand-written example profiles, which is the worst place for it, because an example propagates its laxity to everyone who copies it.
+
+  Error rather than warning, because a warning is the mechanism by which 'anything goes' survives years of green builds. Configurable rather than fixed, because a project that genuinely wants an open vocabulary should be able to say so once, deliberately, in configuration — rather than by omission, where nobody can tell the choice from the oversight.
+
+  Who pays: an existing user upgrading the Tool, whose project leaves a vocabulary undeclared, gets a red build they did not cause and has no item in this graph arguing for them. That cost is bounded to one run of the migration command, which declares what their items already use and so cannot change what the graph admits for anything now in it — but it is a real interruption, and it is why the backfill is part of this requirement rather than a follow-up to it.
+
+  Rejected: reporting at warning severity, which leaves the hole open and teaches that the gate's own findings are optional; and refusing to load a project at all without the vocabulary, which turns an upgrade into an outage before the command that would fix it can run.
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0081
+  type: refines
+- target: SR-0137
+  type: relates
+- target: SR-0182
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8e4bfd9115b518edf0079e8f3ad4871206752c3cab29a366cbf18a2177118f09

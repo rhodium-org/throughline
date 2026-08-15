@@ -27,6 +27,7 @@ from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
+from .tomledit import TomlDocument
 from .version import distribution_version
 
 if sys.version_info >= (3, 11):
@@ -302,24 +303,81 @@ def _backfill_ratification_stamps(root: Path, *,
     return bound
 
 
+def _backfill_vocabularies(root: Path) -> dict[str, list[str]]:
+    """Declare each vocabulary the project leaves absent, as what it already
+    relies on (SR-0185). Returns ``key -> members`` for each one written, and is
+    empty when both were already declared.
+
+    An undeclared vocabulary permits every value, which the gate now reports as
+    an error — so a project that never declared one gets a red build from an
+    upgrade it did not ask for. This is what bounds that cost to a single command.
+
+    What it writes is the project's own current reliance: the values its live
+    items hold, together with any the rest of its configuration names. That list
+    is chosen for what it cannot do — it cannot invalidate an item, because every
+    item's value is in it, and it cannot leave the schema unbuildable, because
+    every value the configuration cites is in it too. The declaration therefore
+    changes nothing about what the graph admits *today* while making the project
+    say what it means from here on, which the author can then narrow deliberately
+    through `tl schema`.
+
+    Presence of the key, never its contents, is what marks it done (SR-0137): a
+    project that declares a vocabulary has made a choice, and a repair that
+    second-guessed the contents would rewrite a deliberate one on every migrate.
+    """
+    cfg_file = root / CONFIG_NAME
+    text = cfg_file.read_text(encoding="utf-8")
+    config = tomllib.loads(text)
+    absent = [(t, k, w) for t, k, w in (("status", "values", "statuses"),
+                                        ("links", "types", "link types"))
+              if (config.get(t) or {}).get(k) is None]
+    if not absent:
+        return {}
+    project = load_project(root)
+    relied = {"status": project.relied_on_statuses,
+              "links": project.relied_on_link_types}
+    doc = TomlDocument(text)
+    written: dict[str, list[str]] = {}
+    for table, key, what in absent:
+        values = sorted(relied[table]())
+        doc.set_key(table, key, values, because=(
+            f"Declared by `tl migrate` (SR-0185) as the {what} this project "
+            "already relies on, because an undeclared vocabulary permits every "
+            "value and so validates none of them. Narrow it deliberately with "
+            "`tl schema` once you have decided what it should be."))
+        written[f"[{table}] {key}"] = values
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return written
+
+
 class RepairResult(NamedTuple):
     """What a major's repair wrote: the configuration bindings it backfilled
-    (SR-0137), and the ratification records it bound (SR-0152)."""
+    (SR-0137), the vocabularies it declared (SR-0185), and the ratification
+    records it bound (SR-0152)."""
     config: dict[str, str] | None
+    vocabularies: dict[str, list[str]]
     stamps: dict[str, str]
 
 
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
-    """The repair for the major that requires [status.roles] (SR-0137, SR-0152).
+    """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
+    SR-0185).
 
-    Ordered, not merely grouped: the record backfill resolves the project's
-    schema, so the configuration the major requires has to be in place before it
-    runs. Both halves are idempotent, so the pair is.
+    Ordered, not merely grouped, and the order is load-bearing twice over. The
+    role bindings come first because the status vocabulary is written from what
+    the configuration relies on, and a role bound to a status is exactly that —
+    written second, the vocabulary would omit the very statuses the roles name and
+    leave the schema refusing to build. The record backfill comes last because it
+    resolves the project's schema, so everything that schema requires has to be on
+    disk before it runs. Each part is idempotent, so the sequence is.
 
     ``index`` reaches only the record backfill (SR-0153): a grounding view has
-    nothing to say about which declared status plays which role, so passing it to
-    the configuration half would imply an influence it does not have."""
-    return RepairResult(_backfill_status_roles(root),
+    nothing to say about which declared status plays which role, or about which
+    values a vocabulary should hold, so passing it to either configuration half
+    would imply an influence it does not have."""
+    roles = _backfill_status_roles(root)
+    vocabularies = _backfill_vocabularies(root)
+    return RepairResult(roles, vocabularies,
                         _backfill_ratification_stamps(root, index=index))
 
 
@@ -368,10 +426,17 @@ class MigrationResult(NamedTuple):
     reported separately from ``repaired`` because the two are different kinds of
     change — one corrects configuration, the other writes to an accountability
     record — and an operator reading the output should never have to guess which
-    they are looking at."""
+    they are looking at.
+
+    ``declared`` maps each vocabulary the repair declared to the members it wrote
+    (SR-0185), and is empty when the project already declared them. Separate again
+    for the same reason: this one decides what the project's items will be
+    validated against from now on, so it is the part an author is most likely to
+    want to narrow, and it cannot be left to be inferred from a count."""
     start: int
     end: int
     repaired: dict[str, str] | None
+    declared: dict[str, list[str]]
     bound: dict[str, str]
 
 
@@ -380,7 +445,7 @@ def migrate_project(path: str | Path, *,
     """Bring a project's on-disk format to what the current major requires
     (NFR-0010).
 
-    Returns ``(from_version, to_version, repaired)``. Raises ``ProjectError`` when
+    Returns a :class:`MigrationResult`. Raises ``ProjectError`` when
     the project is newer than this Tool (upgrade tl instead) or when no migration
     step is registered for an older major.
 
@@ -418,8 +483,9 @@ def migrate_project(path: str | Path, *,
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
-    result = repair(root, index) if repair is not None else RepairResult(None, {})
-    return MigrationResult(start, current, result.config, result.stamps)
+    result = repair(root, index) if repair is not None else RepairResult(None, {}, {})
+    return MigrationResult(start, current, result.config, result.vocabularies,
+                           result.stamps)
 
 
 # ------------------------------------------------------------------- YAML dump

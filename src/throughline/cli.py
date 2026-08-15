@@ -165,7 +165,7 @@ def cmd_migrate(args) -> int:
         print(f"migrated project from format version {result.start} to {result.end}")
     elif result.repaired is None:
         print(f"already at format version {result.end}"
-              + ("" if result.bound else " — nothing to migrate"))
+              + ("" if result.bound or result.declared else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -176,6 +176,16 @@ def cmd_migrate(args) -> int:
         if not result.repaired:
             print("  (no declared status matched a role — bind them yourself, and "
                   "leave out any role your statuses have no honest counterpart for)")
+    # Vocabularies the repair declared (SR-0185). Named in full rather than
+    # counted, because this is what the project's items will be validated against
+    # from now on: it is the project's own current reliance, so it changes nothing
+    # today, and it is exactly the thing an author may want to narrow.
+    if result.declared:
+        print("declared the vocabularies this project relies on but had left "
+              "open — every value was legal before, and nothing checked the ones "
+              "in use; narrow them deliberately with `tl schema`:")
+        for key, values in result.declared.items():
+            print(f"  {key} = {', '.join(values)}")
     # Records the repair completed. Named for the same reason the config bindings
     # are, and more so: this wrote to an accountability record, so an operator who
     # disagrees with a stamp must be able to see which item carries it (SR-0152).
