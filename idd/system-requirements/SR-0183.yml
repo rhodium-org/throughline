@@ -1,0 +1,23 @@
+uid: SR-0183
+type: system_requirement
+status: ratified
+title: Editing the configuration preserves what the file already says
+text: A schema-changing operation shall preserve the configuration file's existing
+  comments, key ordering and formatting, altering only the region that its change
+  affects.
+rationale: |-
+  The configuration is the one file in a throughline project where the reasoning sits inline. This repository's own is the case in point: nearly every table in it carries prose and the UIDs of the requirements that decided it, and that commentary is why a reader can tell a deliberate lifecycle from an accidental one. A round-trip through a TOML serialiser parses the file to a data structure and re-emits it, which is faultless for the values and destroys everything around them — so the obvious implementation of a schema-editing operation would, on its first use, silently delete the only record of why the schema reads as it does.
+
+  The obligation is therefore on the edit to be surgical rather than on the author to keep a backup. It is also what keeps the file honestly hand-editable, which is the promise that makes refusing to force a change (SR-0182) acceptable rather than merely restrictive: an author who reaches past the tool must find the file they left.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0181
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:af1851b9f474985dce27ee4410aa0614a4d71dfe6b892c9cd90d5e43a3a521dc

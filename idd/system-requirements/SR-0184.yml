@@ -1,0 +1,25 @@
+uid: SR-0184
+type: system_requirement
+status: ratified
+title: A schema change records why it was made, beside what it changed
+text: A schema-changing operation shall require the author to state why the change
+  is being made, and shall write that statement into the configuration as a comment
+  on the table it altered.
+rationale: |-
+  A schema is a set of decisions, and the questions asked of it later are all why questions: why can a verified item not go back to draft, why does this project have a status the others do not. The values answer none of them, and the answer is never reconstructible afterwards — it lived in the head of whoever made the change, on the day they made it. Requiring the reason at that moment is the only point at which it is cheap, and writing it beside the table is what makes the configuration self-documenting in the same way an item's rationale already makes the graph self-documenting.
+
+  Who pays: the author of every schema change, who must have a reason ready rather than making the edit and moving on. That is a real cost and it falls on a person the graph does not otherwise bind. It is set at should rather than must for that reason — a project that finds the prompt obstructive should be able to say so — but the default is to ask, because a schema edited without a recorded reason is indistinguishable a year later from one edited by mistake.
+
+  Rejected: deriving the comment from the command line automatically, which would restate what the values already say and train the reader to skip the comments that matter.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0181
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6318f01eb412ce8b33d1e5bef1658645e3abbd3d16146025c49e9f431493608b

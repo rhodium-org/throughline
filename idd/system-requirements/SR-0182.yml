@@ -1,0 +1,36 @@
+uid: SR-0182
+type: system_requirement
+status: ratified
+title: A schema change that would invalidate existing items is refused, not forced
+text: 'A schema change that narrows what the schema permits shall be evaluated against
+  the project''s current items before anything is written, and shall be refused,
+  leaving the configuration untouched, if it would make any existing item or link
+  invalid. The refusal shall name the items concerned and the operation that would
+  resolve each of them, so that the author can correct the graph first or choose
+  a different change. Whether a change narrows shall be judged by its effect on what
+  the schema admits and not by the verb expressing it: adding the first endpoint
+  type to a previously unconstrained link type forbids every endpoint it does not
+  name, and shall be evaluated, whereas adding a status, an item type, a permitted
+  transition or an optional attribute cannot invalidate anything and shall apply
+  without that evaluation. Where the project declares composed sources, the refusal
+  shall state that a local evaluation does not answer for the assembled union.'
+rationale: |-
+  A schema change is retroactive in a way an item edit is not. Removing a status, denying a transition or tightening an endpoint rule passes judgement on items authored while the old rule held, and the author making the change is usually the person least able to say which those are. Writing it anyway and leaving the gate to fail afterwards is the cheaper implementation and the worse one: it teaches its user that a red check is a normal intermediate state, which is the habit that makes every other gate in the tool worthless.
+
+  There is deliberately no flag to force the write. The configuration remains plain TOML that a determined author can still edit by hand, so the refusal takes nobody's autonomy — it only moves the cost to where it belongs, and someone who goes around it that way owns a red check rather than a silent pass. Naming the items and the remedy is what separates a refusal from an obstruction: 'three items would become invalid' sends the reader off to search the graph, where the UIDs and the command that moves them let a human or an agent act on the spot and decide, informed, whether to fix the graph or abandon the change.
+
+  Distinguishing narrowing from widening keeps the evaluation where it earns its cost: a change that only adds to a vocabulary cannot make an existing item illegal, and paying for a whole-graph pass to prove that each time would make the safe change feel as expensive as the dangerous one, which is how a tool teaches people to avoid it. But the distinction is one of effect, and there is a case where the grammar inverts it. An endpoint rule is absent while a link type is unconstrained, so the first endpoint added to it widens nothing — it forbids every endpoint not named, against links authored when no rule existed at all. Keying the decision to the verb would wave that change through unexamined, and it is the one an author is least likely to see coming.
+
+  The local evaluation is honest but not complete for a composed project, and says so rather than implying otherwise. Findings on a borrowed item are suppressed at the seam, so a local narrowing cannot make a source's item newly red; but grounding that leaves the consumer and terminates in a source is judged by the consumer's own configuration, and a check that loads one graph cannot see it.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0181
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6b8cc0e2fdb55986092f6c4068126ffa5422dd3812c18e8c0e789f679f562cf5
