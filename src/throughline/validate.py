@@ -47,6 +47,7 @@ _DEFAULT_SEVERITY = {
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
     "bad-link-target": ERROR, "bad-status": ERROR, "bad-transition": ERROR,
     "bad-link-shape": ERROR, "tombstone-deleted": ERROR,
+    "undeclared-vocabulary": ERROR,
     "no-status-roles": WARNING, "suspect-unreachable": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ratified-stale": WARNING,
@@ -89,6 +90,34 @@ def validate(project, strict: bool = False,
             "[status.roles] — the statuses `tl new`, `ratify`, `invalidate` and "
             "`delete` write are resolved by role, so those operations (and "
             "tl-ratify) cannot run; run `tl migrate` to backfill the table")
+
+    # A vocabulary the project never declares (SR-0185). An absent [status] values
+    # or [links] types is not a neutral default: it makes SR-0081's membership rule
+    # inert, so every typo and every stale status enters the graph unremarked while
+    # check pronounces the graph sound — and a tool whose whole proposition is that
+    # the rules are stated cannot treat 'no rule' as a passing state.
+    #
+    # Error by default, because a warning is the mechanism by which 'anything goes'
+    # survives years of green builds. Configurable like every other rule, so a
+    # project that genuinely wants an open vocabulary says so once in configuration,
+    # where the choice is legible as a choice — rather than by omission, where
+    # nobody can tell it from an oversight.
+    #
+    # The finding names what the graph already relies on, which is both the way out
+    # and the shortest one: that list is what `tl migrate` writes, and declaring it
+    # cannot invalidate anything now in the graph.
+    for table, key, noun, cmd, relied in (
+            ("status", "values", "status", "status", project.relied_on_statuses),
+            ("links", "types", "link type", "linktype",
+             project.relied_on_link_types)):
+        if (project.config.get(table) or {}).get(key) is not None:
+            continue
+        using = ", ".join(sorted(relied()))
+        add("undeclared-vocabulary", "", str(project.path / CONFIG_NAME),
+            f"[{table}] {key} is not declared, so every {noun} is legal here and "
+            f"nothing validates the ones in use. This graph relies on {using} — "
+            "`tl migrate` declares exactly that, or `tl schema "
+            f"{cmd} declare …` declares the vocabulary you mean")
 
     # A lifecycle with no route to suspicion (SR-0174). Suspicion propagation is
     # how the withdrawal of an item's footing becomes visible, and it is carried

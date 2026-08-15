@@ -3,6 +3,7 @@ round-trip, the validation pipeline, and the grounding operations.
 """
 import shutil
 import sys
+import tomllib
 from importlib import metadata
 from pathlib import Path
 
@@ -41,6 +42,7 @@ from throughline.storage import (
     migrate_project,
     read_project,
 )
+from throughline.tomledit import TomlDocument
 from throughline.uid import UidError
 
 REPO = Path(__file__).resolve().parent.parent
@@ -550,7 +552,12 @@ def test_strict_promotes_warnings_to_errors():
     fr = Item(uid="FR-1", type="requirement", status="proposed",
               attrs={"origin": "ai"},
               links=[Link(target="INT-1", type="derives_from")])
-    p = _project(_doc("INT", intent), _doc("FR", fr))
+    # Vocabularies declared, because leaving one out is an error in its own right
+    # (SR-0185) and this is about the promotion of everything that is not.
+    p = _project(_doc("INT", intent), _doc("FR", fr),
+                 config={"status": {"values": ["proposed", "ratified"]},
+                         "links": {"types": ["derives_from", "implements",
+                                             "mitigates", "verifies"]}})
     assert _errors(validate(p, strict=False)) == []
     assert _errors(validate(p, strict=True)) != []
 
@@ -3321,6 +3328,158 @@ def test_gate_no_status_roles_is_suppressible():
     finding off through the standard rule-severity configuration (SR-0136)."""
     findings = validate(_v3_project({"rules": {"no-status-roles": "off"}}))
     assert not [f for f in findings if f.rule == "no-status-roles"]
+
+
+# ------------------------------ undeclared vocabularies at the gate (SR-0185)
+
+def _open_vocab_project(config_extra: dict | None = None,
+                        *docs: Register) -> Project:
+    """A project declaring neither vocabulary — the shape SR-0185 turns red. The
+    roles are bound because the check is about the vocabularies alone."""
+    config = {"project": {"format_version": FORMAT_VERSION},
+              "status": {"roles": {"initial": "draft", "ratified": "ratified"}}}
+    for k, v in (config_extra or {}).items():
+        config[k] = {**config.get(k, {}), **v} if isinstance(v, dict) else v
+    p = Project(path=Path("/tmp/none"), config=config)
+    for d in docs:
+        p.registers[d.prefix] = d
+    return p
+
+
+def test_gate_flags_each_undeclared_vocabulary_as_an_error():
+    """SR-0185. An absent [status] values or [links] types admits everything, which
+    makes SR-0081's membership rule inert — every typo enters the graph unremarked
+    while check pronounces it sound. Error by default, because a warning is how
+    'anything goes' survives years of green builds."""
+    hits = [f for f in validate(_open_vocab_project())
+            if f.rule == "undeclared-vocabulary"]
+
+    assert len(hits) == 2
+    assert {f.severity for f in hits} == {"error"}
+    assert any("[status] values" in f.message for f in hits)
+    assert any("[links] types" in f.message for f in hits)
+
+
+def test_the_undeclared_finding_names_what_the_graph_relies_on():
+    """SR-0185. The finding has to leave the reader able to act, and the one list
+    guaranteed to invalidate nothing is what the project already relies on: the
+    values its items hold, plus whatever the rest of its configuration names — the
+    grounding link types among them, which the schema will not build without."""
+    intent = Item(uid="INT-1", type="intent", status="agreed")
+    fr = Item(uid="FR-1", type="requirement", status="draft",
+              links=[Link(target="INT-1", type="derives_from")])
+    p = _open_vocab_project(None, _doc("INT", intent), _doc("FR", fr))
+    said = {f.message.split("relies on ")[1].split(" —")[0]
+            for f in validate(p) if f.rule == "undeclared-vocabulary"}
+
+    assert "agreed, draft, ratified" in said        # held, and named by a role
+    assert "derives_from, implements, mitigates, verifies" in said
+
+
+def test_gate_silent_when_a_vocabulary_is_declared_however_it_is_declared():
+    """SR-0185. Presence is the whole test. A project that deliberately declares an
+    open vocabulary has said so where the choice can be read as a choice, which is
+    the entire difference between that and an omission."""
+    declared = {"status": {"values": ["draft", "ratified"]}, "links": {"types": []}}
+
+    assert not [f for f in validate(_open_vocab_project(declared))
+                if f.rule == "undeclared-vocabulary"]
+
+
+def test_gate_undeclared_vocabulary_is_suppressible():
+    """SR-0185. Configurable per SR-0041 like every other rule — a project that
+    genuinely wants an open vocabulary says so once, in configuration."""
+    findings = validate(_open_vocab_project({"rules": {"undeclared-vocabulary": "off"}}))
+
+    assert not [f for f in findings if f.rule == "undeclared-vocabulary"]
+
+
+def test_migrate_declares_the_vocabularies_a_project_left_open(tmp_path):
+    """SR-0185. The rule turns an existing project red through an upgrade it did not
+    ask for, so the same single command has to correct it — and what it writes is
+    the project's own reliance, which cannot invalidate an item or leave the schema
+    unbuildable, so the declaration changes nothing about what the graph admits."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
+                 "--title", "why"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("status", "values")
+    doc.remove_key("links", "types")
+    cfg.write_text(doc.text(), encoding="utf-8")
+    assert len([f for f in validate(load_project(root))
+                if f.rule == "undeclared-vocabulary"]) == 2
+
+    result = migrate_project(root)
+
+    assert set(result.declared) == {"[status] values", "[links] types"}
+    assert "draft" in result.declared["[status] values"]
+    assert not [f for f in validate(load_project(root))
+                if f.rule == "undeclared-vocabulary"]
+    # idempotent, and a declared vocabulary is never rewritten
+    before = cfg.read_text(encoding="utf-8")
+    assert migrate_project(root).declared == {}
+    assert cfg.read_text(encoding="utf-8") == before
+
+
+def test_the_backfilled_status_vocabulary_covers_the_roles_bound_beside_it(tmp_path):
+    """SR-0185. Order is load-bearing: the roles are backfilled first, so the
+    vocabulary written after them includes the statuses they name. Written the other
+    way round the two halves of one repair would leave the schema refusing to
+    build — [status.roles] mapping to statuses the values do not declare."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("status", "values")
+    cfg.write_text(doc.text().split("[status.roles]")[0].rstrip() + "\n",
+                   encoding="utf-8")
+
+    result = migrate_project(root)
+
+    schema = load_project(root).schema           # builds, so the two halves agree
+    assert set(result.repaired.values()) <= set(result.declared["[status] values"])
+    assert schema.status_role("initial") in schema.statuses
+
+
+def test_migrate_declaring_a_vocabulary_leaves_the_rest_of_the_file_alone(tmp_path):
+    """SR-0185 through NFR-0009. The repair reaches for the same surgical editor the
+    schema commands use, so a config an author has commented survives being brought
+    up to what the major requires."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("links", "types")
+    cfg.write_text("# Why this project is shaped as it is.\n" + doc.text(),
+                   encoding="utf-8")
+
+    migrate_project(root)
+    out = cfg.read_text(encoding="utf-8")
+
+    assert out.startswith("# Why this project is shaped as it is.\n")
+    assert "implements" in tomllib.loads(out)["links"]["types"]
+
+
+def test_migrate_names_the_vocabularies_it_declared_on_the_cli(tmp_path, capsys):
+    """SR-0185 with SR-0137. This decides what every future item is validated
+    against, so it is named in full rather than counted — it is the part an author
+    is most likely to want to narrow."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("links", "types")
+    cfg.write_text(doc.text(), encoding="utf-8")
+    capsys.readouterr()
+
+    assert _cli(["-C", str(root), "migrate"]) == 0
+    out = capsys.readouterr().out
+
+    assert "[links] types = derives_from, implements, mitigates, verifies" in out
+    assert "nothing to migrate" not in out
 
 
 def test_migrate_refuses_newer_project(tmp_path):

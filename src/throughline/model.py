@@ -229,6 +229,31 @@ class Project:
         for reg in self.registers.values():
             yield from reg.items.values()
 
+    def relied_on_statuses(self) -> set[str]:
+        """Every status this project would strand by not declaring it: the ones
+        its items are in, and the ones the rest of its own configuration already
+        names — which the schema itself refuses to build without.
+
+        This is the one status vocabulary guaranteed to leave the project exactly
+        as valid as it is now, so it is what the gate proposes to a project that
+        declares none and what the migration backfill writes (SR-0185)."""
+        schema = self.schema
+        used = {i.status for i in self.items()}
+        used |= set((schema.status_roles or {}).values())
+        for frm, to in (schema.transitions or {}).items():
+            used |= {frm} | set(to)
+        return used
+
+    def relied_on_link_types(self) -> set[str]:
+        """The link types this project would strand by not declaring them — see
+        :meth:`relied_on_statuses`. Its configuration names them in three further
+        places, and the schema will not build while a grounding or endpoint rule
+        cites a type the declared vocabulary leaves out."""
+        schema = self.schema
+        used = {link.type for item in self.items() for link in item.links}
+        return (used | set(schema.ground_link_types)
+                | set(schema.suspect_link_types) | set(schema.link_rules))
+
     def get(self, uid: str) -> Item | None:
         for reg in self.registers.values():
             if uid in reg.items:
