@@ -1,0 +1,32 @@
+uid: SR-0181
+type: system_requirement
+status: ratified
+title: Change the project's own schema through the tool
+text: The Tool shall provide operations that change the project's declared schema
+  — its item types and their attributes, its link vocabulary and endpoint rules,
+  its status vocabulary and permitted transitions, and its grounding configuration
+  — so that altering what the validator enforces never requires hand-editing the
+  configuration file. Each operation shall name the change it makes rather than accept
+  an arbitrary edit to a table, and shall validate the resulting schema before writing
+  it. An operation shall change only the project it is run against, and shall refuse
+  a change expressed against another graph's namespace before writing anything.
+rationale: |-
+  Every other part of the graph is reachable through an operation — item content (SR-0144), links (SR-0143), status moves (SR-0132) — and the project tells every author and agent that hand-editing structure is the one thing not to do. The schema that decides what a legal structure is was the exception, so adding a status or a transition meant opening the configuration and editing a format the author may have met once, with nothing between the edit and the validator but their own understanding of it. That is the same hole SR-0144 closed one level down, and it is worse here: an item edit damages an item, a schema edit re-judges every item at once.
+
+  Naming each change rather than exposing the tables is what lets the operation judge its own result. A verb that knows it is removing a status can ask what removing it costs; a general writer over TOML can only ask whether the file still parses, which is the question that was never in doubt. Refusing to reach outside the project it is run against follows the line composition already draws for ratification: a schema is the owning graph's own declaration, and a consumer able to edit a source's model would be asserting authority over a repository it does not own and cannot commit to.
+
+  Rejected: a general configuration editor, for the reason above; and leaving this to documentation, which is what the current state already is.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0070
+  type: refines
+- target: SR-0144
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:13c7c9a33bb14a19c108810cfb095a17cd156043f082011e4992818acb0969de

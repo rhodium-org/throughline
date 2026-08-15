@@ -33,7 +33,9 @@ from .identity import (
 from .inject import InjectError, has_markers, inject_text, referenced_uids
 from .model import Link, Register
 from .schema import SchemaError
+from . import schema_ops
 from .storage import (
+    CONFIG_NAME,
     MANIFEST_NAME,
     ProjectError,
     baseline_statuses,
@@ -213,6 +215,25 @@ def cmd_register_new(args) -> int:
                    digits=args.digits, parent=args.parent, path=reg_dir)
     write_manifest(reg)
     print(f"created register {args.prefix} at {reg_dir}")
+    return OK
+
+
+def cmd_schema(args) -> int:
+    """Change the project's own schema through the tool (SR-0181). Every verb
+    routes through here: the operation builds the config it wants, the change is
+    refused if it would invalidate an existing item (SR-0182), and only then is
+    the file edited in place with the reason recorded beside it (SR-0183/0184)."""
+    root = Path(args.path)
+    try:
+        project = schema_ops.load(root)
+        change = args.builder(project, args)
+        result = schema_ops.apply_change(root, change, args.because)
+    except (schema_ops.SchemaOpError, ProjectError) as e:
+        return _err(str(e))
+    if isinstance(result, schema_ops.Refusal):
+        print(result.render(schema_ops.is_composed(project)))
+        return FINDINGS
+    print(f"{result} — {root / CONFIG_NAME} updated")
     return OK
 
 
@@ -1294,6 +1315,7 @@ _CTX_COMMAND_USAGE = {
     "delete": "tl delete <UID>",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
+    "schema": "tl schema <noun> <verb> … --because <why>",
     "migrate": "tl migrate",
     "review": "tl review",
     "init": "tl init [--demo]",
@@ -1309,6 +1331,9 @@ _CTX_COMMAND_EMPHASIS = {
     "invalidate": "retires an item and cascades suspicion — see grounding, below",
     "delete": "tombstones an item; the file stays, the item stops counting",
     "amend": "change content through the tool, never by opening the YAML",
+    "schema": "change the schema itself — nouns: status, transition, type, attr, "
+              "linktype, linkrule, grounding; refuses a change that would "
+              "invalidate existing items and says what to fix",
 }
 
 
@@ -1632,6 +1657,142 @@ def cmd_status(args) -> int:
 
 # ------------------------------------------------------------------------ parse
 
+def _add_schema_parser(sub) -> None:
+    """`tl schema …` — the verbs that change what the validator enforces.
+
+    A separate noun rather than `tl status add` / `tl link type add`, because
+    `tl status` and `tl link` already name operations on the *graph*: overloading
+    them would make `tl status add draft` ambiguous with moving an item called
+    'add'. Keeping the schema verbs under one noun also draws the distinction
+    that matters — these change the rules, the others work within them.
+    """
+    s = sub.add_parser(
+        "schema",
+        help="change the project's own schema (types, statuses, links, grounding)")
+    nouns = s.add_subparsers(dest="schema_noun", required=True)
+    noun_help = {
+        "status": "the status vocabulary",
+        "transition": "permitted status moves",
+        "type": "item types",
+        "attr": "attributes of an item type",
+        "linktype": "the link vocabulary",
+        "linkrule": "endpoint constraints on a link type",
+        "grounding": "the grounding configuration",
+    }
+    made: dict[str, object] = {}
+
+    def _schema_verb(noun: str, verb: str, builder, help_text):
+        """One `tl schema <noun> <verb>`, creating the noun's parser on first use."""
+        if noun not in made:
+            parser = nouns.add_parser(noun, help=noun_help[noun])
+            made[noun] = parser.add_subparsers(dest=f"{noun}_verb", required=True)
+        v = made[noun].add_parser(verb, help=help_text)
+        v.add_argument("--because", required=True,
+                       help="why this change is being made; recorded as a comment "
+                            "beside it in throughline.toml")
+        v.set_defaults(func=cmd_schema, builder=builder)
+        return v
+
+    v = _schema_verb("status", "add",
+                     lambda p, a: schema_ops.status_add(p, a.name),
+                     "declare a new status")
+    v.add_argument("name")
+    v = _schema_verb("status", "declare",
+                     lambda p, a: schema_ops.status_declare(p, a.names),
+                     "declare the whole status vocabulary, where none is declared")
+    v.add_argument("names", metavar="STATUS", nargs="+")
+    v = _schema_verb("status", "remove",
+                     lambda p, a: schema_ops.status_remove(p, a.name),
+                     "withdraw a status")
+    v.add_argument("name")
+
+    v = _schema_verb("transition", "allow",
+                     lambda p, a: schema_ops.transition_allow(p, a.frm, a.to),
+                     "permit a status move")
+    v.add_argument("frm", metavar="FROM")
+    v.add_argument("to", metavar="TO")
+    v = _schema_verb("transition", "deny",
+                     lambda p, a: schema_ops.transition_deny(p, a.frm, a.to),
+                     "withdraw a permitted status move")
+    v.add_argument("frm", metavar="FROM")
+    v.add_argument("to", metavar="TO")
+
+    v = _schema_verb("type", "add",
+                     lambda p, a: schema_ops.type_add(p, a.name),
+                     "declare a new item type")
+    v.add_argument("name")
+    v = _schema_verb("type", "remove",
+                     lambda p, a: schema_ops.type_remove(p, a.name),
+                     "withdraw an item type")
+    v.add_argument("name")
+
+    v = _schema_verb("attr", "add",
+                     lambda p, a: schema_ops.attr_add(
+                         p, a.itype, a.name, kind=a.kind, values=a.values,
+                         required=a.required, normative=a.normative,
+                         default=a.default),
+                     "declare an attribute on an item type")
+    v.add_argument("itype", metavar="TYPE")
+    v.add_argument("name")
+    v.add_argument("--kind", default=None,
+                   help="enum|string|text|int|float|bool|date")
+    v.add_argument("--values", default=None, type=lambda s: s.split(","),
+                   help="comma-separated members, for --kind enum")
+    v.add_argument("--required", action="store_true")
+    v.add_argument("--normative", action="store_true",
+                   help="the value feeds the content fingerprint")
+    v.add_argument("--default", default=None)
+    v = _schema_verb("attr", "remove",
+                     lambda p, a: schema_ops.attr_remove(p, a.itype, a.name),
+                     "withdraw an attribute from an item type")
+    v.add_argument("itype", metavar="TYPE")
+    v.add_argument("name")
+
+    v = _schema_verb("linktype", "add",
+                     lambda p, a: schema_ops.linktype_add(p, a.name),
+                     "declare a new link type")
+    v.add_argument("name")
+    v = _schema_verb("linktype", "declare",
+                     lambda p, a: schema_ops.linktype_declare(p, a.names),
+                     "declare the whole link vocabulary, where none is declared")
+    v.add_argument("names", metavar="LINKTYPE", nargs="+")
+    v = _schema_verb("linktype", "remove",
+                     lambda p, a: schema_ops.linktype_remove(p, a.name),
+                     "withdraw a link type")
+    v.add_argument("name")
+
+    for verb, op, help_text in (
+            ("allow", schema_ops.linkrule_allow,
+             "permit an endpoint type on a link type"),
+            ("deny", schema_ops.linkrule_deny,
+             "withdraw an endpoint type from a link type")):
+        v = _schema_verb(
+            "linkrule", verb,
+            lambda p, a, op=op: op(p, a.ltype,
+                                   side="from" if a.frm else "to",
+                                   itype=a.frm or a.to),
+            help_text)
+        v.add_argument("ltype", metavar="LINKTYPE")
+        side = v.add_mutually_exclusive_group(required=True)
+        side.add_argument("--from", dest="frm", metavar="TYPE")
+        side.add_argument("--to", dest="to", metavar="TYPE")
+    v = _schema_verb("linkrule", "clear",
+                     lambda p, a: schema_ops.linkrule_clear(p, a.ltype),
+                     "leave a link type unconstrained again")
+    v.add_argument("ltype", metavar="LINKTYPE")
+
+    v = _schema_verb("grounding", "add",
+                     lambda p, a: schema_ops.grounding_add(p, a.field, a.value),
+                     "add an entry to a grounding field")
+    v.add_argument("field", metavar="FIELD")
+    v.add_argument("value")
+    v = _schema_verb("grounding", "remove",
+                     lambda p, a: schema_ops.grounding_remove(p, a.field, a.value),
+                     "withdraw an entry from a grounding field")
+    v.add_argument("field", metavar="FIELD")
+    v.add_argument("value")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="tl", description=__doc__.splitlines()[0])
     p.add_argument("--version", action="version", version=f"tl {_version()}")
@@ -1664,6 +1825,8 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--digits", type=int, default=4)
     d.add_argument("--parent", default=None)
     d.set_defaults(func=cmd_register_new)
+
+    _add_schema_parser(sub)
 
     s = sub.add_parser("new", help="allocate + create an item")
     s.add_argument("prefix")
