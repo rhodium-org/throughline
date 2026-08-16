@@ -1,0 +1,41 @@
+uid: SR-0187
+type: system_requirement
+status: ratified
+title: An item block states its identity through the target resolver
+text: The heading of the full item block a tl:item marker produces — and therefore
+  every block a tl:catalog or a front-end directive renders through the same renderer
+  — shall state the item's identity through the optional target resolver (SR-0110)
+  rather than from the item's own UID directly. The default resolver returns the
+  UID unchanged, so a project that does not compose sees identical output and the
+  local case is unaffected. A front end rendering an item drawn from another graph
+  may then state it under the identity the citing document uses for it — a namespace-qualified
+  reference, and where the item carries one, its reference number — so a block cannot
+  be published under a UID that collides with an unrelated local item of the same
+  number, and the heading a reader arrives at matches the citation that sent them
+  there.
+rationale: 'The block renderer was the one place identity was taken from the item
+  rather than resolved, which is why a mirrored external clause published under the
+  source''s own local UID: a consumer document could carry its own SR-0003 and a
+  borrowed asvs:SR-0003 under identical headings, leaving the reference number at
+  the foot of the block as the only way to tell them apart, and consumers compensating
+  with hand-written warning paragraphs telling readers not to trust the headings.
+  The resolver seam already carries display for a matrix cell (SR-0110) and link
+  targets inside a block (SR-0113); the heading was the remaining gap. Resolving
+  it there rather than adding a renderer parameter keeps one seam answering the identity
+  question for every place a UID is shown.'
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0110
+  type: relates
+- target: SR-0113
+  type: relates
+- target: SR-0186
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:677a370a05f34e1ad9447b2f534cf0383683374288984fc2507f378137926011

@@ -9,8 +9,21 @@ throughline regenerates *only* the marked regions, leaving every other byte of
 the file untouched. Because the content is a reference that is re-rendered in
 place — never a hand-maintained copy — it cannot silently drift from the graph.
 
-Ten directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
-``<!-- tl:end -->``:
+A marked region is recognised by its *general form* — a ``tl:`` marker naming a
+kind, with an optional modifier — and the kind is then resolved through a single
+registry (SR-0186). One registry entry is the only place a directive is declared:
+it carries how the directive renders, whether it publishes the items its filter
+selects for the coverage rule (SR-0096), and how that selection is read from the
+argument. A kind no registered directive provides fails injection by name, rather
+than failing to match the pattern and being reported as an unbalanced marker.
+
+A front end built on throughline may add a directive with ``register_directive``,
+so a capability that depends on state core does not hold is provided by the layer
+that holds it instead of being stubbed inside core (NG-0007). Core holds no
+mapping from a directive to the front end that provides it.
+
+Core provides nine directives, each opened by ``<!-- tl:<directive> <arg> -->``
+and closed by ``<!-- tl:end -->``:
 
     tl:item   <UID>     one item rendered as a block, including its outgoing links
               grouped by type (SR-0113) with each target rendered through the
@@ -30,10 +43,6 @@ Ten directives, each opened by ``<!-- tl:<directive> <arg> -->`` and closed by
     tl:unused <filter>  the matching items no narrative document references
               (SR-0112) — a catalogue mirror does not count as use, so the report
               stays meaningful alongside a full catalogue
-    tl:sourced <filter> the distinct external clauses that the matching items
-              reference by a namespace-qualified link target, each rendered in full
-              through the target resolver (SR-0114) — a composed document mirrors
-              the upstream clauses it depends on in one place
     tl:graph  <filter>  the matching items and their link targets as a Mermaid
               flowchart (SR-0115), nodes coloured by item type and external targets
               set apart, so a reader sees the graph flow from roots to externals
@@ -52,32 +61,33 @@ never a document editor (see the ``non_goal`` NG-0001).
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 from .graph import Index
 from .validate import FilterError, eval_filter, is_namespace_qualified
 
-_KINDS = ("item", "table", "matrix", "count", "catalog", "unused", "sourced",
-          "graph", "chart", "stats")
+# A directive name: an identifier, so the pattern that *finds* a marked region
+# carries no enumeration of the kinds that exist (SR-0186). `end` is excluded
+# because `tl:end` closes a region rather than opening one.
+_NAME = r"(?!end\b)[A-Za-z_][A-Za-z0-9_]*"
 
-# Directives that select items to derive a picture or a summary but do not publish
-# those items for the coverage rule (SR-0115/SR-0116/SR-0117) — a diagram or a
-# statistic is not the item's content appearing in a document.
-_NON_PUBLISHING = frozenset({"unused", "sourced", "graph", "chart", "stats"})
+# The modifiers a marker may carry after its kind. `.inline` (SR-0119) omits the
+# newline wrapping so a scalar directive can sit inside a sentence.
+_MODIFIERS = frozenset({"inline"})
 
 # A marked region: the open marker, its generated body, and the end marker. The
 # body is matched non-greedily so adjacent regions do not merge; DOTALL lets a
 # body span lines; IGNORECASE tolerates `TL:` and `tl:`.
 _BLOCK = re.compile(
-    r"(?P<open><!--\s*tl:(?P<kind>item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)(?:\.(?P<mod>inline))?\s+(?P<arg>.*?)\s*-->)"
+    rf"(?P<open><!--\s*tl:(?P<kind>{_NAME})(?:\.(?P<mod>[A-Za-z_][A-Za-z0-9_]*))?\s+(?P<arg>.*?)\s*-->)"
     r"(?P<body>.*?)"
     r"(?P<close><!--\s*tl:end\s*-->)",
     re.DOTALL | re.IGNORECASE,
 )
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
-_OPEN = re.compile(
-    r"<!--\s*tl:(?:item|table|matrix|count|catalog|unused|sourced|graph|chart|stats)\b",
-    re.IGNORECASE)
+_OPEN = re.compile(rf"<!--\s*tl:{_NAME}\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
@@ -111,6 +121,62 @@ def _parse_matrix_arg(
 class InjectError(ValueError):
     """A document marker could not be rendered (SR-0094): an unbalanced marker,
     an unknown item, or a malformed filter. Raised so drift is fixed, not hidden."""
+
+
+# ------------------------------------------------------------------- directives
+
+@dataclass(frozen=True)
+class Directive:
+    """One document directive (SR-0186). The registry entry is the *only* place a
+    directive is declared, so it cannot be recognised for rendering while being
+    omitted from the coverage question, or the reverse.
+
+    ``render(project, arg, resolver) -> str`` produces the body of the marked
+    region. ``publishes`` says whether the items ``selects`` returns count as
+    published for the coverage rule (SR-0096): a diagram, a statistic or a report
+    derives a picture *from* items rather than putting their content in front of a
+    reader, so it selects them without publishing them. ``selects(project, arg)``
+    reads the argument as the set of local item UIDs the directive draws on."""
+
+    name: str
+    render: Callable[..., str]
+    publishes: bool = True
+    selects: Callable[..., Iterable[str]] | None = None
+
+
+_REGISTRY: dict[str, Directive] = {}
+
+
+def register_directive(
+    name: str,
+    render: Callable[..., str],
+    *,
+    publishes: bool = True,
+    selects: Callable[..., Iterable[str]] | None = None,
+) -> Directive:
+    """Register a document directive under ``name`` (SR-0186).
+
+    A front end built on throughline calls this to provide a directive core does
+    not — typically one needing state core does not hold, which core therefore
+    does not stub (NG-0007). Registration is by name only: core keeps no record of
+    which front end supplied a directive, and an unregistered kind is reported as
+    unprovided without naming a tool that might provide it.
+
+    Re-registering a name replaces the entry, so a front end may override a core
+    directive deliberately."""
+    if not re.fullmatch(_NAME, name):
+        raise ValueError(
+            f"invalid directive name {name!r} — a directive is named by an "
+            "identifier, and 'end' is reserved for the closing marker")
+    d = Directive(name=name, render=render, publishes=publishes, selects=selects)
+    _REGISTRY[name] = d
+    return d
+
+
+def directive_names() -> tuple[str, ...]:
+    """The names of every registered directive, sorted — what this build of the
+    running front end provides."""
+    return tuple(sorted(_REGISTRY))
 
 
 class TargetResolver:
@@ -149,13 +215,6 @@ class TargetResolver:
         appending its ``source_ref`` — so a reader sees what the item grounds to."""
         return uid
 
-    def block(self, uid: str) -> str | None:
-        """The full block for ``uid`` when this resolver can render it, else None
-        (SR-0114). The default cannot render a foreign clause, so ``tl:sourced``
-        over a plain ``tl docs`` renders a placeholder. A composing resolver returns
-        the borrowed clause's own block so a composed document can mirror it."""
-        return None
-
 
 def has_markers(text: str) -> bool:
     """True if the text contains any tl: marker at all — the file is a throughline
@@ -163,12 +222,15 @@ def has_markers(text: str) -> bool:
     return bool(_OPEN.search(text) or _END.search(text))
 
 
-def _scan_refs(project, exclude_kinds: frozenset[str] = frozenset()) -> set[str]:
-    """The set of item UIDs referenced by document markers, skipping any marker
-    whose kind is in ``exclude_kinds``. A ``tl:item`` names its UID directly; a
-    ``tl:table`` / ``tl:matrix`` / ``tl:count`` / ``tl:catalog`` publishes every
-    item its filter selects. Malformed markers are ignored — reporting them is
-    `tl docs`'s job, not a coverage question's."""
+def _scan_refs(project, *, publishing_only: bool = False,
+               exclude: frozenset[str] = frozenset()) -> set[str]:
+    """The set of local item UIDs the document markers draw on, each marker read
+    through its registry entry's ``selects`` (SR-0186). With ``publishing_only``,
+    a directive that selects items without publishing them is skipped. ``exclude``
+    drops further kinds by name for a caller asking a narrower question.
+
+    Markers naming an unregistered kind, and malformed filters, are ignored —
+    reporting them is `tl docs`'s job, not a coverage question's."""
     root = Path(project.path)
     refs: set[str] = set()
     for pattern in project.schema.docs_paths:
@@ -181,32 +243,32 @@ def _scan_refs(project, exclude_kinds: frozenset[str] = frozenset()) -> set[str]
                 continue
             for m in _BLOCK.finditer(text):
                 kind, arg = m.group("kind").lower(), m.group("arg").strip()
-                if kind in exclude_kinds:
+                d = _REGISTRY.get(kind)
+                if d is None or d.selects is None or kind in exclude:
                     continue
-                if kind == "item":
-                    refs.add(arg)
-                else:
-                    expr = _parse_matrix_arg(arg)[4] if kind == "matrix" else arg
-                    try:
-                        refs.update(it.uid for it in _matching(project, expr))
-                    except InjectError:
-                        continue
+                if publishing_only and not d.publishes:
+                    continue
+                try:
+                    refs.update(d.selects(project, arg))
+                except InjectError:
+                    continue
     return refs
 
 
 def referenced_uids(project) -> set[str] | None:
     """The set of item UIDs published by a configured document (SR-0096). Returns
     ``None`` when no ``[docs] paths`` are configured, so the ``unpublished`` rule
-    is inert for projects that do not publish through throughline. A ``tl:unused``
-    report does not itself publish the items it lists (SR-0112), so it is excluded;
-    a ``tl:catalog`` does publish (its items appear in full) and so is counted. A
-    ``tl:sourced`` block publishes the *external* clauses its selected local items
-    reference, not those local items (SR-0114); a ``tl:graph`` / ``tl:chart`` /
-    ``tl:stats`` derives a picture or a statistic, not the item's content — none of
-    these publish, so all are excluded (SR-0115/SR-0116/SR-0117)."""
+    is inert for projects that do not publish through throughline.
+
+    Whether a directive publishes what it selects is declared once, on its registry
+    entry (SR-0186) — so a directive registered by a front end answers this question
+    the same way core's own do. A ``tl:unused`` report does not publish the items it
+    lists (SR-0112); a ``tl:graph`` / ``tl:chart`` / ``tl:stats`` derives a picture or
+    a statistic, not the item's content (SR-0115/SR-0116/SR-0117). A ``tl:catalog``
+    does publish — its items appear in full — and so is counted."""
     if not project.schema.docs_paths:
         return None
-    return _scan_refs(project, exclude_kinds=_NON_PUBLISHING)
+    return _scan_refs(project, publishing_only=True)
 
 
 def inject_text(project, text: str, resolver: "TargetResolver | None" = None) -> str:
@@ -227,14 +289,22 @@ def inject_text(project, text: str, resolver: "TargetResolver | None" = None) ->
             "every opener needs exactly one tl:end")
 
     def _replace(m: re.Match) -> str:
-        body = _render(project, m.group("kind").lower(), m.group("arg").strip(),
-                       resolver)
+        kind = m.group("kind").lower()
+        mod = (m.group("mod") or "").lower()
+        # The modifier is lexed generically, so an unrecognised one is reported
+        # rather than silently ignored — a marker whose modifier did nothing would
+        # be exactly the kind of silent miss the registry exists to remove.
+        if mod and mod not in _MODIFIERS:
+            raise InjectError(
+                f"unknown modifier '.{mod}' on 'tl:{kind}' (expected one of "
+                f"{', '.join(sorted(_MODIFIERS))})")
+        body = _render(project, kind, m.group("arg").strip(), resolver)
         # The default wraps the body in newlines so a block directive (item, table,
         # graph …) renders as its own block. The tl:<kind>.inline modifier (SR-0119)
         # omits that wrapping so a scalar directive — above all tl:count — can sit
         # inside a sentence without a line-leading marker starting an HTML block and
         # splitting the Markdown paragraph.
-        if (m.group("mod") or "").lower() == "inline":
+        if mod == "inline":
             return f"{m.group('open')}{body}{m.group('close')}"
         return f"{m.group('open')}\n{body}\n{m.group('close')}"
 
@@ -244,27 +314,26 @@ def inject_text(project, text: str, resolver: "TargetResolver | None" = None) ->
 # ------------------------------------------------------------------- renderers
 
 def _render(project, kind: str, arg: str, resolver: "TargetResolver") -> str:
-    if kind == "item":
-        return _render_item(project, arg, resolver)
-    if kind == "table":
-        return _render_table(project, arg)
-    if kind == "matrix":
-        return _render_matrix(project, arg, resolver)
-    if kind == "count":
-        return _render_count(project, arg)
-    if kind == "catalog":
-        return _render_catalog(project, arg, resolver)
-    if kind == "unused":
-        return _render_unused(project, arg)
-    if kind == "sourced":
-        return _render_sourced(project, arg, resolver)
-    if kind == "graph":
-        return _render_graph(project, arg)
-    if kind == "chart":
-        return _render_chart(project, arg)
-    if kind == "stats":
-        return _render_stats(project, arg)
-    raise InjectError(f"unknown directive 'tl:{kind}' (expected one of {_KINDS})")
+    d = _REGISTRY.get(kind)
+    if d is None:
+        raise InjectError(_unprovided_message(kind))
+    return d.render(project, arg, resolver)
+
+
+def _unprovided_message(kind: str) -> str:
+    """Why a marked region naming ``kind`` could not be rendered (SR-0186).
+
+    States that the *running command* does not provide the directive and that
+    front ends built on throughline register directives of their own — without
+    naming one, because core holds no mapping from a directive to its provider
+    (NG-0007). An author who ran the wrong command is told what is missing, rather
+    than that the document has unbalanced markers."""
+    return (
+        f"'tl:{kind}' is not a directive this command provides — "
+        f"it provides {', '.join(directive_names())}. "
+        "Directives beyond throughline's own are registered by front ends built "
+        "on it, so a document using one must be injected with the front end that "
+        "provides it; otherwise correct the marker. Nothing was written.")
 
 
 # Link-type slugs shown as human labels in an item block's link section. Any
@@ -273,7 +342,7 @@ def _link_label(ltype: str) -> str:
     return ltype.replace("_", " ").capitalize()
 
 
-def _render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> str:
+def render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> str:
     if resolver is None:
         resolver = TargetResolver(project)
     item = project.get(uid)
@@ -285,7 +354,13 @@ def _render_item(project, uid: str, resolver: "TargetResolver | None" = None) ->
         raise InjectError(
             f"tl:item references '{uid}' which is deleted — remove the marker or "
             "point it at a live item")
-    head = f"**{item.uid} — {item.title or '(untitled)'}** — `{item.type}`, status `{item.status}`"
+    # Identity is resolved, not taken from the item (SR-0187). The default returns
+    # the UID unchanged, so a project that does not compose is unaffected; a front
+    # end rendering an item drawn from another graph states it under the identity
+    # the citing document uses, so a mirrored clause cannot be published under a
+    # UID that collides with an unrelated local item of the same number.
+    head = (f"**{resolver.display(item.uid)} — {item.title or '(untitled)'}** — "
+            f"`{item.type}`, status `{item.status}`")
     lines = [head, ""]
     if item.text:
         lines += [f"> {ln}" if ln else ">" for ln in item.text.splitlines()]
@@ -314,7 +389,7 @@ def _item_link_lines(item, resolver: "TargetResolver") -> list[str]:
             for ltype, targets in grouped.items()]
 
 
-def _matching(project, expr: str) -> list:
+def matching(project, expr: str) -> list:
     """Live items matching an SR-0045 filter, in UID order. A malformed filter is
     fatal here (unlike coverage rules) so a broken document is fixed, not silently
     empty."""
@@ -343,7 +418,7 @@ def _cell(value: str) -> str:
 
 
 def _render_table(project, expr: str) -> str:
-    rows = _matching(project, expr)
+    rows = matching(project, expr)
     out = ["| UID | Type | Status | Title |", "|---|---|---|---|"]
     for it in rows:
         out.append(f"| {it.uid} | {it.type} | {it.status} | "
@@ -358,7 +433,7 @@ def _render_count(project, expr: str) -> str:
     (SR-0109). Only live items count — a rejected or deleted item is not part of
     the graph a reader tallies, the same terminal-status set the matrix renderers
     use. A malformed filter fails injection; a filter matching nothing renders 0."""
-    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
+    rows = [it for it in matching(project, expr) if _is_live(project, it.uid)]
     return str(len(rows))
 
 
@@ -386,7 +461,7 @@ def _render_matrix(project, arg: str, resolver: "TargetResolver") -> str:
     rendered — its UID, an attribute such as source_ref, or UID plus attribute."""
     direction, ltype, primary, secondary, expr = _parse_matrix_arg(arg)
     idx = Index.build(project)
-    rows = _matching(project, expr)
+    rows = matching(project, expr)
 
     if direction is not None:
         header = f"{ltype.capitalize()} ({direction})"
@@ -422,32 +497,10 @@ def _render_catalog(project, expr: str, resolver: "TargetResolver") -> str:
     a catch-all filter this is a self-maintaining master reference document. Each
     block renders its links through the resolver (SR-0113), so a borrowed clause a
     local item satisfies shows its reference number."""
-    rows = _matching(project, expr)
+    rows = matching(project, expr)
     if not rows:
         return "_(no matching items)_"
-    return "\n\n".join(_render_item(project, it.uid, resolver) for it in rows)
-
-
-def _render_sourced(project, expr: str, resolver: "TargetResolver") -> str:
-    """A full-clause mirror (SR-0114): the distinct external clauses that the items
-    matching ``expr`` reference by a namespace-qualified link target, each rendered
-    in full through the resolver's ``block``, in target order, separated by a blank
-    line. A target the resolver cannot render is omitted; when nothing resolves the
-    directive renders a clear placeholder rather than an error. A malformed filter
-    fails injection (via ``_matching``)."""
-    seen: set[str] = set()
-    targets: list[str] = []
-    for it in _matching(project, expr):
-        for link in it.links:
-            t = link.target
-            if is_namespace_qualified(t) and t not in seen:
-                seen.add(t)
-                targets.append(t)
-    blocks = [b for b in (resolver.block(t) for t in sorted(targets)) if b]
-    if not blocks:
-        return ("_(no source-backed external clauses to mirror — compose this "
-                "document to render the clauses it references)_")
-    return "\n\n".join(blocks)
+    return "\n\n".join(render_item(project, it.uid, resolver) for it in rows)
 
 
 def _render_unused(project, expr: str) -> str:
@@ -458,11 +511,11 @@ def _render_unused(project, expr: str) -> str:
     if not project.schema.docs_paths:
         return ("_(no [docs] paths configured — tl:unused cannot tell which items "
                 "are referenced)_")
-    # A catalogue mirror, a sourced-clause mirror, a graph/chart/stats summary, and
-    # the report's own listing are not narrative use of the items their filters
-    # select — only prose and item blocks count as a citation.
-    referenced = _scan_refs(project, exclude_kinds=_NON_PUBLISHING | {"catalog"})
-    rows = [it for it in _matching(project, expr) if it.uid not in referenced]
+    # A catalogue mirror is not *narrative* use of the items it lists, so it is
+    # excluded on top of every non-publishing directive (this report's own listing,
+    # a graph/chart/stats summary): only prose and item blocks count as a citation.
+    referenced = _scan_refs(project, publishing_only=True, exclude=frozenset({"catalog"}))
+    rows = [it for it in matching(project, expr) if it.uid not in referenced]
     out = ["| UID | Type | Status | Title |", "|---|---|---|---|"]
     for it in rows:
         out.append(f"| {it.uid} | {it.type} | {it.status} | "
@@ -540,7 +593,7 @@ def _render_graph(project, arg: str) -> str:
     clauses stays narrow instead of sprawling into a wide row of clause boxes. A
     malformed filter fails injection; an empty match renders a placeholder."""
     collapse, expr = _parse_graph_arg(arg)
-    rows = _matching(project, expr)
+    rows = matching(project, expr)
     if not rows:
         return "_(no matching items to graph)_"
     idx = Index.build(project)
@@ -628,7 +681,7 @@ def _render_chart(project, arg: str) -> str:
     """A Mermaid bar chart of the live-item count grouped by a key (SR-0116). A
     malformed filter fails injection; a key no item exhibits renders a placeholder."""
     key, expr = _parse_chart_arg(arg)
-    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
+    rows = [it for it in matching(project, expr) if _is_live(project, it.uid)]
     labels, counts, title = _chart_groups(project, key, rows)
     if not labels:
         return f"_(no data to chart for '{key}')_"
@@ -679,7 +732,7 @@ def _render_stats(project, expr: str) -> str:
     (SR-0117): item and link totals by type, grounding depth, the most-connected
     items, and the degree distribution. Malformed filter fails; empty match →
     placeholder."""
-    rows = [it for it in _matching(project, expr) if _is_live(project, it.uid)]
+    rows = [it for it in matching(project, expr) if _is_live(project, it.uid)]
     if not rows:
         return "_(no matching items to summarise)_"
     idx = Index.build(project)
@@ -717,3 +770,52 @@ def _render_stats(project, expr: str) -> str:
     lines.append("- **Degree distribution:** " +
                  " · ".join(f"{d} → {n}" for d, n in sorted(dist.items())))
     return "\n".join(lines)
+
+
+# ---------------------------------------------------- core directive registry
+
+def _selects_uid(project, arg: str) -> Iterable[str]:
+    """A ``tl:item`` names its UID directly."""
+    return (arg,)
+
+
+def _selects_filter(project, arg: str) -> Iterable[str]:
+    """The directive's argument is an SR-0045 filter; it draws on every item the
+    filter selects."""
+    return [it.uid for it in matching(project, arg)]
+
+
+def _selects_matrix(project, arg: str) -> Iterable[str]:
+    """A ``tl:matrix`` argument may carry a relationship selector before its
+    filter (SR-0099); only the filter part selects items."""
+    return _selects_filter(project, _parse_matrix_arg(arg)[4])
+
+
+def _ignores_resolver(fn):
+    """Adapt a renderer that needs no target resolver to the registry's uniform
+    ``(project, arg, resolver)`` call."""
+    def _call(project, arg, resolver):
+        return fn(project, arg)
+    return _call
+
+
+# Each core directive declared exactly once (SR-0186): its renderer, whether the
+# items it selects are published for the coverage rule (SR-0096), and how its
+# argument names them. `unused`, `graph`, `chart` and `stats` select items to
+# derive a report, a picture or a statistic rather than to put their content in
+# front of a reader, so they do not publish (SR-0112/0115/0116/0117).
+register_directive("item", render_item, selects=_selects_uid)
+register_directive("table", _ignores_resolver(_render_table),
+                   selects=_selects_filter)
+register_directive("matrix", _render_matrix, selects=_selects_matrix)
+register_directive("count", _ignores_resolver(_render_count),
+                   selects=_selects_filter)
+register_directive("catalog", _render_catalog, selects=_selects_filter)
+register_directive("unused", _ignores_resolver(_render_unused),
+                   publishes=False, selects=_selects_filter)
+register_directive("graph", _ignores_resolver(_render_graph),
+                   publishes=False, selects=_selects_filter)
+register_directive("chart", _ignores_resolver(_render_chart),
+                   publishes=False, selects=_selects_filter)
+register_directive("stats", _ignores_resolver(_render_stats),
+                   publishes=False, selects=_selects_filter)

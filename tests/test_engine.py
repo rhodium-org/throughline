@@ -1401,74 +1401,131 @@ def test_inject_catalog_blocks_render_links():
     out = inject_text(_inject_project(), src)
     assert "*Derives from:* INT-1" in out
 
-def test_inject_sourced_renders_borrowed_blocks():
-    """SR-0114: tl:sourced renders, in full, the distinct external clauses the
-    matching items reference by a namespace-qualified target, via the resolver."""
+def test_item_block_states_identity_through_resolver():
+    """SR-0187: the block heading resolves identity through the target resolver, so a
+    front end can state an item drawn from another graph under the identity the
+    citing document uses instead of that graph's own local UID."""
     from throughline.inject import inject_text, TargetResolver
-    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
-              links=[Link(target="ext:SR-9", type="satisfies")])
-    proj = _project(_doc("INT", Item(uid="INT-1", type="intent", status="approved",
-                                     title="Ship value")),
-                    _doc("FR", fr),
-                    config={"grounding": {"ground_link_types": ["derives_from"]},
-                            "links": {"types": ["derives_from", "satisfies"]}})
+    proj = _inject_project()
 
     class _Res(TargetResolver):
-        def block(self, uid):
-            return "**ext:SR-9 — Borrowed clause**\n\n> The upstream text." \
-                if uid == "ext:SR-9" else None
+        def display(self, uid):
+            return f"ext:{uid} (V1.2.1)" if uid == "FR-1" else uid
 
-    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
-    out = inject_text(proj, src, resolver=_Res(proj))
-    assert "**ext:SR-9 — Borrowed clause**" in out
-    assert "> The upstream text." in out
+    out = inject_text(proj, "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n",
+                      resolver=_Res(proj))
+    assert "**ext:FR-1 (V1.2.1) — Wizard**" in out
 
-def test_inject_sourced_placeholder_without_resolver():
-    """SR-0114: with the default resolver no external clause resolves, so the
-    directive renders a clear placeholder rather than an error."""
+def test_item_block_identity_unchanged_without_a_resolver():
+    """SR-0187: the default resolver returns the UID unchanged, so a project that
+    does not compose sees byte-identical output."""
     from throughline.inject import inject_text
-    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
-              links=[Link(target="ext:SR-9", type="satisfies")])
-    proj = _project(_doc("FR", fr),
-                    config={"links": {"types": ["satisfies"]}})
-    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
-    out = inject_text(proj, src)
-    assert "no source-backed external clauses to mirror" in out
+    out = inject_text(_inject_project(), "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n")
+    assert "**FR-1 — Wizard**" in out
 
-def test_inject_sourced_omits_unresolvable_targets():
-    """SR-0114: a target the resolver cannot render is omitted; a resolvable one
-    beside it still renders."""
-    from throughline.inject import inject_text, TargetResolver
-    fr = Item(uid="FR-1", type="requirement", status="approved", title="Wizard",
-              links=[Link(target="ext:SR-9", type="satisfies"),
-                     Link(target="ext:SR-8", type="satisfies")])
-    proj = _project(_doc("FR", fr), config={"links": {"types": ["satisfies"]}})
-
-    class _Res(TargetResolver):
-        def block(self, uid):
-            return "**ext:SR-9 — Resolvable**" if uid == "ext:SR-9" else None
-
-    src = "<!-- tl:sourced uid == 'FR-1' -->\n<!-- tl:end -->\n"
-    out = inject_text(proj, src, resolver=_Res(proj))
-    assert "**ext:SR-9 — Resolvable**" in out
-    assert "ext:SR-8" not in out
-
-def test_inject_sourced_bad_filter_is_fatal():
-    from throughline.inject import InjectError, inject_text
-    with pytest.raises(InjectError):
+def test_core_does_not_provide_sourced():
+    """SR-0186/NG-0007: tl:sourced needs sources core does not hold, so core does
+    not provide it — and does not stub it. It is reported as unprovided."""
+    from throughline.inject import InjectError, directive_names, inject_text
+    assert "sourced" not in directive_names()
+    with pytest.raises(InjectError) as ei:
         inject_text(_inject_project(),
-                    "<!-- tl:sourced nonsense syntax ( -->\n<!-- tl:end -->\n")
+                    "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n")
+    assert "tl:sourced" in str(ei.value)
 
-def test_inject_sourced_does_not_publish_local_items(tmp_path):
-    """SR-0114/SR-0096: a tl:sourced block publishes the external clauses, not the
-    local items its filter selects — those items stay unpublished for coverage."""
-    from throughline.inject import referenced_uids
+def test_unprovided_directive_fails_by_name_not_as_unbalanced():
+    """SR-0186: a kind no registered directive provides is recognised by its general
+    form and reported by name, so the author learns what is missing instead of being
+    told the document has unbalanced markers."""
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError) as ei:
+        inject_text(_inject_project(),
+                    "<!-- tl:nosuchthing type == 'requirement' -->\n<!-- tl:end -->\n")
+    msg = str(ei.value)
+    assert "tl:nosuchthing" in msg
+    assert "unbalanced" not in msg
+    # The marker's tl:end is its partner, not an orphan — the old enumeration in
+    # the pattern made this the confusing failure it reported instead.
+    assert "front ends" in msg
+
+def test_unprovided_directive_message_names_no_front_end():
+    """SR-0186/NG-0007: core holds no mapping from a directive to the front end that
+    provides it, so the message says a front end registers it without naming one."""
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError) as ei:
+        inject_text(_inject_project(),
+                    "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n")
+    assert "compose" not in str(ei.value).lower()
+
+def test_unprovided_directive_writes_nothing(tmp_path, capsys):
+    """SR-0186: injection fails and no file is written — not even the documents that
+    rendered cleanly before the failing one."""
     root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
-    (root / "reference.md").write_text(
+    good = root / "a_good.md"
+    good.write_text("<!-- tl:count type == 'requirement' -->\nstale\n<!-- tl:end -->\n",
+                    encoding="utf-8")
+    before = good.read_text(encoding="utf-8")
+    (root / "b_bad.md").write_text(
         "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n",
         encoding="utf-8")
-    refs = referenced_uids(load_project(root))
-    assert "FR-0001" not in refs
+    assert _cli(["-C", str(root), "docs"]) == 2
+    assert good.read_text(encoding="utf-8") == before
+    assert "tl:sourced" in capsys.readouterr().err
+
+def test_register_directive_adds_a_kind():
+    """SR-0186: a front end registers a directive of its own and injection renders
+    it, so a capability depending on state core does not hold is provided by the
+    layer that holds it (NG-0007)."""
+    from throughline.inject import (Directive, _REGISTRY, inject_text,
+                                    register_directive)
+    register_directive("borrowed", lambda project, arg, resolver: f"rendered {arg}")
+    try:
+        out = inject_text(_inject_project(),
+                          "<!-- tl:borrowed some arg -->\n<!-- tl:end -->\n")
+        assert "rendered some arg" in out
+    finally:
+        del _REGISTRY["borrowed"]
+
+def test_registered_directive_declares_publishing_once(tmp_path):
+    """SR-0186/SR-0096: one registry entry is the only place a directive is declared,
+    so the coverage question reads the same entry that rendered it — a front end's
+    non-publishing directive selects items without publishing them."""
+    from throughline.inject import _REGISTRY, referenced_uids, register_directive
+    register_directive(
+        "mirror",
+        lambda project, arg, resolver: "…",
+        publishes=False,
+        selects=lambda project, arg: [it.uid for it in _matching_uids(project, arg)],
+    )
+    try:
+        root = _scaffold_pub(tmp_path, docs_paths=["*.md"])
+        (root / "reference.md").write_text(
+            "<!-- tl:mirror type == 'requirement' -->\n<!-- tl:end -->\n",
+            encoding="utf-8")
+        assert "FR-0001" not in referenced_uids(load_project(root))
+    finally:
+        del _REGISTRY["mirror"]
+
+def _matching_uids(project, expr):
+    from throughline.inject import matching
+    return matching(project, expr)
+
+def test_unknown_modifier_is_reported():
+    """SR-0186/SR-0119: the modifier is lexed generically, so an unrecognised one is
+    reported rather than silently doing nothing."""
+    from throughline.inject import InjectError, inject_text
+    with pytest.raises(InjectError) as ei:
+        inject_text(_inject_project(),
+                    "<!-- tl:count.blockish type == 'requirement' -->\n<!-- tl:end -->\n")
+    assert ".blockish" in str(ei.value)
+
+def test_end_marker_is_never_read_as_a_directive():
+    """SR-0186: `end` closes a region, so the generic name pattern must not treat
+    `tl:end` as a directive named 'end'."""
+    from throughline.inject import inject_text
+    out = inject_text(_inject_project(),
+                      "<!-- tl:count type == 'requirement' -->\n0\n<!-- tl:end -->\n")
+    assert "tl:end" in out
 
 def test_inject_graph_renders_colour_coded_flowchart():
     """SR-0115: tl:graph renders a Mermaid flowchart of the matching items and their

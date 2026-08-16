@@ -1,6 +1,6 @@
 uid: SR-0114
 type: system_requirement
-status: ratified
+status: rejected
 title: Full-clause mirror of referenced external items in documents
 text: 'The tl:sourced document directive shall render, in full, the distinct external
   clauses that the items matching its SR-0045 filter reference by a namespace-qualified
@@ -14,6 +14,16 @@ text: 'The tl:sourced document directive shall render, in full, the distinct ext
   tl:sourced block mirrors belong to their sources, so the directive does not publish
   the local items its filter selects for the coverage rule (SR-0096). A malformed
   filter fails injection.'
+rationale: 'Retired: the capability moves to throughline-compose, which holds the
+  sources the directive needs. Core carried this renderer while nothing in core could
+  satisfy it — its only unaided output was a placeholder naming another program,
+  and running bare tl docs over an already-rendered composed document silently replaced
+  the mirrored clauses with that placeholder and exited successfully. Rather than
+  specify that degradation more carefully, the directive is provided by the layer
+  that can actually render it, registered through the seam in SR-0186; core keeps
+  only the duty to recognise the marker and say it does not provide it. The principle
+  is recorded as NG-0007. The mirror itself is not withdrawn — it is owned by throughline-compose
+  from here.'
 normative: true
 links:
 - target: UR-0024
