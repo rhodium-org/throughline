@@ -1029,8 +1029,12 @@ def cmd_docs(args, resolver=None) -> int:
         return _err("no documents to inject — pass a Markdown file, or configure "
                     "[docs] paths in throughline.toml")
 
-    stale: list[Path] = []
-    changed = 0
+    # Render every document before writing any of it (SR-0186). An unprovided
+    # directive — or any other injection failure — in the last document must not
+    # leave the earlier ones rewritten: a partially injected tree is drift of
+    # exactly the kind this seam exists to prevent, and it is invisible because
+    # the command that caused it exited non-zero.
+    pending: list[tuple[Path, str]] = []
     for path in paths:
         try:
             original = path.read_text(encoding="utf-8")
@@ -1042,8 +1046,12 @@ def cmd_docs(args, resolver=None) -> int:
             rendered = inject_text(project, original, resolver=resolver)
         except InjectError as e:
             return _err(f"{path}: {e}")
-        if rendered == original:
-            continue
+        if rendered != original:
+            pending.append((path, rendered))
+
+    stale: list[Path] = []
+    changed = 0
+    for path, rendered in pending:
         if args.check:
             stale.append(path)
             print(f"stale: {path}", file=sys.stderr)

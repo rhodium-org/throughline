@@ -118,6 +118,16 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c01a6cdc13f9ea74b540fd5e2da84d90a30330277c7f99a3d5bfbdf86f2a6277 · **ratified_backfilled**: True
 <!-- tl:end -->
 
+<!-- tl:item NG-0007 -->
+**NG-0007 — No directive that depends on state core does not hold** — `non_goal`, status `ratified`
+
+> throughline core shall not provide a document directive whose output depends on state core does not hold — above all, on requirement content owned by another graph. A directive core cannot satisfy unaided shall not be carried in core as a renderer that degrades to a placeholder or to an advisory note naming another program; it shall be provided by the layer that holds the state, registered through the directive seam. Core remains responsible for recognising such a marker and reporting, by name, that the running tool does not provide it — never for rendering a partial or empty substitute in its place.
+
+*Rationale:* tl:sourced was carried in core while the only thing that could satisfy it — a set of composed sources — lived in throughline-compose. Core therefore shipped a renderer whose sole unaided output was a parenthetical telling the reader to run a different program, and which silently overwrote already-rendered borrowed clauses with that parenthetical while exiting successfully. A capability split across the boundary that way leaves no layer accountable for it: core cannot make it work, and the layer that can does not own it. Recording this as a first-class non-goal gives a reviewer the object to point at when the next source-dependent directive is proposed for core.
+
+**origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:bd7cf2daec3ab3724b33572196bc55dd093f571839ec29170b4b25ec4fb814fb
+<!-- tl:end -->
+
 ## 5. Target users
 
 - **The requirements author** — writes and restructures specs frequently;
