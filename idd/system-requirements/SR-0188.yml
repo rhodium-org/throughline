@@ -1,0 +1,49 @@
+uid: SR-0188
+type: system_requirement
+status: ratified
+title: Migration restores a lifecycle's route to suspicion
+text: The current format major's configuration repair shall add a route to the suspect
+  status from every live status the project's transitions table leaves unable to
+  reach it, so a project scaffolded before that route was shipped is corrected by
+  the same single migration command rather than status by status by hand. The repair
+  shall decide which statuses are at issue by the same predicate the gate applies,
+  so the two can never disagree; shall record beside each row it widens that migration
+  made the change and why; and shall remain idempotent, leaving a lifecycle that
+  already permits the move untouched. The command shall report the routes it added
+  apart from its other repairs.
+rationale: 'SR-0175 shipped the corrected lifecycle to newly initialised projects
+  only, reasoning that nobody is obliged to adopt it because an existing project
+  keeps the table it has. The effect is that every project scaffolded before it carries
+  an inert suspicion mechanism for exactly the statuses items are born and parked
+  in, and the only route out is hand-editing each status in turn while migration
+  answers ''nothing to migrate'' over the defect. A tool that reports a fault it
+  declines to repair teaches that its own findings are optional. Migration is where
+  the repair belongs, for the reason SR-0152 gives — it already reaches a project
+  hand-authored at the current major, already guarantees idempotence, and already
+  names what it wrote — and a sweep script beside it would be a second implementation
+  of which statuses count as live. Reusing the gate''s own predicate rather than
+  restating it is what keeps that from drifting into churn over statuses the gate
+  ignores, or silence over the ones it reports. Who pays: a consumer upgrading gets
+  a widened transitions table they did not ask for, permitting moves their process
+  may not have intended. The cost is bounded to one command, is written into the
+  configuration beside each row it touched so it can be read and reversed, and is
+  narrowable with ''tl schema transition deny''. It is the correction SR-0175 already
+  judged right, delivered to the projects it excluded.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0137
+  type: refines
+- target: SR-0175
+  type: relates
+- target: SR-0174
+  type: relates
+- target: SR-0152
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry J Grech-Cini
+  ratified_fingerprint: sha256:d435b949fc63bf33efecd577b2c15c7a08256121b0c9c01e8a81720f00f61e98

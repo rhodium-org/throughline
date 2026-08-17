@@ -244,6 +244,46 @@ class Project:
             used |= {frm} | set(to)
         return used
 
+    def suspect_unreachable_statuses(self) -> list[str]:
+        """The live statuses this project's lifecycle gives no route to the
+        suspect status, sorted (SR-0174, SR-0188).
+
+        Suspicion propagation is how the withdrawal of an item's footing becomes
+        visible, and it is carried entirely by the transition table: a status with
+        no declared move to suspect silently opts every item sitting in it out of
+        the mechanism. Empty when there is nothing to answer for — a project that
+        declares no transitions is unconstrained, and one that binds no suspect
+        role has no such mechanism to disable.
+
+        Judged over the statuses an item can actually hold (SR-0177): a composing
+        project declares the statuses its *borrowed* items carry so the union
+        validates, and nothing local ever enters them; reporting those buries the
+        real gaps under noise the project cannot act on. Occupancy is taken
+        alongside reachability so a status set by hand, or left behind by a
+        lifecycle that has since changed, is still judged rather than excused —
+        but counted over locally-authored items only (SR-0178), because a tool that
+        composes by merging borrowed items would otherwise reinstate through
+        occupancy exactly what reachability excluded, and a borrowed status answers
+        to its own graph's table, which this project cannot edit.
+
+        Defined here, once, because two callers act on it and they must never
+        disagree: the gate reports each of these as a finding, and the migration
+        repair adds the missing route (SR-0188). Were the two notions of "live" to
+        drift, migration would either churn a project's configuration over
+        statuses the gate ignores, or leave the ones it reports."""
+        schema = self.schema
+        if schema.transitions is None or not (schema.status_roles or {}).get("suspect"):
+            return []
+        suspect = schema.status_roles["suspect"]
+        dead = schema.dead_statuses()
+        occupied = {i.status for i in self.items() if i._authored_uid is None}
+        reachable = schema.reachable_statuses()
+        declared = schema.statuses or (set(schema.transitions) | occupied)
+        live = declared if reachable is None else (reachable | occupied) & declared
+        return sorted(s for s in live
+                      if s != suspect and s not in dead
+                      and not schema.allows_transition(s, suspect))
+
     def relied_on_link_types(self) -> set[str]:
         """The link types this project would strand by not declaring them — see
         :meth:`relied_on_statuses`. Its configuration names them in three further
