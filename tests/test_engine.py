@@ -42,7 +42,7 @@ from throughline.storage import (
     migrate_project,
     read_project,
 )
-from throughline.tomledit import TomlDocument
+from throughline.tomledit import TomlDocument, render_value
 from throughline.uid import UidError
 
 REPO = Path(__file__).resolve().parent.parent
@@ -3537,6 +3537,207 @@ def test_migrate_names_the_vocabularies_it_declared_on_the_cli(tmp_path, capsys)
 
     assert "[links] types = derives_from, implements, mitigates, verifies" in out
     assert "nothing to migrate" not in out
+
+
+# --------------------- migration restores a route to suspicion (SR-0188) --- #
+
+def _pre_sr0175_lifecycle(root: Path) -> None:
+    """Put the transitions table back into the shape every project scaffolded before
+    SR-0175 carries: the statuses `tl new` births and parks items in have no move to
+    'suspect', so suspicion propagation is inert for exactly them."""
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    for status in ("proposed", "draft", "deferred"):
+        targets = tomllib.loads(cfg.read_text(encoding="utf-8"))["transitions"][status]
+        doc.set_key("transitions", status, [t for t in targets if t != "suspect"])
+        cfg.write_text(doc.text(), encoding="utf-8")
+
+
+def test_migrate_restores_a_route_to_suspicion_a_lifecycle_never_had(tmp_path):
+    """SR-0188. SR-0175 corrected only the table the Tool *ships*, so a project
+    scaffolded before it keeps an inert suspect role for the statuses items are born
+    and parked in. The gate reports that and, until this, offered no remedy but
+    editing each status by hand — so the same single command has to close it."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _pre_sr0175_lifecycle(root)
+    stranded = {"proposed", "draft", "deferred"}
+    assert set(load_project(root).suspect_unreachable_statuses()) == stranded
+
+    result = migrate_project(root)
+
+    assert set(result.routed) == stranded
+    assert set(result.routed.values()) == {"suspect"}
+    schema = load_project(root).schema
+    assert all(schema.allows_transition(s, "suspect") for s in stranded)
+    assert not [f for f in validate(load_project(root))
+                if f.rule == "suspect-unreachable"]
+
+
+def test_migrate_suspect_route_repair_is_idempotent(tmp_path):
+    """SR-0188 with SR-0137. The repair runs on every `tl migrate`, sound project or
+    not, so a lifecycle that already permits the move must be left byte-identical —
+    otherwise every run would re-comment and re-widen the same rows."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _pre_sr0175_lifecycle(root)
+    assert migrate_project(root).routed
+    cfg = root / "throughline.toml"
+    before = cfg.read_text(encoding="utf-8")
+
+    assert migrate_project(root).routed == {}
+
+    assert cfg.read_text(encoding="utf-8") == before
+
+
+def test_migrate_leaves_a_lifecycle_that_already_reaches_suspicion_alone(tmp_path):
+    """SR-0188. The table `tl init` ships has been correct since SR-0175, so the
+    repair must write nothing at all to a project scaffolded by it — a repair that
+    churned every current project's configuration would be its own defect."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    before = cfg.read_text(encoding="utf-8")
+
+    assert migrate_project(root).routed == {}
+
+    assert cfg.read_text(encoding="utf-8") == before
+
+
+def test_migrate_repairs_exactly_the_statuses_the_gate_reports(tmp_path):
+    """SR-0188. Both halves ask Project.suspect_unreachable_statuses, so what the
+    repair widens and what the gate complains about cannot drift apart: a second
+    reading of "live" here would churn a project's configuration over statuses the
+    gate ignores, or leave the ones it reports."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _pre_sr0175_lifecycle(root)
+    project = load_project(root)
+    reported = {f.message.split("'")[1]
+                for f in validate(project) if f.rule == "suspect-unreachable"}
+
+    assert reported == set(project.suspect_unreachable_statuses())
+    assert set(migrate_project(root).routed) == reported
+
+
+def test_migrate_adds_the_route_without_disturbing_the_moves_already_declared(tmp_path):
+    """SR-0188 through SR-0183/NFR-0009. The route is *added* to the row rather than
+    the row rewritten, so an author's own ordering, layout and comments survive being
+    brought up to what the major requires."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _pre_sr0175_lifecycle(root)
+    cfg = root / "throughline.toml"
+    cfg.write_text("# Why this project is shaped as it is.\n"
+                   + cfg.read_text(encoding="utf-8"), encoding="utf-8")
+    before = tomllib.loads(cfg.read_text(encoding="utf-8"))["transitions"]
+
+    migrate_project(root)
+    out = cfg.read_text(encoding="utf-8")
+
+    assert out.startswith("# Why this project is shaped as it is.\n")
+    after = tomllib.loads(out)["transitions"]
+    for status, targets in before.items():
+        extra = {"suspect"} if status in ("proposed", "draft", "deferred") else set()
+        assert after[status] == targets + sorted(extra)  # appended, nothing reordered
+    assert "SR-0188" in out, "the config records that migration made the change"
+
+
+def test_migrate_gives_a_status_with_no_row_at_all_a_route_to_suspicion(tmp_path):
+    """SR-0188. A status an item sits in but the table never mentions has no outgoing
+    move of any kind, which is the same disabled mechanism by another route — so it
+    gets a row rather than being passed over for lack of one to widen."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("transitions", "deferred")
+    cfg.write_text(doc.text(), encoding="utf-8")
+
+    assert migrate_project(root).routed == {"deferred": "suspect"}
+
+    assert tomllib.loads(cfg.read_text(encoding="utf-8")
+                         )["transitions"]["deferred"] == ["suspect"]
+
+
+def test_migrate_writes_no_route_where_there_is_no_mechanism_to_disable(tmp_path):
+    """SR-0188. A project that declares no transitions is unconstrained, and one that
+    binds no suspect role has no suspicion to propagate. The repair reads a declared
+    lifecycle; it does not invent one, any more than the gate does."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_table("transitions")
+    cfg.write_text(doc.text(), encoding="utf-8")
+    before = cfg.read_text(encoding="utf-8")
+
+    assert migrate_project(root).routed == {}
+
+    assert cfg.read_text(encoding="utf-8") == before
+
+
+def test_migrate_names_the_routes_it_restored_on_the_cli(tmp_path, capsys):
+    """SR-0188 with SR-0137. This is the one part of the repair that *widens* what
+    the lifecycle permits, so an operator who did not want a status able to move must
+    be able to see which rows changed rather than infer it from a count."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    _pre_sr0175_lifecycle(root)
+    capsys.readouterr()
+
+    assert _cli(["-C", str(root), "migrate"]) == 0
+    out = capsys.readouterr().out
+
+    assert "draft -> suspect" in out
+    assert "nothing to migrate" not in out
+
+
+def test_migrate_refuses_to_guess_at_a_transitions_table_it_cannot_edit(tmp_path):
+    """SR-0188. A corrupted throughline.toml invalidates the whole project, so a
+    repair that cannot be made safely must not be made at all — it is refused whole,
+    before anything is written, and named with the command that does it by hand."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    table = tomllib.loads(cfg.read_text(encoding="utf-8"))["transitions"]
+    doc.remove_table("transitions")
+    # The same lifecycle, declared as one inline table rather than a [transitions]
+    # header — a shape the editor cannot widen and must not append a second table to.
+    # Written above every header, so it is the top-level key the schema reads.
+    text = ("transitions = " + render_value({k: [t for t in v if t != "suspect"]
+                                             for k, v in table.items()})
+            + "\n" + doc.text())
+    cfg.write_text(text, encoding="utf-8")
+    assert load_project(root).suspect_unreachable_statuses()
+
+    with pytest.raises(ProjectError, match="tl schema transition allow"):
+        migrate_project(root)
+
+    assert cfg.read_text(encoding="utf-8") == text, "refused whole, nothing written"
+
+
+def test_migrate_keeps_a_comment_an_author_left_beside_one_move(tmp_path):
+    """SR-0188 through SR-0183. Adding to the row is what makes the author's note on
+    an individual move survivable — re-rendering the whole value would have nowhere
+    to put it back, and the editor would rightly refuse rather than drop it, leaving
+    the gap open on a project that had done nothing wrong."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--bare"]) == 0
+    cfg = root / "throughline.toml"
+    doc = TomlDocument(cfg.read_text(encoding="utf-8"))
+    doc.remove_key("transitions", "deferred")
+    cfg.write_text(doc.text().replace(
+        "[transitions]",
+        '[transitions]\ndeferred = [\n    "draft",  # back onto the active front\n]'),
+        encoding="utf-8")
+
+    assert migrate_project(root).routed == {"deferred": "suspect"}
+    out = cfg.read_text(encoding="utf-8")
+
+    assert "# back onto the active front" in out
+    assert tomllib.loads(out)["transitions"]["deferred"] == ["draft", "suspect"]
 
 
 def test_migrate_refuses_newer_project(tmp_path):

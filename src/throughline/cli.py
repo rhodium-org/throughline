@@ -165,7 +165,8 @@ def cmd_migrate(args) -> int:
         print(f"migrated project from format version {result.start} to {result.end}")
     elif result.repaired is None:
         print(f"already at format version {result.end}"
-              + ("" if result.bound or result.declared else " — nothing to migrate"))
+              + ("" if result.bound or result.declared or result.routed
+                 else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -186,6 +187,17 @@ def cmd_migrate(args) -> int:
               "in use; narrow them deliberately with `tl schema`:")
         for key, values in result.declared.items():
             print(f"  {key} = {', '.join(values)}")
+    # Routes to suspicion the repair restored (SR-0188). Named per status, and kept
+    # apart from the vocabularies above, because this is the one part of the repair
+    # that widens what the lifecycle permits — an operator who did not want a
+    # particular status able to move must be able to see which ones changed.
+    if result.routed:
+        print("restored this lifecycle's route to suspicion — an item in each "
+              "status below could never be marked suspect, so withdrawing what it "
+              "grounds in left it unflagged; narrow it back with `tl schema "
+              "transition deny`:")
+        for status, suspect in result.routed.items():
+            print(f"  {status} -> {suspect}")
     # Records the repair completed. Named for the same reason the config bindings
     # are, and more so: this wrote to an accountability record, so an operator who
     # disagrees with a stamp must be able to see which item carries it (SR-0152).

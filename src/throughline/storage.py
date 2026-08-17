@@ -27,7 +27,7 @@ from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
-from .tomledit import TomlDocument
+from .tomledit import TomlDocument, TomlEditError
 from .version import distribution_version
 
 if sys.version_info >= (3, 11):
@@ -350,34 +350,107 @@ def _backfill_vocabularies(root: Path) -> dict[str, list[str]]:
     return written
 
 
+def _backfill_suspect_routes(root: Path) -> dict[str, str]:
+    """Add a move to the suspect status from every live status the lifecycle
+    leaves unable to reach it (SR-0188). Returns ``status -> suspect`` for each
+    row widened, and is empty when suspicion already reaches everywhere it must.
+
+    SR-0175 corrected the lifecycle the Tool *ships*, and left an existing project
+    with the table it already had — so every project scaffolded before it carries
+    a suspect role that is inert for exactly the statuses `tl new` births and parks
+    items in. The gate reports that (SR-0174) and, until this, offered no remedy but
+    editing each status by hand. This is what bounds it to the one command that
+    already repairs the rest of the major's configuration.
+
+    Which statuses are at issue is asked of
+    :meth:`~throughline.model.Project.suspect_unreachable_statuses` — the same
+    predicate the gate reports from — so the repair writes exactly what the gate
+    complains about, no more and no less. Reimplementing "live" here would let the
+    two drift into churning every project's configuration over statuses the gate
+    ignores, or leaving the ones it reports.
+
+    A route is *added* to the row rather than the row rewritten, so the moves
+    already declared keep their order and any comment grouping them (SR-0183). A
+    document this editor will not touch on a guess is refused whole, before
+    anything is written, and named with the command that makes the change by hand
+    — a corrupted `throughline.toml` invalidates the entire project, so a repair
+    that cannot be made safely must not be made at all.
+
+    Idempotent: a widened row permits the move and so is no longer reported.
+    """
+    project = load_project(root)
+    gaps = project.suspect_unreachable_statuses()
+    if not gaps:
+        return {}
+    suspect = project.schema.status_roles["suspect"]
+    declared = project.config.get("transitions") or {}
+    cfg_file = root / CONFIG_NAME
+    doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
+    if not doc.has_table("transitions"):
+        # The schema saw a `transitions` key, so the project declares one — but not
+        # as a [transitions] header, and writing one here would define the table
+        # twice and stop the file parsing at all. Refuse rather than corrupt it.
+        raise ProjectError(
+            f"{cfg_file} declares its transitions somewhere other than a "
+            "[transitions] table, which `tl migrate` will not edit on a guess; "
+            f"allow the moves to '{suspect}' by hand, or one at a time with "
+            f"`tl schema transition allow <status> {suspect} --because …`")
+    for status in gaps:
+        because = (
+            f"`tl migrate` added the move to '{suspect}' (SR-0188): this "
+            f"lifecycle gave '{status}' no route to it, so an item resting in "
+            f"'{status}' could never be marked suspect and invalidating anything "
+            "it grounds in would have left it unflagged. Narrow it back "
+            f"deliberately with `tl schema transition deny {status} {suspect}`.")
+        try:
+            if status in declared:
+                doc.add_to_array("transitions", status, [suspect], because=because)
+            else:
+                doc.set_key("transitions", status, [suspect], because=because)
+        except TomlEditError as e:
+            raise ProjectError(
+                f"cannot add the '{status}' -> '{suspect}' transition to "
+                f"{cfg_file} safely: {e}. Add it by hand, or with `tl schema "
+                f"transition allow {status} {suspect} --because …`") from e
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return {status: suspect for status in gaps}
+
+
 class RepairResult(NamedTuple):
     """What a major's repair wrote: the configuration bindings it backfilled
-    (SR-0137), the vocabularies it declared (SR-0185), and the ratification
-    records it bound (SR-0152)."""
+    (SR-0137), the routes to suspicion it restored (SR-0188), the vocabularies it
+    declared (SR-0185), and the ratification records it bound (SR-0152)."""
     config: dict[str, str] | None
+    routes: dict[str, str]
     vocabularies: dict[str, list[str]]
     stamps: dict[str, str]
 
 
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
-    SR-0185).
+    SR-0185, SR-0188).
 
-    Ordered, not merely grouped, and the order is load-bearing twice over. The
-    role bindings come first because the status vocabulary is written from what
-    the configuration relies on, and a role bound to a status is exactly that —
-    written second, the vocabulary would omit the very statuses the roles name and
-    leave the schema refusing to build. The record backfill comes last because it
-    resolves the project's schema, so everything that schema requires has to be on
-    disk before it runs. Each part is idempotent, so the sequence is.
+    Ordered, not merely grouped, and the order is load-bearing three times over.
+    The role bindings come first because everything after them reads a status
+    through a role — the suspect route has no target until the suspect role is
+    bound — and because the status vocabulary is written from what the
+    configuration relies on, so a role written second would be omitted from the
+    very vocabulary that has to contain it and leave the schema refusing to build.
+    The suspect routes come before that vocabulary for the same reason from the
+    other side: they widen the transitions table, and the vocabulary is derived
+    from the table's endpoints, so declaring it first could leave it short of a
+    status the table now names. The record backfill comes last because it resolves
+    the project's schema, so everything that schema requires has to be on disk
+    before it runs. Each part is idempotent, so the sequence is.
 
     ``index`` reaches only the record backfill (SR-0153): a grounding view has
-    nothing to say about which declared status plays which role, or about which
-    values a vocabulary should hold, so passing it to either configuration half
-    would imply an influence it does not have."""
+    nothing to say about which declared status plays which role, which moves a
+    lifecycle should permit, or which values a vocabulary should hold, so passing
+    it to any configuration half would imply an influence it does not have."""
     roles = _backfill_status_roles(root)
+    routes = _backfill_suspect_routes(root)
     vocabularies = _backfill_vocabularies(root)
-    return RepairResult(roles, vocabularies,
+    return RepairResult(roles, routes, vocabularies,
                         _backfill_ratification_stamps(root, index=index))
 
 
@@ -432,10 +505,17 @@ class MigrationResult(NamedTuple):
     (SR-0185), and is empty when the project already declared them. Separate again
     for the same reason: this one decides what the project's items will be
     validated against from now on, so it is the part an author is most likely to
-    want to narrow, and it cannot be left to be inferred from a count."""
+    want to narrow, and it cannot be left to be inferred from a count.
+
+    ``routed`` maps each status the repair gave a route to suspicion to the suspect
+    status it can now reach (SR-0188), and is empty when suspicion already reached
+    them all. Separate for the third time, and for the sharpest version of the same
+    reason: this one widens what the lifecycle permits, which is the only part of
+    the repair that lets an item make a move the project previously forbade."""
     start: int
     end: int
     repaired: dict[str, str] | None
+    routed: dict[str, str]
     declared: dict[str, list[str]]
     bound: dict[str, str]
 
@@ -483,9 +563,10 @@ def migrate_project(path: str | Path, *,
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
-    result = repair(root, index) if repair is not None else RepairResult(None, {}, {})
-    return MigrationResult(start, current, result.config, result.vocabularies,
-                           result.stamps)
+    result = (repair(root, index) if repair is not None
+              else RepairResult(None, {}, {}, {}))
+    return MigrationResult(start, current, result.config, result.routes,
+                           result.vocabularies, result.stamps)
 
 
 # ------------------------------------------------------------------- YAML dump

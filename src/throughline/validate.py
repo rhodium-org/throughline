@@ -119,42 +119,24 @@ def validate(project, strict: bool = False,
             "`tl migrate` declares exactly that, or `tl schema "
             f"{cmd} declare …` declares the vocabulary you mean")
 
-    # A lifecycle with no route to suspicion (SR-0174). Suspicion propagation is
-    # how the withdrawal of an item's footing becomes visible, and it is carried
-    # entirely by the transition table: a status with no declared move to suspect
-    # silently opts every item sitting in it out of the mechanism, and `invalidate`
-    # can only report the gap once it is too late to matter. Reported per status
-    # because the partial case is the one that deceives — a project whose ratified
-    # items cascade while its proposed ones do not looks healthy from every angle
-    # except the one that counts. A project that declares no transitions is
-    # unconstrained and has nothing to answer for; one that binds no suspect role
-    # has no such mechanism to disable.
-    if schema.transitions is not None and (schema.status_roles or {}).get("suspect"):
+    # A lifecycle with no route to suspicion (SR-0174). Which statuses those are is
+    # decided by Project.suspect_unreachable_statuses, because `tl migrate` repairs
+    # exactly the ones reported here (SR-0188) and a second reading of "live" here
+    # would let the gate and the repair drift apart. Reported per status because the
+    # partial case is the one that deceives — a project whose ratified items cascade
+    # while its proposed ones do not looks healthy from every angle except the one
+    # that counts. `invalidate` can only report the gap once it is too late to matter.
+    # The finding names its remedy, as the undeclared-vocabulary one above does and
+    # for the same reason (SR-0188): `tl migrate` writes exactly what is reported
+    # here, so a reader is never left to close the gap status by status by hand.
+    for status in project.suspect_unreachable_statuses():
         suspect = schema.status_roles["suspect"]
-        dead = schema.dead_statuses()
-        # Only statuses an item can actually hold are judged (SR-0177). A composing
-        # project declares the statuses its borrowed items carry so the union
-        # validates, and nothing local ever enters them; reporting those as gaps
-        # buries the real ones under noise the project cannot act on. Occupancy is
-        # taken alongside reachability so a status set by hand, or left behind by a
-        # lifecycle that has since changed, is still judged rather than excused —
-        # but counted over locally-authored items only (SR-0178). A tool that composes
-        # by merging borrowed items, rather than only their vocabulary, otherwise
-        # reinstates through occupancy exactly what reachability excluded; and the
-        # borrowed status answers to its own graph's transition table, which this
-        # project cannot edit and that graph's own check already judges.
-        occupied = {i.status for i in project.items() if i._authored_uid is None}
-        reachable = schema.reachable_statuses()
-        declared = schema.statuses or (set(schema.transitions) | occupied)
-        live = declared if reachable is None else (reachable | occupied) & declared
-        for status in sorted(live):
-            if status == suspect or status in dead:
-                continue
-            if not schema.allows_transition(status, suspect):
-                add("suspect-unreachable", "", str(project.path / CONFIG_NAME),
-                    f"no declared transition moves '{status}' to '{suspect}', so an "
-                    f"item in '{status}' can never be marked suspect — invalidating "
-                    "anything it grounds in will leave it unflagged")
+        add("suspect-unreachable", "", str(project.path / CONFIG_NAME),
+            f"no declared transition moves '{status}' to '{suspect}', so an "
+            f"item in '{status}' can never be marked suspect — invalidating "
+            "anything it grounds in will leave it unflagged; `tl migrate` adds "
+            f"the route, or `tl schema transition allow {status} {suspect}` "
+            "adds this one")
 
     # A run that discovered nothing is not a sound graph (SR-0146). Items live only
     # beneath a register manifest, so a project whose manifests are missing, misnamed
