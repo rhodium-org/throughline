@@ -4421,3 +4421,197 @@ def test_editability_is_read_from_recorded_metadata_not_guessed(monkeypatch):
     # Absent or unparseable metadata is not evidence of a working tree.
     assert not version_mod._editable_from_direct_url(_Dist(None))
     assert not version_mod._editable_from_direct_url(_Dist("{not json"))
+
+
+# ------------------------------------------------------------------- SR-0189/0190
+# `tl subgraph` — the induced neighbourhood around one UID, and `tl context <UID>`.
+
+def _neighbourhood_fixture(tmp_path) -> Path:
+    """FR-0001 with one thing above it, two below, and a link that crosses between
+    the two halves.
+
+        INT-0001 <-derives_from- FR-0001 <-derives_from- FR-0002 <-derives_from- FR-0003
+             ^------------------------relates-----------------'
+
+    The `relates` edge joins a *downstream* node to an *upstream* one, so it is the
+    edge no single-direction walk can report.
+    """
+    root = _scaffold(tmp_path)  # INT-0001 + FR register
+    for title, ground in [("a", "INT-0001"), ("b", "FR-0001"), ("c", "FR-0002")]:
+        assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                     "--title", title, "--ground", ground]) == 0
+    assert _cli(["-C", str(root), "link", "FR-0002", "INT-0001",
+                 "--type", "relates"]) == 0
+    return root
+
+
+def test_subgraph_reports_the_link_neither_trace_nor_blast_can_show(tmp_path, capsys):
+    """The whole justification for a third view (SR-0189). `trace` walks outward and
+    `blast` collects inward, so a link *between* two members of the neighbourhood —
+    here FR-0002 (below) pointing at INT-0001 (above) — appears in neither. The
+    induced subgraph is the only view that closes that gap."""
+    root = _neighbourhood_fixture(tmp_path)
+    crossing = "FR-0002  -relates->  INT-0001"
+
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "trace", "FR-0001"]) == 0
+    assert "FR-0002" not in capsys.readouterr().out
+    assert _cli(["-C", str(root), "blast", "FR-0001"]) == 0
+    blast = capsys.readouterr().out
+    assert "FR-0002" in blast and "relates" not in blast
+
+    assert _cli(["-C", str(root), "subgraph", "FR-0001"]) == 0
+    out = capsys.readouterr().out
+    assert crossing in out
+    # Both directions are reported, from the one start item.
+    assert "rests on (1):" in out and "INT-0001" in out
+    assert "depended on by (2):" in out and "FR-0003" in out
+
+
+def test_subgraph_bounds_the_walk_by_depth_but_not_the_links(tmp_path, capsys):
+    """`--depth` limits how far the node set reaches, so FR-0003 (two hops below)
+    drops out. Edges stay *induced*: every link joining two surviving nodes is still
+    reported, because hiding one would misrepresent the set that is shown."""
+    root = _neighbourhood_fixture(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "subgraph", "FR-0001", "--depth", "1"]) == 0
+    out = capsys.readouterr().out
+    assert "FR-0003" not in out
+    assert "depended on by (1):" in out and "FR-0002" in out
+    assert "FR-0002  -relates->  INT-0001" in out
+
+
+def test_subgraph_restricts_the_walk_to_chosen_link_types(tmp_path, capsys):
+    """`--link-type` scopes both the closures and the edges, so asking only for
+    derives_from drops the relates edge while the derivation chain survives."""
+    root = _neighbourhood_fixture(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "subgraph", "FR-0001",
+                 "--link-type", "derives_from"]) == 0
+    out = capsys.readouterr().out
+    assert "relates" not in out
+    assert "FR-0003  -derives_from->  FR-0002" in out
+
+
+def test_subgraph_renders_an_unresolved_target_as_a_leaf(tmp_path, capsys):
+    """A namespace-qualified or dangling target has no local item to describe. It
+    stays in the node set as an `(unresolved)` leaf — the walk stops there rather
+    than aborting, matching how `tl trace` already behaves (SR-0051)."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "cites an external clause", "--ground", "INT-0001"]) == 0
+    item = root / "features" / "FR-0001.yml"
+    item.write_text(item.read_text(encoding="utf-8")
+                    + "- target: \"asvs:SR-0003\"\n  type: relates\n",
+                    encoding="utf-8")
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "subgraph", "FR-0001"]) == 0
+    out = capsys.readouterr().out
+    assert "asvs:SR-0003  (unresolved)" in out
+    assert "FR-0001  -relates->  asvs:SR-0003" in out
+
+
+def test_subgraph_json_names_every_node_and_edge(tmp_path, capsys):
+    """The machine-readable form an agent consumes: both closures, a node record
+    carrying resolvability, and the edges as source/type/target triples."""
+    import json
+    root = _neighbourhood_fixture(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "subgraph", "FR-0001", "--format", "json"]) == 0
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["start"] == "FR-0001"
+    assert doc["upstream"] == ["INT-0001"]
+    assert doc["downstream"] == ["FR-0002", "FR-0003"]
+    assert {n["uid"] for n in doc["nodes"]} == {
+        "FR-0001", "FR-0002", "FR-0003", "INT-0001"}
+    assert all(n["resolved"] for n in doc["nodes"])
+    assert {"source": "FR-0002", "type": "relates", "target": "INT-0001"} in doc["edges"]
+
+
+def test_subgraph_rejects_a_uid_that_does_not_exist(tmp_path, capsys):
+    """Naming an absent item is a usage error (exit 2), not an empty neighbourhood
+    that reads as "nothing depends on this"."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "subgraph", "NOPE-0001"]) == 2
+    assert "NOPE-0001 does not exist" in capsys.readouterr().err
+
+
+def test_render_subgraph_applies_the_uid_display_seam(tmp_path, capsys):
+    """The same seam `render_trace` exposes, so tl-compose can show a borrowed
+    clause under its namespace rather than its mangled union UID (SR-0189)."""
+    from throughline.cli import render_subgraph
+    from throughline.graph import Index
+    from throughline.storage import load_project
+    root = _neighbourhood_fixture(tmp_path)
+    project = load_project(str(root))
+    view = Index.build(project).subgraph("FR-0001")
+    capsys.readouterr()
+    render_subgraph(project, view, uid_display=lambda u: f"ns:{u}")
+    out = capsys.readouterr().out
+    assert "ns:FR-0001" in out and "ns:INT-0001" in out
+    assert "ns:FR-0002  -relates->  ns:INT-0001" in out
+
+
+def test_context_without_a_uid_is_unaffected(tmp_path, capsys):
+    """`tl context` with no argument keeps doing exactly what it did: the project
+    brief, and nothing item-specific bolted on (SR-0190)."""
+    root = _neighbourhood_fixture(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "context"]) == 0
+    out = capsys.readouterr().out
+    assert "## The item you were given" not in out
+    assert "rests on" not in out
+
+
+def test_context_with_a_uid_appends_the_neighbourhood(tmp_path, capsys):
+    """`tl context <UID>` is the brief *plus* that item's neighbourhood, so an agent
+    handed one UID gets the project rules and the item's surroundings in a single
+    call. The added section reuses the subgraph renderer, so the two cannot drift
+    (SR-0190)."""
+    root = _neighbourhood_fixture(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "context"]) == 0
+    bare = capsys.readouterr().out
+    assert _cli(["-C", str(root), "context", "FR-0001"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith(bare)                      # the brief is untouched
+    assert "## The item you were given: FR-0001" in out
+    assert "FR-0002  -relates->  INT-0001" in out
+
+
+def test_context_rejects_a_uid_that_does_not_exist(tmp_path, capsys):
+    """Same contract as `subgraph`: an unknown UID fails loudly rather than
+    printing the brief and silently omitting the section that was asked for."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "context", "NOPE-0001"]) == 2
+    assert "NOPE-0001 does not exist" in capsys.readouterr().err
+
+
+def test_subgraph_expand_bounds_the_walk_without_hiding_edges(tmp_path):
+    """The boundary seam tl-compose builds on. A node `expand` rejects is still
+    reported and its links to other members are still drawn — it is simply not
+    walked *through*, so one link into a borrowed standard cannot drag the whole
+    standard in. The named start item is always walked, whatever `expand` says,
+    because a caller who named it is standing on it deliberately."""
+    from throughline.graph import Index
+    from throughline.storage import load_project
+    root = _neighbourhood_fixture(tmp_path)  # INT-0001 <- FR-0001 <- FR-0002 <- FR-0003
+    index = Index.build(load_project(str(root)))
+
+    # Treat everything below FR-0001 as "foreign": FR-0002 is reported but not
+    # traversed, so FR-0003 behind it never enters the set.
+    view = index.subgraph("FR-0001", expand=lambda u: u in {"FR-0001", "INT-0001"})
+    assert view.downstream == ("FR-0002",)
+    assert "FR-0003" not in view.nodes
+    # FR-0002's own links to members of the set survive the boundary.
+    assert ("FR-0002", "relates", "INT-0001") in view.edges
+    assert ("FR-0002", "derives_from", "FR-0001") in view.edges
+    assert all("FR-0003" not in edge for edge in view.edges)
+
+    # The start is exempt: naming a node `expand` rejects still walks it, one step.
+    named = index.subgraph("FR-0002", expand=lambda u: False)
+    assert set(named.upstream) == {"FR-0001", "INT-0001"}   # both are one hop out
+    assert named.downstream == ("FR-0003",)
+    # ...and no further: FR-0001's own parent is already INT-0001, so the proof the
+    # walk stopped is that nothing two hops past the start appears via FR-0003.
+    assert set(named.nodes) == {"FR-0002", "FR-0001", "INT-0001", "FR-0003"}

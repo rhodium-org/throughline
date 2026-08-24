@@ -1,0 +1,37 @@
+uid: SR-0190
+type: system_requirement
+status: ratified
+title: The agent brief can be asked about one item
+text: The brief command shall accept an optional UID. Given one, it shall emit the
+  whole project brief it emits today and append the neighbourhood of that item as
+  a further section, so an agent handed a single UID receives both the rules it must
+  work by and the part of the graph its change will touch from one invocation. The
+  appended section shall be rendered by the same neighbourhood service the standalone
+  command uses, not a second rendering of it. Given no UID the command shall behave
+  exactly as it does before this change — the same brief, assembled from the same
+  sources, with nothing added and nothing withheld; the argument shall introduce
+  a section and shall alter nothing else. A UID that does not exist shall fail with
+  the same diagnostic the other UID-taking commands give, rather than emitting a
+  brief with an empty section.
+rationale: |-
+  The brief exists because an agent that has not read the project cannot be trusted to infer its rules, and it is generated from the live configuration for the same reason. But it describes the project in general and says nothing about the item in hand, so an agent told to change one requirement reads the rules and then has to discover, by separate commands it may not think to run, what that requirement is joined to. The two halves of what it needs are one question — how do I work here, and where am I working — and splitting them across invocations is what lets the second half go unasked.
+
+  Rejected — folding this into the neighbourhood command instead, so that command optionally prints the rules. That inverts the dependency: the brief is the thing an agent is told to read, and burying it inside a graph query means an agent that ran the query never learns the rules exist. The brief stays the entry point and grows an argument.
+
+  Rejected — a separate command that concatenates the two. A third name for the union of two existing outputs is surface without capability, and it would be the name nobody remembers, leaving the same gap.
+
+  Who pays: the brief is already long, and appending a neighbourhood makes a large output larger for anyone who passes a UID. That is the caller's own choice per invocation and the no-argument form is untouched, so no existing caller and no existing script sees a different byte.
+normative: true
+links:
+- target: UR-0022
+  type: implements
+- target: SR-0189
+  type: relates
+- target: SR-0129
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:07c29ed5823c9ed66a75dcb0d69efc0e2e0cfe03c807b9cce8e96ad74d8c773e
