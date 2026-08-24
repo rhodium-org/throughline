@@ -10,6 +10,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+@dataclass(frozen=True)
+class Neighbourhood:
+    """The induced subgraph around one item (SR-0189).
+
+    ``upstream`` and ``downstream`` are the transitive sets reachable by outgoing
+    and incoming links respectively; ``nodes`` is the start plus both, deduplicated
+    (a cycle can put one item in each). ``edges`` is every link whose *source and
+    target both fall inside* ``nodes`` — the part neither ``trace`` nor ``blast``
+    reports, and the reason this is a distinct view rather than a flag on either.
+    """
+    start: str
+    upstream: tuple[str, ...] = ()
+    downstream: tuple[str, ...] = ()
+    nodes: tuple[str, ...] = ()
+    edges: tuple[tuple[str, str, str], ...] = ()   # (source, link type, target)
+
+
 @dataclass
 class Index:
     items: dict = field(default_factory=dict)               # uid -> Item
@@ -70,19 +87,74 @@ class Index:
             stack.extend(t for t, _k in self.out_links(cur, link_types))
         return False
 
+    def closure(self, uid: str, direction: str, link_types: set[str] | None = None,
+                max_depth: int = 0, expand=None) -> list[str]:
+        """Transitive set reachable from ``uid`` over one direction, in
+        breadth-first discovery order and excluding ``uid`` itself.
+
+        ``direction`` is ``"out"`` (what this rests on) or ``"in"`` (what rests on
+        this). ``max_depth`` of 0 means unlimited. The single walk behind both
+        ``impact`` and ``subgraph``, so a blast radius and a neighbourhood can
+        never disagree about what points at an item (SR-0189).
+
+        ``expand`` is the boundary seam ``render_trace`` also offers: a node it
+        rejects is still reported, but is not walked through. tl-compose passes
+        one so a neighbourhood touching a borrowed clause does not swallow the
+        whole standard behind it. ``uid`` itself is always walked — a caller who
+        named it is standing on it deliberately."""
+        step = self.out_links if direction == "out" else self.in_links
+        hit: list[str] = []
+        seen = {uid}
+        frontier = [uid]
+        depth = 0
+        while frontier and (not max_depth or depth < max_depth):
+            nxt: list[str] = []
+            for cur in frontier:
+                if expand is not None and cur != uid and not expand(cur):
+                    continue
+                for other, _k in step(cur, link_types):
+                    if other not in seen:
+                        seen.add(other)
+                        hit.append(other)
+                        nxt.append(other)
+            frontier = nxt
+            depth += 1
+        return hit
+
     def impact(self, uid: str, link_types: set[str] | None = None) -> list[str]:
         """Transitive set reachable via *incoming* links — what depends on this
         (SR-0035 / blast radius)."""
-        hit: list[str] = []
-        seen = {uid}
-        stack = [uid]
-        while stack:
-            for src, _k in self.in_links(stack.pop(), link_types):
-                if src not in seen:
-                    seen.add(src)
-                    hit.append(src)
-                    stack.append(src)
-        return hit
+        return self.closure(uid, "in", link_types)
+
+    def subgraph(self, uid: str, link_types: set[str] | None = None,
+                 max_depth: int = 0, expand=None) -> Neighbourhood:
+        """The induced subgraph around ``uid`` (SR-0189) — both directed closures
+        plus every link joining two members of the resulting node set.
+
+        A target that is not a local item (dangling, or namespace-qualified and
+        resolvable only under tl-compose) stays in the node set as a leaf; it has
+        no outgoing links here, so the walk stops at it rather than failing.
+
+        ``expand`` bounds only what is *walked through*; a link joining two nodes
+        already in the set is still reported, whichever of them it starts at, or
+        the drawing would contradict the set it claims to induce."""
+        upstream = self.closure(uid, "out", link_types, max_depth, expand)
+        downstream = self.closure(uid, "in", link_types, max_depth, expand)
+        nodes = [uid, *upstream]
+        within = set(nodes)
+        for d in downstream:                 # a cycle can put one item in both
+            if d not in within:
+                within.add(d)
+                nodes.append(d)
+        edges = sorted({
+            (src, ltype, tgt)
+            for src in nodes
+            for tgt, ltype in self.out_links(src, link_types)
+            if tgt in within
+        })
+        return Neighbourhood(start=uid, upstream=tuple(upstream),
+                             downstream=tuple(downstream), nodes=tuple(nodes),
+                             edges=tuple(edges))
 
     def refines_cycle(self, cycle_link_types: set[str]) -> list[str] | None:
         WHITE, GREY, BLACK = 0, 1, 2

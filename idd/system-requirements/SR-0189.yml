@@ -1,0 +1,36 @@
+uid: SR-0189
+type: system_requirement
+status: ratified
+title: The neighbourhood of a UID as one induced subgraph
+text: 'Given a UID, the Tool shall report that item''s neighbourhood as a single
+  induced subgraph: the transitive set reachable by outgoing links, the transitive
+  set reachable by incoming links, and every link whose source and target both fall
+  inside that set. Each node shall be reported with its type, status and title, and
+  each edge with its link type and its direction. The report shall be available as
+  text and as JSON, shall accept a depth bound and an optional restriction to named
+  link types, and shall render a link target that is not a local item as a leaf rather
+  than failing the walk. The two directed closures shall be computed by the same
+  link index that impact analysis already uses, so a neighbourhood and a blast radius
+  can never disagree about what points at an item.'
+rationale: |-
+  Trace answers what an item rests on and blast answers what rests on it, but neither reports the links between the items it returns. A verifies edge joining two ancestors, or a relates edge between two dependents, is absent from both views, so the one question a reviewer actually asks before changing an item — what else moves if this moves — is answered by running two commands and reconstructing the missing edges by hand from the YAML. That reconstruction is where the mistake gets made, and it is made silently, because nothing reports that an edge was missed.
+
+  Rejected — a both option on the trace direction flag. That renders two trees over one node set and still omits every cross edge, which is precisely the part neither existing view has. It would also make the tree glyphs claim a hierarchy the neighbourhood does not have: an induced subgraph is a graph, and drawing it as a tree is what forced the two-command workaround in the first place.
+
+  Rejected — a third traversal written for this command. The index already holds both adjacency directions and already serves the impact walk; a separate walker would be a second answer to what points at this item, free to drift from the first exactly when a link type is added. Reusing the existing index is what makes the guarantee above enforceable rather than aspirational.
+
+  Who pays: a caller who wanted only the upstream view now has a command that returns more than they asked for, and on a densely linked item the node set can be most of the graph. The depth bound and the link-type restriction are there for that caller, and trace and blast are unchanged and remain the narrower answers.
+normative: true
+links:
+- target: UR-0012
+  type: implements
+- target: SR-0035
+  type: refines
+- target: SR-0161
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d9374549abad42c279e71723bfa69c0710a486fe9c48a3e43dd4bdab2be95f93

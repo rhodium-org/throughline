@@ -1336,6 +1336,7 @@ _CTX_COMMAND_USAGE = {
     "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>]",
     "trace": "tl trace <UID> [--direction in|out]",
     "blast": "tl blast <UID>",
+    "subgraph": "tl subgraph <UID> [--depth N] [--link-type KIND] [--format json]",
     "shape": "tl shape [--format json]",
     "dump": "tl dump [-o FILE]",
     "diagram": "tl diagram [types|transitions|both]",
@@ -1349,7 +1350,7 @@ _CTX_COMMAND_USAGE = {
     "migrate": "tl migrate",
     "review": "tl review",
     "init": "tl init [--demo]",
-    "context": "tl context",
+    "context": "tl context [<UID>]",
 }
 
 # Commands whose importance is not evident from a one-line help string, and which
@@ -1488,12 +1489,42 @@ def _context_markdown(project) -> str:
     return "\n\n".join(sections) + "\n"
 
 
+def context_item_section(project, view, *, uid_display=None) -> str:
+    """The `<UID>` section of the brief, as markdown (SR-0190).
+
+    Both `tl context <UID>` and tl-compose's union-aware version render through
+    here, so the wording an agent is trained on cannot differ between the two
+    tools — only the graph the neighbourhood was computed over does.
+    """
+    show = uid_display or (lambda u: u)
+    lines: list[str] = []
+    render_subgraph(project, view, uid_display=uid_display, emit=lines.append)
+    body = "\n".join(lines)
+    return (
+        f"## The item you were given: {show(view.start)}\n\n"
+        "Its neighbourhood — what it rests on, what rests on it, and the links "
+        "joining them. Anything listed under *depended on by* may be affected by "
+        "your change.\n\n"
+        f"```\n{body}\n```\n")
+
+
 def cmd_context(args) -> int:
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    sys.stdout.write(_context_markdown(project))
+    uid = getattr(args, "uid", None)
+    # With no UID the output stays byte-for-byte what it has always been (SR-0190),
+    # so every existing caller and script sees no change.
+    if uid is None:
+        sys.stdout.write(_context_markdown(project))
+        sys.stdout.flush()
+        return OK
+    if project.get(uid) is None:
+        return _err(f"{uid} does not exist")
+    view = Index.build(project).subgraph(uid)
+    sys.stdout.write(f"{_context_markdown(project)}\n"
+                     f"{context_item_section(project, view)}")
     sys.stdout.flush()
     return OK
 
@@ -1585,6 +1616,81 @@ def cmd_blast(args) -> int:
         for uid in affected:
             it = project.get(uid)
             print(f"  {uid}  [{it.type}/{it.status}] {it.title}".rstrip())
+    return OK
+
+
+def render_subgraph(project, view, *, uid_display=None, emit=print) -> None:
+    """Render a Neighbourhood as text (SR-0189).
+
+    The one rendering both ``tl subgraph`` and ``tl context <UID>`` use, so the
+    two cannot drift (SR-0190). ``uid_display`` is the same seam ``render_trace``
+    offers: tl-compose passes the namespace-qualified form so a borrowed clause
+    reads ``asvs:SR-0272`` rather than its mangled union UID.
+    """
+    show = uid_display or (lambda u: u)
+
+    def label(uid: str) -> str:
+        item = project.get(uid)
+        if item is None:
+            return f"{show(uid)}  (unresolved)"
+        return f"{show(uid)}  [{item.type}/{item.status}] {item.title}".rstrip()
+
+    emit(label(view.start))
+    for heading, group in (("rests on", view.upstream),
+                           ("depended on by", view.downstream)):
+        emit("")
+        if group:
+            emit(f"{heading} ({len(group)}):")
+            for uid in group:
+                emit(f"  {label(uid)}")
+        else:
+            emit(f"{heading}: none")
+    emit("")
+    if view.edges:
+        emit(f"links within this set ({len(view.edges)}):")
+        width = max(len(show(s)) for s, _lt, _t in view.edges)
+        for src, ltype, tgt in view.edges:
+            emit(f"  {show(src).ljust(width)}  -{ltype}->  {show(tgt)}")
+    else:
+        emit("links within this set: none")
+
+
+def _subgraph_json(project, view, uid_display=None) -> dict:
+    show = uid_display or (lambda u: u)
+
+    def node(uid: str) -> dict:
+        item = project.get(uid)
+        if item is None:
+            return {"uid": show(uid), "resolved": False}
+        return {"uid": show(uid), "resolved": True, "type": item.type,
+                "status": item.status, "title": item.title}
+
+    return {
+        "start": show(view.start),
+        "upstream": [show(u) for u in view.upstream],
+        "downstream": [show(u) for u in view.downstream],
+        "nodes": [node(u) for u in view.nodes],
+        "edges": [{"source": show(s), "type": lt, "target": show(t)}
+                  for s, lt, t in view.edges],
+    }
+
+
+def cmd_subgraph(args) -> int:
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uid = _resolve_uid(project, args.uid, "show the neighbourhood of", "UID")
+    if uid is None:
+        return USAGE
+    if project.get(uid) is None:
+        return _err(f"{uid} does not exist")
+    types = set(args.link_type) if args.link_type else None
+    view = Index.build(project).subgraph(uid, types, args.depth or 0)
+    if args.format == "json":
+        print(json.dumps(_subgraph_json(project, view), indent=2))
+    else:
+        render_subgraph(project, view)
     return OK
 
 
@@ -1982,6 +2088,8 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser(
         "context",
         help="emit an agent-facing Markdown brief (IDD + this project's model)")
+    s.add_argument("uid", nargs="?", default=None,
+                   help="append this item's neighbourhood to the brief")
     s.set_defaults(func=cmd_context)
 
     s = sub.add_parser("trace", help="print the link tree from a UID")
@@ -1996,6 +2104,17 @@ def build_parser() -> argparse.ArgumentParser:
                    help="UID to inspect (omit on a terminal to pick one)")
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.set_defaults(func=cmd_blast)
+
+    s = sub.add_parser(
+        "subgraph",
+        help="show a UID's neighbourhood — both directions plus the links between")
+    s.add_argument("uid", nargs="?", default=None,
+                   help="UID to inspect (omit on a terminal to pick one)")
+    s.add_argument("--format", choices=["text", "json"], default="text")
+    s.add_argument("--depth", type=int, default=0, help="0 = unbounded")
+    s.add_argument("--link-type", action="append", default=None, metavar="KIND",
+                   help="restrict the walk to this link type (repeatable)")
+    s.set_defaults(func=cmd_subgraph)
 
     s = sub.add_parser("ratify", help="a human takes accountability for an item")
     s.add_argument("uid", nargs="?", default=None,
