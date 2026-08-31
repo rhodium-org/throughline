@@ -10,10 +10,10 @@ from __future__ import annotations
 
 import pytest
 
-from throughline.filters import FilterError, safe_eval
+from throughline.filters import FILTER_NAMES, FilterError, check_filter, safe_eval
 from throughline.graph import Index
 from throughline.model import Item, Link
-from throughline.validate import eval_filter
+from throughline.validate import _filter_namespace, eval_filter
 
 NS = {
     "uid": "SR-0045", "type": "system_requirement", "status": "approved",
@@ -167,3 +167,63 @@ def test_outgoing_and_to_work_without_index():
     _, _, it = _link_graph()
     assert eval_filter(it["SR-0001"], "links.outgoing('implements')", None)
     assert eval_filter(it["SR-0001"], "links.to('UR-0001')", None)
+
+
+# ------------------------------------------- static validation (SR-0191)
+
+def test_check_filter_accepts_what_eval_accepts():
+    """The static check and the evaluator walk one grammar. Every form the
+    evaluator runs must pass the check, or a legal filter would be refused at
+    load for being legal."""
+    for expr in (
+            "type == 'system_requirement'",
+            "attrs.get('priority') == 'must'",
+            "not normative or derived",
+            "status in ['approved', 'ratified']",
+            "attrs['score'] > 2",
+            "title.lower().startswith('filter')",
+            "'security' in attrs.get('tags')",
+            "uid == 'SR-0045' and (title != none)",
+    ):
+        check_filter(expr)          # must not raise
+        safe_eval(expr, NS)         # and must still evaluate
+
+
+def test_check_filter_rejects_a_bare_attribute_name():
+    """The defect this exists for: `verification == 'test'` instead of
+    `attrs.get('verification')`. The evaluator already knew; nothing asked it."""
+    with pytest.raises(FilterError, match="unknown name 'verification'"):
+        check_filter("verification == 'test'")
+
+
+def test_check_filter_sees_past_a_short_circuit():
+    """Why the check is static. Evaluation never reaches the misspelling for an
+    item whose type does not match, so an evaluation-time check would report
+    soundness or breakage depending on which items the graph happened to hold."""
+    expr = "type == 'nfr' and verifcation == 'test'"
+    # The evaluator, given a non-matching item, short-circuits and reports False.
+    assert safe_eval(expr, NS) is False
+    # The static check reads the whole expression and is not fooled.
+    with pytest.raises(FilterError, match="unknown name 'verifcation'"):
+        check_filter(expr)
+
+
+def test_check_filter_rejects_syntax_methods_and_forms():
+    for expr, message in (
+            ("type == ", "could not parse"),
+            ("title.format('{0.__class__}')", "not allowed"),
+            ("attrs.get('a', b=1)", "keyword arguments"),
+            ("title[0:2] == 'ab'", "slices are not allowed"),
+            ("__import__('os')", "only method calls"),
+            ("lambda: 1", "unsupported expression"),
+    ):
+        with pytest.raises(FilterError, match=message):
+            check_filter(expr)
+
+
+def test_filter_names_are_exactly_the_runtime_namespace():
+    """The static check validates against FILTER_NAMES; the evaluator reads the
+    namespace `_filter_namespace` builds. If they drift, the check either refuses
+    a legal filter or admits one that raises at evaluation."""
+    item = Item(uid="SR-0001", type="system_requirement", title="t")
+    assert set(_filter_namespace(item)) == set(FILTER_NAMES)

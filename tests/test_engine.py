@@ -569,6 +569,58 @@ def test_coverage_rule_needs_incoming_link():
     assert ("FR-1", "coverage") in _rules(validate(p))
 
 
+def test_coverage_rule_with_an_unusable_filter_is_refused_at_load():
+    """SR-0191. The filter names a bare attribute where the language requires
+    attrs.get(...). Before this, the rule matched no item, check reported the
+    graph sound, and the gate asserted nothing at all."""
+    with pytest.raises(SchemaError, match="unknown name 'verification'"):
+        Schema.from_config({"rules": {"coverage": [
+            {"filter": "type == 'requirement' and verification == 'test'",
+             "needs": "incoming:verifies"}]}})
+
+
+def test_coverage_rule_refusal_names_the_rule_and_the_expression():
+    """SR-0191. A refusal that does not say which rule sends its reader off to
+    read the whole file."""
+    with pytest.raises(SchemaError) as e:
+        Schema.from_config({"rules": {"coverage": [
+            {"filter": "true", "needs": "incoming:verifies"},
+            {"filter": "nope == 1", "needs": "incoming:verifies"}]}})
+    assert "#2" in str(e.value)
+    assert "nope == 1" in str(e.value)
+
+
+def test_coverage_rule_with_an_unusable_needs_clause_is_refused():
+    """SR-0191. An unparseable `needs` was skipped, which left the rule inert in
+    exactly the way a broken filter did."""
+    for needs in ("verifies", "sideways:verifies", None):
+        rule = {"filter": "true"}
+        if needs is not None:
+            rule["needs"] = needs
+        with pytest.raises(SchemaError):
+            Schema.from_config({"rules": {"coverage": [rule]}})
+
+
+def test_coverage_rule_with_an_unknown_severity_is_refused():
+    """SR-0191. A misspelt severity is neither error, warning nor off, so the
+    finding it produced could be neither counted nor silenced."""
+    with pytest.raises(SchemaError, match="severity"):
+        Schema.from_config({"rules": {"coverage": [
+            {"filter": "true", "needs": "incoming:verifies",
+             "severity": "eror"}]}})
+
+
+def test_a_filter_that_raises_at_evaluation_is_an_error_not_a_non_match():
+    """SR-0191. The static check cannot see every failure — comparing values
+    whose types do not compare depends on the data. Reaching past the load-time
+    refusal is how that residue is exercised."""
+    p = _grounded_project()
+    p.schema.coverage = ({"filter": "attrs.get('missing') > 1",
+                          "needs": "incoming:verifies"},)
+    assert any(f.rule == "rule-filter" and f.severity == "error"
+               for f in validate(p))
+
+
 # ---------------------------------------------------------------------- schema
 
 def test_schema_helpers_are_the_single_source(tmp_path):

@@ -1,0 +1,45 @@
+uid: SR-0191
+type: system_requirement
+status: ratified
+title: A declared rule filter that cannot be evaluated is an error
+text: A coverage rule declared in project configuration shall be validated when that
+  configuration is loaded, before any item is checked. The Tool shall reject a rule
+  whose filter expression names a value the filter language does not define, calls
+  a method the language does not permit, or uses an expression form the language
+  does not allow. The Tool shall reject a rule whose needs clause it cannot parse,
+  and a rule that declares no needs clause. Each refusal shall name the rule and
+  the text that was rejected. A filter that raises while it is being evaluated shall
+  be reported as an error finding that names the rule and the expression, and shall
+  never be treated as matching no items.
+rationale: |-
+  A coverage rule is a gate. When its filter could not be evaluated the Tool matched no items, reported no finding, and printed that the graph was sound. The rule was inert and nothing said so.
+
+  This was found on 2026-08-31 in a project whose filter read "verification == 'test'" where the language requires "attrs.get('verification')". The same expression given to the query command was rejected immediately, so the evaluator already knew it was wrong. Only the coverage path discarded that answer.
+
+  Validation belongs at configuration load rather than at evaluation because the filter language short-circuits. In "type == 'requirement' and verification == 'test'" the undefined name is only reached for items whose type already matches, so an evaluation-time check would fail or pass depending on which items happen to be in the graph. Checking the whole expression once, before any item is read, does not depend on the data.
+
+  Load is also where the Tool already refuses other unusable configuration, such as an attribute with an unknown type. A rule that cannot run is the same kind of fault and is treated the same way.
+
+  The evaluation-time error is kept as a second line, because a static check cannot see every failure. Comparing two values whose types do not compare is one example.
+
+  A filter that is valid but matches no item is deliberately not reported. An empty register, and a rule written before the items it will govern, both produce that state honestly, so such a finding would be wrong more often than right. The typo that motivated this requirement is caught by the static check instead.
+
+  Who pays: a project whose configuration already holds a broken rule will fail to load after this change, where before it loaded and passed. That is the intended effect, and it is bounded by the message, which names the rule and the rejected text so the repair is one edit.
+
+  Rejected: reporting the bad filter as a warning, which leaves a gate that proves nothing while the build stays green; and reporting it only at evaluation, which makes the report depend on the graph's current contents.
+normative: true
+links:
+- target: UR-0012
+  type: implements
+- target: SR-0042
+  type: refines
+- target: SR-0103
+  type: relates
+- target: SR-0192
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:286d24f3c28a9c17e46a7f1377da84a6c137203f6e11d4059946a19551c17733

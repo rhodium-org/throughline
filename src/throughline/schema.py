@@ -19,7 +19,15 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .filters import FilterError, check_filter
+
 ERROR, WARNING, OFF = "error", "warning", "off"
+
+# What a coverage rule's `needs` clause looks like: a direction and a link type
+# (SR-0042). Declared here because this is where a rule is admitted or refused;
+# validation reads the same pattern, so the clause the loader accepts and the
+# clause the gate acts on can never be two different things.
+COVERAGE_NEEDS_RE = re.compile(r"(incoming|outgoing):(\w+)$")
 
 # Grounding defaults when a project declares no [grounding] table. Kept here so
 # the grounding layer and the schema agree on one source of truth.
@@ -51,6 +59,45 @@ _STATUS_ROLE_KEYS = frozenset(
 
 class SchemaError(ValueError):
     """Malformed or internally inconsistent project configuration (SR-0082)."""
+
+
+def _check_coverage(coverage: tuple) -> None:
+    """Refuse a coverage rule that could not be enforced (SR-0191).
+
+    A rule the gate cannot run is the failure this exists to end: until now a
+    filter that raised matched nothing, so `check` reported the graph sound while
+    the rule asserted nothing at all. Checked here, at load, because the filter
+    language short-circuits — whether an unusable expression is reached depends on
+    which items the graph holds, so only a check made before any item is read
+    gives the same answer every time.
+    """
+    for pos, rule in enumerate(coverage):
+        where = f"[[rules.coverage]] #{pos + 1}"
+        if not isinstance(rule, dict):
+            raise SchemaError(f"{where} is not a table")
+        try:
+            check_filter(rule.get("filter") or "")
+        except FilterError as e:
+            raise SchemaError(
+                f"{where} has an unusable filter: {e}\n"
+                f"    filter = {rule.get('filter')!r}\n"
+                "  An item attribute is read with attrs.get('name'); `tl query "
+                "<EXPR>` tries an expression out.") from e
+        needs = rule.get("needs")
+        if needs is None:
+            raise SchemaError(
+                f"{where} declares no 'needs', so it requires nothing of the "
+                "items it matches; state it as 'incoming:<link type>' or "
+                "'outgoing:<link type>'")
+        if not COVERAGE_NEEDS_RE.match(str(needs).strip()):
+            raise SchemaError(
+                f"{where} has an unusable 'needs' clause {needs!r} — expected "
+                "'incoming:<link type>' or 'outgoing:<link type>'")
+        severity = rule.get("severity")
+        if severity is not None and severity not in (ERROR, WARNING, OFF):
+            raise SchemaError(
+                f"{where} has unknown severity {severity!r} (expected "
+                f"'{ERROR}', '{WARNING}' or '{OFF}')")
 
 
 @dataclass(frozen=True)
@@ -182,6 +229,7 @@ class Schema:
 
         rules = config.get("rules") or {}
         coverage = tuple(rules.get("coverage", []) or [])
+        _check_coverage(coverage)
         rule_overrides = {k: v for k, v in rules.items() if k != "coverage"}
 
         docs_paths = tuple((config.get("docs") or {}).get("paths", []) or [])

@@ -47,7 +47,7 @@ from .storage import (
     write_manifest,
 )
 from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
-from .validate import ERROR, FilterError, eval_filter, validate
+from .validate import ERROR, OFF, WARNING, FilterError, eval_filter, validate
 from .version import distribution_version
 
 OK, FINDINGS, USAGE = 0, 1, 2
@@ -1286,12 +1286,13 @@ def _ctx_coverage(schema) -> str:
         out.append("_No `[[rules.coverage]]` declared._")
         return "\n".join(out)
     out.append("Each rule requires the matching items to have the stated link "
-               "(unmet → a `coverage` finding):\n")
-    for rule in schema.coverage:
+               "(unmet → a `coverage` finding). They are numbered as "
+               "`tl schema rule remove` counts them:\n")
+    for pos, rule in enumerate(schema.coverage, start=1):
         filt = rule.get("filter", "*")
         needs = rule.get("needs", "?")
-        sev = rule.get("severity", "error")
-        out.append(f"- items where `{filt}` **need** `{needs}` "
+        sev = rule.get("severity", WARNING)
+        out.append(f"{pos}. items where `{filt}` **need** `{needs}` "
                    f"(severity: {sev})")
     return "\n".join(out)
 
@@ -1363,7 +1364,7 @@ _CTX_COMMAND_EMPHASIS = {
     "delete": "tombstones an item; the file stays, the item stops counting",
     "amend": "change content through the tool, never by opening the YAML",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
-              "linktype, linkrule, grounding; refuses a change that would "
+              "linktype, linkrule, grounding, rule; refuses a change that would "
               "invalidate existing items and says what to fix",
 }
 
@@ -1814,6 +1815,7 @@ def _add_schema_parser(sub) -> None:
         "linktype": "the link vocabulary",
         "linkrule": "endpoint constraints on a link type",
         "grounding": "the grounding configuration",
+        "rule": "coverage rules the gate enforces",
     }
     made: dict[str, object] = {}
 
@@ -1927,6 +1929,23 @@ def _add_schema_parser(sub) -> None:
                      "withdraw an entry from a grounding field")
     v.add_argument("field", metavar="FIELD")
     v.add_argument("value")
+
+    v = _schema_verb("rule", "add",
+                     lambda p, a: schema_ops.rule_add(
+                         p, filter=a.filter, needs=a.needs, severity=a.severity),
+                     "declare a coverage rule")
+    v.add_argument("--filter", required=True,
+                   help="which items the rule governs, e.g. \"type == 'system_"
+                        "requirement' and attrs.get('verification') == 'test'\"")
+    v.add_argument("--needs", required=True,
+                   help="what they must have: incoming:<link type> or "
+                        "outgoing:<link type>")
+    v.add_argument("--severity", default=None, choices=[ERROR, WARNING, OFF],
+                   help="default: warning")
+    v = _schema_verb("rule", "remove",
+                     lambda p, a: schema_ops.rule_remove(p, a.index),
+                     "withdraw a coverage rule, by its position in `tl context`")
+    v.add_argument("index", type=int, metavar="N")
 
 
 def build_parser() -> argparse.ArgumentParser:

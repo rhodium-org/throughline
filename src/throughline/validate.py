@@ -15,7 +15,7 @@ from .fingerprint import fingerprint
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import reaches_root
-from .schema import ERROR, OFF, WARNING
+from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
 from .uid import UID_RE, collisions
 
@@ -54,6 +54,10 @@ _DEFAULT_SEVERITY = {
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING,
 }
+# `rule-filter` is deliberately absent above. Every rule there describes a
+# judgement a project may reasonably make differently; a coverage rule that
+# cannot be evaluated is not one of those. Silencing it would restore exactly the
+# inert gate SR-0191 exists to expose, with nothing to tell it from a live one.
 
 def _file(item) -> str:
     return str(item._path) if item._path else ""
@@ -352,10 +356,18 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
     incoming/outgoing link of a given type."""
     findings: list[Finding] = []
     schema = project.schema
-    for rule in schema.coverage:
+    cfg_file = str(project.path / CONFIG_NAME)
+    for pos, rule in enumerate(schema.coverage):
         needs = rule.get("needs", "")
-        m = re.match(r"(incoming|outgoing):(\w+)", needs)
+        m = COVERAGE_NEEDS_RE.match(str(needs).strip())
         if not m:
+            # Unreachable through a loaded project — Schema.from_config refuses a
+            # rule this malformed (SR-0191). Reported rather than skipped so a
+            # schema built by hand cannot reintroduce the silent inert rule.
+            findings.append(Finding(
+                "rule-filter", ERROR, "", cfg_file,
+                f"[[rules.coverage]] #{pos + 1} has an unusable 'needs' clause "
+                f"{needs!r}"))
             continue
         direction, ltype = m.group(1), m.group(2)
         sev = rule.get("severity", WARNING)
@@ -363,8 +375,23 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
             sev = ERROR
         if sev == OFF:
             continue
+        expr = rule.get("filter", "")
         for item in project.items():
-            if item.is_deleted or not _match_filter(item, rule.get("filter", ""), idx):
+            if item.is_deleted:
+                continue
+            try:
+                matched = eval_filter(item, expr, idx)
+            except FilterError as e:
+                # The rule cannot be enforced. Reported once, as an error, and the
+                # rule abandoned: a filter that raises used to be read as 'matches
+                # nothing', which left the gate asserting nothing while check
+                # printed that the graph was sound (SR-0191).
+                findings.append(Finding(
+                    "rule-filter", ERROR, "", cfg_file,
+                    f"[[rules.coverage]] #{pos + 1} ({needs}) could not be "
+                    f"evaluated against {item.uid}: {e} — filter = {expr!r}"))
+                break
+            if not matched:
                 continue
             links = (idx.in_links(item.uid, {ltype}) if direction == "incoming"
                      else idx.out_links(item.uid, {ltype}))
@@ -403,7 +430,9 @@ class _LinkView:
 def _filter_namespace(item, idx: Index | None = None) -> dict:
     """The one set of names an SR-0045 filter can reference (grammar: SR-0104).
     Shared by coverage rules, the `query` CLI, and document injection so the
-    language is identical in all three."""
+    language is identical in all three. The keys are exactly
+    :data:`throughline.filters.FILTER_NAMES`, which is what the static check
+    validates against; a test holds the two together."""
     return {
         "type": item.type, "status": item.status, "register": item._register_prefix,
         "uid": item.uid, "derived": item.derived, "normative": item.normative,
@@ -423,15 +452,6 @@ def eval_filter(item, expr: str, idx: Index | None = None) -> bool:
     if not expr or not expr.strip():
         return True
     return bool(safe_eval(expr, _filter_namespace(item, idx)))
-
-
-def _match_filter(item, expr: str, idx: Index | None = None) -> bool:
-    """Lenient variant for config-declared coverage rules: a malformed rule
-    filter simply fails to match rather than aborting the whole check."""
-    try:
-        return eval_filter(item, expr, idx)
-    except FilterError:
-        return False
 
 
 def is_external(target: str) -> bool:
