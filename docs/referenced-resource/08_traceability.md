@@ -22,8 +22,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0008 | Stakeholder-quality publishing | SR-0015, SR-0057 |
 | UR-0009 | Exchange with other tools | — |
 | UR-0010 | Search and filter | SR-0045, SR-0046, SR-0079, SR-0103, SR-0104, SR-0105, SR-0106 |
-| UR-0011 | Project-specific data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0024, SR-0070, SR-0080, SR-0081, SR-0082, SR-0083, SR-0084, SR-0130, SR-0131, SR-0132, SR-0138, SR-0142, SR-0144, SR-0147, SR-0172, SR-0181, SR-0182, SR-0183, SR-0184 |
-| UR-0012 | Coverage and impact analysis | SR-0035, SR-0042, SR-0051, SR-0052, SR-0078, SR-0085, SR-0086, SR-0096, SR-0189 |
+| UR-0011 | Project-specific data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0024, SR-0070, SR-0080, SR-0081, SR-0082, SR-0083, SR-0084, SR-0130, SR-0131, SR-0132, SR-0138, SR-0142, SR-0144, SR-0147, SR-0172, SR-0181, SR-0182, SR-0183, SR-0184, SR-0192 |
+| UR-0012 | Coverage and impact analysis | SR-0035, SR-0042, SR-0051, SR-0052, SR-0078, SR-0085, SR-0086, SR-0096, SR-0189, SR-0191 |
 | UR-0013 | Baselines | SR-0036, SR-0090 |
 | UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093 |
 | UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137 |

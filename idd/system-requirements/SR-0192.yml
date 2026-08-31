@@ -1,0 +1,35 @@
+uid: SR-0192
+type: system_requirement
+status: ratified
+title: Coverage rules are authored through a schema operation
+text: The Tool shall provide a schema operation that adds and removes a coverage
+  rule, so that every part of a project's configuration that the validator enforces
+  can be changed through the Tool rather than by hand. The operation shall take the
+  same mandatory reason as every other schema operation and record it beside the
+  rule it writes. The operation shall reject a filter expression or a needs clause
+  that the Tool would refuse to load, so that an unusable rule cannot be written
+  to the file.
+rationale: |-
+  The schema command exists so a project never has to hand-edit its own configuration. Every other surface it governs already has a verb: status, transition, type, attr, linktype, linkrule and grounding. Coverage rules had none, so a project that wanted a rule other than the one the scaffold seeds had to open the file, which is the thing the command was built to avoid.
+
+  This is joined to SR-0191 rather than filed separately because the authoring path is where the check earns its keep. SR-0191 stops a broken rule from being enforced; this stops it from being written. A rule added through the operation is validated before the file is touched, so the typo that made a gate inert cannot reach the file at all.
+
+  Coverage is the only kind of rule declared as a table under the rules key. Every other key there sets a severity for a named validation rule, which is a different shape and already has its own meaning. The operation is therefore defined for coverage alone, and describes itself that way, rather than pretending to a generality that does not exist.
+
+  Removal is by index, because a coverage rule has no name to refer to it by. The list is short and ordered, and the reading command prints it in the same order, so an index is unambiguous.
+
+  Rejected: a single operation covering both coverage rules and severity overrides, which would join two unrelated shapes under one verb and make its arguments conditional on which was meant.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0181
+  type: refines
+- target: SR-0191
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:41e077743e3abc1ae79c29decad1124b3d83140b94597d74ce407623655dfc07

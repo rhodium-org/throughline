@@ -283,3 +283,89 @@ def test_a_change_the_schema_itself_rejects_is_a_usage_error(tmp_path):
                  "--because", "No longer used."])
 
     assert code == 2
+
+
+# ------------------------------------------- coverage rules (SR-0192)
+
+def test_a_coverage_rule_can_be_added_and_records_why(tmp_path):
+    """SR-0192. `[[rules.coverage]]` was the one part of the schema with no verb,
+    so a project wanting a rule other than the seeded one had to edit the file."""
+    root = _scaffold(tmp_path)
+    code = _cli(["-C", str(root), "schema", "rule", "add",
+                 "--filter", "type == 'requirement' and status != 'deleted'",
+                 "--needs", "incoming:verifies",
+                 "--because", "A requirement nothing tests is not finished."])
+
+    assert code == 0
+    rules = _config(root)["rules"]["coverage"]
+    assert {"filter": "type == 'requirement' and status != 'deleted'",
+            "needs": "incoming:verifies"} in rules
+    assert "A requirement nothing tests" in (root / "throughline.toml").read_text()
+
+
+def test_adding_a_rule_whose_filter_cannot_be_evaluated_is_refused(tmp_path):
+    """SR-0191 and SR-0192 together: this is why the verb exists. The expression
+    is the one that made a real project's gate inert — a bare attribute name
+    where the language requires attrs.get(...). It must not reach the file."""
+    root = _scaffold(tmp_path)
+    before = (root / "throughline.toml").read_text()
+
+    code = _cli(["-C", str(root), "schema", "rule", "add",
+                 "--filter", "type == 'requirement' and verification == 'test'",
+                 "--needs", "incoming:verifies",
+                 "--because", "Tested requirements need a test."])
+
+    assert code == 2
+    assert (root / "throughline.toml").read_text() == before
+
+
+def test_adding_a_rule_with_an_unusable_needs_clause_is_refused(tmp_path):
+    root = _scaffold(tmp_path)
+    before = (root / "throughline.toml").read_text()
+    code = _cli(["-C", str(root), "schema", "rule", "add",
+                 "--filter", "type == 'requirement'", "--needs", "verifies",
+                 "--because", "x"])
+    assert code == 2
+    assert (root / "throughline.toml").read_text() == before
+
+
+def test_a_coverage_rule_can_be_removed_by_position(tmp_path):
+    """SR-0192. A coverage rule has no name to be called by, so it is withdrawn
+    by the position `tl context` prints it at."""
+    root = _scaffold(tmp_path)
+    base = len(_config(root).get("rules", {}).get("coverage", []))
+    for ltype in ("verifies", "implements"):
+        assert _cli(["-C", str(root), "schema", "rule", "add",
+                     "--filter", f"type == '{ltype}-ish'",
+                     "--needs", f"incoming:{ltype}",
+                     "--because", f"Cover {ltype}."]) == 0
+    assert len(_config(root)["rules"]["coverage"]) == base + 2
+
+    code = _cli(["-C", str(root), "schema", "rule", "remove", str(base + 1),
+                 "--because", "Superseded by the second rule."])
+
+    assert code == 0
+    remaining = _config(root)["rules"]["coverage"]
+    assert len(remaining) == base + 1
+    assert remaining[-1]["needs"] == "incoming:implements"
+    # The reason survives the thing it explains (SR-0184).
+    assert "Superseded by the second rule." in (root / "throughline.toml").read_text()
+
+
+def test_removing_a_rule_that_is_not_there_is_a_usage_error(tmp_path):
+    root = _scaffold(tmp_path)
+    beyond = len(_config(root).get("rules", {}).get("coverage", [])) + 1
+    assert _cli(["-C", str(root), "schema", "rule", "remove", str(beyond),
+                 "--because", "x"]) == 2
+
+
+def test_adding_a_rule_leaves_the_rest_of_the_file_alone(tmp_path):
+    """SR-0183. An array-of-tables is appended, so no existing block moves."""
+    root = _scaffold(tmp_path)
+    before = (root / "throughline.toml").read_text()
+    assert _cli(["-C", str(root), "schema", "rule", "add",
+                 "--filter", "type == 'requirement'",
+                 "--needs", "incoming:verifies",
+                 "--because", "Requirements need tests."]) == 0
+    after = (root / "throughline.toml").read_text()
+    assert after.startswith(before.rstrip("\n"))

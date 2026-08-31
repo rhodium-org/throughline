@@ -34,8 +34,94 @@ _METHODS = frozenset({
 })
 
 
+# Every name a filter may reference (SR-0045). Declared here, beside the grammar,
+# so the static check below and the namespace `validate._filter_namespace` builds
+# cannot drift apart; a test holds the two to each other.
+FILTER_NAMES = frozenset({
+    "type", "status", "register", "uid", "derived", "normative",
+    "title", "text", "rationale", "attrs", "links",
+    "true", "false", "none",
+})
+
+
 class FilterError(ValueError):
     """A filter expression could not be parsed or evaluated (SR-0045)."""
+
+
+def check_filter(expr: str, names: frozenset[str] = FILTER_NAMES) -> None:
+    """Validate ``expr`` against the grammar without evaluating it (SR-0191).
+
+    Evaluation cannot answer 'is this expression sound?', because `and`/`or`
+    short-circuit: in ``type == 'x' and verifcation == 'y'`` the misspelling is
+    reached only for items that pass the first test, so whether the mistake is
+    noticed depends on which items the graph happens to hold. This walks every
+    branch instead, so the answer is a property of the expression alone.
+
+    Raises :class:`FilterError` naming the first fault found.
+    """
+    if not expr or not expr.strip():
+        return
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError as e:
+        raise FilterError(f"could not parse filter: {e.msg}") from e
+    _check(tree.body, names)
+
+
+def _check(node, names: frozenset[str]) -> None:
+    """Walk one node of the same grammar :func:`_eval` executes. The two stay in
+    step by sharing ``_COMPARISONS`` and ``_METHODS``; a test evaluates and checks
+    the same expressions so a form accepted by one cannot be rejected by the
+    other."""
+    if isinstance(node, ast.BoolOp):
+        for value in node.values:
+            _check(value, names)
+        return
+    if isinstance(node, ast.UnaryOp):
+        if not isinstance(node.op, (ast.Not, ast.USub, ast.UAdd)):
+            raise FilterError(f"unsupported operator '{type(node.op).__name__}'")
+        _check(node.operand, names)
+        return
+    if isinstance(node, ast.Compare):
+        _check(node.left, names)
+        for op, comparator in zip(node.ops, node.comparators):
+            if type(op) not in _COMPARISONS:
+                raise FilterError(f"unsupported comparison '{type(op).__name__}'")
+            _check(comparator, names)
+        return
+    if isinstance(node, ast.Name):
+        if node.id not in names:
+            raise FilterError(f"unknown name '{node.id}'")
+        return
+    if isinstance(node, ast.Constant):
+        return
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        for element in node.elts:
+            _check(element, names)
+        return
+    if isinstance(node, ast.Subscript):
+        if isinstance(node.slice, ast.Slice):
+            raise FilterError("slices are not allowed in filters")
+        _check(node.value, names)
+        _check(node.slice, names)
+        return
+    if isinstance(node, ast.Call):
+        _check_call(node, names)
+        return
+    raise FilterError(f"unsupported expression '{type(node).__name__}'")
+
+
+def _check_call(node, names: frozenset[str]) -> None:
+    func = node.func
+    if not isinstance(func, ast.Attribute):
+        raise FilterError("only method calls on values are allowed")
+    if func.attr not in _METHODS:
+        raise FilterError(f"method '{func.attr}' is not allowed in filters")
+    if node.keywords:
+        raise FilterError("keyword arguments are not allowed in filters")
+    _check(func.value, names)
+    for arg in node.args:
+        _check(arg, names)
 
 
 def safe_eval(expr: str, namespace: dict) -> object:

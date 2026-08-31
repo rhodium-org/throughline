@@ -492,3 +492,55 @@ def attr_remove(project: Project, itype: str, name: str) -> Change:
 def _remove_attr(doc: TomlDocument, itype: str, name: str, why: str) -> None:
     doc.remove_key(f"types.{itype}", f"attrs.{name}")
     doc.note_table(f"types.{itype}", why)
+
+
+# `coverage` is the only kind of rule declared as a table under [rules] (SR-0192).
+# Every other key there names a validation rule and sets its severity — a
+# different shape, with a meaning of its own — so these verbs are defined for
+# coverage alone rather than for a generality that does not exist.
+_COVERAGE = ("rules", "coverage")
+
+
+def _coverage(project: Project) -> list[dict]:
+    return list((project.config.get("rules") or {}).get("coverage") or [])
+
+
+def rule_add(project: Project, *, filter: str, needs: str,
+             severity: str | None = None) -> Change:
+    """Declare a coverage rule. The filter and the needs clause are validated by
+    :meth:`Schema.from_config` before anything is written, in
+    :func:`apply_change` — which is the point of the operation: a rule the gate
+    could not enforce cannot reach the file (SR-0191, SR-0192)."""
+    rule: dict = {"filter": filter, "needs": needs}
+    if severity is not None:
+        rule["severity"] = severity
+    cfg = _copy(project)
+    rules = cfg.setdefault("rules", {})
+    existing = list(rules.get("coverage") or [])
+    if rule in existing:
+        raise SchemaOpError("that coverage rule is already declared")
+    rules["coverage"] = existing + [rule]
+    return Change(
+        f"adding a coverage rule: items matching {filter!r} need {needs}", cfg,
+        lambda doc, why: doc.add_array_table(_COVERAGE, rule, because=why))
+
+
+def rule_remove(project: Project, index: int) -> Change:
+    """Withdraw the ``index``-th coverage rule, counting from 1 as `tl context`
+    prints them. By position because a coverage rule has no name to be called
+    by, and the list is short and ordered."""
+    rules_list = _coverage(project)
+    if not rules_list:
+        raise SchemaOpError("this project declares no coverage rules")
+    if index < 1 or index > len(rules_list):
+        raise SchemaOpError(
+            f"this project declares {len(rules_list)} coverage rule(s); "
+            f"there is no #{index}")
+    doomed = rules_list[index - 1]
+    cfg = _copy(project)
+    cfg.setdefault("rules", {})["coverage"] = [
+        r for pos, r in enumerate(rules_list) if pos != index - 1]
+    return Change(
+        f"removing coverage rule #{index} (needs {doomed.get('needs')})", cfg,
+        lambda doc, why: doc.remove_array_table(_COVERAGE, index - 1,
+                                                because=why))

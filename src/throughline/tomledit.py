@@ -342,6 +342,52 @@ class TomlDocument:
         start, end = span
         del self._lines[self._comment_start(start, -1):end]
 
+    def array_table_spans(self,
+                          name: str | tuple[str, ...]) -> list[tuple[int, int]]:
+        """``(header_index, end)`` for each ``[[name]]`` block, in file order.
+        ``end`` is exclusive and stops at the next header of any kind."""
+        want = _as_path(name)
+        headers = self._headers()
+        return [(idx, headers[pos + 1][0] if pos + 1 < len(headers)
+                 else len(self._lines))
+                for pos, (idx, found, is_array) in enumerate(headers)
+                if found == want and is_array]
+
+    def add_array_table(self, name: str | tuple[str, ...], values: dict, *,
+                        because: str | None = None) -> None:
+        """Append a ``[[name]]`` block holding ``values``.
+
+        Appended rather than written in place, because the members of an
+        array-of-tables are ordered and the ones already there are not this
+        change's business — the same reason :meth:`add_to_array` writes at the
+        end of an array (SR-0183)."""
+        written = _render_path(_as_path(name))
+        body: list[str] = []
+        for key, value in values.items():
+            body.extend(render_assignment(key, value))
+        note = comment_block(because) if because else []
+        tail = [""] if self._lines and self._lines[-1].strip() else []
+        self._lines.extend(tail + note + [f"[[{written}]]"] + body)
+
+    def remove_array_table(self, name: str | tuple[str, ...], index: int, *,
+                           because: str | None = None) -> None:
+        """Remove the ``index``-th (0-based) ``[[name]]`` block, taking the
+        comment that introduced it with it.
+
+        ``because`` is left behind in the block's place. A removal has no key or
+        table left to hang its reason on, and the gap where the rule used to be
+        is the one spot where a reader looking for it will pass (SR-0184)."""
+        spans = self.array_table_spans(name)
+        written = _render_path(_as_path(name))
+        if index < 0 or index >= len(spans):
+            raise TomlEditError(
+                f"this document has {len(spans)} [[{written}]] block(s); "
+                f"there is no #{index + 1}")
+        start, end = spans[index]
+        floor = spans[index - 1][1] - 1 if index else -1
+        at = self._comment_start(start, floor)
+        self._lines[at:end] = comment_block(because) if because else []
+
     def note_table(self, name: str | tuple[str, ...], because: str) -> None:
         """Record ``because`` above the header of an existing table."""
         span = self._table_span(name)
