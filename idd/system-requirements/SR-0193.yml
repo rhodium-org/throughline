@@ -1,0 +1,34 @@
+uid: SR-0193
+type: system_requirement
+status: implemented
+title: Item files are parsed with PyYAML's C loader when it is present
+text: 'Every YAML the Tool reads — a register manifest, an item file, an item as
+  it stood at a git ref — is parsed through one loader chosen once at import: PyYAML''s
+  CSafeLoader where the installed PyYAML carries libyaml, and SafeLoader otherwise.
+  Both are safe loaders that construct no Python objects, so NFR-0022 holds either
+  way. The parsed result is the same whichever runs; only the time differs. No other
+  module reads YAML by another route.'
+rationale: 'Measured on a composed graph of 1,205 items, the pure-Python loader took
+  nine of the fourteen seconds a tl-compose link cost, and the C loader parses the
+  same files nine times faster with an identical result. Every command in the family
+  loads the graph first, so this is the whole family''s start-up, including the CI
+  gate and the browser editor, whose Pyodide build of PyYAML carries libyaml. Rejected:
+  caching parsed items on disk, because a cache is state that can go stale and this
+  change has none — the same parse of the same files, done by the implementation
+  PyYAML already ships. Verified by test: the loader in use is CSafeLoader with libyaml
+  present, a project loads identically under both loaders, and a python/object tag
+  is refused under both.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: NFR-0008
+  type: refines
+- target: NFR-0022
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a4294b1d3aa2f9e4975d28c5609e44163ad0a433ff6eb5fb0b321aeb0923dd43

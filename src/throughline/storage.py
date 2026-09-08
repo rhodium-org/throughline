@@ -22,6 +22,17 @@ from typing import NamedTuple
 
 import yaml
 
+# One loader for every YAML the Tool reads (SR-0193). PyYAML's C loader parses the
+# same files about nine times faster than the pure-Python one and constructs the
+# same result; both are *safe* loaders that build no Python objects (NFR-0022).
+# Chosen once here, so no module reads YAML by another route.
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+def _load_yaml(text: str):
+    """Parse one YAML document safely, through the loader chosen above."""
+    return yaml.load(text, Loader=_YAML_LOADER)
+
 from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import ratification_refusal
@@ -635,7 +646,7 @@ def _build_project(root: Path, config: dict, manifest_names: set[str]) -> Projec
     manifests = sorted(m for name in manifest_names for m in root.rglob(name))
     for manifest in manifests:
         reg_dir = manifest.parent
-        raw = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+        raw = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
         reg = Register.from_manifest(raw, path=reg_dir)
         if reg.prefix in project.registers:
             # A second register folder claims a prefix already loaded. Keeping the
@@ -649,7 +660,7 @@ def _build_project(root: Path, config: dict, manifest_names: set[str]) -> Projec
         for item_file in sorted(reg_dir.glob("*.yml")):
             if item_file.name in manifest_names:
                 continue
-            d = yaml.safe_load(item_file.read_text(encoding="utf-8")) or {}
+            d = _load_yaml(item_file.read_text(encoding="utf-8")) or {}
             item = Item.from_dict(d, path=item_file)
             item._register_prefix = reg.prefix
             for msg in item._load_errors:
@@ -750,7 +761,7 @@ def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | N
                 capture_output=True, text=True, check=True).stdout
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
             continue  # not present at ref (new file) or bad ref for this path
-        data = yaml.safe_load(blob) or {}
+        data = _load_yaml(blob) or {}
         status = data.get("status")
         if isinstance(status, str):
             out[item.uid] = status
@@ -787,7 +798,7 @@ def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | N
                 capture_output=True, text=True, check=True).stdout
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
             continue
-        data = yaml.safe_load(blob) or {}
+        data = _load_yaml(blob) or {}
         uid, status = data.get("uid"), data.get("status")
         if isinstance(uid, str) and isinstance(status, str):
             out.setdefault(uid, status)
