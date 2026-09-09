@@ -161,18 +161,16 @@ Then verify rather than assume; every path must be your checkout, never
 python -c "import throughline as m; print(m.__file__)"
 ```
 
-For the CLIs you use day to day, pipx needs the same treatment. Install the
-development chain under a suffix, so the plain names stay free for the published
-release you gate against — the doctor asks only that *some* command run your tree,
-not that a particular one does. Two traps here both fail *silently*:
+For the CLIs you use day to day, pipx needs the same treatment — with three traps
+that all fail *silently*:
 
 ```sh
-pipx install --suffix=-local --editable ./throughline
-pipx install --suffix=-local --editable ./throughline-compose
-pipx inject --force --editable throughline-compose-local ./throughline
-pipx install --suffix=-local --editable ./throughline-ratify
-pipx inject --force --editable throughline-ratify-local ./throughline-compose
-pipx inject --force --editable throughline-ratify-local ./throughline   # core LAST
+pipx install --editable ./throughline
+pipx install --editable ./throughline-compose
+pipx inject --force --editable throughline-compose ./throughline
+pipx install --editable ./throughline-ratify
+pipx inject --force --editable throughline-ratify ./throughline-compose
+pipx inject --force --editable throughline-ratify ./throughline   # core LAST
 ```
 
 - **Inject the core last.** Injecting a dependent afterwards re-resolves its
@@ -180,9 +178,14 @@ pipx inject --force --editable throughline-ratify-local ./throughline   # core L
 - **`pipx install --force --editable` does not convert an existing venv.** It
   reports success while leaving the published copy in place. `pipx uninstall` first.
 - **An editable install's version label is written once, at install time.** The
-  `.pth` keeps the *code* live, but `.dist-info` never refreshes, so `tl-local
-  --version` can name a release you have long since moved past. The label is not
-  evidence; reinstall to resync it.
+  `.pth` keeps the *code* live, but `.dist-info` never refreshes, so `--version`
+  can name a release you have long since moved past. The label is not evidence of
+  what runs; reinstall to resync it.
+
+If you also keep a published build to hand — to check a graph against a release
+rather than against your tree — install it under any `pipx --suffix` you like. The
+doctor discovers the extra names off `PATH` and asks only that *some* command run
+your working tree, not that a particular one does.
 
 Because throughline manages its own requirements, changes here follow the same
 IDD discipline: ground the change in an `idd/` item (create it and get it ratified

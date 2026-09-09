@@ -148,6 +148,7 @@ def test_a_cli_in_its_own_venv_is_inspected_not_skipped(tmp_path, monkeypatch):
     script = _fake_cli_venv(tmp_path, "pipx-tl")
     monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
     monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor, "_toolchain_clis", lambda: ["tl"])
     monkeypatch.setattr(doctor.shutil, "which", lambda _c: str(script))
     monkeypatch.setattr(Path, "is_file", lambda self: self.name == "pyproject.toml")
     monkeypatch.setattr(
@@ -177,6 +178,7 @@ def test_a_published_plain_name_passes_when_a_suffixed_one_runs_the_tree(
     local = _fake_cli_venv(tmp_path, "pipx-tl-local")
     monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
     monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor, "_toolchain_clis", lambda: ["tl", "tl-local"])
     monkeypatch.setattr(
         doctor.shutil,
         "which",
@@ -205,6 +207,7 @@ def test_no_command_runs_the_tree_is_the_only_failure(tmp_path, monkeypatch):
     local = _fake_cli_venv(tmp_path, "pipx-tl-local")
     monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
     monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor, "_toolchain_clis", lambda: ["tl", "tl-local"])
     monkeypatch.setattr(
         doctor.shutil,
         "which",
@@ -219,7 +222,7 @@ def test_no_command_runs_the_tree_is_the_only_failure(tmp_path, monkeypatch):
 
     assert not result.ok
     assert "No command on PATH runs your working tree" in result.remediation
-    assert "--suffix=-local" in result.remediation
+    assert "pipx --suffix" in result.remediation
 
 
 def test_the_current_environment_is_not_reported_twice(monkeypatch):
@@ -227,6 +230,7 @@ def test_the_current_environment_is_not_reported_twice(monkeypatch):
     would report one divergence as two."""
     monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
     monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor, "_toolchain_clis", lambda: ["tl"])
     monkeypatch.setattr(
         doctor.shutil, "which", lambda _c: str(Path(sys.prefix) / "bin" / "tl")
     )
@@ -236,6 +240,57 @@ def test_the_current_environment_is_not_reported_twice(monkeypatch):
 
     assert result.ok
     assert result.detail == "no separate CLI environments"
+
+
+def test_any_suffix_is_discovered_not_just_a_blessed_one(tmp_path, monkeypatch):
+    """Which suffix a second install uses is the contributor's choice.
+
+    Naming one here would publish a private convention as project policy and quietly
+    fail everyone who picked a different word, so the extra names are read off PATH.
+    A separator is required, or `tlsomething` would be mistaken for the toolchain.
+    """
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    for name in ("tl", "tl-wibble", "tl_dev", "tlsomething", "unrelated"):
+        (bindir / name).write_text("#!/bin/sh\n")
+    monkeypatch.setattr(doctor.os, "get_exec_path", lambda: [str(bindir)])
+
+    found = doctor._toolchain_clis()
+
+    assert "tl-wibble" in found, "an arbitrary suffix must be discovered"
+    assert "tl_dev" in found
+    assert "tlsomething" not in found, "a separator is required, not a bare prefix"
+    assert "unrelated" not in found
+
+
+def test_a_command_sharing_a_prefix_but_not_the_toolchain_is_ignored(
+    tmp_path, monkeypatch
+):
+    """Discovery is deliberately loose, so the environment has to be the filter —
+    otherwise an unrelated `tl-*` tool would be reported as toolchain divergence."""
+    ours = _fake_cli_venv(tmp_path, "pipx-tl")
+    stranger = _fake_cli_venv(tmp_path, "pipx-tl-unrelated")
+    monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
+    monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(doctor, "_toolchain_clis", lambda: ["tl", "tl-unrelated"])
+    monkeypatch.setattr(
+        doctor.shutil,
+        "which",
+        lambda c: str(stranger) if c == "tl-unrelated" else str(ours),
+    )
+    monkeypatch.setattr(Path, "is_file", lambda self: self.name == "pyproject.toml")
+    monkeypatch.setattr(
+        doctor,
+        "_kinds_in",
+        lambda p: {"throughline": ["absent", ""]}
+        if "pipx-tl-unrelated" in str(p)
+        else {"throughline": ["editable", str(doctor.REPO_ROOT)]},
+    )
+
+    result = doctor.check_cli_toolchain_chained()
+
+    assert result.ok, result.detail
+    assert "tl-unrelated" not in result.detail
 
 
 def test_probe_mode_reports_this_interpreter_as_json(capsys):

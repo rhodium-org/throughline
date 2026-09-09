@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -53,11 +54,6 @@ CLI_FOR = {
     "throughline-ratify": "tl-ratify",
 }
 
-# A package is often installed twice under different command names — the published
-# build under the plain name, for gating work against a release, and the working tree
-# under a suffixed one. UR-0021 asks that *some* command run the tree, not that a
-# particular one does, so every known name is inspected and each is reported.
-CLI_SUFFIXES = ("", "-local")
 
 # ANSI colour, disabled when not a TTY so logs stay clean.
 _TTY = sys.stdout.isatty()
@@ -264,6 +260,34 @@ def check_toolchain_chained() -> Result:
     return _chain_verdict("toolchain chained editable", _kinds_here())
 
 
+def _toolchain_clis() -> list[str]:
+    """Console scripts on PATH that could belong to the toolchain.
+
+    A package is often installed more than once under different command names — the
+    published build under the plain name, so work can be gated against a release, and
+    the working tree under a suffixed one. Which suffix is the contributor's own
+    choice, so it is discovered here rather than named: any command that extends a
+    known base name is a candidate, and the environment behind it decides whether it
+    counts. UR-0021 asks that *some* command run the tree, not that a particular one
+    does, so nothing in this file should know what the extra name is.
+    """
+    bases = set(CLI_FOR.values()) | set(TOOLCHAIN)
+    found: set[str] = set(bases)
+    for entry in os.get_exec_path():
+        try:
+            names = os.listdir(entry)
+        except OSError:
+            continue  # a PATH entry that does not exist or cannot be read
+        for name in names:
+            stem = name[:-4] if name.lower().endswith(".exe") else name
+            if any(
+                stem.startswith(b) and len(stem) > len(b) and stem[len(b)] in "-_."
+                for b in bases
+            ):
+                found.add(stem)
+    return sorted(found)
+
+
 def _venv_python_for(cli: str) -> Path | None:
     """The interpreter that actually runs ``cli``, following the console script."""
     exe = shutil.which(cli)
@@ -282,16 +306,17 @@ def _cli_source_remediation(missing: list[str]) -> str:
     return (
         "No command on PATH runs your working tree for:"
         f"\n      {', '.join(missing)}"
-        "\npipx keeps a venv per application, so the development chain needs one of "
-        "its own. Install it under a suffix so the plain names stay on the release, "
-        "and inject the core LAST — injecting a dependent afterwards silently pulls "
-        "the published core back over it:"
-        "\n      pipx install --suffix=-local --editable ./throughline"
-        "\n      pipx install --suffix=-local --editable ./throughline-compose"
-        "\n      pipx inject --force --editable throughline-compose-local ./throughline"
-        "\n      pipx install --suffix=-local --editable ./throughline-ratify"
-        "\n      pipx inject --force --editable throughline-ratify-local ./throughline-compose"
-        "\n      pipx inject --force --editable throughline-ratify-local ./throughline"
+        "\npipx keeps a venv per application, so the chain needs building there too — "
+        "and the core is injected LAST, because injecting a dependent afterwards "
+        "silently pulls the published core back over it:"
+        "\n      pipx install --editable ./throughline"
+        "\n      pipx install --editable ./throughline-compose"
+        "\n      pipx inject --force --editable throughline-compose ./throughline"
+        "\n      pipx install --editable ./throughline-ratify"
+        "\n      pipx inject --force --editable throughline-ratify ./throughline-compose"
+        "\n      pipx inject --force --editable throughline-ratify ./throughline"
+        "\nTo keep a published build alongside it, install that one under any "
+        "'pipx --suffix' you like; the extra names are discovered, not assumed."
         "\nNote that 'pipx install --force --editable' does NOT convert an existing "
         "venv — it reports success and leaves the published copy in place."
     )
@@ -322,30 +347,30 @@ def check_cli_toolchain_chained() -> Result:
     # doctor was invoked from, which is the confusion UR-0021 exists to prevent.
     from_source: set[str] = set()
     seen: set[Path] = set()
-    for dist_name in TOOLCHAIN:
-        base = CLI_FOR[dist_name]
-        for cli in (base + suffix for suffix in CLI_SUFFIXES):
-            python = _venv_python_for(cli)
-            if python is None:
-                continue  # not on PATH; the 'tl CLI on PATH' check covers the one we need
-            # Identify the environment by its venv root, never by resolving the
-            # interpreter: a venv's bin/python is a symlink to the base interpreter, so
-            # resolving it collapses every distinct venv onto the same binary and the
-            # separate environments this check exists to find all look like this one.
-            venv_root = python.parent.parent
-            if venv_root == Path(sys.prefix) or venv_root in seen:
-                continue  # already judged by the in-process check, or a shared venv
-            seen.add(venv_root)
-            kinds = _kinds_in(python)
-            if kinds is None:
-                detail.append(f"{cli}: could not inspect")
-                continue
-            detail.append(f"{cli} \u2192 {_chain_verdict(name, kinds).detail}")
-            from_source.update(
-                d
-                for d in _checked_out()
-                if (kinds.get(d) or ["absent"])[0] == "editable"
-            )
+    for cli in _toolchain_clis():
+        python = _venv_python_for(cli)
+        if python is None:
+            continue  # not on PATH; the 'tl CLI on PATH' check covers the one we need
+        # Identify the environment by its venv root, never by resolving the
+        # interpreter: a venv's bin/python is a symlink to the base interpreter, so
+        # resolving it collapses every distinct venv onto the same binary and the
+        # separate environments this check exists to find all look like this one.
+        venv_root = python.parent.parent
+        if venv_root == Path(sys.prefix) or venv_root in seen:
+            continue  # already judged by the in-process check, or a shared venv
+        seen.add(venv_root)
+        kinds = _kinds_in(python)
+        if kinds is None:
+            detail.append(f"{cli}: could not inspect")
+            continue
+        if all((kinds.get(d) or ["absent"])[0] == "absent" for d in TOOLCHAIN):
+            continue  # an unrelated command that merely shares a prefix
+        detail.append(f"{cli} \u2192 {_chain_verdict(name, kinds).detail}")
+        from_source.update(
+            d
+            for d in _checked_out()
+            if (kinds.get(d) or ["absent"])[0] == "editable"
+        )
 
     if not detail:
         return Result(name, True, detail="no separate CLI environments")
