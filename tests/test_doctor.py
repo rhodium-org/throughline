@@ -163,6 +163,65 @@ def test_a_cli_in_its_own_venv_is_inspected_not_skipped(tmp_path, monkeypatch):
     assert "does NOT convert an existing venv" in result.remediation
 
 
+def test_a_published_plain_name_passes_when_a_suffixed_one_runs_the_tree(
+    tmp_path, monkeypatch
+):
+    """The deliberate two-install arrangement (UR-0021).
+
+    `tl` is the release, kept on the plain name so estate work is gated against a
+    published build; `tl-local` runs the working tree. Nothing is standing in for
+    anything, so the check must report which command runs which and pass — failing
+    here would ban the arrangement outright.
+    """
+    released = _fake_cli_venv(tmp_path, "pipx-tl")
+    local = _fake_cli_venv(tmp_path, "pipx-tl-local")
+    monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
+    monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(
+        doctor.shutil,
+        "which",
+        lambda c: str(local) if c == "tl-local" else str(released),
+    )
+    monkeypatch.setattr(Path, "is_file", lambda self: self.name == "pyproject.toml")
+    monkeypatch.setattr(
+        doctor,
+        "_kinds_in",
+        lambda p: {"throughline": ["editable", str(doctor.REPO_ROOT)]}
+        if "pipx-tl-local" in str(p)
+        else {"throughline": ["published", "2.2.1"]},
+    )
+
+    result = doctor.check_cli_toolchain_chained()
+
+    assert result.ok, result.detail
+    assert "tl \u2192 throughline: published 2.2.1" in result.detail
+    assert "tl-local \u2192 throughline: editable" in result.detail
+
+
+def test_no_command_runs_the_tree_is_the_only_failure(tmp_path, monkeypatch):
+    """Both names published means the contributor's edits run nowhere — the failure
+    the check still exists to catch."""
+    released = _fake_cli_venv(tmp_path, "pipx-tl")
+    local = _fake_cli_venv(tmp_path, "pipx-tl-local")
+    monkeypatch.setattr(doctor, "TOOLCHAIN", ("throughline",))
+    monkeypatch.setattr(doctor, "CLI_FOR", {"throughline": "tl"})
+    monkeypatch.setattr(
+        doctor.shutil,
+        "which",
+        lambda c: str(local) if c == "tl-local" else str(released),
+    )
+    monkeypatch.setattr(Path, "is_file", lambda self: self.name == "pyproject.toml")
+    monkeypatch.setattr(
+        doctor, "_kinds_in", lambda _p: {"throughline": ["published", "2.2.1"]}
+    )
+
+    result = doctor.check_cli_toolchain_chained()
+
+    assert not result.ok
+    assert "No command on PATH runs your working tree" in result.remediation
+    assert "--suffix=-local" in result.remediation
+
+
 def test_the_current_environment_is_not_reported_twice(monkeypatch):
     """The in-process check already judges it; naming it again as a CLI environment
     would report one divergence as two."""
