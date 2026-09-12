@@ -4,19 +4,16 @@ status: implemented
 title: Only ratification writes the ratification record
 text: The Tool shall refuse to set or change an item's ratification attributes —
   the ratifier's name, any identifier recorded beside it, the stamp binding the record
-  to the content ratified, and the marking that a record was backfilled — through
-  any operation other than ratification itself. An operation that sets attributes
-  generally shall reject them by name, saying which command owns them.
-rationale: A ratification record is evidence that a named person took accountability,
-  and evidence is worth what it costs to forge. An operation that sets typed attributes
-  reaches the ratification attributes too unless it is stopped, so correcting a title
-  and signing a name nobody gave would be the same keystroke, and an agent could
-  write the one thing it must never write while doing something it was asked to do.
-  Refusing costs a genuine ratifier nothing, because re-ratifying is a single command
-  that already shows what changed before it asks; allowing it would quietly reduce
-  every ratification in the graph to the value of a comment. The refusal names the
-  attribute and the command that owns it, so the author learns the route rather than
-  only that the door is shut.
+  to the content ratified, the marking that a record was backfilled, and the revision
+  cached as holding the content the stamp was taken over — through any operation
+  other than the one that owns each. An operation that sets attributes generally
+  shall reject them by name, saying which command owns them.
+rationale: |-
+  A ratification record is evidence that a named person took accountability, and evidence is worth what it costs to forge. An operation that sets typed attributes reaches the ratification attributes too unless it is stopped, so correcting a title and signing a name nobody gave would be the same keystroke, and an agent could write the one thing it must never write while doing something it was asked to do. Refusing costs a genuine ratifier nothing, because re-ratifying is a single command that already shows what changed before it asks; allowing it would quietly reduce every ratification in the graph to the value of a comment. The refusal names the attribute and the command that owns it, so the author learns the route rather than only that the door is shut.
+
+  Owned per attribute rather than by ratification alone. Two parts of the record are written by migration and not by ratify — the backfill marking, and the cached revision, which cannot be known at sign-off because the content being signed is not yet committed — so a rule phrased as 'only ratification may write this' would have described neither correctly while the refusal it demands already named a command per attribute.
+
+  The cached revision is guarded although a planted value cannot survive use — SR-0166 re-verifies it against the stamp and discards it where it disagrees, so the worst a forged one achieves is to be thrown away. It is guarded anyway because the guard is not only a safety mechanism: a value on an accountability record written by something other than the verb that owns it is a false statement about how that record came to be, whether or not anything downstream is fooled by it. Rejected — leaving it open on the grounds that verification is sufficient, which would make this the one part of the record whose provenance the Tool does not defend, and would invite the next such field to be added the same way.
 normative: true
 links:
 - target: UR-0023
@@ -32,4 +29,4 @@ attrs:
   verification: test
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1e047262f19708ceab6ea848fe05d7a4ee55b44baebb3349fdac9cb2a30febb2
+  ratified_fingerprint: sha256:33f1cbe2775b00f0dc717f1691c2714b810df1827b7b55ecd9ff5465f5e241f2

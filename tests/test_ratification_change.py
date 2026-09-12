@@ -221,6 +221,16 @@ def test_migrate_caches_the_resolved_revision(graph):
     assert sha == _git(graph, "rev-parse", "HEAD").strip()
 
 
+def test_migrate_reports_that_it_wrote_to_those_records(graph, capsys):
+    """Migrate names every other thing it writes, so a silent write to an
+    accountability record would be the one change an operator cannot audit
+    afterwards. A count suffices here (SR-0166)."""
+    assert _cli(["-C", graph, "migrate"]) == 0
+    out = capsys.readouterr().out
+    assert "cached the ratified revision for 1 record(s)" in out
+    assert "nothing to migrate" not in out       # it did write something
+
+
 def test_the_revision_cache_is_idempotent(graph):
     """It runs on every migrate, so it must settle (SR-0166)."""
     assert _cli(["-C", graph, "migrate"]) == 0
