@@ -1,6 +1,6 @@
 uid: SR-0165
 type: system_requirement
-status: ratified
+status: implemented
 title: The change since ratification is resolved against the stamp, never approximated
 text: The Tool shall report, field by field, the difference between an item's current
   normative content and the content its ratification stamp was taken over. It shall

@@ -27,11 +27,13 @@ from .grounding import (
 )
 from .identity import (
     RATIFICATION_ATTRS,
+    RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
     IdentityError,
     default_ratifier,
 )
 from .inject import InjectError, has_markers, inject_text, referenced_uids
+from .ratification import change_since_ratification, render_change
 from .model import Link, Register
 from .schema import SchemaError
 from . import schema_ops
@@ -167,7 +169,7 @@ def cmd_migrate(args) -> int:
     elif result.repaired is None:
         print(f"already at format version {result.end}"
               + ("" if result.bound or result.declared or result.routed
-                 else " — nothing to migrate"))
+                 or result.cached else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -209,6 +211,14 @@ def cmd_migrate(args) -> int:
               "stands now, not to what the ratifier read:")
         for uid, stamp in result.bound.items():
             print(f"  {uid} = {stamp}")
+    # Revisions cached against a stamp (SR-0166). Counted rather than listed: this
+    # one records where an answer was already found rather than deciding anything,
+    # it is re-verified against the stamp before it is ever used, and a graph of
+    # any size would bury the parts above that an operator may need to correct.
+    if result.cached:
+        print(f"cached the ratified revision for {len(result.cached)} record(s) so "
+              "that what changed since a signature can be shown without walking "
+              "history each time")
     return OK
 
 
@@ -1791,6 +1801,9 @@ def cmd_ratify(args) -> int:
     # (UR-0029) — and before the identity prompt, so the reader knows what they are
     # being asked about while they are being asked. Non-interactive runs render
     # nothing: there is no reader to serve, and output nobody reads is noise in CI.
+    # Resolved once, before anything is shown, so the difference put in front of
+    # the ratifier and the gate below are the same answer (SR-0165).
+    change = change_since_ratification(project, item)
     interactive = _interactive()
     if interactive:
         _render_for_ratification(
@@ -1802,6 +1815,24 @@ def cmd_ratify(args) -> int:
                         default=default_ratifier(args.path))
     if by is None:
         return USAGE
+    # Re-ratifying is taking accountability afresh, so what moved since the last
+    # signature goes in the path of this one (SR-0167). Placed after the item and
+    # immediately before the stop, because that is where a reader is deciding.
+    # Unresolvable stops harder rather than passing quietly: letting the least
+    # knowable case through would make it the easiest one to sign, which is the
+    # failure this guards, arriving by the back door.
+    if change.stale:
+        if interactive:
+            for line in render_change(change,
+                                      ratifier=item.attrs.get(RATIFIED_BY_ATTR)):
+                print(line, file=sys.stderr)
+            print("", file=sys.stderr)
+        elif not args.accept_change:
+            return _err(
+                f"{uid} has changed since {item.attrs.get(RATIFIED_BY_ATTR, 'a human')} "
+                "ratified it and this session cannot show you what changed — pass "
+                "--accept-change to record a signature over a change accepted "
+                "unseen, or run this on a terminal to see it first")
     # The stop that makes the rendering more than decoration, asked whether or not
     # --by was supplied (SR-0195) — a fully specified command is exactly how a bulk
     # or habitual ratification is run, and display without a stop is a warning that
@@ -2244,6 +2275,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--by-id", default=None, metavar="SCHEME:VALUE",
                    help="optional stable identifier for that human, e.g. "
                         "github:octocat or email:ada@example.com")
+    # Its own flag, never a general assent (SR-0167): an automated re-ratification
+    # should say that a change was accepted unseen and be findable later, not
+    # inherit permission granted for something else.
+    s.add_argument("--accept-change", action="store_true",
+                   help="accept a change made since the last ratification without "
+                        "seeing it (non-interactive sessions only)")
     s.set_defaults(func=cmd_ratify)
 
     s = sub.add_parser("invalidate", help="falsify an item; cascade suspect")

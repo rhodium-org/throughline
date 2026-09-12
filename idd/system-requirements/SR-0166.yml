@@ -1,6 +1,6 @@
 uid: SR-0166
 type: system_requirement
-status: ratified
+status: implemented
 title: A resolved ratification revision is cached on the record and re-verified before
   reuse
 text: The Tool shall cache the revision it resolved for a ratification stamp on that

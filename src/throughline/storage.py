@@ -314,6 +314,49 @@ def _backfill_ratification_stamps(root: Path, *,
     return bound
 
 
+def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
+    """Cache, on each ratification record, the revision whose content reproduces
+    its stamp (SR-0166). Returns ``uid -> sha`` for every record populated.
+
+    Resolution is a walk back through an item's history, and the surfaces that
+    need it are interactive — a reviewer moving down a worklist would pay that
+    walk on every item they land on. Held on the record it is a single read.
+
+    Here rather than at ratify time, and here rather than in a script beside the
+    tool: the content being ratified is still uncommitted when ratify runs, so the
+    revision that holds it does not exist yet, and recording HEAD then would
+    anchor to the state *before* the change — the wrong side of it. Migration is
+    the first moment the answer can be found, and repairing records in place is
+    what it is for.
+
+    Only a record whose stamp still matches its current content is cached, because
+    that is the case where the revision is a fact rather than a guess: an item
+    that has since drifted will be resolved on demand and the answer then belongs
+    to whatever it has drifted to. A record already carrying a verifiable revision
+    is left alone, which is what makes this idempotent; one carrying a revision the
+    stamp disagrees with is re-resolved, so a hint left by rewritten history heals
+    rather than persisting.
+    """
+    from .ratification import REVISION_ATTR, resolve_revision
+
+    project = load_project(root)
+    schema = project.schema
+    cached: dict[str, str] = {}
+    for item in project.items():
+        if not item.attrs.get("ratified_fingerprint"):
+            continue
+        if fingerprint(item, schema) != item.attrs["ratified_fingerprint"]:
+            continue                      # drifted: resolved on demand, not here
+        before = item.attrs.get(REVISION_ATTR)
+        sha, _reason, was_cached = resolve_revision(project, item)
+        if sha is None or (was_cached and sha == before):
+            continue
+        item.attrs[REVISION_ATTR] = sha
+        write_item(item)
+        cached[item.uid] = sha
+    return cached
+
+
 def _backfill_vocabularies(root: Path) -> dict[str, list[str]]:
     """Declare each vocabulary the project leaves absent, as what it already
     relies on (SR-0185). Returns ``key -> members`` for each one written, and is
@@ -430,11 +473,13 @@ def _backfill_suspect_routes(root: Path) -> dict[str, str]:
 class RepairResult(NamedTuple):
     """What a major's repair wrote: the configuration bindings it backfilled
     (SR-0137), the routes to suspicion it restored (SR-0188), the vocabularies it
-    declared (SR-0185), and the ratification records it bound (SR-0152)."""
+    declared (SR-0185), the ratification records it bound (SR-0152), and the
+    ratified revisions it cached (SR-0166)."""
     config: dict[str, str] | None
     routes: dict[str, str]
     vocabularies: dict[str, list[str]]
     stamps: dict[str, str]
+    revisions: dict[str, str]
 
 
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
@@ -461,8 +506,12 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     roles = _backfill_status_roles(root)
     routes = _backfill_suspect_routes(root)
     vocabularies = _backfill_vocabularies(root)
-    return RepairResult(roles, routes, vocabularies,
-                        _backfill_ratification_stamps(root, index=index))
+    stamps = _backfill_ratification_stamps(root, index=index)
+    # Last, and after the stamps: a record bound a moment ago has a stamp to
+    # resolve against, so binding first is what lets one `tl migrate` both
+    # complete a record and cache its revision.
+    return RepairResult(roles, routes, vocabularies, stamps,
+                        _backfill_ratification_revisions(root))
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -529,6 +578,7 @@ class MigrationResult(NamedTuple):
     routed: dict[str, str]
     declared: dict[str, list[str]]
     bound: dict[str, str]
+    cached: dict[str, str]
 
 
 def migrate_project(path: str | Path, *,
@@ -575,9 +625,9 @@ def migrate_project(path: str | Path, *,
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
     result = (repair(root, index) if repair is not None
-              else RepairResult(None, {}, {}, {}))
+              else RepairResult(None, {}, {}, {}, {}))
     return MigrationResult(start, current, result.config, result.routes,
-                           result.vocabularies, result.stamps)
+                           result.vocabularies, result.stamps, result.revisions)
 
 
 # ------------------------------------------------------------------- YAML dump
