@@ -1,6 +1,6 @@
 uid: SR-0120
 type: system_requirement
-status: ratified
+status: implemented
 title: Guided interactive prompting for missing details
 text: 'When a command is run without a detail it requires, the CLI shall behave by
   the session it is in. On an interactive terminal (stdin and stderr are a TTY) it
@@ -10,17 +10,20 @@ text: 'When a command is run without a detail it requires, the CLI shall behave 
   to already know the flag grammar. When the session is not interactive — a pipe,
   a redirect, or CI — it shall not prompt; it shall fail fast with a usage error
   that names the missing detail and the flag that supplies it, so automation never
-  hangs waiting on input and never silently guesses. Prompting is an aid to discovery,
-  not a second way to configure the tool: every value obtainable through a prompt
-  shall remain settable by a flag, and a fully specified command shall never prompt.'
-rationale: A newcomer does not yet know the flag grammar, and forcing them to read
-  usage output for every argument is exactly the friction UR-0020 forbids; a tool
-  that asks clear questions turns the first uncertain command into a guided success.
-  But the same tool must stay a first-class automation citizen (UR-0016, SR-0060)
-  — a prompt that blocks in CI is a hang, and a default silently chosen for a piped
-  command is a wrong answer nobody agreed to. Keying the behaviour off the TTY, and
-  keeping every prompt backed by a flag, lets one code path serve both the guided
-  human and the scripted pipeline without either compromising the other.
+  hangs waiting on input and never silently guesses. Prompting for a value is an
+  aid to discovery, not a second way to configure the tool: every value obtainable
+  through a prompt shall remain settable by a flag, and a fully specified command
+  shall never be prompted for a value. Asking a user to confirm an act is not prompting
+  for a value and is not governed by that rule — where a command records an accountability
+  that cannot be withdrawn, it may require confirmation on an interactive terminal
+  however fully it was specified, and shall require none where the session is not
+  interactive.'
+rationale: |-
+  A newcomer does not yet know the flag grammar, and forcing them to read usage output for every argument is exactly the friction UR-0020 forbids; a tool that asks clear questions turns the first uncertain command into a guided success. But the same tool must stay a first-class automation citizen (UR-0016, SR-0060) — a prompt that blocks in CI is a hang, and a default silently chosen for a piped command is a wrong answer nobody agreed to. Keying the behaviour off the TTY, and keeping every prompt backed by a flag, lets one code path serve both the guided human and the scripted pipeline without either compromising the other.
+
+  The confirmation carve-out separates two things this requirement had treated as one. A prompt for a value is a way of configuring the command, and the rule against prompting a fully specified command protects the flag grammar from becoming optional. A confirmation configures nothing — it asks whether to proceed with an act the command already fully describes — so forbidding it on a fully specified command protects nothing and denies the tool its only means of putting a stop in front of something irreversible. SR-0167 already required such a confirmation and SR-0195 now does too, so the alternative was two requirements each deviating from this clause without saying so.
+
+  Scoped to an accountability that cannot be withdrawn rather than granted generally, because a confirmation asked for routinely is the dialogue everyone learns to dismiss, and the value of the stop is that it is rare. Left permissive (may) rather than mandatory, so what warrants a stop stays the judgement of the requirement that describes the act. Still forbidden without a terminal, which is the automation guarantee above and is not weakened here.
 normative: true
 links:
 - target: UR-0020
@@ -29,10 +32,14 @@ links:
   type: relates
 - target: SR-0060
   type: relates
+- target: SR-0167
+  type: relates
+- target: SR-0195
+  type: relates
 attrs:
   origin: hybrid
   priority: should
   verification: test
-  ratified_by: henry
-  ratified_fingerprint: sha256:904c8865e8d189d3b7e7f3f8e4b9b14b3e9a5da6bd3307e43459c1548e2e54db
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:dec309fa56b28bc724ff79d1b3c153cbab84f515eb7088bae8e84d5ffc567aaf
   ratified_backfilled: true

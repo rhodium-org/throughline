@@ -368,6 +368,26 @@ def test_empty_graph_fails_rather_than_passing_vacuously(tmp_path):
     assert _errors(findings)
     assert "register" in next(f.message for f in findings if f.rule == "empty-graph")
 
+def test_registers_with_no_items_warn_rather_than_fail(tmp_path):
+    """Registers laid down but nothing authored yet is a legitimate state, not a
+    misconfiguration (SR-0194): it warns, so `check` exits 0, and it fails only
+    under --strict, as every warning does. A project with no manifest at all is
+    still SR-0146's error, tested above."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    p = load_project(str(root))
+    assert next(p.items(), None) is None
+    findings = validate(p, strict=False)
+    severities = {f.rule: f.severity for f in findings}
+    assert severities.get("empty-registers") == "warning"
+    assert "empty-graph" not in severities
+    assert not _errors(findings)
+    assert "tl new" in next(f.message for f in findings if f.rule == "empty-registers")
+    assert _errors(validate(p, strict=True))
+    assert _cli(["-C", str(root), "check", "--quiet"]) == 0
+    assert _cli(["-C", str(root), "check", "--strict", "--quiet"]) == 1
+
 def test_unknown_top_level_key_is_reported(tmp_path):
     """A key that is neither a core field nor `attrs` is read by nothing, so a
     misplaced one fails silently — most damagingly `origin`, which at the top level
@@ -2906,9 +2926,138 @@ def test_ratify_wizard_prompts_for_ratifier(tmp_path, monkeypatch):
                  "--title", "feat", "--status", "proposed", "--ground", "INT-0001",
                  "--no-interactive"]) == 0
     # single type after picking is 'requirement'; but INT-0001 is also live, so the
-    # type stage runs: [intent, requirement] -> pick requirement(#2), item #1, then by.
-    _make_tty(monkeypatch, ["2", "1", "henry"])
+    # type stage runs: [intent, requirement] -> pick requirement(#2), item #1, then
+    # by, then the SR-0195 confirmation.
+    _make_tty(monkeypatch, ["2", "1", "henry", "y"])
     assert _cli(["-C", str(root), "ratify"]) == 0
+    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
+
+
+# ------------------------------------ ratify shows what is being signed (SR-0195)
+
+def _ratifiable(tmp_path):
+    """A scaffold holding one grounded, proposed requirement with both text and a
+    rationale — the shape a ratifier is actually asked to judge."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "Widget cache expires", "--status", "proposed",
+                 "--text", "The Tool shall evict a cached widget after an hour.",
+                 "--ground", "INT-0001", "--no-interactive"]) == 0
+    assert _cli(["-C", str(root), "amend", "FR-0001",
+                 "--rationale", "Stale widgets were served for days."]) == 0
+    return root
+
+
+def _tty_marking_prompts(monkeypatch, answers):
+    """An interactive terminal whose every prompt leaves a marker in the stream the
+    rendering also writes to, so a test can assert that the content came first
+    rather than merely that both appeared."""
+    import throughline.cli as _climod
+    monkeypatch.setattr(_climod, "_interactive", lambda: True)
+    supply = iter(answers)
+
+    def _input(*_a, **_k):
+        print("<<asked>>", file=sys.stderr)
+        return next(supply)
+
+    monkeypatch.setattr("builtins.input", _input)
+
+
+def test_ratify_renders_the_item_before_it_asks_anything(tmp_path, monkeypatch, capsys):
+    """The content a signature is being taken for goes in front of the signer, and
+    before any prompt (SR-0195, UR-0029) — text, rationale and each grounding target
+    named, not left as a UID to go and look up."""
+    root = _ratifiable(tmp_path)
+    _tty_marking_prompts(monkeypatch, ["henry", "y"])
+    assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 0
+    err = capsys.readouterr().err
+    for shown in ("Widget cache expires",
+                  "The Tool shall evict a cached widget after an hour.",
+                  "Stale widgets were served for days.",
+                  "derives_from INT-0001"):
+        assert shown in err, shown
+    assert "why" in err                      # the grounding target's own title
+    assert err.index("Stale widgets") < err.index("<<asked>>")
+
+
+def test_ratify_renders_and_confirms_even_when_by_was_supplied(tmp_path, monkeypatch,
+                                                               capsys):
+    """A fully specified command is exactly how a habitual ratification is run, so it
+    is the one that must not skip the content or the stop (SR-0195). SR-0120 permits
+    the prompt: confirming an act is not prompting for a value."""
+    root = _ratifiable(tmp_path)
+    _tty_marking_prompts(monkeypatch, ["y"])
+    assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "henry"]) == 0
+    err = capsys.readouterr().err
+    assert "The Tool shall evict a cached widget after an hour." in err
+    assert "<<asked>>" in err                # the confirmation still happened
+    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
+
+
+def test_declining_the_confirmation_writes_no_record(tmp_path, monkeypatch):
+    """The stop is a real stop: a declined confirmation records nothing. It is not an
+    error either — the user was asked and answered (SR-0195)."""
+    root = _ratifiable(tmp_path)
+    _make_tty(monkeypatch, ["henry", "n"])
+    assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 0
+    item = load_project(root).get("FR-0001")
+    assert "ratified_by" not in item.attrs
+    assert item.status == "proposed"
+
+
+def test_silence_declines_the_confirmation(tmp_path, monkeypatch):
+    """The default must never be the irreversible answer (SR-0195): an empty answer
+    declines rather than signing."""
+    root = _ratifiable(tmp_path)
+    _make_tty(monkeypatch, ["henry", ""])
+    assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 0
+    assert "ratified_by" not in load_project(root).get("FR-0001").attrs
+
+
+def test_ratify_refuses_before_rendering_or_asking(tmp_path, monkeypatch, capsys):
+    """An item that cannot be signed is refused before anything is rendered and
+    before anyone is asked to name themselves (SR-0195). The old order asked who was
+    taking accountability and only then discovered nothing could be signed."""
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
+                 "--title", "ungrounded", "--status", "proposed",
+                 "--no-interactive"]) == 0
+    _tty_marking_prompts(monkeypatch, [])    # any prompt would raise StopIteration
+    assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 2
+    err = capsys.readouterr().err
+    assert "not grounded to a root" in err
+    assert "<<asked>>" not in err            # nobody was asked
+    assert "ungrounded" not in err           # and the item was never rendered
+
+
+def test_an_already_ratified_item_is_refused_before_rendering(tmp_path, monkeypatch,
+                                                              capsys):
+    """The same ordering for the other refusal (SR-0195, SR-0148): rendering an item
+    and taking a signature, only to then say there was nothing to accept, is the bug
+    this ordering closes. ratify asks one precondition function, so the refusal shown
+    early is the refusal the write would have raised."""
+    root = _ratifiable(tmp_path)
+    assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "alice"]) == 0
+    capsys.readouterr()                      # discard the first, legitimate run
+    _tty_marking_prompts(monkeypatch, [])    # any prompt would raise StopIteration
+    assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 2
+    err = capsys.readouterr().err
+    assert "already ratified by alice" in err
+    assert "<<asked>>" not in err
+    assert "Widget cache expires" not in err
+    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "alice"
+
+
+def test_non_interactive_ratify_renders_nothing_and_confirms_nothing(tmp_path, capsys):
+    """Without a terminal there is no reader to serve and nothing that may block, so
+    neither the rendering nor the confirmation applies and SR-0120's automation
+    guarantee is untouched (SR-0195)."""
+    root = _ratifiable(tmp_path)
+    assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "henry"]) == 0
+    out = capsys.readouterr()
+    assert "The Tool shall evict a cached widget after an hour." not in out.err
+    assert "Stale widgets were served for days." not in out.err
+    assert "FR-0001 ratified by henry" in out.out
     assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
 
 

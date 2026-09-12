@@ -67,6 +67,33 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     return None
 
 
+def ratification_obstacle(schema, idx: Index, item: Item) -> str | None:
+    """Why :func:`ratify` would refuse ``item`` as the graph now stands, or ``None``
+    when it would proceed — the whole precondition set, asked without writing
+    anything (SR-0195).
+
+    ratify must refuse an item it cannot accept *before* a front end renders it or
+    asks anyone to confirm it, so "may this be signed?" has to be answerable ahead
+    of the act. :func:`ratify` answers it through this same function rather than
+    repeating the conditions, so the refusal a user is shown early is by
+    construction the refusal the write would have raised. It is a superset of
+    :func:`ratification_refusal`, which stays the narrower "must never be signed"
+    predicate the migration repair binds against (SR-0152) — an unstamped record
+    is exactly what that repair exists to complete, so it must not be told that an
+    already-ratified item has nothing to accept."""
+    refusal = ratification_refusal(schema, idx, item)
+    if refusal is not None:
+        return refusal
+    already = (item.status == schema.status_role("ratified")
+               if schema.ratify_moves_status
+               else item.attrs.get(RATIFIED_BY_ATTR) is not None)
+    if already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema):
+        return (f"{item.uid} is already ratified by "
+                f"{item.attrs.get('ratified_by', 'a human')} and its content has "
+                "not changed since — there is nothing to accept")
+    return None
+
+
 def ratify(project, uid: str, by: str, *, index: Index | None = None,
            by_id: str | None = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
@@ -86,26 +113,15 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
     idx = index if index is not None else Index.build(project)
-    refusal = ratification_refusal(schema, idx, item)
-    if refusal is not None:
-        raise GroundingError(refusal)
-    # Ratifying an already-ratified item whose content has not moved accepts
-    # nothing, and would replace the record of who accepted it leaving no trace
-    # that it changed (SR-0148). An item ratified before the stamp existed has
-    # none to compare against, so that first call is allowed through and stamps it.
+    # Every reason this may be refused, including that an already-ratified item
+    # whose content has not moved accepts nothing and would replace the record of
+    # who accepted it leaving no trace that it changed (SR-0148). An item ratified
+    # before the stamp existed has none to compare against, so that first call is
+    # allowed through and stamps it.
+    obstacle = ratification_obstacle(schema, idx, item)
+    if obstacle is not None:
+        raise GroundingError(obstacle)
     current = fingerprint(item, schema)
-    # "Already ratified" is read from whatever this project uses as the durable
-    # proof (SR-0172). Where ratification advances the item, that is the status, as
-    # it always has been. Where it does not, the status says nothing about sign-off
-    # and the record itself is the only honest witness.
-    already = (item.status == schema.status_role("ratified")
-               if schema.ratify_moves_status
-               else item.attrs.get(RATIFIED_BY_ATTR) is not None)
-    if already and item.attrs.get("ratified_fingerprint") == current:
-        raise GroundingError(
-            f"{uid} is already ratified by "
-            f"{item.attrs.get('ratified_by', 'a human')} and its content has not "
-            "changed since — there is nothing to accept")
     # Advancing is the default, and is transition-validated — an item that cannot
     # legally reach the ratified status is refused rather than moved illegally. A
     # project that binds the ratified role to a workflow state turns this off, and

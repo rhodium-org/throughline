@@ -1,0 +1,32 @@
+uid: UR-0029
+type: user_requirement
+status: ratified
+title: Ratification shows the ratifier what they are accepting
+text: Where the Tool asks a human to ratify an item, it shall first show that human
+  the item's content — what it obliges, the reasoning recorded with it, and the grounding
+  that justifies it — from the same command that is asking for the signature, so
+  that no ratification record is written for content its signer was never shown.
+rationale: |-
+  UR-0023 obliges a human to ratify; it does not oblige the tool to show them what they are ratifying. Today the whole interaction is a prompt for the signer's name and a line confirming the signature, so the cheapest action at the moment accountability is asked for is to sign something unread. UR-0028 already accepts this argument for the harder case, where the item moved after its stamp — that is the refinement and this is the base case, and accepting it there but not here leaves a first signature weaker than a second.
+
+  Who pays — the person ratifying, in screen space and in the seconds it takes to read, at every ratification including a bulk one. A script pays nothing, because a non-interactive run has no reader to serve. That is the price of a signature that means something; a ratified_by naming someone who never saw the item is exactly the false accountability record this tool exists to prevent.
+
+  Says content rather than normative content, deliberately. Normative content is this graph's term of art for what the fingerprint covers — text, type, the normative attributes — and it excludes the rationale. The rationale is the why, which is most of what a ratifier is being asked to judge, so the obligation is stated over the item as a reader meets it and not over the digest.
+
+  Rejected — telling the ratifier to run the inspection command first. Two commands make the second one optional, and the person who would skip it is the person this exists for. Rejected — widening the item-picker line, which serves only the path where no UID was given and carries neither rationale nor grounding.
+
+  Binds every surface that asks for a signature, and only one of them answers here. A user ratifies blind in whichever of the core CLI, a composing consumer or a review cockpit omits the content, but those last two are separate graphs in separate repositories, so this graph can carry only the core CLI's mechanism. The gap is stated rather than hidden by narrowing the obligation to the one surface that can close it.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0028
+  type: relates
+- target: UR-0023
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bec35c7aec3ac66ff2165d6fa4e14714082464d02661791b5351c593ad080d9b

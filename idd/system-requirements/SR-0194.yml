@@ -1,0 +1,35 @@
+uid: SR-0194
+type: system_requirement
+status: ratified
+title: A graph whose registers hold no items warns rather than fails
+text: When a check run finds at least one register manifest but discovers no items,
+  the Tool shall report a named finding at warning severity, distinct from the missing-manifest
+  finding, saying that nothing was validated and directing the reader to the command
+  that authors an item. Under --strict the warning is an error, as every warning
+  is, so a CI gate on an empty graph still fails. The finding shall be suppressible
+  through the standard rule-severity configuration.
+rationale: 'A graph that has been laid down — its registers decided, none yet authored
+  — is a legitimate state, not a misconfiguration: it is where a project stands between
+  choosing its registers and writing its first item, and where the shaping skill
+  in throughline-skills hands a graph to a human before any item exists. SR-0146
+  treated it as the same fault as a missing manifest, so a freshly laid-down graph
+  could not check green without first authoring something into it, which pushes a
+  decision about content into a step that is only about structure. Rejected: keeping
+  one rule and lowering its severity, because a missing manifest really is a misconfiguration
+  and must stay an error; and a project-level severity override, because it would
+  have to be copied into every new graph and would silence the missing-manifest case
+  with it. Verified by test: a --bare project with one register and no items reports
+  empty-registers at warning severity and check exits 0, and exits 1 under --strict;
+  a project with no manifest still reports empty-graph at error severity.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0146
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:977f4807b2da36f7ac7a53a6cfd5bc91e411b8ac9aebe23702c354862558e630
