@@ -41,6 +41,14 @@ RATIFICATION_ATTRS = {
     # Written only by the format migration that binds a pre-stamp record, and
     # marked as attesting to content the ratifier never read (SR-0152).
     "ratified_backfilled": "migrate",
+    # The revision whose content reproduces the stamp, cached so that what changed
+    # since a signature can be shown without walking history (SR-0166). Migration
+    # writes it, because when ratify runs the content being signed is not yet
+    # committed. Guarded here like the rest of the record: it is re-verified
+    # against the stamp before it is ever used, so a planted value cannot produce
+    # a false difference — but a hand-written one would still be a claim about an
+    # accountability record made by something other than the verb that owns it.
+    "ratified_revision": "migrate",
 }
 
 # A scheme-qualified identifier: 'github:octocat', 'email:ada@example.com'. The

@@ -1,6 +1,6 @@
 uid: SR-0167
 type: system_requirement
-status: ratified
+status: implemented
 title: Re-ratifying a stale item shows the change and requires confirmation
 text: Where ratify is asked to accept an item reported stale, the Tool shall show
   what changed since its stamp and require the ratifier to confirm before the signature
