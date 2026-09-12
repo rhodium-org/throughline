@@ -1,0 +1,39 @@
+uid: SR-0195
+type: system_requirement
+status: implemented
+title: Ratify renders the item before it asks who is signing
+text: On an interactive terminal, ratify shall render the target item — its UID,
+  type, status, title, text, rationale, normative attributes, and each grounding
+  link with its target's title — and shall then require the ratifier to confirm before
+  the record is written, whether or not the ratifier was named on the command line.
+  It shall refuse an item it cannot ratify before it renders or asks anything, rather
+  than after. Where there is no interactive terminal it shall neither render nor
+  confirm, and the non-interactive rules already governing ratify stand.
+rationale: |-
+  Rendering before the signature, not after it and not on request, is the only placement that reaches the person who would not go looking — the same reasoning SR-0167 applies to a stale item, applied to every item. SR-0121 is not this mechanism and is not extended to be — its picker lists UID, status and title so a user recognises an item, which is recall and not judgement, and it does not run at all when a UID was given.
+
+  Rendering and confirming both apply whether or not --by was supplied. Hanging either off the identity prompt would make a fully specified command the one that shows nothing and asks nothing, and that command is exactly how a bulk or habitual ratification is run — the case this requirement exists for. Display without a stop is a warning that scrolled past, which is the failure SR-0167 rejects, so the confirmation is what makes the rendering more than decoration.
+
+  This needs SR-0120 to say that confirming an act is not the same as prompting for a value, because a confirmation on a fully specified command is otherwise forbidden there. The carve-out belongs in SR-0120 and not here — SR-0167 already requires such a confirmation and would otherwise deviate from the same clause unstated.
+
+  The eligibility check moves ahead of everything else because the present order asks who is taking accountability and only then discovers that nothing can be signed. An ungrounded item is refused after the ratifier has already named themselves, which teaches that the prompt is a formality.
+
+  Without a terminal there is no reader to serve and nothing that may block, so neither the rendering nor the confirmation applies and SR-0120's fail-fast rule is untouched.
+
+  Verified by test — a grounded proposed item ratified on a pty emits its text, rationale and each grounding target, then refuses to write until confirmed, and does both again when --by names the ratifier; declining the confirmation writes no record; an ungrounded item is refused with nothing rendered and nothing asked; the same runs with no terminal emit neither and confirm nothing.
+normative: true
+links:
+- target: UR-0029
+  type: implements
+- target: SR-0167
+  type: relates
+- target: SR-0121
+  type: relates
+- target: SR-0120
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:1b6058eadc4b27e03e3dda034de7c1700f038fae022884ef7f390ae0c710a11e

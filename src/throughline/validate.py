@@ -42,6 +42,7 @@ _DEFAULT_SEVERITY = {
     "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
     "malformed-link": ERROR,
     "schema": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
+    "empty-registers": WARNING,
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
     "namespace-unresolved": ERROR,
     "grounding-cycle": ERROR, "orphan": ERROR, "unserved-root": ERROR,
@@ -142,21 +143,25 @@ def validate(project, strict: bool = False,
             f"the route, or `tl schema transition allow {status} {suspect}` "
             "adds this one")
 
-    # A run that discovered nothing is not a sound graph (SR-0146). Items live only
-    # beneath a register manifest, so a project whose manifests are missing, misnamed
-    # or unmigrated loads zero items — and every rule below then passes vacuously,
-    # reporting "sound" while nothing at all was validated.
+    # A run that discovered nothing validated nothing. Two causes, two rules:
+    # no register manifest at all is a misconfiguration — manifests missing,
+    # misnamed or unmigrated — and every rule below would pass vacuously,
+    # reporting "sound" while nothing was validated, so it is an error
+    # (SR-0146). Registers that exist but hold no items are the state a graph
+    # is in between choosing its registers and authoring its first item, so
+    # that is a warning, which --strict still raises to an error (SR-0194).
     if next(project.items(), None) is None:
         if not project.registers:
-            why = ("no register was found beneath this project — items are only "
-                   "loaded from a folder holding a .register.yml manifest; run "
-                   "`tl register new` to create one, or `tl migrate` if this "
-                   "project predates the current format")
+            add("empty-graph", "", str(project.path),
+                "no items were discovered, so this check validated nothing: no "
+                "register was found beneath this project — items are only loaded "
+                "from a folder holding a .register.yml manifest; run `tl register "
+                "new` to create one, or `tl migrate` if this project predates the "
+                "current format")
         else:
-            why = ("its registers hold no items — run `tl new <PREFIX>` to author "
-                   "one")
-        add("empty-graph", "", str(project.path),
-            f"no items were discovered, so this check validated nothing: {why}")
+            add("empty-registers", "", str(project.path),
+                "no items were discovered, so this check validated nothing: its "
+                "registers hold no items yet — run `tl new <PREFIX>` to author one")
 
     # Malformed structure tolerated at load time (SR-0134): a link entry that is
     # not a mapping or is missing its target would once have crashed the loader

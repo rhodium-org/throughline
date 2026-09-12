@@ -1,13 +1,13 @@
 uid: SR-0146
 type: system_requirement
 status: ratified
-title: A graph that discovers no items fails the gate
-text: When a check run discovers no items at all, the Tool shall report a named finding
-  at error severity rather than reporting the graph sound, naming the likely cause
-  — no register manifest was found beneath the project directory — and directing
-  the reader to the command that creates one. The finding shall be suppressible through
-  the standard rule-severity configuration, so a project deliberately starting from
-  nothing can silence it.
+title: A graph in which no register manifest is found fails the gate
+text: When a check run finds no register manifest beneath the project directory,
+  so that no item could have been discovered, the Tool shall report a named finding
+  at error severity rather than reporting the graph sound, naming that cause and
+  directing the reader to the command that creates a register. The finding shall
+  be suppressible through the standard rule-severity configuration. Registers that
+  exist but hold no items are a different state and are the subject of SR-0194.
 rationale: A gate whose green means nothing is worse than no gate at all. Items are
   discovered only beneath a register manifest, so a project whose manifests are missing,
   misnamed, or not yet migrated loads zero items and check --strict prints "graph
@@ -16,7 +16,9 @@ rationale: A gate whose green means nothing is worse than no gate at all. Items 
   every green check before the manifests were repaired had been meaningless. SR-0136
   already establishes the principle for the configuration side, that a gap which
   disables validation must surface at the gate rather than pass quietly; this applies
-  the same principle to the items themselves.
+  the same principle to the items themselves. Narrowed from every empty graph to
+  a missing manifest when SR-0194 gave registers-without-items their own, lesser
+  finding.
 normative: true
 links:
 - target: UR-0016
@@ -30,5 +32,5 @@ attrs:
   verification: test
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5069f995821de7c8722287b0f2af3cf318251ccf5eaf645c8a67ec1518b815b3
+  ratified_fingerprint: sha256:6909f7e7bee81fe98f5306c90ca8eedc4bdf5ab6973d7fa8610f85a558b483f6
   ratified_backfilled: true

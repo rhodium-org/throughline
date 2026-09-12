@@ -20,6 +20,7 @@ from .graph import Index
 from .grounding import (
     GroundingError,
     invalidate,
+    ratification_obstacle,
     ratify,
     reaches_root,
     set_status,
@@ -1695,6 +1696,75 @@ def cmd_subgraph(args) -> int:
     return OK
 
 
+def _render_for_ratification(project, item, *, emit) -> None:
+    """Put the item in front of the person about to sign it (SR-0195, UR-0029).
+
+    Not :func:`throughline.inject.render_item`: that renders Markdown for a
+    published document, and states every attribute alike. A ratifier is being asked
+    to judge, so this separates the normative attributes — the ones whose change
+    breaks the signature — from the rest, and names each grounding target so the
+    'why' reads as a sentence instead of a bare UID the reader has to go and look
+    up. Emitted on stderr like every other piece of guidance (SR-0120), leaving
+    stdout to the one line that says what was ratified.
+    """
+    schema = project.schema
+    emit("")
+    emit(f"{item.uid}  [{item.type}/{item.status}] {item.title}".rstrip())
+    for label, body in (("", item.text), ("rationale", item.rationale)):
+        if not body:
+            continue
+        emit("")
+        if label:
+            emit(f"{label}:")
+        for line in body.splitlines():
+            emit(f"  {line}" if line else "")
+    grounding = [ln for ln in (_ground_line(project, link, schema)
+                               for link in item.links) if ln]
+    emit("")
+    if grounding:
+        emit("grounded by:")
+        for line in grounding:
+            emit(f"  {line}")
+    else:
+        # A root needs no grounding and says so; anything else could not have got
+        # this far, since ratification_obstacle refuses an ungrounded item.
+        emit("grounded by: nothing — this is a root and justifies itself")
+    normative = [n for n in schema.normative_attrs(item.type) if n in item.attrs]
+    if normative:
+        emit("")
+        emit("normative attributes (a change here breaks this signature): "
+             + " · ".join(f"{n}={item.attrs[n]}" for n in normative))
+    emit("")
+
+
+def _ground_line(project, link, schema) -> str | None:
+    """One grounding link rendered with its target's title, or None for a link that
+    confers no grounding — those are context, not justification, and listing them
+    here would present a 'relates' neighbour as a reason the item exists."""
+    if link.type not in schema.ground_link_types:
+        return None
+    target = project.get(link.target)
+    if target is None:
+        return f"{link.type} {link.target}  (unresolved)"
+    return f"{link.type} {link.target}  [{target.type}/{target.status}] {target.title}".rstrip()
+
+
+def _confirm(question: str) -> bool:
+    """Ask a yes/no question on an interactive terminal, defaulting to no (SR-0195).
+
+    A confirmation is not a prompt for a value, so it has no flag behind it and
+    SR-0120's rule that a fully specified command is never prompted for one does
+    not reach it: the whole point is to stop a command that already says everything
+    it needs to say. Silence, EOF and anything unrecognised all decline — the
+    default must never be the irreversible answer.
+    """
+    try:
+        raw = input(f"{question} [y/N]: ").strip().lower()
+    except EOFError:
+        return False
+    return raw in ("y", "yes")
+
+
 def cmd_ratify(args) -> int:
     try:
         project = load_project(args.path)
@@ -1705,6 +1775,26 @@ def cmd_ratify(args) -> int:
     uid = _resolve_uid(project, args.uid, "ratify", "UID")
     if uid is None:
         return USAGE
+    item = project.get(uid)
+    if item is None:
+        return _err(f"{uid} does not exist")
+    # Refuse before rendering anything or asking anyone (SR-0195). The old order
+    # asked who was taking accountability and only then discovered that nothing
+    # could be signed, which taught that the prompt was a formality. The index is
+    # built once and handed to ratify, so the question asked here and the write
+    # below read the same graph.
+    idx = Index.build(project)
+    obstacle = ratification_obstacle(project.schema, idx, item)
+    if obstacle is not None:
+        return _err(obstacle)
+    # Ratifying is taking accountability, so the content comes before the signature
+    # (UR-0029) — and before the identity prompt, so the reader knows what they are
+    # being asked about while they are being asked. Non-interactive runs render
+    # nothing: there is no reader to serve, and output nobody reads is noise in CI.
+    interactive = _interactive()
+    if interactive:
+        _render_for_ratification(
+            project, item, emit=lambda line: print(line, file=sys.stderr))
     # Offer the identity this repository already signs commits with (SR-0156). It
     # is only ever a default: _resolve_value shows it and takes it on assent, and a
     # non-interactive session that names no ratifier is refused, not signed for.
@@ -1712,8 +1802,18 @@ def cmd_ratify(args) -> int:
                         default=default_ratifier(args.path))
     if by is None:
         return USAGE
+    # The stop that makes the rendering more than decoration, asked whether or not
+    # --by was supplied (SR-0195) — a fully specified command is exactly how a bulk
+    # or habitual ratification is run, and display without a stop is a warning that
+    # scrolled past. SR-0120 permits it: confirming an act is not prompting for a
+    # value. Declining writes nothing and is not an error; the user was asked and
+    # answered.
+    if interactive and not _confirm(f"ratify {uid} as {by}?"):
+        print("not ratified", file=sys.stderr)
+        return OK
     try:
-        item = ratify(project, uid, by=by, by_id=getattr(args, "by_id", None))
+        item = ratify(project, uid, by=by, index=idx,
+                      by_id=getattr(args, "by_id", None))
     except IdentityError as e:
         return _err(str(e))
     except (ProjectError, GroundingError, SchemaError) as e:

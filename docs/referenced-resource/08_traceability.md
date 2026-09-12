@@ -27,7 +27,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0013 | Baselines | SR-0036, SR-0090 |
 | UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093 |
 | UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137 |
-| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193 |
+| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194 |
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
 | UR-0018 | Migration path in | — |
 | UR-0019 | Requirements-to-code traceability | — |
@@ -40,6 +40,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0026 | Conflict-free parallel identity allocation | SR-0122, SR-0123, SR-0124, SR-0125, SR-0126 |
 | UR-0027 | Item identity is tamper-evident | SR-0127, SR-0128 |
 | UR-0028 | A stale item shows what changed before it asks to be re-ratified | SR-0165, SR-0166, SR-0167 |
+| UR-0029 | Ratification shows the ratifier what they are accepting | SR-0195 |
 <!-- tl:end -->
 
 ## Coverage check
