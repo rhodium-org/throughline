@@ -31,6 +31,7 @@ second copy of the rule, drifting from the first.
 from __future__ import annotations
 
 import difflib
+import re
 import subprocess
 import tomllib
 from dataclasses import dataclass, field
@@ -332,11 +333,166 @@ def _value(v: object) -> str:
     return str(v)
 
 
+# A sentence ends at . ! or ? followed by whitespace. Good enough for requirement
+# prose; an abbreviation such as "e.g." splits a sentence in two, which costs a
+# unit shown twice at worst, never a change hidden.
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+# Painted as git paints a diff on a terminal: a removed line red, an added line
+# green, and within a replaced sentence the words that moved in reverse video —
+# so a reworded eighty-word sentence is read at the word that changed, not
+# searched for it. 27 turns reverse off without dropping the line's colour.
+_RED, _GREEN, _RESET = "\033[31m", "\033[32m", "\033[0m"
+_EMPHASIS, _UNEMPHASIS = "\033[7m", "\033[27m"
+_PAINT = {"-": _RED, "+": _GREEN, " ": ""}
+
+
+def _units(value: str) -> list[str]:
+    """The pieces a prose value is compared and shown in: its lines where it has
+    them, else its sentences (SR-0198)."""
+    if "\n" in value:
+        return value.splitlines()
+    return _SENTENCE_END.split(value) if value else [""]
+
+
+def _prose(was: object, now: object) -> bool:
+    return (isinstance(was, str) and isinstance(now, str)
+            and any(ch.isspace() for ch in was + now))
+
+
+#: A word of a unit and whether it is among the words that moved.
+_Word = tuple[str, bool]
+
+
+def _plain(unit: str) -> list[_Word]:
+    return [(w, False) for w in unit.split()]
+
+
+def _word_marks(removed: str, added: str) -> tuple[list[_Word], list[_Word]]:
+    """Both sides of a replaced sentence with the words that differ marked."""
+    a, b = removed.split(), added.split()
+    keep_a, keep_b = [False] * len(a), [False] * len(b)
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(
+            None, a, b, autojunk=False).get_opcodes():
+        if op == "equal":
+            keep_a[i1:i2] = [True] * (i2 - i1)
+            keep_b[j1:j2] = [True] * (j2 - j1)
+    return ([(w, not k) for w, k in zip(a, keep_a)],
+            [(w, not k) for w, k in zip(b, keep_b)])
+
+
+# Below this share of words in common, a removed sentence and an added one are
+# not the same sentence reworded, and marking their differences would mark
+# nearly every word — the whole is clearer than the parts.
+_SAME_SENTENCE = 0.5
+
+
+def _pair_words(removed: list[str],
+                added: list[str]) -> tuple[list[list[_Word]], list[list[_Word]]]:
+    """The units of one hunk with the words that moved marked, wherever a removed
+    sentence has a successor it plainly became. Each removed sentence takes the
+    most similar added one still free; a sentence with no counterpart — deleted
+    outright, added outright, or rewritten beyond recognition — is shown whole."""
+    marks_r = [_plain(u) for u in removed]
+    marks_a = [_plain(u) for u in added]
+    free = list(range(len(added)))
+
+    def alike(r: str, s: str) -> float:
+        return difflib.SequenceMatcher(None, r.split(), s.split(),
+                                       autojunk=False).ratio()
+
+    for ri, r in enumerate(removed):
+        if not free:
+            break
+        best = max(free, key=lambda ai: alike(r, added[ai]))
+        if alike(r, added[best]) >= _SAME_SENTENCE:
+            marks_r[ri], marks_a[best] = _word_marks(r, added[best])
+            free.remove(best)
+    return marks_r, marks_a
+
+
+def _wrap(words: list[_Word], *, first: str, rest: str,
+          width: int) -> list[list[_Word]]:
+    """Greedy word wrap that never breaks a word, measured on the words alone
+    so that painting a line afterwards cannot lengthen it past ``width``."""
+    lines: list[list[_Word]] = []
+    line: list[_Word] = []
+    used = len(first)
+    for word, moved in words:
+        need = len(word) + (1 if line else 0)
+        if line and used + need > width:
+            lines.append(line)
+            line, used = [], len(rest)
+            need = len(word)
+        line.append((word, moved))
+        used += need
+    lines.append(line)
+    return lines
+
+
+def _render_prose(field: str, was: str, now: str, *, pad: str,
+                  columns: int, colour: bool) -> list[str]:
+    """One field's change as its kept, removed and added units, each wrapped to
+    the terminal (SR-0198). Kept units stay in place so the reader sees the
+    removed sentence above its replacement, inside the paragraph it belongs to.
+    Removed units precede added ones within a hunk, as they do in a git diff."""
+    lines = [f"{pad}{field}:"]
+    indent = pad * 2
+    width = max(columns, 40)
+
+    def painted(wrapped: list[_Word]) -> str:
+        # Consecutive moved words share one run, spaces included, so a reworded
+        # phrase reads as a phrase and not as a row of blinking words.
+        out: list[str] = []
+        open_run = False
+        for word, moved in wrapped:
+            sep = " " if out else ""
+            if colour and moved and not open_run:
+                out.append(f"{sep}{_EMPHASIS}{word}")
+                open_run = True
+            elif colour and moved:
+                out.append(f"{sep}{word}")
+            else:
+                if open_run:
+                    out.append(_UNEMPHASIS)
+                    open_run = False
+                out.append(f"{sep}{word}")
+        if open_run:
+            out.append(_UNEMPHASIS)
+        return "".join(out)
+
+    def emit(mark: str, words: list[_Word]) -> None:
+        first, rest = f"{indent}{mark} ", f"{indent}  "
+        paint = _PAINT[mark] if colour else ""
+        for n, wrapped in enumerate(_wrap(words, first=first, rest=rest,
+                                          width=width)):
+            head = first if n == 0 else rest
+            line = f"{head}{painted(wrapped)}".rstrip()
+            lines.append(f"{paint}{line}{_RESET}" if paint else line)
+
+    a, b = _units(was), _units(now)
+    matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            for unit in a[i1:i2]:
+                emit(" ", _plain(unit))
+            continue
+        marks_r, marks_a = _pair_words(a[i1:i2], b[j1:j2])
+        for words in marks_r:
+            emit("-", words)
+        for words in marks_a:
+            emit("+", words)
+    return lines
+
+
 def render_change(change: RatificationChange, *, ratifier: str | None = None,
-                  width: int = 2) -> list[str]:
-    """The difference as lines of text, for a terminal. Kept apart from the
-    resolution above so that a caller wanting fields to lay out never has to take
-    formatted output back apart (SR-0165)."""
+                  width: int = 2, columns: int = 80,
+                  colour: bool = False) -> list[str]:
+    """The difference as lines of text, for a terminal ``columns`` wide, painted
+    with ANSI colour only when ``colour`` is asked for — the caller knows whether
+    a terminal is listening. Kept apart from the resolution above so that a caller
+    wanting fields to lay out never has to take formatted output back apart
+    (SR-0165)."""
     pad = " " * width
     who = f" by {ratifier}" if ratifier else ""
     if change.outcome == UNRATIFIED:
@@ -354,13 +510,9 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
              f"(stamp {change.stamp}, ratified content at {change.revision[:9]}"
              f"{', cached' if change.cached else ''}):"]
     for c in change.changes:
-        if c.multiline:
-            lines.append(f"{pad}{c.field}:")
-            was = _value(c.was).splitlines() or [""]
-            now = _value(c.now).splitlines() or [""]
-            diff = list(difflib.unified_diff(was, now, lineterm="", n=1))
-            for ln in diff[2:] if len(diff) > 2 else diff:
-                lines.append(f"{pad}{pad}{ln}")
+        if _prose(c.was, c.now):
+            lines.extend(_render_prose(c.field, c.was, c.now, pad=pad,
+                                       columns=columns, colour=colour))
         else:
             lines.append(f"{pad}{c.field}: was {_value(c.was)!r}, "
                          f"now {_value(c.now)!r}")

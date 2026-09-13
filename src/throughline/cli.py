@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -1823,8 +1825,12 @@ def cmd_ratify(args) -> int:
     # failure this guards, arriving by the back door.
     if change.stale:
         if interactive:
-            for line in render_change(change,
-                                      ratifier=item.attrs.get(RATIFIED_BY_ATTR)):
+            # Painted as git would paint it: colour on a terminal, none when the
+            # reader has asked for none (NO_COLOR, https://no-color.org).
+            for line in render_change(
+                    change, ratifier=item.attrs.get(RATIFIED_BY_ATTR),
+                    columns=shutil.get_terminal_size((80, 24)).columns,
+                    colour=not os.environ.get("NO_COLOR")):
                 print(line, file=sys.stderr)
             print("", file=sys.stderr)
         elif not args.accept_change:
