@@ -7,6 +7,7 @@ revision that reproduces the stamp, so a fake history would test nothing.
 """
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -209,6 +210,126 @@ def test_unresolvable_rendering_says_nobody_can_state_what_is_accepted(graph):
         change_since_ratification(project, project.get("REQ-0002")), ratifier="Ada"))
     assert "CANNOT BE SHOWN" in rendered
     assert "nobody can state what you would be accepting" in rendered
+
+
+# ------------------------------------------- showing a changed paragraph (SR-0198)
+
+PARAGRAPH = ("The Tool shall evict a cached widget after 3600 seconds. "
+             "It shall record the eviction in the audit log with the widget's key. "
+             "A widget evicted twice in one minute is a fault.")
+REWORDED = PARAGRAPH.replace("after 3600 seconds", "when it is an hour old")
+
+
+def _ratified_paragraph(graph) -> None:
+    assert _cli(["-C", graph, "new", "REQ", "--title", "Eviction",
+                 "--text", PARAGRAPH, "--ground", "INT-0001",
+                 "--ground-type", "implements", "--origin", "ai",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada Lovelace"]) == 0
+    _commit(graph, "ratified REQ-0002")
+    assert _cli(["-C", graph, "amend", "REQ-0002", "--text", REWORDED]) == 0
+    _commit(graph, "reworded REQ-0002")
+
+
+def test_a_changed_paragraph_is_shown_sentence_by_sentence(graph):
+    """The removed sentence sits above its replacement inside the paragraph, and
+    the sentences that stayed are shown once, unmarked (SR-0198)."""
+    _ratified_paragraph(graph)
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    lines = render_change(change, ratifier="Ada Lovelace", columns=72)
+    rendered = "\n".join(lines)
+
+    assert "was '" not in rendered and "now '" not in rendered
+    marks = [ln.lstrip()[0] for ln in lines[2:] if ln.strip()]
+    assert marks.count("-") == 1 and marks.count("+") == 1
+    minus = next(ln for ln in lines if ln.lstrip().startswith("- "))
+    plus = next(ln for ln in lines if ln.lstrip().startswith("+ "))
+    assert "3600 seconds" in minus
+    assert "an hour old" in plus
+    assert lines.index(minus) < lines.index(plus)
+    assert rendered.count("audit log") == 1            # a kept sentence, once
+    assert rendered.count("twice in one minute") == 1
+
+
+def test_the_paragraph_is_wrapped_to_the_terminal(graph):
+    """No line runs past the width the caller gave, and a wrapped sentence keeps
+    its mark on the first line only (SR-0198)."""
+    _ratified_paragraph(graph)
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    narrow = render_change(change, columns=48)[2:]
+    wide = render_change(change, columns=72)[2:]
+    assert all(len(ln) <= 48 for ln in narrow), narrow
+    assert all(len(ln) <= 72 for ln in wide), wide
+    assert len(narrow) > len(wide) > 4          # four units, some wrapped
+    marked = [ln for ln in narrow if ln.lstrip().startswith(("- ", "+ "))]
+    assert len(marked) == 2                      # a wrapped unit is marked once
+
+
+def test_a_short_value_still_reads_as_was_and_now(graph):
+    """Only prose is diffed; a token like a priority stays on one line (SR-0198)."""
+    _drift(graph)
+    project = load_project(graph)
+    rendered = "\n".join(render_change(
+        change_since_ratification(project, project.get("REQ-0001"))))
+    assert "attrs.priority: was 'should', now 'must'" in rendered
+    assert "- The Tool shall evict a cached widget after 3600 seconds." in rendered
+    assert "+ The Tool shall evict a cached widget after 900 seconds." in rendered
+
+
+def _marked(line: str) -> list[str]:
+    """The runs of a painted line shown in reverse video: the words that moved."""
+    return re.findall("\033\\[7m(.*?)\033\\[27m", line)
+
+
+def test_the_words_that_moved_are_marked_when_painted(graph):
+    """On a terminal the removed sentence is red, its replacement green, and the
+    words that differ between them stand out in reverse video; the words the two
+    sentences share are painted with the line, not marked (SR-0198)."""
+    _ratified_paragraph(graph)
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    lines = render_change(change, columns=200, colour=True)
+    minus = next(ln for ln in lines if "\033[31m" in ln)
+    plus = next(ln for ln in lines if "\033[32m" in ln)
+    assert minus.startswith("\033[31m") and minus.endswith("\033[0m")
+    assert plus.startswith("\033[32m") and plus.endswith("\033[0m")
+    assert _marked(minus) == ["after 3600 seconds."]   # one run, spaces included
+    assert _marked(plus) == ["when it is an hour old."]
+    kept = [ln for ln in lines if "audit log" in ln]
+    assert kept and "\033[" not in kept[0]      # a kept sentence is not painted
+
+
+def test_no_escape_codes_unless_colour_is_asked_for(graph):
+    """A pipe, a log, or a reader who set NO_COLOR sees the marks alone (SR-0198)."""
+    _ratified_paragraph(graph)
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    assert not any("\033[" in ln for ln in render_change(change))
+
+
+def test_a_sentence_replaced_by_two_pairs_with_the_one_it_became(graph):
+    """Within a hunk each removed sentence is compared with the added one it most
+    resembles, so a sentence split in two still shows which words it lost; the
+    sentence that is wholly new carries no marks, and neither does a sentence
+    rewritten beyond recognition (SR-0198)."""
+    _ratified_paragraph(graph)
+    split = REWORDED.replace(
+        "It shall record the eviction in the audit log with the widget's key.",
+        "It shall record the eviction in the audit log. The record shall name "
+        "the widget's key.")
+    assert _cli(["-C", graph, "amend", "REQ-0002", "--text", split]) == 0
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    lines = render_change(change, columns=200, colour=True)
+    assert any("hour" in run for ln in lines for run in _marked(ln))  # the 1:1 pair
+    minus_audit = next(ln for ln in lines if "\033[31m" in ln and "audit" in ln)
+    assert _marked(minus_audit) == ["log with the widget's key."]   # the lost words
+    plus_audit = next(ln for ln in lines if "\033[32m" in ln and "audit" in ln)
+    assert _marked(plus_audit) == ["log."]                  # only the full stop
+    wholly_new = next(ln for ln in lines if "The record shall" in ln)
+    assert wholly_new.startswith("\033[32m") and "\033[7m" not in wholly_new
 
 
 # ------------------------------------------------------ the revision cache (SR-0166)
