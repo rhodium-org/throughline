@@ -1,6 +1,6 @@
 uid: SR-0198
 type: system_requirement
-status: ratified
+status: implemented
 title: A changed prose field is shown as a diff, coloured on a terminal, with the
   words that moved marked
 text: Where the change since ratification is rendered and a differing field holds
