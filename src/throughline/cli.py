@@ -625,6 +625,21 @@ def cmd_link(args) -> int:
         print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
               + (" (stamped)" if args.stamp else ""))
         return OK
+    # The same edge twice is never wanted: with --stamp it is the re-confirm
+    # command SR-0034 promises, refreshing the stored fingerprint in place;
+    # without it there is nothing to add, and a parallel duplicate would hide
+    # a stale stamp behind a fresh one.
+    same = [ln for ln in src.links if ln.target == dst_uid and ln.type == ltype]
+    if same:
+        if not args.stamp:
+            return _err(f"{src_uid} --{ltype}--> {dst_uid} already exists "
+                        f"(add --stamp to refresh its stamp, or --retype to "
+                        f"change its type)")
+        for ln in same:
+            ln.stamp = stamp
+        write_item(src, project.register_of(src.uid))
+        print(f"restamped {src_uid} --{ltype}--> {dst_uid}")
+        return OK
     src.links.append(Link(target=dst_uid, type=ltype, stamp=stamp))
     write_item(src, project.register_of(src.uid))
     print(f"linked {src_uid} --{ltype}--> {dst_uid}"
@@ -2143,7 +2158,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--type", default=None,
                    help="link type (omit on a terminal to choose one)")
     s.add_argument("--stamp", action="store_true",
-                   help="record target fingerprint (suspect tracking)")
+                   help="record the target's fingerprint, or refresh it on an edge that already exists (suspect tracking)")
     s.add_argument("--retype", action="store_true",
                    help="change the type of the existing SRC -> DST link in "
                         "place instead of adding a new one")
