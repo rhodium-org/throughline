@@ -146,7 +146,8 @@ transitions = [["draft","approved"], ["approved","implemented"], ["implemented",
 # Semantic status roles (SR-0131). The tool's operations act on statuses BY ROLE,
 # never by a value fixed in code: `tl new` births at 'initial', `tl ratify' writes
 # 'ratified', `tl invalidate` writes 'invalidated' (and reads 'invalidated' +
-# 'tombstone' as dead scope), `tl delete` writes 'tombstone'. Required from
+# 'tombstone' as dead scope), `tl withdraw` writes 'suspect', `tl delete` writes
+# 'tombstone'. Required from
 # format_version 3 up; `tl migrate` backfills the mapping below for a v2 project.
 [status.roles]
 initial = "draft"

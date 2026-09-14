@@ -29,6 +29,16 @@ from pathlib import Path
 RATIFIED_BY_ATTR = "ratified_by"
 RATIFIED_ID_ATTR = "ratified_id"
 
+# The withdrawal record (SR-0197): a signature that should no longer stand is
+# removed, and what replaces it says who removed it, why, and whose signature it
+# was. Held once — a later withdrawal overwrites an earlier one, as SR-0196 keeps
+# only the immediately preceding identity; the graph is plain text under version
+# control, so the succession is recoverable from history.
+WITHDRAWN_BY_ATTR = "withdrawn_by"
+WITHDRAWN_ID_ATTR = "withdrawn_id"
+WITHDRAWN_REASON_ATTR = "withdrawn_reason"
+WITHDRAWN_RATIFIER_ATTR = "withdrawn_ratifier"
+
 # The ratification record, and the one command entitled to write each part of it
 # (SR-0170). Any operation that sets attributes generally reaches these too unless
 # it is stopped, which would make correcting a title and signing a name nobody gave
@@ -54,6 +64,14 @@ RATIFICATION_ATTRS = {
     # record because a hand-written one would claim that a signature succeeded
     # another when none did.
     "ratified_supersedes": "ratify",
+    # Withdrawing a signature is as much a claim about people as giving one — who
+    # withdrew it, whose it was — so the record is guarded like the rest (SR-0197).
+    # Withdraw is also the verb that clears the fields above; a hand edit that
+    # removed a signature would leave nothing saying one was ever taken.
+    WITHDRAWN_BY_ATTR: "withdraw",
+    WITHDRAWN_ID_ATTR: "withdraw",
+    WITHDRAWN_REASON_ATTR: "withdraw",
+    WITHDRAWN_RATIFIER_ATTR: "withdraw",
 }
 
 # A scheme-qualified identifier: 'github:octocat', 'email:ada@example.com'. The

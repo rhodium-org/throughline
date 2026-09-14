@@ -1,6 +1,6 @@
 uid: SR-0197
 type: system_requirement
-status: ratified
+status: implemented
 title: Withdrawing a ratification returns the item for signature and records who
   withdrew it
 text: The Tool shall provide an operation that withdraws the ratification of each

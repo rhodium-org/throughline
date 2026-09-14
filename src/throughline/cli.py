@@ -26,11 +26,13 @@ from .grounding import (
     ratify,
     reaches_root,
     set_status,
+    withdraw,
 )
 from .identity import (
     RATIFICATION_ATTRS,
     RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
+    WITHDRAWN_RATIFIER_ATTR,
     IdentityError,
     default_ratifier,
 )
@@ -1357,6 +1359,7 @@ _CTX_COMMAND_USAGE = {
     "docs": "tl docs [FILE ...] [--at REF] [--check]",
     "status": "tl status <UID> <STATUS>",
     "invalidate": "tl invalidate <UID> [--reason …]",
+    "withdraw": "tl withdraw <UID> [<UID> …] --reason <why> --by <who>",
     "delete": "tl delete <UID>",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
@@ -1374,6 +1377,9 @@ _CTX_COMMAND_EMPHASIS = {
     "ratify": "a human accepts a proposed item; never run this for a human",
     "migrate": "idempotent repairs; extend this, never a script beside it",
     "invalidate": "retires an item and cascades suspicion — see grounding, below",
+    "withdraw": "removes a signature that should not stand (wrong name, signed in "
+                "error) without touching content or dependents; the item awaits a "
+                "human again — not `invalidate`, which says the item is false",
     "delete": "tombstones an item; the file stays, the item stops counting",
     "amend": "change content through the tool, never by opening the YAML",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
@@ -1901,6 +1907,52 @@ def cmd_invalidate(args) -> int:
     return OK
 
 
+def cmd_withdraw(args) -> int:
+    """Withdraw the ratification of one or more items (SR-0197). The signature no
+    longer stands; the item goes back to awaiting a human; who withdrew it, why,
+    and whose signature it was are recorded. Content and dependents are untouched —
+    this is not ``invalidate``."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uids = list(args.uids)
+    if not uids:
+        # One item through the picker on a terminal; a batch is named explicitly.
+        uid = _resolve_uid(project, None, "withdraw the ratification of", "UID")
+        if uid is None:
+            return USAGE
+        uids = [uid]
+    # The reason is required, not optional: removing a signature is the quieter
+    # attack on an accountability record, and a withdrawal that says why is what
+    # makes it as accountable as the signature it removes. Asked once for the run.
+    reason = _resolve_value(args.reason, "reason", "--reason")
+    if reason is None:
+        return USAGE
+    by = _resolve_value(args.by, "withdrawer", "--by",
+                        default=default_ratifier(args.path))
+    if by is None:
+        return USAGE
+    # Confirmed on a terminal for the same reason ratify is (SR-0195): the act is
+    # about people, and a fully specified command is how a batch is run.
+    if _interactive() and not _confirm(
+            f"withdraw the ratification of {', '.join(uids)} as {by}?"):
+        print("not withdrawn", file=sys.stderr)
+        return OK
+    try:
+        items = withdraw(project, uids, by=by, reason=reason,
+                         by_id=getattr(args, "by_id", None))
+    except IdentityError as e:
+        return _err(str(e))
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    for item in items:
+        write_item(item, project.register_of(item.uid))
+        print(f"{item.uid}: ratification by {item.attrs[WITHDRAWN_RATIFIER_ATTR]} "
+              f"withdrawn by {by}; now '{item.status}', awaiting ratification")
+    return OK
+
+
 def cmd_status(args) -> int:
     """The generic, transition-validated status verb (SR-0132). Every status
     move a project's [transitions] table permits is reachable through this
@@ -2304,6 +2356,26 @@ def build_parser() -> argparse.ArgumentParser:
                    help="UID to invalidate (omit on a terminal to pick one)")
     s.add_argument("--reason", default="")
     s.set_defaults(func=cmd_invalidate)
+
+    # Withdrawing a signature is its own verb, not a mode of ratify (SR-0197): it
+    # names no new accountable party and is the one act here anyone may perform,
+    # so it must not share a verb with the act that requires a named human.
+    s = sub.add_parser("withdraw",
+                       help="withdraw an item's ratification — the signature no "
+                            "longer stands; the item awaits a human again")
+    s.add_argument("uids", nargs="*", metavar="UID",
+                   help="item(s) whose ratification to withdraw (omit on a "
+                        "terminal to pick one)")
+    s.add_argument("--reason", default=None,
+                   help="why the signature should no longer stand (required; "
+                        "prompted for on a terminal)")
+    s.add_argument("--by", default=None,
+                   help="who is withdrawing it (omit on a terminal to be prompted; "
+                        "defaults to the identity this repository signs with)")
+    s.add_argument("--by-id", default=None, metavar="SCHEME:VALUE",
+                   help="optional stable identifier for the withdrawer, e.g. "
+                        "github:octocat or email:ada@example.com")
+    s.set_defaults(func=cmd_withdraw)
 
     s = sub.add_parser("status",
                        help="move an item to a status (transition-validated)")

@@ -278,6 +278,7 @@ tl docs [FILE ...] --check                      # CI gate: fail if any document 
 tl context                                     # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who> [--by-id <scheme:value>]   # a human takes accountability
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
+tl withdraw <UID> [<UID> …] --reason "…" --by <who>    # a signature no longer stands
 ```
 
 Omit `--by` on a terminal and you are offered the identity this repository already
@@ -291,6 +292,19 @@ grounding links, plus any the project declares under `[grounding]
 suspect_link_types`. A "see also" is not a justification, so nothing spreads through
 one unless you say it should. To see everything that merely *touches* an item —
 a wider question — use `tl blast`.
+
+`withdraw` is the opposite in effect, and exists because a signature can be wrong
+when the item is not: it names the wrong person, the signer has changed their mind,
+or a set of items was signed off in error. The signature is removed, the item moves
+to the status bound to the `suspect` role so `check` reports it as awaiting a human
+again, and who withdrew it, why, and whose signature it was are recorded on the
+item. Nothing the item says changes and nothing grounded on it moves. A reason is
+required. A withdrawal cannot ratify — whoever signs next reads the item again.
+
+A ratifier recorded under the wrong name, caught before the record was committed,
+needs no withdrawal: `tl ratify <UID> --by <who> --replacing` corrects it in place
+and records the name it replaced. A record that has been committed cannot be
+replaced by anyone — withdraw it and sign again.
 
 ### What `check` enforces
 

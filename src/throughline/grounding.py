@@ -18,8 +18,13 @@ from typing import NamedTuple
 from .fingerprint import fingerprint
 from .graph import Index
 from .identity import (
+    RATIFICATION_ATTRS,
     RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
+    WITHDRAWN_BY_ATTR,
+    WITHDRAWN_ID_ATTR,
+    WITHDRAWN_RATIFIER_ATTR,
+    WITHDRAWN_REASON_ATTR,
     normalise_identifier,
 )
 from .model import Item, Link
@@ -240,6 +245,75 @@ def invalidate(project, uid: str, reason: str = "") -> Invalidation:
         reasons.append(f"upstream {uid} invalidated")
         marked.append(aid)
     return Invalidation(affected, marked, refused)
+
+
+def withdraw(project, uids, *, by: str, reason: str,
+             by_id: str | None = None) -> list[Item]:
+    """Withdraw the ratification of each item in ``uids`` (SR-0197): the signature
+    no longer stands, the item returns to those awaiting a human, and the record
+    says who withdrew it, why, and whose signature it was.
+
+    Not invalidation, and deliberately its opposite in effect: ``tl invalidate``
+    says an item is false and cascades suspicion into everything grounded on it
+    (SR-0035); this says nothing about the item. Its words have not moved, so
+    nothing resting on them has lost its footing — content is untouched and no
+    dependent is restatused. The item moves to the status bound to the suspect
+    role (SR-0131), which every live status may reach (SR-0175) and which already
+    means what this needs: a human must look again.
+
+    Anyone may withdraw, because withdrawal takes nothing — the item cannot count
+    as ratified again until a real human accepts it — but the act is recorded, not
+    silent: stripping a colleague's sign-off and leaving an item that merely looks
+    unratified would be the quieter attack on an accountability record.
+
+    All or nothing: every item is checked before any is written, so a mistyped UID
+    in a batch is a failure the caller sees, never a half-applied run. Refused for
+    an item that carries no ratification, for an empty reason, and for a status the
+    project's lifecycle will not let move to suspect.
+    """
+    if not by or not by.strip():
+        raise GroundingError("a withdrawal must name who is withdrawing it")
+    if not reason or not reason.strip():
+        raise GroundingError("a withdrawal must state its reason — pass --reason")
+    identifier = normalise_identifier(by_id)          # IdentityError if malformed
+    schema = project.schema
+    suspect = schema.status_role("suspect")
+    items: list[Item] = []
+    seen: set[str] = set()
+    for uid in uids:
+        if uid in seen:
+            raise GroundingError(f"{uid} is named more than once")
+        seen.add(uid)
+        item = project.get(uid)
+        if item is None:
+            raise GroundingError(f"{uid} does not exist")
+        if not item.attrs.get(RATIFIED_BY_ATTR):
+            raise GroundingError(f"{uid} carries no ratification to withdraw")
+        if not schema.allows_transition(item.status, suspect):
+            raise GroundingError(
+                f"{uid}: status change '{item.status}' -> '{suspect}' is not an "
+                "allowed transition, so its ratification cannot be withdrawn")
+        items.append(item)
+    # The record the ratifying verbs own is cleared, and only that record: the
+    # withdrawn identity moves into the withdrawal record rather than vanishing,
+    # so the graph still shows that a signature was taken and then set aside.
+    cleared = [name for name, owner in RATIFICATION_ATTRS.items()
+               if owner != "withdraw"]
+    for item in items:
+        ratifier = item.attrs[RATIFIED_BY_ATTR]
+        for name in cleared:
+            item.attrs.pop(name, None)
+        item.attrs[WITHDRAWN_RATIFIER_ATTR] = ratifier
+        item.attrs[WITHDRAWN_BY_ATTR] = by
+        if identifier is not None:
+            item.attrs[WITHDRAWN_ID_ATTR] = identifier
+        else:
+            item.attrs.pop(WITHDRAWN_ID_ATTR, None)
+        item.attrs[WITHDRAWN_REASON_ATTR] = reason
+        set_status(schema, item, suspect)
+        item.attrs.setdefault("suspect_reasons", []).append(
+            f"ratification by {ratifier} withdrawn by {by}: {reason}")
+    return items
 
 
 def scout_ingest(project, report: dict) -> dict:

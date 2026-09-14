@@ -150,6 +150,7 @@ tl docs [FILE ...] --check                     # CI gate: fail if any document i
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect
+tl withdraw <UID> [<UID> …] --reason "…"      # a signature no longer stands; awaits a human again
 ```
 
 > `tl` and `throughline` are the same command — `tl` is the short alias, and
@@ -223,6 +224,10 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
   items: the two states that must never be signed off.
 - **invalidate** — falsify an assumption (or any node): it is rejected and every
   transitive dependent is marked `suspect` (its blast radius).
+- **withdraw** — set aside a signature that should no longer stand (wrong name,
+  signed off in error), one item or a batch. Content and dependents are untouched;
+  the item returns to awaiting a human, and who withdrew it, why, and whose
+  signature it was stay on record.
 
 ---
 
