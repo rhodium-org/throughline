@@ -1,0 +1,36 @@
+uid: UR-0030
+type: user_requirement
+status: ratified
+title: A ratification that records the wrong person can be corrected
+text: Where a ratification record names someone other than the person who took accountability
+  for the item, and that record has not yet been published to the project's history,
+  a user shall be able to replace it with a correct one through the Tool. A record
+  that has been published shall not be replaceable by any operation. A correction
+  shall name the identity it replaced, rather than presenting itself as the original
+  record.
+rationale: |-
+  A ratification record is a statement about a person, and the Tool could make that statement wrong and then refuse to correct it. SR-0148 declines a second signature over unchanged content, SR-0170 refuses the attributes to every other command, and between them a misrecorded ratifier had no supported fix at all — only tl invalidate, which falsifies an item that is not false, or a hand edit the format exists to make unnecessary. Observed, not hypothetical: on 2026-09-13 a ratification recorded a hand-typed variant of a name the same graph already held forty-five times, and it was recoverable only because the record had not been committed.
+
+  Scoped to an unpublished record, and that scope is the whole requirement rather than a caveat on it. The Tool does not authenticate anybody: the ratifier is a string the caller supplies, so any rule about who may replace a record is advice the Tool cannot enforce. A general power to replace would therefore let one person lift another's accountability off an item with a supported one-line command — and the graver harm is not the credit taken, it is the accountability removed, because an item that later proves wrong would no longer show who accepted it. Naming the replaced identity makes that auditable, which is not the same as preventing it.
+
+  An unpublished record is a different thing, and the difference is enforceable. It has not been shared, so it can only be the caller's own work of the last few minutes, and the version control this project is built on can be asked whether that is so. The line is therefore drawn where the Tool can actually hold it.
+
+  Who pays: nobody. A correction costs the person correcting a flag, and takes nothing from anyone else, because a record anyone else could have seen is out of reach.
+
+  Rejected — a command that edits ratified_by in place. The value is evidence of an act, so editing it without anyone performing the act again is the forgery SR-0170 closes.
+
+  Rejected — permitting replacement of a published record on the strength of the predecessor being named. That was this requirement's first form and it was wrong: it traded an invariant the Tool enforces for a policy it cannot, in a tool with no authentication.
+
+  Not addressed here: records already published under a wrong or inconsistent identity, of which this estate holds twenty-one written under a pre-SR-0156 default. Reaching those needs canonical identities declared per project, which is SR-0155 — considered and rejected as friction. They stay out of reach by that decision, not by oversight, and reopening them means reopening it.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0023
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:5002c027f54c4b5029ed9242903aded2293446ac9e391ee3aee3160c4bc75624

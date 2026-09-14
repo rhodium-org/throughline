@@ -15,6 +15,7 @@ from .fingerprint import fingerprint
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import reaches_root
+from .identity import WITHDRAWN_BY_ATTR, WITHDRAWN_RATIFIER_ATTR, WITHDRAWN_REASON_ATTR
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
 from .uid import UID_RE, collisions
@@ -295,7 +296,16 @@ def validate(project, strict: bool = False,
         if (origin in schema.ai_origins and not item.attrs.get("ratified_by")
                 and item.status not in schema.dead_statuses()):
             roles = schema.status_roles or {}
-            if item.status == roles.get("proposed"):
+            if item.attrs.get(WITHDRAWN_BY_ATTR):
+                # A withdrawn signature (SR-0197) is the one route out of the
+                # ratified record that names its own cause, so the finding says
+                # so rather than reading as an item that dodged the gate.
+                why = (f"had its ratification by "
+                       f"{item.attrs.get(WITHDRAWN_RATIFIER_ATTR, 'a human')} "
+                       f"withdrawn by {item.attrs[WITHDRAWN_BY_ATTR]} "
+                       f"({item.attrs.get(WITHDRAWN_REASON_ATTR, 'no reason recorded')})"
+                       " — awaiting human ratification again")
+            elif item.status == roles.get("proposed"):
                 why = "awaiting human ratification"
             elif item.status == roles.get("ratified"):
                 why = ("sits in the ratified status but names no ratifier — a status "

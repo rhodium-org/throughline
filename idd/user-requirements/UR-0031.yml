@@ -1,0 +1,36 @@
+uid: UR-0031
+type: user_requirement
+status: ratified
+title: A signature that should no longer stand can be withdrawn
+text: Where a signature recorded on an item should no longer stand — it names the
+  wrong person, the signer has withdrawn it, or a set of items was signed off in
+  error — a user shall be able to withdraw that signature, for one item or for a
+  set of them in a single act, without altering what any of those items say. A withdrawn
+  signature shall return its item to those awaiting ratification, and shall leave
+  on record who withdrew it, why, and whose signature it was.
+rationale: |-
+  UR-0030 gives a correction route only while a record is unpublished, because that is the only case the Tool can hold without authenticating anybody. That leaves every published record beyond reach, which is most of them, and this estate already holds twenty-one written under a pre-SR-0156 default. The gap is not that the Tool cannot change a published signature; it is that it should not — and the way out is not a stronger power to overwrite but a weaker one that asks a human to sign again.
+
+  Withdrawal separates two acts the Tool had fused. Saying an existing signature no longer stands is not the same as saying who signs instead, and only the second needs to be a claim about a person. Anyone may withdraw, because withdrawal takes nothing: the item returns to the queue and a real human must accept it before it counts again. Nobody can end up credited with work they did not accept, because a withdrawal cannot ratify.
+
+  Recorded rather than silent, and that is what stops the obvious abuse of this route. Stripping a colleague's sign-off without leaving who did it or why would be its own attack — quieter than overwriting, because the graph would simply show an unratified item. Naming the withdrawer, the reason, and the signature that was withdrawn makes the act as accountable as the signature it removes.
+
+  A set at once, because the case that motivated it is a set. Twenty-one records corrected one command at a time would make the honest route more tedious than a hand edit, and a tool whose supported path is the slowest teaches people to leave it.
+
+  Content is untouched, which is what distinguishes this from invalidation. The items are not wrong and nothing derived from them has lost its footing; only the signature is in question, so nothing downstream should move.
+
+  Who pays: whoever now has to re-ratify. That cost is the point rather than a side effect — a signature reinstated without anyone reading the item again would be the blind re-ratification UR-0028 exists to prevent.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0030
+  type: relates
+- target: UR-0023
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d359c85f41316975d166544171e1d8101f228699408ee06d247b9a17d2a20a1f

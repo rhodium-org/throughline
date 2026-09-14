@@ -1,0 +1,43 @@
+uid: SR-0196
+type: system_requirement
+status: implemented
+title: Ratify replaces a recorded signature when the caller says that is what they
+  are doing
+text: Ratify shall accept a signature over content that has not changed since it
+  was last ratified where, and only where, the caller states that they are replacing
+  the recorded ratifier and the record being replaced does not appear in the project's
+  committed history; in every other case it shall refuse as it does now. Whether
+  the record has been committed shall be settled by asking the project's version
+  control, never assumed. A record written this way shall carry the identity it replaced,
+  and that identity shall itself be part of the ratification record, writable by
+  no other command.
+rationale: |-
+  Two conditions, and the second is what makes the first safe. The explicit statement keeps SR-0148's refusal doing its work — a second signature over unchanged content accepts nothing, and letting one through by default would restore the silent overwrite that requirement closed. The committed-history test is what stops the statement being a licence: the Tool authenticates nobody, so a caller asserting 'I am correcting my own record' is unverifiable, and on its own would hand anyone a supported command for lifting a colleague's accountability off an item.
+
+  An uncommitted record is the one case where the assertion needs no trust. It has never been shared, so it is the caller's own work from the current session, and the question is answerable rather than assumed — which is why the requirement says to ask version control instead of inferring it from a timestamp or from the record looking fresh. That is the same discipline SR-0165 follows for the ratified content itself.
+
+  The replaced identity is still recorded, for the reader rather than as the safeguard. The safeguard is the scope; naming the predecessor is what keeps a correction from presenting itself as the original record, and satisfies SR-0148's condition that an accountability record never changes without the graph showing that it changed. The field is part of the ratification record, writable by no other command (SR-0170), for the same reason the name is.
+
+  Only the immediately preceding identity is held. The graph is plain text under version control (BN-0002), so succession is recoverable from history; the field exists to make replacement visible where the record is read.
+
+  Rejected — a distinct verb of its own, a re-ratify command beside ratify. Two commands for one act would let the rules drift apart, and the act is a ratification: the same refusals, the same identity handling, the same stamp.
+
+  Rejected — inferring the intent from the ratifier differing, which would make a correction indistinguishable from the mistake this guards: someone re-running a command with a wrong default and silently rewriting a record.
+
+  Verified by test — an uncommitted record is replaced only with the statement and refused without it; a committed record is refused with or without it; the accepted record names the identity it replaced and carries a fresh stamp; a signature over content that HAS moved behaves as it does today; and no other command can write the predecessor field.
+normative: true
+links:
+- target: UR-0030
+  type: implements
+- target: SR-0148
+  type: relates
+- target: SR-0170
+  type: relates
+- target: SR-0156
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:3341fe30b4c47a46a9cf3ed2377b4ce4e6597185594627555471047e2567939e

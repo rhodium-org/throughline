@@ -1,0 +1,50 @@
+uid: SR-0197
+type: system_requirement
+status: implemented
+title: Withdrawing a ratification returns the item for signature and records who
+  withdrew it
+text: The Tool shall provide an operation that withdraws the ratification of each
+  item it is given, accepting more than one item in a single run and requiring a
+  stated reason. For each item it shall record that reason, the identity of the person
+  withdrawing, and the identity the withdrawn record named; shall move the item to
+  the status the project binds to the suspect role, so that validation and any worklist
+  report it as awaiting a human again; and shall leave the item's content untouched
+  and its dependents unmoved. It shall refuse an item that carries no ratification
+  to withdraw. What it writes shall be part of the ratification record, writable
+  by no other command.
+rationale: |-
+  The suspect role rather than a status of its own, and rather than a move back to proposed. The shipped lifecycle permits ratified to reach suspect from anywhere and permits suspect to reach ratified again (SR-0175, SR-0150), so withdrawal works in an existing project without editing its transitions — whereas a return to proposed is not a legal move from ratified and would demand every project widen its table before it could correct a name. Suspect also already means what this needs it to mean: the footing has stopped holding and a human must look again. Resolved through the role and never a literal status (SR-0131), so a project that renamed its statuses is unaffected.
+
+  Distinguished from invalidation deliberately, because the two look alike and are opposite. tl invalidate says an item is false and cascades suspicion into everything grounded on it (SR-0035); this says nothing about the item at all. The words have not moved, so what rests on them has not lost its footing, and touching dependents would raise a graph-wide alarm over a misspelled name.
+
+  A reason is required, not optional. Withdrawal is the quieter attack on an accountability record: overwriting a signature at least leaves a signature, whereas stripping one leaves an item that merely looks unratified, and nothing to say a sign-off was ever taken. Recording the reason, the withdrawer and the identity withdrawn makes removing a signature as accountable as giving one, which is the only reason it is safe to let anyone do it.
+
+  Several items in one run, because the motivating case is a batch and a supported route slower than a hand edit is one people stop using. Requiring the reason once for the run is what keeps a batch honest rather than a prompt to dismiss.
+
+  Refuses an item with nothing to withdraw rather than passing quietly, so a mistyped UID in a batch is a failure the caller sees, not a no-op they read as success (the fail-fast rule the Tool applies to every other invalid input).
+
+  Rejected — clearing the record outright and leaving the item as though never ratified. That erases the evidence the record exists to hold: who accepted these words, and that somebody later decided their acceptance should not stand.
+
+  Rejected — folding this into ratify as another mode. Withdrawing is not ratifying; it names no new accountable party, and it is the one operation here that anyone may legitimately perform, so sharing a verb with the act that requires a named human would blur precisely the line SR-0196 was narrowed to hold.
+
+  Verified by test — a withdrawal moves each named item to the suspect role, records reason, withdrawer and the withdrawn identity, and leaves content and dependents unchanged; a batch withdraws every item named; an item with no ratification is refused; the item is then reported as awaiting ratification and can be ratified again; and no other command can write the fields it wrote.
+normative: true
+links:
+- target: UR-0031
+  type: implements
+- target: SR-0196
+  type: relates
+- target: SR-0148
+  type: relates
+- target: SR-0175
+  type: relates
+- target: SR-0170
+  type: relates
+- target: SR-0035
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:b854dcfd751da1c1323cfc51fe8e7f58acac8b10ec3ecb9ff06e808139f6e6b6
