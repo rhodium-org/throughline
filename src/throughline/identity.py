@@ -49,6 +49,11 @@ RATIFICATION_ATTRS = {
     # a false difference — but a hand-written one would still be a claim about an
     # accountability record made by something other than the verb that owns it.
     "ratified_revision": "migrate",
+    # The identity a correction replaced (SR-0196). Ratify writes it, because a
+    # correction is itself a ratification; it is guarded like the rest of the
+    # record because a hand-written one would claim that a signature succeeded
+    # another when none did.
+    "ratified_supersedes": "ratify",
 }
 
 # A scheme-qualified identifier: 'github:octocat', 'email:ada@example.com'. The

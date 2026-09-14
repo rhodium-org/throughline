@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .fingerprint import fingerprint
+from .identity import RATIFIED_BY_ATTR
 from .model import Item
 from .schema import Schema
 
@@ -48,6 +49,11 @@ from .schema import Schema
 REVISION_ATTR = "ratified_revision"
 
 STAMP_ATTR = "ratified_fingerprint"
+
+# The identity a corrected record replaced (SR-0196). Written only by ratify, and
+# only for a record that had not been published, so it never names a signature
+# anyone else could have seen.
+SUPERSEDED_ATTR = "ratified_supersedes"
 
 #: Outcomes. Kept as four distinct values because collapsing any pair of them
 #: loses a claim a reader acts on differently (SR-0165).
@@ -252,6 +258,45 @@ def resolve_revision(project, item) -> tuple[str | None, str, bool]:
                   "revision(s) were examined; the record may have been backfilled "
                   "over content that was never committed (ratified_backfilled), or "
                   "the history holding it may have been rewritten"), False
+
+
+def ratification_is_committed(project, item) -> bool | None:
+    """Whether ``item``'s current ratification record appears in the project's
+    committed history (SR-0196). ``None`` when that cannot be established.
+
+    The question is asked of version control and never inferred. A record is
+    published once the committed file carries this same ratifier over this same
+    stamp — the pair is what makes it the same record, so a signature taken, amended
+    and re-taken in one sitting does not read as published because an earlier one
+    was. ``None`` where the question cannot be put — no work tree, or a tree whose
+    state cannot be read: the caller must then refuse, because a correction is
+    permitted only on evidence that the record was never shared, and absence of
+    evidence is not that evidence. A work tree holding no commits at all is not
+    such a case; it is an answer, and the answer is that nothing is published.
+    """
+    by = item.attrs.get(RATIFIED_BY_ATTR)
+    stamp = item.attrs.get(STAMP_ATTR)
+    if not by or not stamp:
+        return False            # nothing recorded is nothing published
+    if item._path is None:
+        return None
+    top = repo_top(Path(item._path).parent)
+    if top is None:
+        return None
+    rel = _relative(top, Path(item._path))
+    if rel is None:
+        return None
+    if _git(top, "rev-parse", "--verify", "--quiet", "HEAD^{commit}") is None:
+        # An unborn HEAD is an answer, not a gap: a work tree with no commits has
+        # published nothing, so no record in it can have been shared.
+        return False
+    past = _item_at(top, "HEAD", rel)
+    if past is None:
+        # The file is absent at HEAD, so this record has never been committed.
+        # Distinguished from an unreadable tree above, which returns None.
+        return False
+    return (past.attrs.get(RATIFIED_BY_ATTR) == by
+            and past.attrs.get(STAMP_ATTR) == stamp)
 
 
 def _normative_names(project, item, past_schema: Schema | None) -> list[str]:

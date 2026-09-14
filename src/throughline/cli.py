@@ -1796,7 +1796,8 @@ def cmd_ratify(args) -> int:
     # built once and handed to ratify, so the question asked here and the write
     # below read the same graph.
     idx = Index.build(project)
-    obstacle = ratification_obstacle(project.schema, idx, item)
+    obstacle = ratification_obstacle(project.schema, idx, item,
+                                     replacing=args.replacing)
     if obstacle is not None:
         return _err(obstacle)
     # Ratifying is taking accountability, so the content comes before the signature
@@ -1845,12 +1846,15 @@ def cmd_ratify(args) -> int:
     # scrolled past. SR-0120 permits it: confirming an act is not prompting for a
     # value. Declining writes nothing and is not an error; the user was asked and
     # answered.
-    if interactive and not _confirm(f"ratify {uid} as {by}?"):
+    question = (f"replace the ratifier recorded on {uid} with {by}?"
+                if args.replacing else f"ratify {uid} as {by}?")
+    if interactive and not _confirm(question):
         print("not ratified", file=sys.stderr)
         return OK
     try:
         item = ratify(project, uid, by=by, index=idx,
-                      by_id=getattr(args, "by_id", None))
+                      by_id=getattr(args, "by_id", None),
+                      replacing=args.replacing)
     except IdentityError as e:
         return _err(str(e))
     except (ProjectError, GroundingError, SchemaError) as e:
@@ -2287,6 +2291,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--accept-change", action="store_true",
                    help="accept a change made since the last ratification without "
                         "seeing it (non-interactive sessions only)")
+    # Correcting the identity on a record that was never published (SR-0196). Its
+    # own flag, because the act it permits — a signature over content that has not
+    # moved — is the one SR-0148 otherwise refuses outright.
+    s.add_argument("--replacing", action="store_true",
+                   help="replace the ratifier recorded on an uncommitted "
+                        "ratification, e.g. to correct a misspelled name")
     s.set_defaults(func=cmd_ratify)
 
     s = sub.add_parser("invalidate", help="falsify an item; cascade suspect")

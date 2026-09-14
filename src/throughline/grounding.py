@@ -67,7 +67,8 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     return None
 
 
-def ratification_obstacle(schema, idx: Index, item: Item) -> str | None:
+def ratification_obstacle(schema, idx: Index, item: Item, *,
+                          replacing: bool = False) -> str | None:
     """Why :func:`ratify` would refuse ``item`` as the graph now stands, or ``None``
     when it would proceed — the whole precondition set, asked without writing
     anything (SR-0195).
@@ -88,14 +89,20 @@ def ratification_obstacle(schema, idx: Index, item: Item) -> str | None:
                if schema.ratify_moves_status
                else item.attrs.get(RATIFIED_BY_ATTR) is not None)
     if already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema):
-        return (f"{item.uid} is already ratified by "
-                f"{item.attrs.get('ratified_by', 'a human')} and its content has "
-                "not changed since — there is nothing to accept")
+        # A correction is the one signature over unchanged content that accepts
+        # something — the identity on the record (SR-0196). Whether it is allowed
+        # rests on the record being unpublished, which only :func:`ratify` can
+        # establish, so the refusal is lifted here and reimposed there.
+        if not replacing:
+            return (f"{item.uid} is already ratified by "
+                    f"{item.attrs.get('ratified_by', 'a human')} and its content has "
+                    "not changed since — there is nothing to accept; pass "
+                    "--replacing to correct the recorded ratifier instead")
     return None
 
 
 def ratify(project, uid: str, by: str, *, index: Index | None = None,
-           by_id: str | None = None) -> Item:
+           by_id: str | None = None, replacing: bool = False) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
 
@@ -118,9 +125,31 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # who accepted it leaving no trace that it changed (SR-0148). An item ratified
     # before the stamp existed has none to compare against, so that first call is
     # allowed through and stamps it.
-    obstacle = ratification_obstacle(schema, idx, item)
+    obstacle = ratification_obstacle(schema, idx, item, replacing=replacing)
     if obstacle is not None:
         raise GroundingError(obstacle)
+    # A correction replaces the identity on a record that was never published
+    # (SR-0196). The test is made here rather than left to the caller, for the
+    # reason every other decision in this function is: a front end that could
+    # assert its way past it would be able to obtain a record this function would
+    # refuse to write. Unestablished is refused, not assumed — a correction is
+    # permitted on evidence the record was never shared, and absence of evidence
+    # is not that evidence.
+    superseded = None
+    if replacing:
+        from .ratification import SUPERSEDED_ATTR, ratification_is_committed
+        published = ratification_is_committed(project, item)
+        if published is None:
+            raise GroundingError(
+                f"{uid}: cannot establish whether this ratification has been "
+                "committed, so it may not be replaced — a correction is only "
+                "allowed for a record that was never published")
+        if published:
+            raise GroundingError(
+                f"{uid} was ratified by {item.attrs.get(RATIFIED_BY_ATTR)} in a "
+                "commit, so that record may not be replaced: a published "
+                "signature is not something one caller may take from another")
+        superseded = item.attrs.get(RATIFIED_BY_ATTR)
     current = fingerprint(item, schema)
     # Advancing is the default, and is transition-validated — an item that cannot
     # legally reach the ratified status is refused rather than moved illegally. A
@@ -137,6 +166,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     if identifier is not None:
         item.attrs[RATIFIED_ID_ATTR] = identifier
     item.attrs["ratified_fingerprint"] = current
+    # Kept so a correction never reads as the original record (SR-0148's condition
+    # that an accountability record never changes without the graph showing it).
+    if superseded is not None and superseded != by:
+        from .ratification import SUPERSEDED_ATTR
+        item.attrs[SUPERSEDED_ATTR] = superseded
     return item
 
 
