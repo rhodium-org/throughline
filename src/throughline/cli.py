@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -24,11 +26,13 @@ from .grounding import (
     ratify,
     reaches_root,
     set_status,
+    withdraw,
 )
 from .identity import (
     RATIFICATION_ATTRS,
     RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
+    WITHDRAWN_RATIFIER_ATTR,
     IdentityError,
     default_ratifier,
 )
@@ -1370,6 +1374,7 @@ _CTX_COMMAND_USAGE = {
     "docs": "tl docs [FILE ...] [--at REF] [--check]",
     "status": "tl status <UID> <STATUS>",
     "invalidate": "tl invalidate <UID> [--reason …]",
+    "withdraw": "tl withdraw <UID> [<UID> …] --reason <why> --by <who>",
     "delete": "tl delete <UID>",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
@@ -1387,6 +1392,9 @@ _CTX_COMMAND_EMPHASIS = {
     "ratify": "a human accepts a proposed item; never run this for a human",
     "migrate": "idempotent repairs; extend this, never a script beside it",
     "invalidate": "retires an item and cascades suspicion — see grounding, below",
+    "withdraw": "removes a signature that should not stand (wrong name, signed in "
+                "error) without touching content or dependents; the item awaits a "
+                "human again — not `invalidate`, which says the item is false",
     "delete": "tombstones an item; the file stays, the item stops counting",
     "amend": "change content through the tool, never by opening the YAML",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
@@ -1791,83 +1799,115 @@ def _confirm(question: str) -> bool:
 
 
 def cmd_ratify(args) -> int:
+    """Ratify one or more items (SR-0199). Every item named is checked before any
+    is rendered or signed, so a run that cannot complete writes nothing; the
+    ratifier is asked once; each item is then shown and confirmed on its own,
+    because the signature is per item (UR-0029)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    # A proposed item is the usual target, but ratify tolerates any item (the
-    # grounding layer decides what it means), so the picker lists all live items.
-    uid = _resolve_uid(project, args.uid, "ratify", "UID")
-    if uid is None:
-        return USAGE
-    item = project.get(uid)
-    if item is None:
-        return _err(f"{uid} does not exist")
-    # Refuse before rendering anything or asking anyone (SR-0195). The old order
-    # asked who was taking accountability and only then discovered that nothing
-    # could be signed, which taught that the prompt was a formality. The index is
-    # built once and handed to ratify, so the question asked here and the write
-    # below read the same graph.
+    uids = list(args.uids)
+    if not uids:
+        # A proposed item is the usual target, but ratify tolerates any item (the
+        # grounding layer decides what it means), so the picker lists all live items.
+        uid = _resolve_uid(project, None, "ratify", "UID")
+        if uid is None:
+            return USAGE
+        uids = [uid]
+    # Refuse before rendering anything or asking anyone (SR-0195), and for the
+    # whole run before any item in it (SR-0199). The old order asked who was taking
+    # accountability and only then discovered that nothing could be signed, which
+    # taught that the prompt was a formality. The index is built once and handed to
+    # ratify, so the question asked here and the writes below read the same graph.
     idx = Index.build(project)
-    obstacle = ratification_obstacle(project.schema, idx, item)
-    if obstacle is not None:
-        return _err(obstacle)
-    # Ratifying is taking accountability, so the content comes before the signature
-    # (UR-0029) — and before the identity prompt, so the reader knows what they are
-    # being asked about while they are being asked. Non-interactive runs render
-    # nothing: there is no reader to serve, and output nobody reads is noise in CI.
+    items = []
+    for uid in uids:
+        item = project.get(uid)
+        if item is None:
+            return _err(f"{uid} does not exist")
+        obstacle = ratification_obstacle(project.schema, idx, item,
+                                         replacing=args.replacing)
+        if obstacle is not None:
+            return _err(obstacle if len(uids) == 1
+                        else f"{obstacle} — nothing in this run was ratified")
+        items.append(item)
     # Resolved once, before anything is shown, so the difference put in front of
     # the ratifier and the gate below are the same answer (SR-0165).
-    change = change_since_ratification(project, item)
+    changes = {item.uid: change_since_ratification(project, item) for item in items}
     interactive = _interactive()
-    if interactive:
-        _render_for_ratification(
-            project, item, emit=lambda line: print(line, file=sys.stderr))
+    if not interactive:
+        for item in items:
+            if changes[item.uid].stale and not args.accept_change:
+                return _err(
+                    f"{item.uid} has changed since "
+                    f"{item.attrs.get(RATIFIED_BY_ATTR, 'a human')} ratified it and this "
+                    "session cannot show you what changed — pass --accept-change to "
+                    "record a signature over a change accepted unseen, or run this on "
+                    "a terminal to see it first")
     # Offer the identity this repository already signs commits with (SR-0156). It
     # is only ever a default: _resolve_value shows it and takes it on assent, and a
     # non-interactive session that names no ratifier is refused, not signed for.
-    by = _resolve_value(args.by, "ratifier", "--by",
-                        default=default_ratifier(args.path))
-    if by is None:
-        return USAGE
-    # Re-ratifying is taking accountability afresh, so what moved since the last
-    # signature goes in the path of this one (SR-0167). Placed after the item and
-    # immediately before the stop, because that is where a reader is deciding.
-    # Unresolvable stops harder rather than passing quietly: letting the least
-    # knowable case through would make it the easiest one to sign, which is the
-    # failure this guards, arriving by the back door.
-    if change.stale:
+    # Asked once for the run — the person does not change between items — and on a
+    # terminal not until the first item has been shown, so the reader knows what
+    # they are being asked about while they are being asked (UR-0029, SR-0195).
+    by = None
+    if not interactive:
+        by = _resolve_value(args.by, "ratifier", "--by",
+                            default=default_ratifier(args.path))
+        if by is None:
+            return USAGE
+    rc = OK
+    for item in items:
+        uid = item.uid
+        change = changes[uid]
+        # Ratifying is taking accountability, so the content comes before the
+        # signature (UR-0029). Non-interactive runs render nothing: there is no
+        # reader to serve, and output nobody reads is noise in CI.
         if interactive:
-            for line in render_change(change,
-                                      ratifier=item.attrs.get(RATIFIED_BY_ATTR)):
-                print(line, file=sys.stderr)
-            print("", file=sys.stderr)
-        elif not args.accept_change:
-            return _err(
-                f"{uid} has changed since {item.attrs.get(RATIFIED_BY_ATTR, 'a human')} "
-                "ratified it and this session cannot show you what changed — pass "
-                "--accept-change to record a signature over a change accepted "
-                "unseen, or run this on a terminal to see it first")
-    # The stop that makes the rendering more than decoration, asked whether or not
-    # --by was supplied (SR-0195) — a fully specified command is exactly how a bulk
-    # or habitual ratification is run, and display without a stop is a warning that
-    # scrolled past. SR-0120 permits it: confirming an act is not prompting for a
-    # value. Declining writes nothing and is not an error; the user was asked and
-    # answered.
-    if interactive and not _confirm(f"ratify {uid} as {by}?"):
-        print("not ratified", file=sys.stderr)
-        return OK
-    try:
-        item = ratify(project, uid, by=by, index=idx,
-                      by_id=getattr(args, "by_id", None))
-    except IdentityError as e:
-        return _err(str(e))
-    except (ProjectError, GroundingError, SchemaError) as e:
-        return _err(str(e))
-    write_item(item, project.register_of(item.uid))
-    identifier = item.attrs.get(RATIFIED_ID_ATTR)
-    print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
-    return OK
+            _render_for_ratification(
+                project, item, emit=lambda line: print(line, file=sys.stderr))
+            # Re-ratifying is taking accountability afresh, so what moved since the
+            # last signature goes in the path of this one (SR-0167). Placed after the
+            # item and immediately before the stop, because that is where a reader
+            # is deciding. Painted as git would paint it: colour on a terminal, none
+            # when the reader has asked for none (NO_COLOR, https://no-color.org).
+            if change.stale:
+                for line in render_change(
+                        change, ratifier=item.attrs.get(RATIFIED_BY_ATTR),
+                        columns=shutil.get_terminal_size((80, 24)).columns,
+                        colour=not os.environ.get("NO_COLOR")):
+                    print(line, file=sys.stderr)
+                print("", file=sys.stderr)
+            # The stop that makes the rendering more than decoration, asked whether
+            # or not --by was supplied (SR-0195) — a fully specified command is
+            # exactly how a bulk or habitual ratification is run, and display
+            # without a stop is a warning that scrolled past. SR-0120 permits it:
+            # confirming an act is not prompting for a value. Declining writes
+            # nothing for this item and is not an error; the user was asked and
+            # answered, and the run goes on to the next item (SR-0199).
+            if by is None:
+                by = _resolve_value(args.by, "ratifier", "--by",
+                                    default=default_ratifier(args.path))
+                if by is None:
+                    return USAGE
+            question = (f"replace the ratifier recorded on {uid} with {by}?"
+                        if args.replacing else f"ratify {uid} as {by}?")
+            if not _confirm(question):
+                print(f"{uid} not ratified", file=sys.stderr)
+                continue
+        try:
+            item = ratify(project, uid, by=by, index=idx,
+                          by_id=getattr(args, "by_id", None),
+                          replacing=args.replacing)
+        except IdentityError as e:
+            return _err(str(e))
+        except (ProjectError, GroundingError, SchemaError) as e:
+            return _err(str(e))
+        write_item(item, project.register_of(item.uid))
+        identifier = item.attrs.get(RATIFIED_ID_ATTR)
+        print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
+    return rc
 
 
 def cmd_invalidate(args) -> int:
@@ -1903,6 +1943,52 @@ def cmd_invalidate(args) -> int:
               "records it; declare the move under [transitions] to close the gap",
               file=sys.stderr)
         return FINDINGS
+    return OK
+
+
+def cmd_withdraw(args) -> int:
+    """Withdraw the ratification of one or more items (SR-0197). The signature no
+    longer stands; the item goes back to awaiting a human; who withdrew it, why,
+    and whose signature it was are recorded. Content and dependents are untouched —
+    this is not ``invalidate``."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uids = list(args.uids)
+    if not uids:
+        # One item through the picker on a terminal; a batch is named explicitly.
+        uid = _resolve_uid(project, None, "withdraw the ratification of", "UID")
+        if uid is None:
+            return USAGE
+        uids = [uid]
+    # The reason is required, not optional: removing a signature is the quieter
+    # attack on an accountability record, and a withdrawal that says why is what
+    # makes it as accountable as the signature it removes. Asked once for the run.
+    reason = _resolve_value(args.reason, "reason", "--reason")
+    if reason is None:
+        return USAGE
+    by = _resolve_value(args.by, "withdrawer", "--by",
+                        default=default_ratifier(args.path))
+    if by is None:
+        return USAGE
+    # Confirmed on a terminal for the same reason ratify is (SR-0195): the act is
+    # about people, and a fully specified command is how a batch is run.
+    if _interactive() and not _confirm(
+            f"withdraw the ratification of {', '.join(uids)} as {by}?"):
+        print("not withdrawn", file=sys.stderr)
+        return OK
+    try:
+        items = withdraw(project, uids, by=by, reason=reason,
+                         by_id=getattr(args, "by_id", None))
+    except IdentityError as e:
+        return _err(str(e))
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    for item in items:
+        write_item(item, project.register_of(item.uid))
+        print(f"{item.uid}: ratification by {item.attrs[WITHDRAWN_RATIFIER_ATTR]} "
+              f"withdrawn by {by}; now '{item.status}', awaiting ratification")
     return OK
 
 
@@ -2282,8 +2368,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_subgraph)
 
     s = sub.add_parser("ratify", help="a human takes accountability for an item")
-    s.add_argument("uid", nargs="?", default=None,
-                   help="UID to ratify (omit on a terminal to pick one)")
+    # A list, as withdraw's is (SR-0197): several proposed items are the usual
+    # shape of a machine-authored batch, and each is still shown and confirmed on
+    # its own (SR-0199). A front end that read the single `uid` by name must now
+    # read `uids`.
+    s.add_argument("uids", nargs="*", metavar="UID",
+                   help="item(s) to ratify, in order (omit on a terminal to pick one)")
     s.add_argument("--by", default=None,
                    help="ratifier name (omit on a terminal to be prompted; "
                         "defaults to the identity this repository signs with)")
@@ -2296,6 +2386,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--accept-change", action="store_true",
                    help="accept a change made since the last ratification without "
                         "seeing it (non-interactive sessions only)")
+    # Correcting the identity on a record that was never published (SR-0196). Its
+    # own flag, because the act it permits — a signature over content that has not
+    # moved — is the one SR-0148 otherwise refuses outright.
+    s.add_argument("--replacing", action="store_true",
+                   help="replace the ratifier recorded on an uncommitted "
+                        "ratification, e.g. to correct a misspelled name")
     s.set_defaults(func=cmd_ratify)
 
     s = sub.add_parser("invalidate", help="falsify an item; cascade suspect")
@@ -2303,6 +2399,26 @@ def build_parser() -> argparse.ArgumentParser:
                    help="UID to invalidate (omit on a terminal to pick one)")
     s.add_argument("--reason", default="")
     s.set_defaults(func=cmd_invalidate)
+
+    # Withdrawing a signature is its own verb, not a mode of ratify (SR-0197): it
+    # names no new accountable party and is the one act here anyone may perform,
+    # so it must not share a verb with the act that requires a named human.
+    s = sub.add_parser("withdraw",
+                       help="withdraw an item's ratification — the signature no "
+                            "longer stands; the item awaits a human again")
+    s.add_argument("uids", nargs="*", metavar="UID",
+                   help="item(s) whose ratification to withdraw (omit on a "
+                        "terminal to pick one)")
+    s.add_argument("--reason", default=None,
+                   help="why the signature should no longer stand (required; "
+                        "prompted for on a terminal)")
+    s.add_argument("--by", default=None,
+                   help="who is withdrawing it (omit on a terminal to be prompted; "
+                        "defaults to the identity this repository signs with)")
+    s.add_argument("--by-id", default=None, metavar="SCHEME:VALUE",
+                   help="optional stable identifier for the withdrawer, e.g. "
+                        "github:octocat or email:ada@example.com")
+    s.set_defaults(func=cmd_withdraw)
 
     s = sub.add_parser("status",
                        help="move an item to a status (transition-validated)")

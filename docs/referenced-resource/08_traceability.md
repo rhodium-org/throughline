@@ -39,8 +39,11 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
 | UR-0026 | Conflict-free parallel identity allocation | SR-0122, SR-0123, SR-0124, SR-0125, SR-0126 |
 | UR-0027 | Item identity is tamper-evident | SR-0127, SR-0128 |
-| UR-0028 | A stale item shows what changed before it asks to be re-ratified | SR-0165, SR-0166, SR-0167 |
+| UR-0028 | A stale item shows what changed before it asks to be re-ratified | SR-0165, SR-0166, SR-0167, SR-0198 |
 | UR-0029 | Ratification shows the ratifier what they are accepting | SR-0195 |
+| UR-0030 | A ratification that records the wrong person can be corrected | SR-0196 |
+| UR-0031 | A signature that should no longer stand can be withdrawn | SR-0197 |
+| UR-0032 | Several items can be ratified in one run, each shown and confirmed on its own | SR-0199 |
 <!-- tl:end -->
 
 ## Coverage check

@@ -18,8 +18,13 @@ from typing import NamedTuple
 from .fingerprint import fingerprint
 from .graph import Index
 from .identity import (
+    RATIFICATION_ATTRS,
     RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
+    WITHDRAWN_BY_ATTR,
+    WITHDRAWN_ID_ATTR,
+    WITHDRAWN_RATIFIER_ATTR,
+    WITHDRAWN_REASON_ATTR,
     normalise_identifier,
 )
 from .model import Item, Link
@@ -67,7 +72,8 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     return None
 
 
-def ratification_obstacle(schema, idx: Index, item: Item) -> str | None:
+def ratification_obstacle(schema, idx: Index, item: Item, *,
+                          replacing: bool = False) -> str | None:
     """Why :func:`ratify` would refuse ``item`` as the graph now stands, or ``None``
     when it would proceed — the whole precondition set, asked without writing
     anything (SR-0195).
@@ -88,14 +94,20 @@ def ratification_obstacle(schema, idx: Index, item: Item) -> str | None:
                if schema.ratify_moves_status
                else item.attrs.get(RATIFIED_BY_ATTR) is not None)
     if already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema):
-        return (f"{item.uid} is already ratified by "
-                f"{item.attrs.get('ratified_by', 'a human')} and its content has "
-                "not changed since — there is nothing to accept")
+        # A correction is the one signature over unchanged content that accepts
+        # something — the identity on the record (SR-0196). Whether it is allowed
+        # rests on the record being unpublished, which only :func:`ratify` can
+        # establish, so the refusal is lifted here and reimposed there.
+        if not replacing:
+            return (f"{item.uid} is already ratified by "
+                    f"{item.attrs.get('ratified_by', 'a human')} and its content has "
+                    "not changed since — there is nothing to accept; pass "
+                    "--replacing to correct the recorded ratifier instead")
     return None
 
 
 def ratify(project, uid: str, by: str, *, index: Index | None = None,
-           by_id: str | None = None) -> Item:
+           by_id: str | None = None, replacing: bool = False) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
 
@@ -118,9 +130,31 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # who accepted it leaving no trace that it changed (SR-0148). An item ratified
     # before the stamp existed has none to compare against, so that first call is
     # allowed through and stamps it.
-    obstacle = ratification_obstacle(schema, idx, item)
+    obstacle = ratification_obstacle(schema, idx, item, replacing=replacing)
     if obstacle is not None:
         raise GroundingError(obstacle)
+    # A correction replaces the identity on a record that was never published
+    # (SR-0196). The test is made here rather than left to the caller, for the
+    # reason every other decision in this function is: a front end that could
+    # assert its way past it would be able to obtain a record this function would
+    # refuse to write. Unestablished is refused, not assumed — a correction is
+    # permitted on evidence the record was never shared, and absence of evidence
+    # is not that evidence.
+    superseded = None
+    if replacing:
+        from .ratification import SUPERSEDED_ATTR, ratification_is_committed
+        published = ratification_is_committed(project, item)
+        if published is None:
+            raise GroundingError(
+                f"{uid}: cannot establish whether this ratification has been "
+                "committed, so it may not be replaced — a correction is only "
+                "allowed for a record that was never published")
+        if published:
+            raise GroundingError(
+                f"{uid} was ratified by {item.attrs.get(RATIFIED_BY_ATTR)} in a "
+                "commit, so that record may not be replaced: a published "
+                "signature is not something one caller may take from another")
+        superseded = item.attrs.get(RATIFIED_BY_ATTR)
     current = fingerprint(item, schema)
     # Advancing is the default, and is transition-validated — an item that cannot
     # legally reach the ratified status is refused rather than moved illegally. A
@@ -137,6 +171,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     if identifier is not None:
         item.attrs[RATIFIED_ID_ATTR] = identifier
     item.attrs["ratified_fingerprint"] = current
+    # Kept so a correction never reads as the original record (SR-0148's condition
+    # that an accountability record never changes without the graph showing it).
+    if superseded is not None and superseded != by:
+        from .ratification import SUPERSEDED_ATTR
+        item.attrs[SUPERSEDED_ATTR] = superseded
     return item
 
 
@@ -206,6 +245,75 @@ def invalidate(project, uid: str, reason: str = "") -> Invalidation:
         reasons.append(f"upstream {uid} invalidated")
         marked.append(aid)
     return Invalidation(affected, marked, refused)
+
+
+def withdraw(project, uids, *, by: str, reason: str,
+             by_id: str | None = None) -> list[Item]:
+    """Withdraw the ratification of each item in ``uids`` (SR-0197): the signature
+    no longer stands, the item returns to those awaiting a human, and the record
+    says who withdrew it, why, and whose signature it was.
+
+    Not invalidation, and deliberately its opposite in effect: ``tl invalidate``
+    says an item is false and cascades suspicion into everything grounded on it
+    (SR-0035); this says nothing about the item. Its words have not moved, so
+    nothing resting on them has lost its footing — content is untouched and no
+    dependent is restatused. The item moves to the status bound to the suspect
+    role (SR-0131), which every live status may reach (SR-0175) and which already
+    means what this needs: a human must look again.
+
+    Anyone may withdraw, because withdrawal takes nothing — the item cannot count
+    as ratified again until a real human accepts it — but the act is recorded, not
+    silent: stripping a colleague's sign-off and leaving an item that merely looks
+    unratified would be the quieter attack on an accountability record.
+
+    All or nothing: every item is checked before any is written, so a mistyped UID
+    in a batch is a failure the caller sees, never a half-applied run. Refused for
+    an item that carries no ratification, for an empty reason, and for a status the
+    project's lifecycle will not let move to suspect.
+    """
+    if not by or not by.strip():
+        raise GroundingError("a withdrawal must name who is withdrawing it")
+    if not reason or not reason.strip():
+        raise GroundingError("a withdrawal must state its reason — pass --reason")
+    identifier = normalise_identifier(by_id)          # IdentityError if malformed
+    schema = project.schema
+    suspect = schema.status_role("suspect")
+    items: list[Item] = []
+    seen: set[str] = set()
+    for uid in uids:
+        if uid in seen:
+            raise GroundingError(f"{uid} is named more than once")
+        seen.add(uid)
+        item = project.get(uid)
+        if item is None:
+            raise GroundingError(f"{uid} does not exist")
+        if not item.attrs.get(RATIFIED_BY_ATTR):
+            raise GroundingError(f"{uid} carries no ratification to withdraw")
+        if not schema.allows_transition(item.status, suspect):
+            raise GroundingError(
+                f"{uid}: status change '{item.status}' -> '{suspect}' is not an "
+                "allowed transition, so its ratification cannot be withdrawn")
+        items.append(item)
+    # The record the ratifying verbs own is cleared, and only that record: the
+    # withdrawn identity moves into the withdrawal record rather than vanishing,
+    # so the graph still shows that a signature was taken and then set aside.
+    cleared = [name for name, owner in RATIFICATION_ATTRS.items()
+               if owner != "withdraw"]
+    for item in items:
+        ratifier = item.attrs[RATIFIED_BY_ATTR]
+        for name in cleared:
+            item.attrs.pop(name, None)
+        item.attrs[WITHDRAWN_RATIFIER_ATTR] = ratifier
+        item.attrs[WITHDRAWN_BY_ATTR] = by
+        if identifier is not None:
+            item.attrs[WITHDRAWN_ID_ATTR] = identifier
+        else:
+            item.attrs.pop(WITHDRAWN_ID_ATTR, None)
+        item.attrs[WITHDRAWN_REASON_ATTR] = reason
+        set_status(schema, item, suspect)
+        item.attrs.setdefault("suspect_reasons", []).append(
+            f"ratification by {ratifier} withdrawn by {by}: {reason}")
+    return items
 
 
 def scout_ingest(project, report: dict) -> dict:

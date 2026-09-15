@@ -1,0 +1,46 @@
+uid: SR-0198
+type: system_requirement
+status: implemented
+title: A changed prose field is shown as a diff, coloured on a terminal, with the
+  words that moved marked
+text: Where the change since ratification is rendered and a differing field holds
+  prose, the Tool shall show that field as a diff in the manner of a version-control
+  diff — sentence by sentence, or line by line where the value has lines, each marked
+  as kept, removed or added, removed before added within a hunk, and wrapped to the
+  terminal's width. On a terminal, removed lines shall be coloured red and added
+  lines green, and within a removed sentence and the added sentence it plainly became,
+  the words that differ shall be visibly marked; no colour or marking shall be emitted
+  where output is not a terminal or the reader has asked for none through NO_COLOR.
+  A value holding no whitespace is shown as before and after on one line.
+rationale: 'A paragraph shown whole beside its predecessor, quoted on one line, asked
+  the ratifier to find the change by eye across eighty words — the operator called
+  it very difficult to use and asked for what a git diff gives. The sentence is the
+  unit a requirement is argued in, so it is the unit compared and shown, with the
+  sentences that stayed left in place unmarked so a removed sentence sits above its
+  replacement inside its paragraph. Marking the words within a replaced sentence
+  is what git''s diff-highlight adds and for the same reason — a reworded long sentence
+  is otherwise still searched, not read — and it is drawn only between a sentence
+  and the successor it most resembles, so a sentence deleted, added or rewritten
+  outright is shown whole rather than mostly marked. Colour follows git''s convention
+  and its off-switch: none on a pipe, none under NO_COLOR, so a log or a test sees
+  the marks alone. Rejected — interleaving change markers inside the sentence text
+  without colour, which reads worse than the removed sentence above its replacement.
+  Rejected — a word-level diff as the unit, which loses the paragraph. Verified by
+  test — kept, removed and added sentences are marked and wrapped within the width;
+  the moved words of a replaced sentence form one highlighted run; a sentence split
+  in two pairs with the one it became; and no escape code is emitted unless colour
+  is asked for.'
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0167
+  type: relates
+- target: SR-0165
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a935c534197502a14b71900a7251334284807d772328cd6858513bd16d1e7406
