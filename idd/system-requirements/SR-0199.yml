@@ -1,0 +1,40 @@
+uid: SR-0199
+type: system_requirement
+status: implemented
+title: Ratify accepts more than one item, refuses the whole run before writing anything,
+  and stops at each item
+text: Ratify shall accept any number of item identifiers in one invocation. Before
+  it renders or asks anything it shall check every item named, and if any of them
+  cannot be ratified it shall refuse the whole run naming that item, writing nothing.
+  It shall ask for the ratifier once for the run, and on a terminal not before the
+  first item has been shown. It shall then take the items in the order given and,
+  for each, render it, show what changed since its last signature, and require confirmation,
+  exactly as it does for a single item; declining one item shall leave that item
+  unsigned and continue to the next. Where no item is named it shall behave as it
+  does today. Where there is no interactive terminal, the rules already governing
+  a single non-interactive ratification shall apply to each item.
+rationale: 'Refusing the whole run first keeps the property SR-0195 gives a single
+  item, that nothing is shown or asked for a signature that cannot be written, and
+  keeps a batch atomic in the only sense that matters here: a run that ends with
+  some items signed and one refused would need the reader to work out which. Confirming
+  per item rather than per run is what distinguishes this from withdrawal, where
+  one reason and one confirmation cover the batch (SR-0197): a withdrawal is one
+  decision about a set, a ratification is a decision about each item''s content.
+  The positional argument changes from one optional identifier to a list, which is
+  a change of interface for any front end that reads the parsed argument by name;
+  throughline-compose does, and its ratify over a composed graph must move with this
+  release.'
+normative: true
+links:
+- target: UR-0032
+  type: implements
+- target: SR-0195
+  type: relates
+- target: SR-0197
+  type: relates
+- target: SR-0120
+  type: relates
+attrs:
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:e412855223305f9c21c85012cc14ee46bce332d00a39cbbb3c36b87cf18df037

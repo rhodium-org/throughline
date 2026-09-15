@@ -1,0 +1,29 @@
+uid: UR-0032
+type: user_requirement
+status: ratified
+title: Several items can be ratified in one run, each shown and confirmed on its
+  own
+text: As the person working through a batch of proposed items, typically the set
+  a machine authored in one pass, I want to name several items in one ratify command
+  and be taken through them in turn, so that I am not retyping the command and the
+  ratifier for each one. Each item is still shown to me and still confirmed by me
+  on its own, because the signature is per item.
+rationale: Withdrawal already takes several items in one run (UR-0031, SR-0197);
+  ratification, the more frequent act, took one. On 15th September 2026 the operator
+  was handed tl-compose ratify SR-0054 SR-0055 and the command was refused with unrecognized
+  arguments, which is the moment the asymmetry was noticed. Rejected, a flag that
+  ratifies a whole batch on one confirmation, because UR-0029 requires the content
+  to be shown before each signature and a single yes over a list is a warning that
+  scrolled past.
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+- target: UR-0029
+  type: relates
+- target: UR-0031
+  type: relates
+attrs:
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:9c34895f2a7a722c6c51fe50a6823d38181adccc3df25b4d07b3dee61e460482

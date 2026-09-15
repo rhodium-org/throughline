@@ -43,6 +43,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0029 | Ratification shows the ratifier what they are accepting | SR-0195 |
 | UR-0030 | A ratification that records the wrong person can be corrected | SR-0196 |
 | UR-0031 | A signature that should no longer stand can be withdrawn | SR-0197 |
+| UR-0032 | Several items can be ratified in one run, each shown and confirmed on its own | SR-0199 |
 <!-- tl:end -->
 
 ## Coverage check
