@@ -1,6 +1,6 @@
 uid: SR-0199
 type: system_requirement
-status: ratified
+status: implemented
 title: Ratify accepts more than one item, refuses the whole run before writing anything,
   and stops at each item
 text: Ratify shall accept any number of item identifiers in one invocation. Before
