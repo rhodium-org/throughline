@@ -4376,6 +4376,36 @@ def _linked_pair(tmp_path):
     return root
 
 
+def test_link_same_edge_twice_is_an_error(tmp_path, capsys):
+    """Adding an edge that already exists with the same type is refused rather
+    than duplicated (SR-0143 names the single matching edge; SR-0034)."""
+    root = _linked_pair(tmp_path)
+    assert _cli(["-C", str(root), "link", "FR-0002", "FR-0001",
+                 "--type", "relates"]) != 0
+    assert "already exists" in capsys.readouterr().err
+    links = [ln for ln in load_project(str(root)).get("FR-0002").links
+             if ln.target == "FR-0001"]
+    assert len(links) == 1
+
+
+def test_link_stamp_refreshes_existing_edge_in_place(tmp_path):
+    """`tl link --stamp` on an existing edge is the re-confirm command SR-0034
+    promises: the stamp is refreshed on that edge and no second edge appears."""
+    root = _linked_pair(tmp_path)
+    assert _cli(["-C", str(root), "link", "FR-0002", "FR-0001",
+                 "--type", "relates", "--stamp"]) == 0
+    links = [ln for ln in load_project(str(root)).get("FR-0002").links
+             if ln.target == "FR-0001"]
+    assert len(links) == 1 and links[0].stamp
+    first = links[0].stamp
+    assert _cli(["-C", str(root), "amend", "FR-0001", "--text", "changed"]) == 0
+    assert _cli(["-C", str(root), "link", "FR-0002", "FR-0001",
+                 "--type", "relates", "--stamp"]) == 0
+    links = [ln for ln in load_project(str(root)).get("FR-0002").links
+             if ln.target == "FR-0001"]
+    assert len(links) == 1 and links[0].stamp and links[0].stamp != first
+
+
 def test_link_retype_changes_type_in_place(tmp_path):
     """`tl link --retype` changes an existing edge's type rather than adding a
     parallel one, so a semantic-link review needs no YAML hand-editing (SR-0143)."""
