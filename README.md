@@ -179,6 +179,7 @@ Upward and downward coverage are independent and both matter:
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 | `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
+| `normative-mismatch` | an item's `normative` flag disagrees with what its type declares (`tl migrate` repairs it) |
 
 Every rule's severity is configurable per project under `[rules]`; `--strict`
 promotes every warning to an error for CI.
