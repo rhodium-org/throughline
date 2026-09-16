@@ -318,13 +318,15 @@ def validate(project, strict: bool = False,
                        "the proposed status without passing the gate")
             add("unratified", item.uid, f, f"{origin}-origin item {why}")
 
-        # The flag is the type's (SR-0201), so an item disagreeing with its type
-        # was written before the type declared it, or by hand. Reported rather
+        # The flag is the type's (SR-0201), so an item disagreeing with what its
+        # type declares was written before the type declared it, or by hand.
+        # Judged only where the type declares the key: a project that never did
+        # is unchanged by upgrading, and opts in by declaring. Reported rather
         # than repaired here — `tl migrate` rewrites it (SR-0203) — and at warning
-        # severity, because every project upgraded across the change would
-        # otherwise go red before it could run the repair.
-        want = schema.is_normative(item.type)
-        if item.normative != want:
+        # severity, so a project that has just opted in is not red before it can
+        # run the repair.
+        want = schema.declares_normative(item.type)
+        if want is not None and item.normative != want:
             add("normative-mismatch", item.uid, f,
                 f"normative: {str(item.normative).lower()} but type '{item.type}' "
                 f"declares {str(want).lower()} — run `tl migrate` to repair")

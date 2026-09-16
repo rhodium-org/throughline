@@ -39,9 +39,42 @@ def _flag(root: Path, rel: str) -> bool:
 
 # ------------------------------------------------- SR-0201: the type declares it
 
-def test_a_type_absent_from_config_is_normative():
-    assert Schema.from_config({}).is_normative("anything") is True
-    assert Schema.from_config({"types": {"advice": {}}}).is_normative("advice") is True
+def test_a_type_absent_from_config_is_normative_and_judged_by_nothing():
+    """Backward compatibility: a project that never declared the key births
+    items normative as before, and neither `check` nor `migrate` judges them."""
+    schema = Schema.from_config({"types": {"advice": {}}})
+    assert schema.is_normative("anything") is True
+    assert schema.is_normative("advice") is True
+    assert schema.declares_normative("anything") is None
+    assert schema.declares_normative("advice") is None
+    assert Schema.from_config({"types": {"advice": {"normative": False}}}
+                              ).declares_normative("advice") is False
+
+
+def test_an_undeclared_type_holding_both_values_is_not_a_finding(tmp_path):
+    """The pre-3.5 estate: items written `normative: false` by hand or by the old
+    demo seed, under types that declare nothing. Upgrading must change nothing."""
+    root = tmp_path / "proj"
+    assert _cli(["-C", root, "init", "--no-demo"]) == 0
+    cfg = root / "throughline.toml"
+    text = cfg.read_text(encoding="utf-8")
+    text = text.replace("[types.intent]\nnormative = false\n", "")
+    text = text.replace("[types.test]\nnormative = false\n", "")
+    text = text.replace("normative = false\nattrs.origin", "attrs.origin")
+    cfg.write_text(text, encoding="utf-8")
+    assert not any("normative" in body for body in
+               tomllib.loads(cfg.read_text(encoding="utf-8"))["types"].values())
+    assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "a",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", root, "new", "NG", "--type", "non_goal", "--title", "b",
+                 "--no-interactive"]) == 0
+    assert _flag(root, "vision/INT-0001.yml") is True     # born as 3.4 bore it
+    ng = root / "non-goals" / "NG-0001.yml"
+    ng.write_text(ng.read_text().replace("normative: true", "normative: false"))
+    assert not {r for r in _rules(root) if r[1] == "normative-mismatch"}
+    result = migrate_project(root)
+    assert result.normative == {} and result.stale == []
+    assert _flag(root, "non-goals/NG-0001.yml") is False   # untouched
 
 
 def test_a_type_declares_its_items_non_normative():
@@ -235,3 +268,35 @@ def test_the_brief_describes_the_flag_by_its_effects(tmp_path, capsys):
     assert "### `intent` _(root, delivery-root, non-normative)_" in out
     assert "### `non_goal` _(root, non-normative)_" in out
     assert "### `requirement`" in out and "`requirement` _(" not in out
+
+
+# ------------------------- SR-0205: birth is one function, offered to any tool
+
+def test_birth_item_is_the_single_birth_tl_new_uses(tmp_path):
+    """A composing tool calling `birth_item` gets exactly what `tl new` writes:
+    the proposed status for a machine origin (SR-0141), the author's attributes,
+    the schema's defaults (SR-0138) and the type's normative flag (SR-0201)."""
+    from throughline.cli import birth_item
+    root = tmp_path / "proj"
+    assert _cli(["-C", root, "init", "--no-demo"]) == 0
+    assert _cli(["-C", root, "schema", "attr", "add", "requirement", "owner",
+                 "--default", "nobody", "--because", "a sentinel"]) == 0
+    project = load_project(root)
+    reg = project.registers["REQ"]
+    born = birth_item(project.schema, reg, "REQ-0001", item_type="requirement",
+                      title="R", text="T.", origin="ai", attrs={"priority": "must"})
+    assert born.status == "proposed"
+    assert born.attrs == {"priority": "must", "origin": "ai", "owner": "nobody"}
+    assert born.normative is True
+    root_item = birth_item(project.schema, project.registers["NG"], "NG-0001",
+                           item_type="non_goal", title="N")
+    assert root_item.status == "draft" and root_item.normative is False
+    # And `tl new` produces the same item through the same function.
+    assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.",
+                 "--origin", "ai", "--attr", "priority=must", "--ground", "REQ-0001",
+                 "--no-interactive"]) == 2   # REQ-0001 does not exist yet: refused
+    assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.",
+                 "--origin", "ai", "--attr", "priority=must", "--no-interactive"]) == 0
+    written = load_project(root).get("REQ-0001")
+    assert (written.status, written.attrs, written.normative) == (
+        born.status, born.attrs, born.normative)

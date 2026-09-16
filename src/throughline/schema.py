@@ -144,8 +144,11 @@ class Schema:
     # accountability record written is identical either way.
     ratify_moves_status: bool = True
     # Whether items of a type are normative (SR-0201): the flag `tl new` writes
-    # on an item is the kind's, not the command's. A type absent here is
-    # normative, so a project that never declared the key behaves as before.
+    # on an item is the kind's, not the command's. Only types that DECLARE the
+    # key are here. An undeclared type births items normative, as before, and is
+    # never judged by `check` or rewritten by `migrate` (SR-0203) — so a project
+    # that never declared the key is unchanged by upgrading, and opts in by
+    # declaring it.
     type_normative: dict[str, bool] = field(default_factory=dict)
 
     # ------------------------------------------------------------------ build
@@ -163,11 +166,12 @@ class Schema:
             # (SR-0201). Absent means true, so an existing project is unchanged;
             # a non-boolean is a configuration error rather than a truthiness
             # coercion, for the reason [ratify] moves_status gives below.
-            flag = (tbody or {}).get("normative", True)
-            if not isinstance(flag, bool):
-                raise SchemaError(
-                    f"type '{tname}' normative must be true or false, not {flag!r}")
-            type_normative[tname] = flag
+            flag = (tbody or {}).get("normative")
+            if flag is not None:
+                if not isinstance(flag, bool):
+                    raise SchemaError(
+                        f"type '{tname}' normative must be true or false, not {flag!r}")
+                type_normative[tname] = flag
             specs: dict[str, AttrSpec] = {}
             for aname, meta in ((tbody or {}).get("attrs") or {}).items():
                 if not isinstance(meta, dict):
@@ -339,10 +343,16 @@ class Schema:
         return sorted(n for n, s in self.attrs_for(item_type).items() if s.normative)
 
     def is_normative(self, item_type: str) -> bool:
-        """Whether an item of ``item_type`` is normative (SR-0201): the value
-        `tl new` writes on it, and the one `check` and `migrate` hold its
-        `normative` field to. Undeclared types are normative."""
+        """Whether an item of ``item_type`` is born normative (SR-0201): the
+        value `tl new` writes on it. Undeclared types are normative."""
         return self.type_normative.get(item_type, True)
+
+    def declares_normative(self, item_type: str) -> bool | None:
+        """What the type declares its items' flag to be, or None where it
+        declares nothing. `check` and `migrate` hold an item to this and only
+        this (SR-0203), so a project that never declared the key sees no finding
+        and no rewrite on upgrade."""
+        return self.type_normative.get(item_type)
 
     def is_link_type(self, link_type: str) -> bool:
         return self.link_types is None or link_type in self.link_types

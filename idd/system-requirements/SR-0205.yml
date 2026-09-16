@@ -1,0 +1,40 @@
+uid: SR-0205
+type: system_requirement
+status: ratified
+title: An item's birth is one function, offered to any tool that creates items
+text: The Tool shall give an item everything it receives at birth through one function,
+  and shall offer that function through the Python API to any tool that creates items
+  in a throughline project. The function shall apply the birth status the origin
+  selects (a machine origin enters the proposed status), the attributes the author
+  supplied, the defaults the schema declares, and the normative flag the item's type
+  declares. `tl new` shall create items through it and nothing else.
+rationale: 'tl-compose creates an item itself when it grounds one into a borrowed
+  clause, and that copy of the birth had drifted from tl new on every rule added
+  since: it wrote no attribute defaults (SR-0138), dropped the author''s --attr values,
+  birthed a machine-authored item at the initial status rather than proposed (SR-0141),
+  and wrote the flag tl new no longer writes (SR-0201). The last of those is what
+  was noticed on 16th September 2026; the third means a machine-authored item grounded
+  into a source escaped the ratification gate. A second copy of a birth rule is unwatched,
+  so the fix is the seam SR-0151 and SR-0153 already opened for ratify and migrate:
+  one function, offered to the composing tool. Rejected, having compose re-implement
+  each rule, because it would drift again at the next one.'
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0141
+  type: refines
+- target: SR-0138
+  type: refines
+- target: SR-0201
+  type: refines
+- target: SR-0151
+  type: relates
+- target: SR-0153
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:0ebee851dea6a52ca7fbae34b2988cd86ce15883e8e50b36940022e423555056
