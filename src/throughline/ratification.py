@@ -26,7 +26,9 @@ and each of those deserves to be named rather than smoothed over.
 Results are returned as structured data, with rendering kept separate
 (:func:`render_change`). Every other surface that must show this — a composing
 consumer, a review cockpit — would otherwise re-parse formatted text, which is a
-second copy of the rule, drifting from the first.
+second copy of the rule, drifting from the first. The same holds one level down:
+a changed prose field's diff is data too (:func:`diff_prose`, SR-0200), and the
+terminal rendering here is one reader of it among others.
 """
 from __future__ import annotations
 
@@ -400,20 +402,46 @@ def _units(value: str) -> list[str]:
     return _SENTENCE_END.split(value) if value else [""]
 
 
-def _prose(was: object, now: object) -> bool:
+def is_prose(was: object, now: object) -> bool:
+    """Whether a changed field is shown as a diff (SR-0198): both values are
+    strings and at least one holds whitespace. A token — a priority, a flag — is
+    shown as before and after on one line instead."""
     return (isinstance(was, str) and isinstance(now, str)
             and any(ch.isspace() for ch in was + now))
 
 
 #: A word of a unit and whether it is among the words that moved.
-_Word = tuple[str, bool]
+Word = tuple[str, bool]
+
+#: The marks a unit of a prose diff carries, as a git diff marks its lines.
+KEPT, REMOVED, ADDED = " ", "-", "+"
 
 
-def _plain(unit: str) -> list[_Word]:
+@dataclass(frozen=True)
+class DiffUnit:
+    """One unit of a prose diff (SR-0200): a sentence, or a line where the value
+    has lines, marked :data:`KEPT`, :data:`REMOVED` or :data:`ADDED`, with each
+    word and whether it is among the words that moved. Words are marked only
+    between a removed sentence and the added one it plainly became; a unit
+    deleted, added or rewritten outright carries no marks."""
+    mark: str
+    words: tuple[Word, ...]
+
+    @property
+    def text(self) -> str:
+        return " ".join(w for w, _moved in self.words)
+
+    @property
+    def marked(self) -> bool:
+        """Whether any word of the unit is among the words that moved."""
+        return any(moved for _w, moved in self.words)
+
+
+def _plain(unit: str) -> list[Word]:
     return [(w, False) for w in unit.split()]
 
 
-def _word_marks(removed: str, added: str) -> tuple[list[_Word], list[_Word]]:
+def _word_marks(removed: str, added: str) -> tuple[list[Word], list[Word]]:
     """Both sides of a replaced sentence with the words that differ marked."""
     a, b = removed.split(), added.split()
     keep_a, keep_b = [False] * len(a), [False] * len(b)
@@ -433,7 +461,7 @@ _SAME_SENTENCE = 0.5
 
 
 def _pair_words(removed: list[str],
-                added: list[str]) -> tuple[list[list[_Word]], list[list[_Word]]]:
+                added: list[str]) -> tuple[list[list[Word]], list[list[Word]]]:
     """The units of one hunk with the words that moved marked, wherever a removed
     sentence has a successor it plainly became. Each removed sentence takes the
     most similar added one still free; a sentence with no counterpart — deleted
@@ -456,12 +484,36 @@ def _pair_words(removed: list[str],
     return marks_r, marks_a
 
 
-def _wrap(words: list[_Word], *, first: str, rest: str,
-          width: int) -> list[list[_Word]]:
-    """Greedy word wrap that never breaks a word, measured on the words alone
+def diff_prose(was: str, now: str) -> tuple[DiffUnit, ...]:
+    """The difference between two prose values as data (SR-0200). Kept units stay
+    in place, so a removed sentence sits above its replacement inside the
+    paragraph it belongs to, and removed units precede added ones within a hunk,
+    as they do in a git diff (SR-0198).
+
+    This is the one place the comparison is made. :func:`render_change` reads it
+    to paint a terminal, and a consumer with a screen of its own reads it too,
+    so the two can never disagree about what moved."""
+    a, b = _units(was), _units(now)
+    units: list[DiffUnit] = []
+    matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            units.extend(DiffUnit(KEPT, tuple(_plain(u))) for u in a[i1:i2])
+            continue
+        marks_r, marks_a = _pair_words(a[i1:i2], b[j1:j2])
+        units.extend(DiffUnit(REMOVED, tuple(w)) for w in marks_r)
+        units.extend(DiffUnit(ADDED, tuple(w)) for w in marks_a)
+    return tuple(units)
+
+
+def wrap_words(words: list[Word] | tuple[Word, ...], *, first: str, rest: str,
+               width: int) -> list[list[Word]]:
+    """Greedy word wrap of a unit's words that never breaks a word and keeps each
+    word's mark. ``first`` and ``rest`` are the prefixes the caller will draw
+    before the first and the later lines; the wrap is measured on the words alone
     so that painting a line afterwards cannot lengthen it past ``width``."""
-    lines: list[list[_Word]] = []
-    line: list[_Word] = []
+    lines: list[list[Word]] = []
+    line: list[Word] = []
     used = len(first)
     for word, moved in words:
         need = len(word) + (1 if line else 0)
@@ -478,14 +530,13 @@ def _wrap(words: list[_Word], *, first: str, rest: str,
 def _render_prose(field: str, was: str, now: str, *, pad: str,
                   columns: int, colour: bool) -> list[str]:
     """One field's change as its kept, removed and added units, each wrapped to
-    the terminal (SR-0198). Kept units stay in place so the reader sees the
-    removed sentence above its replacement, inside the paragraph it belongs to.
-    Removed units precede added ones within a hunk, as they do in a git diff."""
+    the terminal (SR-0198). Built from :func:`diff_prose` and nothing else
+    (SR-0200): what is painted here is exactly what the data says."""
     lines = [f"{pad}{field}:"]
     indent = pad * 2
     width = max(columns, 40)
 
-    def painted(wrapped: list[_Word]) -> str:
+    def painted(wrapped: list[Word]) -> str:
         # Consecutive moved words share one run, spaces included, so a reworded
         # phrase reads as a phrase and not as a row of blinking words.
         out: list[str] = []
@@ -506,27 +557,14 @@ def _render_prose(field: str, was: str, now: str, *, pad: str,
             out.append(_UNEMPHASIS)
         return "".join(out)
 
-    def emit(mark: str, words: list[_Word]) -> None:
-        first, rest = f"{indent}{mark} ", f"{indent}  "
-        paint = _PAINT[mark] if colour else ""
-        for n, wrapped in enumerate(_wrap(words, first=first, rest=rest,
-                                          width=width)):
+    for unit in diff_prose(was, now):
+        first, rest = f"{indent}{unit.mark} ", f"{indent}  "
+        paint = _PAINT[unit.mark] if colour else ""
+        for n, wrapped in enumerate(wrap_words(unit.words, first=first, rest=rest,
+                                               width=width)):
             head = first if n == 0 else rest
             line = f"{head}{painted(wrapped)}".rstrip()
             lines.append(f"{paint}{line}{_RESET}" if paint else line)
-
-    a, b = _units(was), _units(now)
-    matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
-    for op, i1, i2, j1, j2 in matcher.get_opcodes():
-        if op == "equal":
-            for unit in a[i1:i2]:
-                emit(" ", _plain(unit))
-            continue
-        marks_r, marks_a = _pair_words(a[i1:i2], b[j1:j2])
-        for words in marks_r:
-            emit("-", words)
-        for words in marks_a:
-            emit("+", words)
     return lines
 
 
@@ -555,7 +593,7 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
              f"(stamp {change.stamp}, ratified content at {change.revision[:9]}"
              f"{', cached' if change.cached else ''}):"]
     for c in change.changes:
-        if _prose(c.was, c.now):
+        if is_prose(c.was, c.now):
             lines.extend(_render_prose(c.field, c.was, c.now, pad=pad,
                                        columns=columns, colour=colour))
         else:

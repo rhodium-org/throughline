@@ -16,7 +16,10 @@ import pytest
 
 from throughline.cli import main as cli_main
 from throughline.ratification import (
+    ADDED,
     CHANGED,
+    KEPT,
+    REMOVED,
     REVISION_ATTR,
     UNCHANGED,
     UNRATIFIED,
@@ -24,6 +27,9 @@ from throughline.ratification import (
     change_since_ratification,
     render_change,
     resolve_revision,
+    diff_prose,
+    is_prose,
+    wrap_words,
 )
 from throughline.storage import load_project
 
@@ -330,6 +336,63 @@ def test_a_sentence_replaced_by_two_pairs_with_the_one_it_became(graph):
     assert _marked(plus_audit) == ["log."]                  # only the full stop
     wholly_new = next(ln for ln in lines if "The record shall" in ln)
     assert wholly_new.startswith("\033[32m") and "\033[7m" not in wholly_new
+
+
+# --------------------------------------------- the diff offered as data (SR-0200)
+
+def test_the_diff_is_offered_as_units_with_the_moved_words_marked():
+    """A consumer with a screen of its own reads the kept, removed and added units
+    in order, each word carrying whether it moved, and derives nothing (SR-0200)."""
+    units = diff_prose(PARAGRAPH, REWORDED)
+    assert [u.mark for u in units] == [REMOVED, ADDED, KEPT, KEPT]
+    removed, added, kept, _last = units
+    assert removed.text == "The Tool shall evict a cached widget after 3600 seconds."
+    assert added.text == "The Tool shall evict a cached widget when it is an hour old."
+    assert [w for w, moved in removed.words if moved] == ["after", "3600", "seconds."]
+    assert [w for w, moved in added.words if moved] == ["when", "it", "is", "an", "hour", "old."]
+    assert kept.text.startswith("It shall record") and not kept.marked
+
+
+def test_the_terminal_rendering_is_built_from_the_same_data(graph):
+    """What tl ratify paints and what the data says are one account: every unit
+    the rendering shows is a unit the data names, in the same order with the same
+    words, and the words it highlights are the words the data marks (SR-0200)."""
+    _ratified_paragraph(graph)
+    project = load_project(graph)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+    (field,) = change.changes
+    units = diff_prose(field.was, field.now)
+
+    plain = render_change(change, columns=400)[2:]           # one line per unit
+    assert [ln.strip()[0] if ln.strip()[0] in "-+" else " " for ln in plain] \
+        == [u.mark for u in units]
+    assert [ln.strip().lstrip("-+ ") for ln in plain] == [u.text for u in units]
+
+    painted = render_change(change, columns=400, colour=True)[2:]
+    for line, unit in zip(painted, units):
+        marked_words = " ".join(w for w, moved in unit.words if moved)
+        assert _marked(line) == ([marked_words] if marked_words else [])
+
+
+def test_only_prose_is_diffed():
+    """A token — a priority, a flag — is before and after on one line, so the
+    consumer asks the same question the renderer does before drawing a diff."""
+    assert not is_prose("should", "must")
+    assert not is_prose(None, "must")
+    assert is_prose("The Tool shall.", "The Tool must.")
+    assert is_prose("", "Two words.")
+
+
+def test_a_unit_wraps_without_losing_a_word_or_its_mark():
+    """The wrap a consumer draws with keeps every word once, keeps each word's
+    mark, and never runs past the width once the prefixes are counted (SR-0200)."""
+    (removed, *_rest) = diff_prose(PARAGRAPH, REWORDED)
+    lines = wrap_words(removed.words, first="    - ", rest="      ", width=30)
+    assert len(lines) > 1
+    assert [w for ln in lines for w in ln] == list(removed.words)
+    for n, ln in enumerate(lines):
+        prefix = "    - " if n == 0 else "      "
+        assert len(prefix) + len(" ".join(w for w, _m in ln)) <= 30
 
 
 # ------------------------------------------------------ the revision cache (SR-0166)
