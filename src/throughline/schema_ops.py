@@ -31,9 +31,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from .model import Project
+from .model import Item, Project
 from .schema import Schema, SchemaError
-from .storage import CONFIG_NAME, ProjectError, load_project
+from .storage import CONFIG_NAME, ProjectError, load_project, write_item
 from .tomledit import TomlDocument, TomlEditError
 from .validate import ERROR, Finding, validate
 
@@ -513,6 +513,34 @@ def attr_remove(project: Project, itype: str, name: str) -> Change:
     body["attrs"] = attrs
     return Change(f"removing attribute '{name}' from item type '{itype}'", cfg,
                   lambda doc, why: _remove_attr(doc, itype, name, why))
+
+
+def attr_carriers(project: Project, itype: str, name: str) -> list[Item]:
+    """The live items of ``itype`` that carry ``name``, in UID order (SR-0207)."""
+    return sorted((it for it in project.items()
+                   if not it.is_deleted and it.type == itype and name in it.attrs),
+                  key=lambda it: it.uid)
+
+
+def attr_values_unset(project: Project, itype: str, name: str) -> Change:
+    """Finish a withdrawal made before withdrawing could remove values (SR-0207):
+    the type no longer declares ``name``, but its items still carry it. No value
+    in the configuration changes; the reason is recorded beside the type, as for
+    any schema change (SR-0184)."""
+    if itype not in (project.config.get("types") or {}):
+        raise SchemaOpError(f"item type '{itype}' is not declared")
+    return Change(f"removing attribute '{name}' from the items of type '{itype}', "
+                  "which already declares no such attribute", _copy(project),
+                  lambda doc, why: doc.note_table(f"types.{itype}", why))
+
+
+def unset_from(items: list[Item], name: str) -> list[str]:
+    """Remove ``name`` from each of ``items`` and write them. The caller has
+    already asked `attribute_removal_refusal` of every one (SR-0206)."""
+    for it in items:
+        del it.attrs[name]
+        write_item(it)
+    return [it.uid for it in items]
 
 
 def _remove_attr(doc: TomlDocument, itype: str, name: str, why: str) -> None:

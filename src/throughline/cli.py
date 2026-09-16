@@ -21,7 +21,9 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
     GroundingError,
+    attribute_removal_refusal,
     invalidate,
+    origin_change_refusal,
     ratification_obstacle,
     ratify,
     reaches_root,
@@ -39,7 +41,7 @@ from .identity import (
 from .inject import InjectError, has_markers, inject_text, referenced_uids
 from .ratification import change_since_ratification, render_change
 from .model import Link, Register
-from .schema import SchemaError
+from .schema import Schema, SchemaError
 from . import schema_ops
 from .storage import (
     CONFIG_NAME,
@@ -289,6 +291,57 @@ def cmd_schema(args) -> int:
         print(result.render(schema_ops.is_composed(project)))
         return FINDINGS
     print(f"{result} — {root / CONFIG_NAME} updated")
+    return OK
+
+
+def cmd_schema_attr_remove(args) -> int:
+    """Withdraw an attribute from an item type, naming the items that still carry
+    it, and with --unset remove it from them as well (SR-0207).
+
+    Without --unset no item is touched, so withdrawing an attribute and declaring
+    it again, the only way to change a declaration, keeps its values. With it, the
+    same command also finishes a withdrawal that an earlier release left behind.
+    Every refusal is decided before the configuration or any item is written."""
+    root = Path(args.path)
+    try:
+        project = schema_ops.load(root)
+        declared = project.schema.attr(args.itype, args.name) is not None
+        carriers = schema_ops.attr_carriers(project, args.itype, args.name)
+        type_declared = args.itype in (project.config.get("types") or {})
+        if declared:
+            change = schema_ops.attr_remove(project, args.itype, args.name)
+        elif args.unset and carriers and type_declared:
+            change = schema_ops.attr_values_unset(project, args.itype, args.name)
+        else:
+            hint = ""
+            if carriers and type_declared:
+                hint = (f" — {len(carriers)} item(s) of that type still carry it; "
+                        "pass --unset to remove it from them")
+            try:
+                change = schema_ops.attr_remove(project, args.itype, args.name)
+            except schema_ops.SchemaOpError as e:
+                return _err(f"{e}{hint}")
+        if args.unset:
+            after = Schema.from_config(change.config)
+            for it in carriers:
+                refusal = attribute_removal_refusal(after, it, args.name)
+                if refusal is not None:
+                    return _err(f"{refusal} — nothing was changed")
+        result = schema_ops.apply_change(root, change, args.because)
+    except (schema_ops.SchemaOpError, ProjectError, SchemaError) as e:
+        return _err(str(e))
+    if isinstance(result, schema_ops.Refusal):
+        print(result.render(schema_ops.is_composed(project)))
+        return FINDINGS
+    print(f"{result} — {root / CONFIG_NAME} updated")
+    uids = " ".join(it.uid for it in carriers)
+    if args.unset and carriers:
+        schema_ops.unset_from(carriers, args.name)
+        print(f"  removed '{args.name}' from {len(carriers)} item(s): {uids}")
+    elif carriers:
+        print(f"  {len(carriers)} item(s) still carry '{args.name}': {uids}")
+        print(f"  remove it from them with `tl schema attr remove {args.itype} "
+              f"{args.name} --unset --because \"…\"`")
     return OK
 
 
@@ -807,15 +860,33 @@ def cmd_amend(args) -> int:
     # Amending nothing is a mistake worth naming. Succeeding silently would let a
     # typo in an option name read as a change that was made.
     if args.title is None and args.text is None and args.rationale is None \
-            and not args.attr:
-        return _err("amend needs at least one of --title, --text, --rationale "
-                    "or --attr")
+            and not args.attr and not args.unset:
+        return _err("amend needs at least one of --title, --text, --rationale, "
+                    "--attr or --unset")
     schema = project.schema
     try:
         attrs = _parse_attrs(schema, item.type, args.attr,
                              command="amend", declared_only=True)
     except UidError as e:
         return _err(str(e))
+    unset = list(dict.fromkeys(name.strip() for name in (args.unset or [])))
+    if "" in unset:
+        return _err("--unset expects an attribute name")
+    both = sorted(set(unset) & set(attrs))
+    if both:
+        return _err(f"--attr and --unset both name {', '.join(both)} — "
+                    "say which you mean")
+    # Every refusal is decided before anything moves, so a refused amendment
+    # changes nothing. An origin leaves the machine-origin set only by ratification
+    # (SR-0208); removal stops at the attributes a gate reads (SR-0206).
+    if "origin" in attrs:
+        refusal = origin_change_refusal(schema, item, attrs["origin"])
+        if refusal is not None:
+            return _err(refusal)
+    for name in unset:
+        refusal = attribute_removal_refusal(schema, item, name)
+        if refusal is not None:
+            return _err(refusal)
 
     before = fingerprint(item, schema)
     was_reviewed = item.reviewed is not None
@@ -835,6 +906,11 @@ def cmd_amend(args) -> int:
         if item.attrs.get(key) != value:
             item.attrs[key] = value
             changed.append(key)
+    # Removal reaches an attribute the type no longer declares (SR-0206), which is
+    # what a withdrawn attribute leaves behind and what nothing could clear before.
+    for name in unset:
+        del item.attrs[name]
+        changed.append(f"{name} (unset)")
     if not changed:
         print(f"{uid} already says that — nothing changed")
         return OK
@@ -1398,7 +1474,8 @@ _CTX_FORMAT = (
 # to describe it, and _ctx_commands_uncovered() fails the build if one slips past.
 _CTX_COMMAND_USAGE = {
     "new": "tl new <PREFIX> --type <T> [--title …] [--text …] --ground <PARENT_UID>",
-    "amend": "tl amend <UID> [--title …] [--text …] [--rationale …] [--attr K=V]",
+    "amend": "tl amend <UID> [--title …] [--text …] [--rationale …] [--attr K=V] "
+             "[--unset K]",
     "link": "tl link <SRC> <DST> --type <kind>",
     "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
     "check": "tl check [--strict] [--format json]",
@@ -2165,6 +2242,10 @@ def _add_schema_parser(sub) -> None:
                      "withdraw an attribute from an item type")
     v.add_argument("itype", metavar="TYPE")
     v.add_argument("name")
+    v.add_argument("--unset", action="store_true",
+                   help="also remove the attribute from every item of the type that "
+                        "carries it; finishes a withdrawal that left values behind")
+    v.set_defaults(func=cmd_schema_attr_remove)
 
     v = _schema_verb("linktype", "add",
                      lambda p, a: schema_ops.linktype_add(p, a.name),
@@ -2324,6 +2405,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--attr", action="append", metavar="KEY=VALUE",
                    help="set a declared attribute, e.g. --attr priority=must "
                         "(repeatable; coerced to the attribute's declared type)")
+    s.add_argument("--unset", action="append", metavar="KEY",
+                   help="remove an attribute from the item, whether or not its type "
+                        "still declares it (repeatable)")
     s.set_defaults(func=cmd_amend)
 
     s = sub.add_parser("review", help="mark item(s) reviewed at current content")

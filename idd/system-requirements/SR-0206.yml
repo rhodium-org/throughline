@@ -1,0 +1,37 @@
+uid: SR-0206
+type: system_requirement
+status: ratified
+title: An attribute can be removed from an item through the tool
+text: The Tool shall let an author remove named attributes from an existing item
+  through amend, whether or not the item's type still declares them, so a value the
+  schema no longer governs can be cleared without hand-editing the item. It shall
+  refuse, saying why, to remove an attribute the item does not carry, one its type
+  declares as required, the ratification record (SR-0170), and the ambiguity flag
+  that blocks ratification. A removal is a content change and shall be reported like
+  any other amendment.
+rationale: 'After `tl schema attr remove`, every item of the type kept the value,
+  amend refused to clear it because the type no longer declared it, and published
+  documents went on rendering it (issue #37). The only route left was a hand-edit,
+  which the CLI-only discipline forbids. Removal has to reach exactly the values
+  the schema has stopped governing, so it is not limited to declared attributes as
+  setting is (SR-0144). It refuses the attributes a gate reads, so their reach stays
+  what it was: the ratification record keeps the owners SR-0170 gives it, an origin
+  is governed by SR-0208, and how an ambiguity flag is resolved is not decided here.
+  Rejected, clearing to an empty value, because an empty string is still a value
+  that a document renders and an enum rejects.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0144
+  type: refines
+- target: SR-0170
+  type: relates
+- target: SR-0208
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:5c489010f25dc95c3ee5965d6ffbc30de98a1c0defb79bbae78715ff5c42d01d
