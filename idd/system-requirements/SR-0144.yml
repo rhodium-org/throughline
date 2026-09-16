@@ -9,10 +9,10 @@ text: The Tool shall let an author change an existing item's title, text, ration
   for that attribute and rejecting a value the schema cannot accept. It shall refuse
   to change uid, type, status, or links — identity is immutable, and the other three
   each have their own verb — and shall fail clearly when the named item does not
-  exist or when a named attribute is not one the item's type declares. Amending content
-  shall update the item's stored fingerprint, so that changing normative text marks
-  dependents suspect (SR-0034) and clears the item's review state (SR-0038) rather
-  than leaving a stale confirmation standing.
+  exist or when an attribute it is asked to set is not one the item's type declares.
+  Amending content shall update the item's stored fingerprint, so that changing normative
+  text marks dependents suspect (SR-0034) and clears the item's review state (SR-0038)
+  rather than leaving a stale confirmation standing.
 rationale: An item's title, text, rationale and attributes were write-once at creation,
   so every later correction — wording that turned out to be wrong, an attribute that
   became false once the facts were known — could be made only by opening the YAML
@@ -34,11 +34,17 @@ links:
   type: relates
 - target: SR-0143
   type: relates
+- target: SR-0206
+  type: relates
+- target: SR-0034
+  type: relates
+- target: SR-0038
+  type: relates
 attrs:
   priority: must
   verification: test
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c893e4600e9ad7bf29e79d6628f9a1d11ac8164ace478680c5d47015263121e5
+  ratified_fingerprint: sha256:68b1aa1c96fb5efb2970139424d5d36c7cba991cd823acc1739f7a91a4a597f8
   ratified_backfilled: true
   ratified_revision: 465a8edab9fbfd5da43e1ef726dff56801fe9a8e

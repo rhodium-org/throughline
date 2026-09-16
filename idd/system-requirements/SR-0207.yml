@@ -1,0 +1,42 @@
+uid: SR-0207
+type: system_requirement
+status: ratified
+title: Withdrawing an attribute names the items that still carry it, and can remove
+  it from them
+text: 'When an attribute is withdrawn from an item type, the Tool shall name every
+  item of that type that still carries it. With an explicit option it shall also
+  remove the attribute from each of those items in the same run, under the refusals
+  of SR-0206 and SR-0208, and name each item it changed. The same option shall finish
+  a withdrawal made before it existed: where a type no longer declares an attribute
+  that its items still carry, it shall remove the values and record why beside the
+  type. Without the option no item is changed, so an attribute can still be withdrawn
+  and declared again to change its declaration without losing its values.'
+rationale: 'Rejected, removing the values by default: withdrawing and declaring again
+  is the only way the schema commands offer to change an attribute''s declaration,
+  and it would destroy the values on the way. Rejected, a check finding for an attribute
+  no schema declares, and a migrate repair that strips such attributes: creation
+  accepts an undeclared attribute on purpose, and a sweep of 346 real graphs on 16
+  September 2026 found 622 items in 57 of them carrying one deliberately. Neither
+  a check nor a repair can tell those from a withdrawn attribute, so both would fire
+  on graphs that never withdrew anything, which is how 3.5.0 broke existing projects.
+  Naming the items when the attribute is withdrawn, and letting the person who names
+  it finish the job, reaches every orphan without guessing. Who pays: nobody by default;
+  a project that wants the values gone passes one option.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0181
+  type: refines
+- target: SR-0206
+  type: relates
+- target: SR-0184
+  type: relates
+- target: SR-0208
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6a5418bc6e949ded150fbc98a480df8fdb3319fc9df4f51bbc6b9d9f476b2650

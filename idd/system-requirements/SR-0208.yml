@@ -1,0 +1,40 @@
+uid: SR-0208
+type: system_requirement
+status: ratified
+title: A machine-authored item leaves the ratification gate only by being ratified
+text: The Tool shall refuse any operation that would take an item's origin out of
+  the configured machine-origin set, whether by setting another value or by removing
+  the attribute. Changing an origin to another value in the set, or moving an item
+  into the set, shall be allowed.
+rationale: 'SR-0149 closed the status routes out of the ratification gate, but it
+  recognises a machine-authored item by its origin, so relabelling the origin is
+  the route left open. On 3.5.1, `tl amend <UID> --attr origin=human` on a proposed
+  machine-authored item removed its unratified finding while it stayed proposed,
+  and check passed an item no person had accepted. Removing an attribute through
+  amend (SR-0206), or withdrawing it from a type together with its values (SR-0207),
+  would have added two more routes, the second across every item of the type at once.
+  Ratifying a machine-authored item is how it becomes accepted; relabelling it is
+  not. Who pays: an author who labelled a human-written item as machine-authored
+  ratifies it, one command, instead of relabelling it. Rejected, allowing the change
+  once the item is ratified: the gate would pass, but the record would then say a
+  person wrote what a machine proposed.'
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0092
+  type: refines
+- target: SR-0144
+  type: relates
+- target: SR-0206
+  type: relates
+- target: SR-0207
+  type: relates
+- target: SR-0149
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:70d19efdcb71d1aa9baa068de5fa4852b95b8c861fee1a26379b807a35e38108

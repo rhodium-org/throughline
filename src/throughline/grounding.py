@@ -72,6 +72,54 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     return None
 
 
+def origin_change_refusal(schema, item: Item, to: str | None) -> str | None:
+    """Why ``item``'s origin may not become ``to`` (``None`` meaning removed), or
+    ``None`` when it may (SR-0208).
+
+    The unratified gate recognises a machine-authored item by its origin (SR-0092,
+    SR-0149), so moving an origin out of the machine-origin set passes the gate
+    without anyone signing. Every operation that sets or removes an attribute asks
+    this one predicate. A move within the set, or into it, keeps the item under
+    the gate and is allowed."""
+    origin = item.attrs.get("origin")
+    if origin in schema.ai_origins and to not in schema.ai_origins:
+        now = "removed" if to is None else f"changed to '{to}'"
+        return (f"{item.uid} is machine-authored (origin '{origin}') and its origin "
+                f"cannot be {now} — a machine-authored item is accepted by "
+                "`tl ratify`, not by relabelling it")
+    return None
+
+
+def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
+    """Why ``name`` may not be removed from ``item``, or ``None`` when it may
+    (SR-0206). `tl amend --unset` and `tl schema attr remove --unset` both ask
+    this, so they refuse the same things (SR-0207).
+
+    Removal reaches an attribute whether or not the type still declares it, since
+    a withdrawn attribute is exactly what it exists to clear. It stops at the
+    attributes a gate reads: the ratification record keeps the owners SR-0170
+    gives it, an origin stays under SR-0208, and removing the ambiguity flag would
+    let an item be ratified without anyone clarifying it."""
+    if name not in item.attrs:
+        return f"{item.uid} carries no attribute '{name}'"
+    owner = RATIFICATION_ATTRS.get(name)
+    if owner is not None:
+        return (f"'{name}' on {item.uid} is part of the ratification record and "
+                f"cannot be removed — `tl {owner}` owns it")
+    if name == "ambiguous":
+        return (f"'ambiguous' marks {item.uid} as unable to be ratified until it is "
+                "clarified, and removing the flag does not clarify it")
+    if name == "origin":
+        refusal = origin_change_refusal(schema, item, None)
+        if refusal is not None:
+            return refusal
+    spec = schema.attr(item.type, name)
+    if spec is not None and spec.required:
+        return (f"'{item.type}' declares '{name}' as required — set another value "
+                "with --attr, or withdraw the attribute from the type first")
+    return None
+
+
 def ratification_obstacle(schema, idx: Index, item: Item, *,
                           replacing: bool = False) -> str | None:
     """Why :func:`ratify` would refuse ``item`` as the graph now stands, or ``None``
