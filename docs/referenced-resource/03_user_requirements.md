@@ -109,11 +109,13 @@ Regenerate with `tl docs` and gate it in CI with `tl docs --check` (SR-0094).
 <!-- tl:item UR-0010 -->
 **UR-0010 — Search and filter** — `user_requirement`, status `ratified`
 
-> Users shall be able to find requirements by any combination of attribute values, text search, tags, and link conditions.
+> Users shall be able to find requirements by any combination of attribute values, text search, and link conditions.
+
+*Rationale:* Tags were named here from the filter strings other requirements tools offer, and the Tool never built them; a project classifies its items with attributes instead (issue #40).
 
 *Derives from:* BN-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a3eac3ac57b6a12fe478218c00ef06674f1654405607364ad9bf53434f6e6395 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:6d4afd3ea56fecb871679331b1eb65de54cad52923df4de5940529a5cbcfba01 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 <!-- tl:item UR-0011 -->

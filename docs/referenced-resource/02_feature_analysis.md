@@ -62,7 +62,7 @@ Docs-as-code life-cycle objects ("needs") embedded in Sphinx documentation.
 | Configurable need types (req, spec, impl, test, …) | **Adopt** | Item `type` from project schema (SR-0021) |
 | Custom options/attributes per need, usable in filters and styling | **Adopt** | SR-0020 |
 | Configurable extra link types with incoming/outgoing semantics | **Adopt** | SR-0030 |
-| Powerful filter strings (boolean expressions over attributes, tags, links) applied uniformly across views | **Adopt** | Query language, SR-0045..46 |
+| Powerful filter strings (boolean expressions over attributes, tags, links) applied uniformly across views | **Adopt**, without tags | Query language, SR-0045..46 |
 | Generated views: needtable, needlist, needflow (graphs), needpie/needbar (charts), traceability matrices | **Adapt** | Tables + matrix + graph export (DOT); charts out of scope |
 | `needs.json` builder: full machine-readable export; import of external needs across projects | **Adopt** | Canonical JSON export, SR-0055 |
 | Validation/constraints: allowed statuses, ID regex, link constraints, schema checks | **Adopt** | SR-0041..43 |
