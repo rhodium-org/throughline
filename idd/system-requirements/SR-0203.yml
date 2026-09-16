@@ -1,0 +1,43 @@
+uid: SR-0203
+type: system_requirement
+status: ratified
+title: Items whose normative flag disagrees with their type are reported and repaired
+text: '`tl check` shall report, at warning severity, an item whose normative flag
+  differs from what its type declares. `tl migrate` shall rewrite such items to the
+  type''s value as an idempotent repair and shall name every item it rewrote. It
+  shall not touch a ratification record: a rewritten item that is ratified becomes
+  ratified-stale, and a person re-ratifies it through `tl ratify`, which shows them
+  that only the flag moved before it asks for their signature. Where a link into
+  a rewritten item carries a stamp equal to the item''s fingerprint before the rewrite,
+  the repair shall refresh that stamp to the fingerprint after it, because the wording
+  the link was confirmed against has not changed; a stamp that already disagreed
+  is left alone. The command shall report how many ratified items now await re-ratification.'
+rationale: 'The flag is a fingerprint input, so rewriting it makes every ratified
+  intent and non-goal in a graph stale at once. Rejected, having migration refresh
+  the ratification stamp in place: SR-0170 reserves that stamp to ratification, and
+  SR-0148 forbids replacing an accountability record without the graph showing the
+  change. The stale finding is the graph showing it, and SR-0165 puts the one-field
+  difference in front of the ratifier before they sign; with several items ratified
+  in one run the cost is one command per graph, each item still shown. A link stamp
+  names no person and records only the content a link was confirmed against, so refreshing
+  one that matched exactly restates a confirmation rather than making a new one.
+  Rejected, a check finding at error severity, because every existing project would
+  go red on upgrade before it could run the repair.'
+normative: true
+links:
+- target: UR-0033
+  type: implements
+- target: SR-0201
+  type: refines
+- target: SR-0170
+  type: relates
+- target: SR-0148
+  type: relates
+- target: SR-0165
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:e8b7cb2a0fb8b4aef90a3076142bb2c51faef50d0d6392e0d3933ff665186e3a

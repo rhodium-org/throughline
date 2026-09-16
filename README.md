@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-166
+170
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-29
+30
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21

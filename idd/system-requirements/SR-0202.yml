@@ -1,0 +1,24 @@
+uid: SR-0202
+type: system_requirement
+status: ratified
+title: A new project declares its roots and tests non-normative
+text: The configuration `tl init` writes shall declare the `intent`, `non_goal` and
+  `test` types non-normative, and the demo items it seeds shall carry the same value
+  `tl new` would give them. A requirement or nfr stays normative.
+rationale: Before this the demo seeded these three types non-normative and `tl new`
+  wrote them normative, so a fresh project held both values from its first command.
+  An intent and a non-goal are the why and the excluded scope, not obligations, and
+  a test verifies rather than binds; none needs to reach a published document. A
+  project that disagrees changes the declaration.
+normative: true
+links:
+- target: UR-0033
+  type: implements
+- target: SR-0201
+  type: refines
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:cca79bbb54c5e0f3c44460d5210247d6ffce3f64dc87c9191bcdce5320938b8a

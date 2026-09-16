@@ -1,0 +1,33 @@
+uid: SR-0201
+type: system_requirement
+status: ratified
+title: A type declares whether its items are normative
+text: The project shall be able to declare, on an item type in configuration, whether
+  items of that type are normative. The declaration shall default to true where absent,
+  so an existing project is unchanged. A value that is not a boolean shall be a configuration
+  error at load time. When `tl new` creates an item it shall take the flag from the
+  item's type. The declaration shall be settable through the schema commands, on
+  a new type and on an existing one, so a project never edits its configuration by
+  hand to reach it.
+rationale: 'The flag feeds the fingerprint (SR-0033) and the unpublished finding
+  (SR-0096), and nothing could set it before this. Declared on the type rather than
+  the item so that every item of a kind carries one value and the choice is recorded
+  once, where a reader can find it. Who pays: a project that wants one normative
+  non-goal among non-normative ones must declare a second type; none is known to
+  want that.'
+normative: true
+links:
+- target: UR-0033
+  type: implements
+- target: SR-0022
+  type: refines
+- target: SR-0033
+  type: relates
+- target: SR-0096
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d5b8fd221beb3cb0555d133338e6662456c06349a133c3b36f19fc3a28656971
