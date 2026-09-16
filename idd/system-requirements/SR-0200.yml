@@ -1,0 +1,35 @@
+uid: SR-0200
+type: system_requirement
+status: implemented
+title: The diff of a changed prose field is available as data, so another screen
+  can draw it
+text: 'Where the change since ratification holds a prose field, the Tool shall offer
+  that field''s diff as structured data: the kept, removed and added units in order,
+  each with its words and, within a replaced sentence, which words moved. The Tool''s
+  own terminal rendering shall be built from that same data. A consumer with a screen
+  of its own shall need neither to parse the Tool''s painted output nor to compare
+  the content itself.'
+rationale: |-
+  SR-0198 built the sentence diff for tl ratify and kept every part of it private. render_change hands back strings painted with ANSI escape codes. The review cockpit, throughline-ratify, draws with curses and cannot use escape codes, so it stayed on the whole-field rendering that SR-0198 replaced. A ratifier there still finds the change by eye across a paragraph, which is the complaint SR-0198 answered for the command line.
+
+  SR-0165 settled that a consumer wanting fields to lay out never takes formatted output back apart. The diff is the next piece down and the same rule applies. One function computes the units and the marked words, and both renderings read it, so the cockpit and tl ratify cannot disagree about what moved.
+
+  Who pays: nobody outside this tool. The new names are additive and render_change is unchanged.
+
+  Rejected: letting the consumer import the private helpers, which binds it to names that may move without notice. Rejected: a second diff written in the consumer, which is the drift the cockpit's own graph refuses.
+
+  Verified by test: the units the data names are the units the rendering shows, and the marked words agree.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0198
+  type: relates
+- target: SR-0165
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:cc0e536bbb1fc7b2af1176255028318d7fa77b83190de6e82dd463707af888e6
