@@ -512,6 +512,51 @@ def _parse_attrs(schema, item_type: str, pairs: list[str] | None,
     return attrs
 
 
+def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
+               text: str = "", status: str | None = None,
+               origin: str | None = None, attrs: dict | None = None):
+    """Everything an item receives at birth, in one place (SR-0205), offered to
+    any tool that creates items in a project so `tl new` and a composing tool
+    bear an item identically. ``attrs`` are the author's already-parsed values
+    (see :func:`_parse_attrs`); ``status`` overrides the birth status explicitly.
+    The caller adds grounding links and writes the item."""
+    from .model import Item
+    attrs = dict(attrs or {})
+    # --origin is the canonical way to set provenance, but honour origin given via
+    # --attr too so birth status stays consistent with what actually lands on the
+    # item.
+    origin = origin or attrs.get("origin")
+    # Birth status comes from the project's status roles, never a value fixed in
+    # code (SR-0131); ``status`` overrides it explicitly. A machine-origin item is
+    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
+    # actually engages and a named human must ratify it before it counts; without
+    # this a machine-authored item would enter the ordinary initial status and
+    # silently escape the gate the tool exists to enforce (SR-0141). If the
+    # project declares no 'proposed' role we fall back to 'initial'.
+    has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
+    if status is None:
+        if origin in schema.ai_origins and has_proposed_role:
+            status = schema.status_role("proposed")
+        else:
+            status = schema.status_role("initial")
+    # The flag is the kind's, not the command's (SR-0201): an intent or a
+    # non-goal is born non-normative because its type says so.
+    item = Item(uid=uid, type=item_type, status=status, title=title, text=text,
+                normative=schema.is_normative(item_type))
+    item.attrs.update(attrs)
+    if origin:
+        item.attrs["origin"] = origin
+    # Apply schema-declared attribute defaults (SR-0138): a default only ever
+    # lands at birth on an attribute the author did not set, so a schema sentinel
+    # (e.g. a priority meaning "no human has decided yet") appears automatically
+    # without overwriting an explicit value.
+    for name, spec in schema.attrs_for(item_type).items():
+        if spec.default is not None and name not in item.attrs:
+            item.attrs[name] = spec.default
+    item._register_prefix = reg.prefix
+    return item
+
+
 def cmd_new(args) -> int:
     try:
         project = load_project(args.path)
@@ -538,41 +583,9 @@ def cmd_new(args) -> int:
         attrs = _parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
-    # --origin is the canonical way to set provenance, but honour origin given via
-    # --attr too so birth status stays consistent with what actually lands on the
-    # item.
-    origin = args.origin or attrs.get("origin")
-    # Birth status comes from the project's status roles, never a value fixed in
-    # code (SR-0131); --status overrides it explicitly. A machine-origin item is
-    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
-    # actually engages and a named human must ratify it before it counts; without
-    # this a machine-authored item would enter the ordinary initial status and
-    # silently escape the gate the tool exists to enforce (SR-0141). If the
-    # project declares no 'proposed' role we fall back to 'initial'.
-    has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
-    if args.status is not None:
-        status = args.status
-    elif origin in schema.ai_origins and has_proposed_role:
-        status = schema.status_role("proposed")
-    else:
-        status = schema.status_role("initial")
-    # The flag is the kind's, not the command's (SR-0201): an intent or a
-    # non-goal is born non-normative because its type says so, where before
-    # every item of every type was written normative and nothing could change it.
-    item = Item(uid=uid, type=args.type, status=status,
-                title=args.title or "", text=args.text or "",
-                normative=schema.is_normative(args.type))
-    item.attrs.update(attrs)
-    if args.origin:
-        item.attrs["origin"] = args.origin
-    # Apply schema-declared attribute defaults (SR-0138): a default only ever
-    # lands at birth on an attribute the author did not set, so a schema sentinel
-    # (e.g. a priority meaning "no human has decided yet") appears automatically
-    # without overwriting an explicit value.
-    for name, spec in schema.attrs_for(args.type).items():
-        if spec.default is not None and name not in item.attrs:
-            item.attrs[name] = spec.default
-    item._register_prefix = reg.prefix
+    item = birth_item(schema, reg, uid, item_type=args.type,
+                      title=args.title or "", text=args.text or "",
+                      status=args.status, origin=args.origin, attrs=attrs)
 
     # Grounding-assisted authoring (SR-0073): attach a parent at birth so the
     # item is justified the moment it exists, rather than being created orphaned

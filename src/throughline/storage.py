@@ -492,7 +492,8 @@ def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
                                                  list[tuple[str, str]], list[str]]:
     """Rewrite every item whose ``normative`` flag disagrees with what its type
     declares (SR-0203). Returns the flags rewritten, the link stamps refreshed and
-    the ratified items now stale.
+    the ratified items now stale. A type that declares nothing is left alone, so
+    a project that never opted in is untouched by upgrading.
 
     Before a type could declare the flag (SR-0201) every item was written
     normative, so a graph that now declares its intents and non-goals otherwise
@@ -520,8 +521,8 @@ def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
     for item in project.items():
         if item.is_deleted:
             continue
-        want = schema.is_normative(item.type)
-        if item.normative == want:
+        want = schema.declares_normative(item.type)
+        if want is None or item.normative == want:
             continue
         before[item.uid] = fingerprint(item, schema)
         item.normative = want
