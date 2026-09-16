@@ -11,3 +11,4 @@ attrs:
   ratified_by: Henry Grech-Cini
   ratified_fingerprint: sha256:8d1c9addba93b75e68e86b24209c6204685c353c978b9292c9860be38bb05831
   ratified_backfilled: true
+  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb

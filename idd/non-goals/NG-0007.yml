@@ -19,8 +19,8 @@ rationale: 'tl:sourced was carried in core while the only thing that could satis
   it work, and the layer that can does not own it. Recording this as a first-class
   non-goal gives a reviewer the object to point at when the next source-dependent
   directive is proposed for core.'
-normative: true
+normative: false
 attrs:
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:bd7cf2daec3ab3724b33572196bc55dd093f571839ec29170b4b25ec4fb814fb
+  ratified_fingerprint: sha256:4d8f75810f57dd50a3e5be699842adfbd9b5bdc2b90796699512d09b01e927de

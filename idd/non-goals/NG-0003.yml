@@ -17,9 +17,9 @@ rationale: Trying to filter natural language for "malicious instructions" is bot
   explicitly tells integrators where the tool's guarantees stop, so they wrap graph
   content as untrusted data rather than assuming throughline made it safe. Structural
   safety is covered separately and positively by NFR-0022.
-normative: true
+normative: false
 attrs:
   origin: human
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:21399c25134bc77c4f605c299520e5bf422064e964a4f541badcd100e1005e11
+  ratified_fingerprint: sha256:11e1248c001bfbea4c5ef67f7b4f89401454f3a4296e880758b259474ad9d01a
   ratified_backfilled: true

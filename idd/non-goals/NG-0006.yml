@@ -22,9 +22,9 @@ rationale: A local preview server with live reload was carried as deferred scope
   keeps no network surface to defend. Recording the boundary as a first-class non-goal
   is the object a reviewer points at to reject the next proposal to add a serve command,
   and the ratified intent that SR-0063's withdrawal traces to.
-normative: true
+normative: false
 attrs:
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c01a6cdc13f9ea74b540fd5e2da84d90a30330277c7f99a3d5bfbdf86f2a6277
+  ratified_fingerprint: sha256:d5949b13c27464942ed187892336780974c7216476783c7439ce9ee4fd3aaa99
   ratified_backfilled: true

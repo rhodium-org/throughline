@@ -39,3 +39,4 @@ attrs:
   verification: test
   ratified_by: Henry Grech-Cini
   ratified_fingerprint: sha256:e350049113c4435ebb931bf1311b56c9dc4cf3d7790ae488ab8b15c584f98d2e
+  ratified_revision: ffbf193e2ee5663ecb3c5091865df6f5c2620a97

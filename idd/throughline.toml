@@ -36,6 +36,8 @@ attrs.verification = { type = "enum", values = ["test", "demonstration", "inspec
 # detect items that 'violate' a non_goal.
 [types.non_goal]
 attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+# excluded scope binds nobody
+normative = false
 
 [links]
 types = ["refines", "verifies", "satisfies", "implements", "relates",

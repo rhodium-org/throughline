@@ -11,9 +11,9 @@ rationale: An earlier draft suggested CC-BY-4.0 for the specification while the 
   declares and forced readers to reason about which license applies to which file.
   Recording a single-license stance as an explicit non-goal removes that ambiguity
   and gives the license-alignment change a ratified intent to trace to.
-normative: true
+normative: false
 attrs:
   origin: human
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a150812336105b51774908eb804f226b805e05c8fd05bd971a0608ad774ed4ae
+  ratified_fingerprint: sha256:c5e24459981119d7215f0c3844263b9892a199094e586a269b10b008174f3243
   ratified_backfilled: true
