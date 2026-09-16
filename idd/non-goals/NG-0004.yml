@@ -6,9 +6,9 @@ text: throughline does not provide, and does not require, an online counter or c
   service to allocate UIDs. Allocation atomicity derives solely from compare-and-swap
   on the trunk ref, keeping identity allocation viable for fully offline and zero-backend
   (e.g. in-browser) clients.
-normative: true
+normative: false
 attrs:
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:4aca0877318b77f7a4563ecd4e84bb8d9efff5c1a4691247947bf4ddc0bcc2d0
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a511f1e2e493a5e2fc9355f70c8491402489995632b92b766cf048b467c0efdc
   ratified_backfilled: true

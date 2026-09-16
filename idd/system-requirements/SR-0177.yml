@@ -33,3 +33,4 @@ attrs:
   priority: must
   ratified_by: Henry Grech-Cini
   ratified_fingerprint: sha256:15bc967d5eeac9045125337939a18788565e7b239e277ac4a6e6ed926c2da932
+  ratified_revision: 0aefa106a812f04158cc64c0bd8ef454fbdfce74

@@ -20,9 +20,9 @@ rationale: Every tool that started as a validator and grew a renderer for stakeh
   Markdown generator so the core could stay pure). Recording the boundary as a first-class
   non-goal is the object a reviewer points at to reject that scope, and the ratified
   intent the withdrawals trace to.
-normative: true
+normative: false
 attrs:
   origin: hybrid
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b561f9b71646b36c9311b485fb58ba5dcbc9544006fcae43ecb21f16e92760f6
+  ratified_fingerprint: sha256:fd4bf4cd0c3775b67cb2a9383e38bccf66b2c97df2b191f61497294b23629b7c
   ratified_backfilled: true

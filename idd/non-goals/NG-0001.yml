@@ -11,9 +11,9 @@ rationale: The comparable tools that started as validators and grew editing surf
   became document-management systems and lost the git-native, reference-not-copy
   property that keeps content from drifting. Recording this as a first-class non-goal
   is the object a reviewer points at to reject that category of proposed scope.
-normative: true
+normative: false
 attrs:
   origin: human
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:32a0fcd84dcba445e7785aa380208009029d3070ff75f2e20611e1226f5371b3
+  ratified_fingerprint: sha256:90e8a7543c3dba8d1363d2737ab12ac23e02e41003085c9bb0cc72a299c1d302
   ratified_backfilled: true
