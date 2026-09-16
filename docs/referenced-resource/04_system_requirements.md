@@ -229,7 +229,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0103 -->
 **SR-0103 — Filter expressions never reach eval or exec** — `system_requirement`, status `ratified`
 
-> The Tool shall never pass any project-supplied value — a coverage-rule filter, a query expression, or any other string read from project files or configuration — to eval, exec, or an equivalent dynamic-code primitive. The one boolean filter language (SR-0045) shall be evaluated through a constrained parser that reads only the published filter namespace (attributes, tags, text, status, type, register, and link predicates) and can reach neither Python builtins nor object internals nor imports. A filter that cannot be parsed shall fail fast with an error rather than fall back to dynamic evaluation.
+> The Tool shall never pass any project-supplied value — a coverage-rule filter, a query expression, or any other string read from project files or configuration — to eval, exec, or an equivalent dynamic-code primitive. The one boolean filter language (SR-0045) shall be evaluated through a constrained parser that reads only the published filter namespace (the names SR-0045 lists, and the literals `true`, `false` and `none`) and can reach neither Python builtins nor object internals nor imports. A filter that cannot be parsed shall fail fast with an error rather than fall back to dynamic evaluation.
 
 *Rationale:* NFR-0022 declares project files untrusted input that must not become code execution, but its wording pins only the YAML loader and emitter; the filter path evaluates expressions with eval against a namespace whose only guard is an emptied builtins, which sandbox-escape techniques defeat, so the exact threat NFR-0022 names is still open on the filter surface. A crafted filter in a committed coverage rule already runs on every contributor's and CI machine at tl check; the risk sharpens once graphs are composed across authorities, because a filter authored by one party would then execute inside another party's environment. A parser that evaluates the fixed grammar directly removes the primitive rather than trying to fence it.
 
@@ -237,7 +237,7 @@ kept as a live example of the tombstone convention.)*
 *Refines:* SR-0045
 *Relates:* NFR-0022
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:ce2066654165e79188642214cb1ced3607aa66c44be241a35ac96d597a90ba15 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:663302a57f3f9158143b336391c7c430492f474892e01194b3634e8f55f19552 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 ## 3. Attributes and schema
@@ -265,11 +265,13 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0022 -->
 **SR-0022 — Built-in core fields** — `system_requirement`, status `ratified`
 
-> The Tool shall reserve and manage these fields on every item: uid, type, status, text, title, links, order/level, normative, derived, reviewed, created, modified.
+> The Tool shall reserve these top-level fields on every item: `uid`, `type`, `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`, `attrs`, `reviewed`, `created`, `modified` and `deleted`.
+
+*Rationale:* The list named twelve fields while the Tool reserves fifteen, so a reader who built against it got an item shape that rejects valid files (issue #39). rationale, attrs and deleted were missing, and order/level named a field the Tool calls order; doc 06 §4 already showed all fifteen. The requirement says reserve rather than reserve and manage, because no command sets order, created or modified: the Tool reads them and writes them back unchanged.
 
 *Implements:* UR-0011
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:16fa361a8e716ad860313cd24e7af8682fb55f9622dbe1f970ac75ea4e15892f · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e6fe61207a5e899e379d8ea8b8fc06c03c5f5f1861c3de9d0510d1c610756888 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 <!-- tl:item SR-0023 -->
@@ -539,11 +541,14 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0045 -->
 **SR-0045 — Filter expression language** — `system_requirement`, status `ratified`
 
-> The Tool shall provide one boolean filter language over attributes, tags, text, status, type, register, and link predicates, usable identically in search, table generation, exports, and coverage rules.
+> The Tool shall provide one boolean filter language over an item's `uid`, `type`, `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs` and `links`, usable identically in search, table generation, exports, and coverage rules.
+
+*Rationale:* The list named tags, which the Tool has never had, and left out uid, rationale, normative and derived, which it admits (issue #40). The names are written out exactly because a reader reproducing the language needs the set, and SR-0103 bounds what the parser may read by it. Tags came from the filter strings other tools offer and were never built, so UR-0010 no longer promises them.
 
 *Implements:* UR-0010
+*Relates:* SR-0103
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c052063548a289eae98266972c638eb12fbc4d2f53e14aa6d8d58989ac5e901d · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:1742905d7f8db9f53fafc0ba42d31f704f10d75afe5fd2e12a6a91c4fc9f12af · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 <!-- tl:item SR-0104 -->

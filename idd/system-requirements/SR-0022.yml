@@ -2,16 +2,23 @@ uid: SR-0022
 type: system_requirement
 status: ratified
 title: Built-in core fields
-text: 'The Tool shall reserve and manage these fields on every item: uid, type, status,
-  text, title, links, order/level, normative, derived, reviewed, created, modified.'
+text: 'The Tool shall reserve these top-level fields on every item: `uid`, `type`,
+  `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`,
+  `attrs`, `reviewed`, `created`, `modified` and `deleted`.'
+rationale: 'The list named twelve fields while the Tool reserves fifteen, so a reader
+  who built against it got an item shape that rejects valid files (issue #39). rationale,
+  attrs and deleted were missing, and order/level named a field the Tool calls order;
+  doc 06 §4 already showed all fifteen. The requirement says reserve rather than
+  reserve and manage, because no command sets order, created or modified: the Tool
+  reads them and writes them back unchanged.'
 normative: true
 links:
 - target: UR-0011
   type: implements
 attrs:
   priority: must
-  verification: inspection
+  verification: test
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:16fa361a8e716ad860313cd24e7af8682fb55f9622dbe1f970ac75ea4e15892f
+  ratified_fingerprint: sha256:e6fe61207a5e899e379d8ea8b8fc06c03c5f5f1861c3de9d0510d1c610756888
   ratified_backfilled: true
   ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb

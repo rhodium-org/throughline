@@ -2,17 +2,25 @@ uid: SR-0045
 type: system_requirement
 status: ratified
 title: Filter expression language
-text: The Tool shall provide one boolean filter language over attributes, tags, text,
-  status, type, register, and link predicates, usable identically in search, table
-  generation, exports, and coverage rules.
+text: The Tool shall provide one boolean filter language over an item's `uid`, `type`,
+  `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs`
+  and `links`, usable identically in search, table generation, exports, and coverage
+  rules.
+rationale: 'The list named tags, which the Tool has never had, and left out uid,
+  rationale, normative and derived, which it admits (issue #40). The names are written
+  out exactly because a reader reproducing the language needs the set, and SR-0103
+  bounds what the parser may read by it. Tags came from the filter strings other
+  tools offer and were never built, so UR-0010 no longer promises them.'
 normative: true
 links:
 - target: UR-0010
   type: implements
+- target: SR-0103
+  type: relates
 attrs:
   priority: must
   verification: test
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c052063548a289eae98266972c638eb12fbc4d2f53e14aa6d8d58989ac5e901d
+  ratified_fingerprint: sha256:1742905d7f8db9f53fafc0ba42d31f704f10d75afe5fd2e12a6a91c4fc9f12af
   ratified_backfilled: true
   ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
