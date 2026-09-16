@@ -420,14 +420,40 @@ def _clear_rule(doc: TomlDocument, ltype: str, why: str) -> None:
     doc.note_table("link_rules", why)
 
 
-def type_add(project: Project, name: str) -> Change:
+def type_add(project: Project, name: str, *, normative: bool = True) -> Change:
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
     if name in types:
         raise SchemaOpError(f"item type '{name}' is already declared")
-    types[name] = {}
-    return Change(f"adding item type '{name}'", cfg,
-                  lambda doc, why: doc.add_table(f"types.{name}", comment=why))
+    types[name] = {} if normative else {"normative": False}
+
+    def edit(doc: TomlDocument, why: str) -> None:
+        doc.add_table(f"types.{name}", comment=why)
+        if not normative:
+            doc.set_key(f"types.{name}", "normative", False)
+
+    return Change(f"adding item type '{name}'"
+                  + ("" if normative else " (non-normative)"), cfg, edit)
+
+
+def type_normative(project: Project, name: str, value: bool) -> Change:
+    """Declare whether items of an existing type are normative (SR-0201). The
+    items already written keep their flag until `tl migrate` rewrites it (SR-0203),
+    so this never rewrites an item; `check` reports the disagreement meanwhile."""
+    cfg = _copy(project)
+    types = cfg.setdefault("types", {})
+    if name not in types:
+        raise SchemaOpError(f"item type '{name}' is not declared")
+    body = types[name] = dict(types[name] or {})
+    if body.get("normative", True) == value:
+        raise SchemaOpError(
+            f"item type '{name}' is already declared "
+            f"{'normative' if value else 'non-normative'}")
+    body["normative"] = value
+    return Change(f"declaring item type '{name}' "
+                  f"{'normative' if value else 'non-normative'}", cfg,
+                  lambda doc, why: doc.set_key(f"types.{name}", "normative", value,
+                                               because=why))
 
 
 def type_remove(project: Project, name: str) -> Change:

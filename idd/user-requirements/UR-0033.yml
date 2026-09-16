@@ -1,0 +1,31 @@
+uid: UR-0033
+type: user_requirement
+status: ratified
+title: Whether an item is normative is decided by its kind, not by which command
+  wrote it
+text: 'As the person who keeps a graph, I want the normative flag on an item to follow
+  from what kind of item it is, so that an intent or a non-goal is not treated as
+  a binding statement just because `tl new` wrote it. Today the tool writes `normative:
+  true` for every item of every type, and no command can change it, so the only value
+  a graph can hold is the one the tool happened to write.'
+rationale: 'Filed as issue #44 against 3.4.0 after an audit of a 1,500-item graph
+  found five registers holding both values of the field. The tool already disagrees
+  with itself: the demo project seeds intents, tests and non-goals as non-normative,
+  while `tl new` writes true for the same types, and this project''s own non-goals
+  carry true. Rejected, a per-item flag on `tl new` and `tl amend`, because the value
+  is a property of the kind of thing and a per-item judgement drifts again at scale.
+  The flag governs only the fingerprint and the unpublished finding; it does not
+  gate the suspect cascade, so the fix corrects publication coverage and the documentation,
+  not invalidation.'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0025
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6151ced0eb3aefc2945b80c311e7f3c8b25451e39031bcf8f63e51651969a9c0

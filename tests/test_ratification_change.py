@@ -49,10 +49,14 @@ def _commit(root: Path, message: str) -> str:
     return _git(root, "rev-parse", "HEAD").strip()
 
 
-CONFIG_EXTRA = '''
-[types.intent]
-attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
-'''
+
+def _declare_intent_origin(root: Path) -> None:
+    """The scaffold declares `[types.intent]` (SR-0202), so the attribute these
+    fixtures need is added through the tool rather than by appending a second
+    table the config already holds."""
+    assert _cli(["-C", root, "schema", "attr", "add", "intent", "origin",
+                 "--kind", "enum", "--values", "human,ai,hybrid",
+                 "--because", "the fixture records who authored each intent"]) == 0
 
 
 @pytest.fixture
@@ -61,8 +65,7 @@ def graph(tmp_path) -> Path:
     normative content is known."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
-    cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8") + CONFIG_EXTRA, encoding="utf-8")
+    _declare_intent_origin(root)
 
     _git(root, "init")
     _git(root, "config", "user.email", "t@t")
@@ -573,8 +576,7 @@ def test_outside_a_git_work_tree_the_change_cannot_be_shown(tmp_path):
     rather than smoothed over (SR-0165)."""
     root = tmp_path / "nogit"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
-    cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8") + CONFIG_EXTRA, encoding="utf-8")
+    _declare_intent_origin(root)
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Why",
                  "--text", "V.", "--origin", "human", "--no-interactive"]) == 0
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "Original.",

@@ -25,10 +25,14 @@ from throughline.identity import RATIFICATION_ATTRS
 from throughline.ratification import SUPERSEDED_ATTR, ratification_is_committed
 from throughline.storage import load_project
 
-CONFIG_EXTRA = '''
-[types.intent]
-attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
-'''
+
+def _declare_intent_origin(root: Path) -> None:
+    """The scaffold declares `[types.intent]` (SR-0202), so the attribute these
+    fixtures need is added through the tool rather than by appending a second
+    table the config already holds."""
+    assert _cli(["-C", root, "schema", "attr", "add", "intent", "origin",
+                 "--kind", "enum", "--values", "human,ai,hybrid",
+                 "--because", "the fixture records who authored each intent"]) == 0
 
 
 def _cli(argv) -> int:
@@ -46,8 +50,7 @@ def graph(tmp_path) -> Path:
     misspelled name and not yet committed."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
-    cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8") + CONFIG_EXTRA, encoding="utf-8")
+    _declare_intent_origin(root)
     _git(root, "init")
     _git(root, "config", "user.email", "a@e")
     _git(root, "config", "user.name", "Ada Lovelace")
@@ -151,8 +154,7 @@ def test_outside_a_work_tree_the_correction_is_refused(tmp_path):
     evidence the record was never shared, and absence of evidence is not that."""
     root = tmp_path / "nogit"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
-    cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8") + CONFIG_EXTRA, encoding="utf-8")
+    _declare_intent_origin(root)
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "W",
                  "--text", "V.", "--origin", "human", "--no-interactive"]) == 0
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.",

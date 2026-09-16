@@ -173,7 +173,7 @@ def cmd_migrate(args) -> int:
     elif result.repaired is None:
         print(f"already at format version {result.end}"
               + ("" if result.bound or result.declared or result.routed
-                 or result.cached else " — nothing to migrate"))
+                 or result.cached or result.normative else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -223,6 +223,24 @@ def cmd_migrate(args) -> int:
         print(f"cached the ratified revision for {len(result.cached)} record(s) so "
               "that what changed since a signature can be shown without walking "
               "history each time")
+    # Items whose normative flag disagreed with their type (SR-0203). Named in
+    # full: the flag is a fingerprint input, so each rewrite is a content change
+    # the graph will hold someone to. The ratification records are left alone —
+    # only ratification writes them (SR-0170) — so the stale ones are counted here
+    # and each is re-ratified by a person who sees that only the flag moved.
+    if result.normative:
+        print(f"rewrote the normative flag on {len(result.normative)} item(s) to "
+              "what the item's type declares:")
+        for uid, value in result.normative.items():
+            print(f"  {uid} = {'true' if value else 'false'}")
+        if result.restamped:
+            print(f"  refreshed {len(result.restamped)} link stamp(s) that matched "
+                  "the content before the rewrite — the wording they confirmed "
+                  "has not changed")
+        if result.stale:
+            print(f"  {len(result.stale)} ratified item(s) now await re-ratification "
+                  "— `tl ratify` shows that only the flag moved before it asks: "
+                  + " ".join(result.stale))
     return OK
 
 
@@ -538,8 +556,12 @@ def cmd_new(args) -> int:
         status = schema.status_role("proposed")
     else:
         status = schema.status_role("initial")
+    # The flag is the kind's, not the command's (SR-0201): an intent or a
+    # non-goal is born non-normative because its type says so, where before
+    # every item of every type was written normative and nothing could change it.
     item = Item(uid=uid, type=args.type, status=status,
-                title=args.title or "", text=args.text or "")
+                title=args.title or "", text=args.text or "",
+                normative=schema.is_normative(args.type))
     item.attrs.update(attrs)
     if args.origin:
         item.attrs["origin"] = args.origin
@@ -1217,6 +1239,8 @@ def _ctx_types(schema) -> str:
             tags.append("root")
         if tname in schema.delivery_roots:
             tags.append("delivery-root")
+        if not schema.is_normative(tname):
+            tags.append("non-normative")
         tag = f" _({', '.join(tags)})_" if tags else ""
         out.append(f"### `{tname}`{tag}\n")
         specs = schema.attrs_for(tname)
@@ -1339,7 +1363,8 @@ _CTX_FORMAT = (
     "status: approved             # one of the declared statuses\n"
     "title: Guided setup wizard\n"
     "text: The system shall walk a new user through setup in 3 steps.\n"
-    "normative: true              # content changes mark dependents suspect\n"
+    "normative: true              # set by the type; feeds the fingerprint, and a\n"
+    "                             # normative item must reach a published document\n"
     "links:\n"
     "  - target: BN-0003          # a grounding link up to a root\n"
     "    type: derives_from\n"
@@ -2088,9 +2113,19 @@ def _add_schema_parser(sub) -> None:
     v.add_argument("to", metavar="TO")
 
     v = _schema_verb("type", "add",
-                     lambda p, a: schema_ops.type_add(p, a.name),
+                     lambda p, a: schema_ops.type_add(
+                         p, a.name, normative=not a.non_normative),
                      "declare a new item type")
     v.add_argument("name")
+    v.add_argument("--non-normative", action="store_true",
+                   help="items of this type are not normative: they feed no "
+                        "fingerprint drift and need reach no published document")
+    v = _schema_verb("type", "normative",
+                     lambda p, a: schema_ops.type_normative(
+                         p, a.name, a.value == "true"),
+                     "declare whether items of an existing type are normative")
+    v.add_argument("name", metavar="TYPE")
+    v.add_argument("value", choices=["true", "false"])
     v = _schema_verb("type", "remove",
                      lambda p, a: schema_ops.type_remove(p, a.name),
                      "withdraw an item type")

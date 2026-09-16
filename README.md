@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-166
+170
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-29
+30
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -179,6 +179,7 @@ Upward and downward coverage are independent and both matter:
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 | `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
+| `normative-mismatch` | an item's `normative` flag disagrees with what its type declares (`tl migrate` repairs it) |
 
 Every rule's severity is configurable per project under `[rules]`; `--strict`
 promotes every warning to an error for CI.

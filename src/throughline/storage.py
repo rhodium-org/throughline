@@ -480,6 +480,70 @@ class RepairResult(NamedTuple):
     vocabularies: dict[str, list[str]]
     stamps: dict[str, str]
     revisions: dict[str, str]
+    # The normative flags rewritten to the type's value (SR-0203), the link stamps
+    # refreshed because they matched the content before the rewrite, and the
+    # ratified items the rewrite left awaiting a person.
+    normative: dict[str, bool] = {}
+    restamped: list[tuple[str, str]] = []
+    stale: list[str] = []
+
+
+def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
+                                                 list[tuple[str, str]], list[str]]:
+    """Rewrite every item whose ``normative`` flag disagrees with what its type
+    declares (SR-0203). Returns the flags rewritten, the link stamps refreshed and
+    the ratified items now stale.
+
+    Before a type could declare the flag (SR-0201) every item was written
+    normative, so a graph that now declares its intents and non-goals otherwise
+    holds items that disagree with their own kind. The flag is a fingerprint
+    input, so this is a content change and is treated as one: the ratification
+    record is not touched — only ratification writes it (SR-0170), and a stamp
+    replaced without the graph showing the change would be the thing SR-0148
+    forbids — so a rewritten item that is ratified reads as stale until a person,
+    shown that only the flag moved, signs again.
+
+    A link stamp is different. It names nobody and records only the content a
+    link was confirmed against, so a stamp equal to the item's fingerprint before
+    the rewrite is refreshed to the fingerprint after it: the wording it confirmed
+    has not moved. A stamp that already disagreed was suspect before this and is
+    left as it was.
+
+    Idempotent: a rewritten item agrees with its type and never matches again.
+    """
+    project = load_project(root)
+    schema = project.schema
+    before: dict[str, str] = {}
+    after: dict[str, str] = {}
+    rewritten: dict[str, bool] = {}
+    stale: list[str] = []
+    for item in project.items():
+        if item.is_deleted:
+            continue
+        want = schema.is_normative(item.type)
+        if item.normative == want:
+            continue
+        before[item.uid] = fingerprint(item, schema)
+        item.normative = want
+        after[item.uid] = fingerprint(item, schema)
+        write_item(item)
+        rewritten[item.uid] = want
+        if item.attrs.get("ratified_fingerprint"):
+            stale.append(item.uid)
+    restamped: list[tuple[str, str]] = []
+    if rewritten:
+        for item in project.items():
+            if item.is_deleted:
+                continue
+            touched = False
+            for link in item.links:
+                if link.target in before and link.stamp == before[link.target]:
+                    link.stamp = after[link.target]
+                    restamped.append((item.uid, link.target))
+                    touched = True
+            if touched:
+                write_item(item)
+    return rewritten, restamped, stale
 
 
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
@@ -506,12 +570,17 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     roles = _backfill_status_roles(root)
     routes = _backfill_suspect_routes(root)
     vocabularies = _backfill_vocabularies(root)
+    # The flags before the record backfill (SR-0203): a record bound below is
+    # bound to the content as it stands, which should be the content after the
+    # flag has been put right, not a stamp that goes stale a line later.
+    normative, restamped, stale = _repair_normative_flags(root)
     stamps = _backfill_ratification_stamps(root, index=index)
     # Last, and after the stamps: a record bound a moment ago has a stamp to
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
     return RepairResult(roles, routes, vocabularies, stamps,
-                        _backfill_ratification_revisions(root))
+                        _backfill_ratification_revisions(root),
+                        normative, restamped, stale)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -579,6 +648,12 @@ class MigrationResult(NamedTuple):
     declared: dict[str, list[str]]
     bound: dict[str, str]
     cached: dict[str, str]
+    # Normative flags rewritten to the type's value (SR-0203), the link stamps
+    # refreshed because they matched the content before it, and the ratified
+    # items the rewrite left awaiting re-ratification.
+    normative: dict[str, bool] = {}
+    restamped: list[tuple[str, str]] = []
+    stale: list[str] = []
 
 
 def migrate_project(path: str | Path, *,
@@ -627,7 +702,8 @@ def migrate_project(path: str | Path, *,
     result = (repair(root, index) if repair is not None
               else RepairResult(None, {}, {}, {}, {}))
     return MigrationResult(start, current, result.config, result.routes,
-                           result.vocabularies, result.stamps, result.revisions)
+                           result.vocabularies, result.stamps, result.revisions,
+                           result.normative, result.restamped, result.stale)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -1047,29 +1123,37 @@ def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
     that verifies the requirement (satisfying the coverage rule), and a non-goal.
     ``docs/overview.md`` carries tl:item / tl:table / tl:matrix regions and is
     injected before return, so it ships already rendered."""
+    # The flag on each seeded item is the type's (SR-0202): the demo and `tl new`
+    # read the same declaration, so a fresh project holds one value per kind.
+    normative = load_project(root).schema.is_normative
     items = [
-        Item(uid="INT-0001", type="intent", status="approved", normative=False,
+        Item(uid="INT-0001", type="intent", status="approved",
+             normative=normative("intent"),
              title=f"Deliver {name}",
              text="Describe the outcome this project exists to create. Every "
                   "requirement below grounds back to this intent."),
-        Item(uid="REQ-0001", type="requirement", status="approved", normative=True,
+        Item(uid="REQ-0001", type="requirement", status="approved",
+             normative=normative("requirement"),
              title="First requirement",
              text="State something the system shall do, then replace this with a "
                   "real requirement.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"priority": "must", "origin": "human"}),
-        Item(uid="NFR-0001", type="nfr", status="approved", normative=True,
+        Item(uid="NFR-0001", type="nfr", status="approved",
+             normative=normative("nfr"),
              title="First quality attribute",
              text="State a quality the system shall have (performance, security, "
                   "usability), then replace this.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"origin": "human"}),
-        Item(uid="TEST-0001", type="test", status="approved", normative=False,
+        Item(uid="TEST-0001", type="test", status="approved",
+             normative=normative("test"),
              title="Verifies the first requirement",
              text="Describe how REQ-0001 is checked. This verifies link satisfies "
                   "the coverage rule declared in throughline.toml.",
              links=[Link(target="REQ-0001", type="verifies")]),
-        Item(uid="NG-0001", type="non_goal", status="approved", normative=False,
+        Item(uid="NG-0001", type="non_goal", status="approved",
+             normative=normative("non_goal"),
              title="First non-goal",
              text="Record something deliberately out of scope, so nobody proposes "
                   "it later. Non-goals are negative space; nothing grounds to them.",
@@ -1110,6 +1194,13 @@ delivery_roots = ["intent", "business_need", "risk", "constraint"]
 ground_link_types = ["derives_from", "mitigates", "implements", "verifies"]
 ai_origins = ["ai", "hybrid"]
 
+# `normative = false` on a type means its items are not binding statements:
+# they feed no ratification drift of their own and need reach no published
+# document. An intent is the why, a non_goal is excluded scope, a test verifies
+# rather than binds. Absent, a type is normative.
+[types.intent]
+normative = false
+
 [types.requirement]
 attrs.priority = {{ type = "enum", values = ["must", "should", "could"], normative = true }}
 attrs.origin   = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
@@ -1117,10 +1208,14 @@ attrs.origin   = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
 [types.nfr]
 attrs.origin = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
 
+[types.test]
+normative = false
+
 # A non_goal records deliberately-excluded scope — the object a human points at
 # to reject a category of proposed work. Passive by design: throughline surfaces
 # non_goals in `tl context` but never tries to detect items that 'violate' one.
 [types.non_goal]
+normative = false
 attrs.origin = {{ type = "enum", values = ["human", "ai", "hybrid"] }}
 
 [links]

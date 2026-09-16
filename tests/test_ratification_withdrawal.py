@@ -32,10 +32,14 @@ from throughline.identity import (
 )
 from throughline.storage import load_project
 
-CONFIG_EXTRA = '''
-[types.intent]
-attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
-'''
+
+def _declare_intent_origin(root: Path) -> None:
+    """The scaffold declares `[types.intent]` (SR-0202), so the attribute these
+    fixtures need is added through the tool rather than by appending a second
+    table the config already holds."""
+    assert _cli(["-C", root, "schema", "attr", "add", "intent", "origin",
+                 "--kind", "enum", "--values", "human,ai,hybrid",
+                 "--because", "the fixture records who authored each intent"]) == 0
 
 WITHDRAWAL = [WITHDRAWN_BY_ATTR, WITHDRAWN_ID_ATTR, WITHDRAWN_REASON_ATTR,
               WITHDRAWN_RATIFIER_ATTR]
@@ -53,8 +57,7 @@ def graph(tmp_path) -> Path:
     the first, and a third left proposed."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
-    cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8") + CONFIG_EXTRA, encoding="utf-8")
+    _declare_intent_origin(root)
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Why",
                  "--text", "V.", "--origin", "human", "--no-interactive"]) == 0
     for n, ground in (("R1", "INT-0001"), ("R2", "REQ-0001"), ("R3", "INT-0001")):

@@ -94,3 +94,13 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+
+# An intent is the why, not an obligation; its items already carry normative:
+# false (SR-0201, SR-0202)
+[types.intent]
+normative = false
+
+# A business need is the why, not an obligation; its items already carry
+# normative: false (SR-0201, SR-0202)
+[types.business_need]
+normative = false

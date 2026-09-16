@@ -54,7 +54,7 @@ _DEFAULT_SEVERITY = {
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ratified-stale": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
-    "unpublished": WARNING,
+    "unpublished": WARNING, "normative-mismatch": WARNING,
 }
 # `rule-filter` is deliberately absent above. Every rule there describes a
 # judgement a project may reasonably make differently; a coverage rule that
@@ -317,6 +317,17 @@ def validate(project, strict: bool = False,
                 why = (f"is '{item.status}', yet no human ever ratified it — it left "
                        "the proposed status without passing the gate")
             add("unratified", item.uid, f, f"{origin}-origin item {why}")
+
+        # The flag is the type's (SR-0201), so an item disagreeing with its type
+        # was written before the type declared it, or by hand. Reported rather
+        # than repaired here — `tl migrate` rewrites it (SR-0203) — and at warning
+        # severity, because every project upgraded across the change would
+        # otherwise go red before it could run the repair.
+        want = schema.is_normative(item.type)
+        if item.normative != want:
+            add("normative-mismatch", item.uid, f,
+                f"normative: {str(item.normative).lower()} but type '{item.type}' "
+                f"declares {str(want).lower()} — run `tl migrate` to repair")
 
         # Publication coverage (SR-0096): a live normative item referenced by no
         # published document is scope that can justify itself but cannot reach

@@ -1,0 +1,26 @@
+uid: SR-0204
+type: system_requirement
+status: ratified
+title: The agent brief describes the normative flag by what it does
+text: 'The item example in `tl context` shall describe the `normative` field by its
+  effects: it feeds the content fingerprint, and a normative item must be reached
+  by a published document. It shall not say the flag governs whether content changes
+  mark dependents suspect, because the suspect cascade does not read it.'
+rationale: 'The brief said content changes mark dependents suspect, and issue #44
+  reasoned from that line to a harm that cannot occur. A brief generated from the
+  live configuration is read as the tool''s own statement of itself (UR-0022), so
+  a wrong comment there is worse than none.'
+normative: true
+links:
+- target: UR-0022
+  type: implements
+- target: SR-0096
+  type: relates
+- target: SR-0033
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f34a545259d6c803129b702f08058668b235701cbf3a4498670fc679efb443bb

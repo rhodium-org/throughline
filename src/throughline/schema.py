@@ -17,7 +17,7 @@ at load time so the tool fails fast instead of silently mis-behaving.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .filters import FilterError, check_filter
 
@@ -143,6 +143,10 @@ class Schema:
     # orthogonal, and advancing a finished item would fabricate a history. The
     # accountability record written is identical either way.
     ratify_moves_status: bool = True
+    # Whether items of a type are normative (SR-0201): the flag `tl new` writes
+    # on an item is the kind's, not the command's. A type absent here is
+    # normative, so a project that never declared the key behaves as before.
+    type_normative: dict[str, bool] = field(default_factory=dict)
 
     # ------------------------------------------------------------------ build
 
@@ -153,7 +157,17 @@ class Schema:
         name = ((config.get("project") or {}).get("name")) or ""
 
         types: dict[str, dict[str, AttrSpec]] = {}
+        type_normative: dict[str, bool] = {}
         for tname, tbody in (config.get("types") or {}).items():
+            # [types.<name>] normative — whether items of this kind are normative
+            # (SR-0201). Absent means true, so an existing project is unchanged;
+            # a non-boolean is a configuration error rather than a truthiness
+            # coercion, for the reason [ratify] moves_status gives below.
+            flag = (tbody or {}).get("normative", True)
+            if not isinstance(flag, bool):
+                raise SchemaError(
+                    f"type '{tname}' normative must be true or false, not {flag!r}")
+            type_normative[tname] = flag
             specs: dict[str, AttrSpec] = {}
             for aname, meta in ((tbody or {}).get("attrs") or {}).items():
                 if not isinstance(meta, dict):
@@ -261,6 +275,7 @@ class Schema:
             suspect_link_types=suspect_link_types, ai_origins=ai_origins,
             coverage=coverage, rule_overrides=rule_overrides,
             docs_paths=docs_paths, ratify_moves_status=ratify_moves_status,
+            type_normative=type_normative,
         )
         schema._check_consistency()
         return schema
@@ -322,6 +337,12 @@ class Schema:
 
     def normative_attrs(self, item_type: str) -> list[str]:
         return sorted(n for n, s in self.attrs_for(item_type).items() if s.normative)
+
+    def is_normative(self, item_type: str) -> bool:
+        """Whether an item of ``item_type`` is normative (SR-0201): the value
+        `tl new` writes on it, and the one `check` and `migrate` hold its
+        `normative` field to. Undeclared types are normative."""
+        return self.type_normative.get(item_type, True)
 
     def is_link_type(self, link_type: str) -> bool:
         return self.link_types is None or link_type in self.link_types
