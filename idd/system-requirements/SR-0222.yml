@@ -1,0 +1,40 @@
+uid: SR-0222
+type: system_requirement
+status: implemented
+title: Check reports a flagged item, and ratify refuses it until it is clarified
+text: While an item carries the ambiguity flag, check shall report a finding named
+  ambiguous for it at warning severity, giving the reasons recorded against the item.
+  Where no reason is recorded it shall say so and name the operation that records
+  one. A project shall be able to change that severity like any other rule's (SR-0041).
+  Ratify shall refuse to sign a flagged item, saying that it cannot be ratified until
+  it is clarified (SR-0213).
+rationale: |-
+  Both behaviours shipped in the first release, and other parts of the Tool rely on them, but no requirement stated them. The finding was described only in the README's table of rules. The refusal was stated only inside SR-0151, which is about letting a composing tool reuse ratify, and in SR-0167's rationale. This item states them where they belong.
+
+  One thing changes: a flag carrying no reason reported "flagged ambiguous" and left the author nothing to act on. A flag can be raised when an item is created, where no reason is asked for (SR-0223), so the finding names the gap and the operation that fills it. No item in the estate carries the flag, so no existing graph reads differently.
+
+  Warning severity, so `--strict` makes the finding an error, as it does for every other quality finding.
+
+  Rejected — making the finding an error by default. A project that runs check without `--strict` would go red where it is green today.
+
+  Who pays: nobody. The finding, its severity and the refusal are otherwise unchanged, and only an item flagged without a reason reads differently.
+normative: true
+links:
+- target: UR-0035
+  type: implements
+- target: SR-0041
+  type: relates
+- target: SR-0213
+  type: relates
+- target: SR-0151
+  type: relates
+- target: SR-0167
+  type: relates
+- target: SR-0223
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:9a2f47ed266bd10de0f42b9797beef2c316572a0e29fa8285e4665c62459df57

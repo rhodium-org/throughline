@@ -1,0 +1,50 @@
+uid: SR-0221
+type: system_requirement
+status: implemented
+title: Flag marks an item as ambiguous, with who flagged it and why
+text: 'The Tool shall provide an operation that flags one item as ambiguous and requires
+  a stated reason and the name of whoever flags it. It shall set the item''s ambiguity
+  flag and add that name and reason to the reasons recorded against the item. It
+  shall change nothing else on the item: its title, text, rationale, other attributes,
+  status and links stay as they were. It shall refuse an item that does not exist
+  or is a tombstone. An item that is already flagged shall keep its flag and gain
+  the new reason. The operation shall be exported from the package alongside the
+  other grounding operations (SR-0061).'
+rationale: |-
+  The operation is named `tl flag`, after the words check and ratify already print: "flagged ambiguous". It is the counterpart of `tl clarify` (SR-0213) and takes the same arguments.
+
+  The name and reason go into the item's recorded reasons, `suspect_reasons`, because check already reports the flag from them (SR-0222) and `tl clarify` copies what check reported into its record. A separate record would give one flag two places to look.
+
+  Status is left alone. Scout ingestion moved a ratified item to suspect, which forces a new signature even when the flag turns out to be wrong. The flag already fails `tl check --strict` and blocks ratification. If the item is reworded, its stamp no longer matches and ratify shows what changed (SR-0167). If the flag was wrong, the signature still stands.
+
+  A second flag on a flagged item adds its reason rather than being refused. Two reviewers can have different doubts, and the author needs each of them.
+
+  One item per run, as for clarify, because each doubt has its own reason.
+
+  `scout_ingest` is removed. It has no command and no caller, here or in a public code search. The library API this package offers is `throughline.__all__`, which is the compatibility surface NFR-0011 protects, so removing a function outside it is a minor release. Exporting this operation, and `withdraw` and `clarify` with it, makes that list the operations the Tool offers rather than an accident of when each was written (SR-0061).
+
+  This operation replaces scout ingestion's ambiguity branch. Its other two branches already have commands: it created items with UIDs chosen by the report, outside the one birth function (SR-0205), where `tl new --origin ai` proposes an item; and it passed coverage gaps through unread, where coverage rules report them. SR-0213's rationale names scout ingestion as a source of the flag; that was true when it was written.
+
+  Who pays: whoever flags an item gives a name and a reason. Nothing changes until the operation is used, so existing graphs see no new finding and no rewrite. A program that imported `scout_ingest` would break. None does in the estate, and a public code search found none.
+normative: true
+links:
+- target: UR-0035
+  type: implements
+- target: SR-0213
+  type: relates
+- target: SR-0167
+  type: relates
+- target: SR-0205
+  type: relates
+- target: NFR-0011
+  type: relates
+- target: SR-0222
+  type: relates
+- target: SR-0061
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:aa690d51c8f2ba66ca28f73af4ab198861fb220cc8936a55eb1c56b3a7eddd1c

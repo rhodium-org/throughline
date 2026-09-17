@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-180
+183
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-31
+32
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -151,6 +151,7 @@ tl context                                    # agent-facing brief (IDD + this p
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…"      # a signature no longer stands; awaits a human again
+tl flag <UID> --reason "…"                    # the wording is ambiguous; records who flagged it and why
 tl clarify <UID> --reason "…"                 # an ambiguity is resolved; removes the flag, records who and why
 ```
 
@@ -177,7 +178,7 @@ Upward and downward coverage are independent and both matter:
 | `suspect-link` | target changed since the link was last confirmed |
 | `unreviewed` | item content changed since last review |
 | `unratified` | AI-origin item still `proposed` |
-| `ambiguous` | flagged ambiguous — blocked from ratification until `tl clarify` removes the flag |
+| `ambiguous` | flagged ambiguous by `tl flag` — blocked from ratification until `tl clarify` removes the flag |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 | `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
 | `normative-mismatch` | an item's `normative` flag disagrees with what its type declares (`tl migrate` repairs it) |
@@ -230,6 +231,9 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
   signed off in error), one item or a batch. Content and dependents are untouched;
   the item returns to awaiting a human, and who withdrew it, why, and whose
   signature it was stay on record.
+- **flag** — record that an item's wording is ambiguous, naming who flagged it and
+  why. Nothing else on the item changes, including its status and any signature it
+  carries. `check` reports the item and `ratify` refuses it while the flag stands.
 - **clarify** — remove an item's ambiguity flag once someone judges the ambiguity
   resolved, because the item was reworded or the flag was wrong. Nothing else on
   the item changes. Who removed the flag, why, and what `check` reported for it

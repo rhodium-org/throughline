@@ -1,0 +1,35 @@
+uid: UR-0035
+type: user_requirement
+status: ratified
+title: An item's wording can be flagged ambiguous, with a record of who flagged it
+  and why
+text: Where someone reviewing an item, a person or an automated reviewer, judges
+  its wording ambiguous, they shall be able to flag the item through the Tool, saying
+  why and naming themselves. While the flag stands, check shall report the item and
+  the Tool shall refuse to ratify it.
+rationale: |-
+  The Tool acts on an ambiguity flag: check reports a flagged item, ratify refuses it, and `tl clarify` removes the flag (UR-0034). But no command raises one. The only code that sets it is `scout_ingest`, a library function with no command, no caller and no requirement behind it. A reviewer can flag an item only by editing its file by hand, which records nothing.
+
+  Flagging is a judgement about someone else's words, and it blocks their ratification. So it is recorded with a name and a reason, as clarifying is. The reason is also what the author needs in order to fix the wording.
+
+  Anyone may flag an item, a person or an agent, because a flag accepts nothing and removes nothing. It only stops a signature until someone clarifies the item.
+
+  Rejected — a command that reads a reviewer's report file and applies it. It would import item content from an outside format, which NG-0005 rules out, and every part of such a report already has a command: `tl new --origin ai` proposes an item, `tl flag` raises a doubt, and coverage rules report gaps.
+
+  Rejected — dropping the flag altogether. Check, ratify and `tl clarify` already act on it, and a state the Tool acts on needs a supported way in.
+
+  Who pays: whoever flags an item names themselves and gives a reason. The item's author meets a failing `tl check --strict` and a refused ratification until the item is clarified. Existing graphs see no new finding and no rewrite: no item in the 353 graphs of the estate carries the flag (measured 2026-09-17).
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0034
+  type: relates
+- target: NG-0005
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8a6ddae51bf42448a2c61fd107b57fdd1d6cc99b1c6bcab731d2395f72d99211

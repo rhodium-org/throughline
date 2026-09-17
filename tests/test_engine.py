@@ -32,7 +32,7 @@ import throughline as throughline_pkg
 from throughline import identity
 from throughline.cli import main as _cli
 from throughline.identity import IdentityError
-from throughline.grounding import GroundingError, scout_ingest
+from throughline.grounding import GroundingError
 from throughline.schema import Schema, SchemaError
 from throughline.storage import (
     CONFIG_NAME,
@@ -2261,27 +2261,6 @@ def test_suspect_link_types_must_be_declared_link_types():
                 "suspect_link_types": ["assums"],
             },
         })
-
-def test_scout_ingest_proposes_roots_and_flags_ambiguity():
-    intent = Item(uid="INT-1", type="intent", status="ratified")
-    fr = Item(uid="FR-1", type="requirement", status="ratified",
-              attrs={"origin": "ai"},
-              links=[Link(target="INT-1", type="derives_from")])
-    p = _project(_doc("INT", intent, fr))
-    report = {
-        "proposed_roots": [{"id": "BN-9", "type": "business_need",
-                            "title": "recover access", "rationale": "cluster"}],
-        "ambiguities": [{"id": "FR-1", "reason": "'fast' unquantified"}],
-        "coverage_gaps": [{"root": "CON-2", "detail": "unimplemented"}],
-    }
-    summary = scout_ingest(p, report)
-    assert "BN-9" in summary["roots_proposed"]
-    assert p.get("BN-9").status == "proposed"
-    assert p.get("BN-9").attrs["origin"] == "ai"
-    assert p.get("FR-1").attrs["ambiguous"] is True
-    assert p.get("FR-1").status == "suspect"
-    assert ("CON-2", "unimplemented") in summary["gaps"]
-
 
 # --------------------------------------------- config-driven status ops (SR-0130/0131/0132)
 

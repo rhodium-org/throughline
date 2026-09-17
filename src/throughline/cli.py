@@ -22,6 +22,7 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .links import LinkError, add_link, remove_link, retype_link
 from .grounding import (
+    AMBIGUOUS_ATTR,
     CLARIFICATION_ATTRS,
     CLARIFIED_AMBIGUITY_ATTR,
     CLARIFIED_BY_ATTR,
@@ -32,6 +33,8 @@ from .grounding import (
     attribute_removal_refusal,
     clarification_refusal,
     clarify,
+    flag,
+    flag_refusal,
     invalidate,
     origin_change_refusal,
     ratification_obstacle,
@@ -521,7 +524,12 @@ def _coerce_attr(schema, item_type: str, key: str, raw: str):
     membership (SR-0023). A value the schema cannot accept is a hard error at
     creation (fail-fast), not a surprise the loader raises later."""
     spec = schema.attr(item_type, key)
-    kind = spec.kind if spec is not None else "string"
+    # An undeclared attribute is stored as the text given, which made
+    # `--attr ambiguous=false` a non-empty string and so a flag: asking for no flag
+    # raised one. The Tool reads this attribute as a flag everywhere, so it reads
+    # the value as one here (SR-0223). A project that declares it keeps its kind.
+    default_kind = "bool" if key == AMBIGUOUS_ATTR else "string"
+    kind = spec.kind if spec is not None else default_kind
     try:
         if kind == "enum":
             if raw not in spec.values:
@@ -1505,6 +1513,7 @@ _CTX_COMMAND_USAGE = {
     "invalidate": "tl invalidate <UID> [--reason …]",
     "withdraw": "tl withdraw <UID> [<UID> …] --reason <why> --by <who>",
     "clarify": "tl clarify <UID> --reason <why> --by <who>",
+    "flag": "tl flag <UID> --reason <why> --by <who>",
     "delete": "tl delete <UID>",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
@@ -1525,6 +1534,9 @@ _CTX_COMMAND_EMPHASIS = {
     "withdraw": "removes a signature that should not stand (wrong name, signed in "
                 "error) without touching content or dependents; the item awaits a "
                 "human again — not `invalidate`, which says the item is false",
+    "flag": "records that an item's wording is ambiguous, with who flagged it and "
+            "why; check reports it and ratify refuses it until `tl clarify` "
+            "removes the flag",
     "clarify": "removes an item's ambiguity flag once someone judges the ambiguity "
                "resolved, recording who and why; it accepts nothing — a proposed "
                "item still needs a human to ratify it",
@@ -2170,6 +2182,37 @@ def cmd_clarify(args) -> int:
     return OK
 
 
+def cmd_flag(args) -> int:
+    """Flag an item as ambiguous, recording who flagged it and why (SR-0221).
+    Refused before anyone is asked for a reason or a name, as ratify refuses before
+    it renders (SR-0195). It takes nothing from the item: the wording stands until
+    someone rewrites it, and the flag stands until someone clarifies it."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uid = _resolve_uid(project, args.uid, "flag", "UID")
+    if uid is None:
+        return USAGE
+    refusal = flag_refusal(project, uid)
+    if refusal is not None:
+        return _err(refusal)
+    reason = _resolve_value(args.reason, "reason", "--reason")
+    if reason is None:
+        return USAGE
+    by = _resolve_value(args.by, "reviewer", "--by",
+                        default=default_ratifier(args.path))
+    if by is None:
+        return USAGE
+    try:
+        item = flag(project, uid, by=by, reason=reason)
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    write_item(item, project.register_of(uid))
+    print(f"{uid} flagged ambiguous by {by}")
+    return OK
+
+
 def cmd_status(args) -> int:
     """The generic, transition-validated status verb (SR-0132). Every status
     move a project's [transitions] table permits is reachable through this
@@ -2634,6 +2677,22 @@ def build_parser() -> argparse.ArgumentParser:
                    help="who judged it resolved (omit on a terminal to be prompted; "
                         "defaults to the identity this repository signs with)")
     s.set_defaults(func=cmd_clarify)
+
+    # The other half of the pair (SR-0221): raising the doubt is as much a judgement
+    # as removing it, so it carries a name and a reason too. One item per run,
+    # because each doubt has its own reason.
+    s = sub.add_parser("flag",
+                       help="record that an item's wording is ambiguous, with who "
+                            "flagged it and why")
+    s.add_argument("uid", nargs="?", default=None,
+                   help="item to flag (omit on a terminal to pick one)")
+    s.add_argument("--reason", default=None,
+                   help="why the wording is ambiguous — what the author must "
+                        "settle (required; prompted for on a terminal)")
+    s.add_argument("--by", default=None,
+                   help="who is flagging it (omit on a terminal to be prompted; "
+                        "defaults to the identity this repository signs with)")
+    s.set_defaults(func=cmd_flag)
 
     s = sub.add_parser("status",
                        help="move an item to a status (transition-validated)")
