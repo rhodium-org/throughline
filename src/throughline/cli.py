@@ -14,6 +14,7 @@ import os
 import shutil
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .dump import build_dump
@@ -787,11 +788,32 @@ def cmd_delete(args) -> int:
     item = project.get(uid)
     if item is None:
         return _err(f"{uid} does not exist")
+    schema = project.schema
     try:
-        set_status(project.schema, item, project.schema.status_role("tombstone"))
+        tombstone = schema.status_role("tombstone")
+    except SchemaError as e:
+        return _err(str(e))
+    # A tombstone is permanent (SR-0093), and so is what it records. Deleting an
+    # item already retired changes nothing, rather than writing a second date and
+    # reason over the first.
+    if item.status == tombstone:
+        print(f"{uid} is already deleted — its tombstone is permanent and was left "
+              "unchanged (SR-0093)")
+        return OK
+    try:
+        set_status(schema, item, tombstone)
     except (GroundingError, SchemaError) as e:
         return _err(str(e))
-    item.deleted = {"reason": args.reason or "unspecified"}
+    # What the tombstone keeps (SR-0012): the day the UID was retired, why, and the
+    # fingerprint of the content it last held, so the record says what was retired
+    # wherever the file travels without its history. The day is taken in UTC so
+    # it does not depend on where the command was run, and the fingerprint is the
+    # one stamps, reviews and ratifications record (SR-0033).
+    item.deleted = {
+        "date": datetime.now(timezone.utc).date().isoformat(),
+        "reason": args.reason or "unspecified",
+        "fingerprint": fingerprint(item, schema),
+    }
     write_item(item, project.register_of(item.uid))
     print(f"tombstoned {uid} (UID retired, never reused)")
     return OK

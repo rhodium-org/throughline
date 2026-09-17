@@ -52,7 +52,7 @@ class Item:
     reviewed: str | None = None       # own fingerprint at last review (SR-0038)
     created: str | None = None
     modified: str | None = None
-    deleted: dict | None = None       # {date, reason} tombstone payload (SR-0012)
+    deleted: dict | None = None       # {date, reason, fingerprint} tombstone (SR-0012)
     extra: dict = field(default_factory=dict)
     _path: Path | None = None
     _register_prefix: str | None = None
