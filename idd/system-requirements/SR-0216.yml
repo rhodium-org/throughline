@@ -1,0 +1,36 @@
+uid: SR-0216
+type: system_requirement
+status: ratified
+title: What changed since a signature is read from the recorded content when the
+  record holds it
+text: Where a ratification record holds recorded content that reproduces its stamp,
+  the Tool shall compute the change since ratification (SR-0165) from that content
+  and shall not read version-control history. The structured result shall say that
+  the earlier content came from the record rather than from a revision. Where the
+  record holds no recorded content, or holds content that does not reproduce its
+  stamp, the Tool shall resolve the earlier content from history as it does now,
+  and shall never show that content as what was signed.
+rationale: |-
+  The record is the one source that exists wherever the item file does, so it is read first. History remains the route for signatures made before content was recorded and not yet migrated (SR-0218).
+
+  Content that does not reproduce the stamp is not evidence of what was signed, and SR-0165 rules out approximating, so it is never shown as the earlier wording. Resolving from history instead is safe, because a revision is itself accepted only when it reproduces the stamp.
+
+  Saying where the earlier content came from lets a reviewer, and a test, tell the two routes apart.
+
+  Who pays: a consumer of the structured result sees one new field. Nothing else in the result changes.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0165
+  type: relates
+- target: SR-0215
+  type: relates
+- target: SR-0218
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:1f967cba24324f665af8d5f3fb3d6d927108b802f061dea7fedbfabf3a008c38
