@@ -91,7 +91,11 @@ Rules:
 - Files are written with stable key order as above, LF endings, UTF-8,
   final newline (SR-0072).
 - A tombstone is the same file with `status: deleted`, plus
-  `deleted: {date, reason}`; `text` may be truncated to a hash reference.
+  `deleted: {date, reason, fingerprint}`: the UTC day the UID was retired
+  (`YYYY-MM-DD`), why, and the §5 fingerprint of the content it last held, so
+  `text` may be truncated to that hash reference. A tombstone is never rewritten
+  (SR-0093), so one written before `date` and `fingerprint` were recorded keeps
+  only its `reason`.
 
 ## 5. Fingerprint (normative content hash)
 
