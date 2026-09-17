@@ -383,14 +383,13 @@ def validate(project, strict: bool = False,
             add("ratified-content-mismatch", item.uid, f,
                 "ratified content is recorded but no ratification stamp stands beside "
                 "it, so it shows a signature that is not there — restore the record "
-                "from version control, or remove it by withdrawing and ratifying "
-                "the item again")
+                "from version control, or ratify the item again, which rewrites both")
         elif content is not None and content_fingerprint(item.authored_uid, content) != stamp:
             add("ratified-content-mismatch", item.uid, f,
                 "the recorded ratified content does not reproduce the ratification "
                 "stamp, so it no longer shows what was signed — restore the record "
-                "from version control, or withdraw the ratification (`tl withdraw`) "
-                "and have the item ratified again")
+                "from version control, or ratify the item again (`tl ratify`, or "
+                "`tl withdraw` first where its content has not moved)")
 
     out.extend(_coverage_rules(project, idx, strict))
     return out

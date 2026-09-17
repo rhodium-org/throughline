@@ -110,7 +110,9 @@ def content_fingerprint(uid: str, content: object) -> str | None:
     Its values are read exactly as :func:`fingerprint` reads an item's, which hashes
     each as text: whatever the fingerprint accepted when the stamp was written, the
     record reproduces, so the Tool never writes a record its own check rejects."""
-    if not isinstance(content, dict) or set(content) != set(CONTENT_KEYS):
+    # Every key this version reads must be there; a later version may record more
+    # beside them, and those do not change what this one hashes.
+    if not isinstance(content, dict) or not set(CONTENT_KEYS) <= set(content):
         return None
     attrs = content["attrs"]
     if not isinstance(attrs, dict) or not all(isinstance(k, str) for k in attrs):

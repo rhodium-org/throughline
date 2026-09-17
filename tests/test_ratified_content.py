@@ -249,7 +249,7 @@ def test_migration_records_content_from_the_item_when_it_still_reproduces_the_st
     item = _req(root)
 
     assert result.contents == {"REQ-0001": "current"}
-    assert result.unprovable == []
+    assert dict(result.unprovable) == {}
     assert item.attrs[CONTENT_ATTR]["text"] == ORIGINAL
     for name in ("ratified_by", STAMP_ATTR):
         assert item.attrs[name] == before[name]
@@ -281,13 +281,17 @@ def test_migration_leaves_a_record_whose_content_cannot_be_proved(tmp_path, caps
 
     result = migrate_project(root)
 
-    assert result.contents == {}
-    assert result.unprovable == ["REQ-0001"]
+    assert dict(result.contents) == {}
+    assert list(result.unprovable) == ["REQ-0001"]
+    # The reason is kept, so a project with no repository is not told that no
+    # revision reproduced the stamp when none was ever examined.
+    assert "no history" in result.unprovable["REQ-0001"]
     assert CONTENT_ATTR not in _req(root).attrs
 
     assert _cli(["-C", root, "migrate"]) == 0
     out = capsys.readouterr().out
     assert "could not prove the signed content of 1 ratification record(s)" in out
+    assert "1 — the content has moved and there is no history to resolve it in" in out
     assert "nothing to migrate" not in out
 
 
@@ -301,7 +305,7 @@ def test_migration_keeps_the_backfilled_marking_and_is_idempotent(tmp_path, caps
     assert _req(root).attrs["ratified_backfilled"] is True
 
     second = migrate_project(root)
-    assert second.contents == {} and second.unprovable == []
+    assert dict(second.contents) == {} and dict(second.unprovable) == {}
 
 
 def test_migration_never_overwrites_recorded_content(tmp_path):
@@ -311,7 +315,7 @@ def test_migration_never_overwrites_recorded_content(tmp_path):
 
     result = migrate_project(root)
 
-    assert result.contents == {}
+    assert dict(result.contents) == {}
     assert _req(root).attrs[CONTENT_ATTR]["text"] == "Words nobody signed."
 
 
@@ -420,6 +424,63 @@ def test_an_attribute_made_normative_after_signing_is_never_reported_as_unset(tm
     assert "zeta became normative after the signature" in change.reason
 
 
+def test_an_attribute_made_normative_after_signing_is_named_beside_a_real_change(tmp_path):
+    """The record cannot say what was signed for it, and a diff that passed over it
+    in silence would read as complete (SR-0165, SR-0216)."""
+    root = _project(tmp_path, git=False)
+    assert _cli(["-C", root, "schema", "attr", "add", "requirement", "zeta",
+                 "--because", "a non-normative attribute"]) == 0
+    assert _cli(["-C", root, "new", "REQ", "--title", "Z", "--text", "Zeta.",
+                 "--ground", "INT-0001", "--ground-type", "implements", "--origin",
+                 "ai", "--attr", "zeta=q", "--no-interactive"]) == 0
+    assert _cli(["-C", root, "ratify", "REQ-0002", "--by", "Ada Lovelace"]) == 0
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        "attrs.zeta = {}", "attrs.zeta = { normative = true }"), encoding="utf-8")
+    assert _cli(["-C", root, "amend", "REQ-0002", "--text", "Zeta, reworded."]) == 0
+
+    project = load_project(root)
+    change = change_since_ratification(project, project.get("REQ-0002"))
+
+    assert change.outcome == CHANGED
+    assert [c.field for c in change.changes] == ["text"]
+    assert "zeta became normative after the signature" in change.reason
+    assert "zeta became normative" in "\n".join(render_change(change))
+
+
+def test_recorded_content_from_a_later_version_still_reproduces_its_stamp(tmp_path):
+    """A later version may record more beside the fields this one hashes; that is a
+    newer record, not a damaged one (SR-0217)."""
+    root = _project(tmp_path, git=False)
+    item = _req(root)
+    item.attrs[CONTENT_ATTR] = dict(item.attrs[CONTENT_ATTR], links=["INT-0001"])
+    write_item(item)
+
+    assert "ratified-content-mismatch" not in _rules(root)
+    _drift(root)
+    project = load_project(root)
+    assert change_since_ratification(project, project.get("REQ-0001")).source == RECORD
+
+
+def test_ratifying_again_repairs_a_record_the_tool_cannot_otherwise_clear(tmp_path):
+    """The finding names a route the Tool allows: withdraw refuses a record with no
+    ratifier, and --unset refuses the attribute (SR-0217, SR-0219)."""
+    root = _project(tmp_path, git=False)
+    item = _req(root)
+    for name in (STAMP_ATTR, "ratified_by", "ratified_id"):
+        item.attrs.pop(name, None)
+    write_item(item)
+    [finding] = [f for f in validate(load_project(root))
+                 if f.rule == "ratified-content-mismatch"]
+    assert "ratify the item again" in finding.message
+
+    assert _cli(["-C", root, "withdraw", "REQ-0001", "--reason", "x",
+                 "--by", "Ada Lovelace"]) != 0          # no ratifier to withdraw
+    assert _cli(["-C", root, "amend", "REQ-0001", "--unset", "ratified_content"]) != 0
+    assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
+    assert "ratified-content-mismatch" not in _rules(root)
+
+
 def test_a_record_attribute_cannot_be_declared_or_defaulted(tmp_path, capsys):
     """A declared default would write the record at birth (SR-0170, SR-0219)."""
     root = _project(tmp_path, git=False)
@@ -434,10 +495,13 @@ def test_a_record_attribute_cannot_be_declared_or_defaulted(tmp_path, capsys):
         load_project(root)
     except Exception:                       # the config itself refused the table
         return
+    capsys.readouterr()
     assert _cli(["-C", root, "new", "REQ", "--title", "X", "--text", "X.",
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--no-interactive"]) == 0
     assert CONTENT_ATTR not in load_project(root).get("REQ-0002").attrs
+    # Said, not silently dropped: the author learns the declaration does nothing.
+    assert "ignored the declared default for 'ratified_content'" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("content", ["just a string",

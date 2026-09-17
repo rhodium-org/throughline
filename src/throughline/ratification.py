@@ -342,7 +342,7 @@ def recorded_content(item) -> dict | None:
     return content
 
 
-def content_at_stamp(project, item) -> tuple[dict | None, str]:
+def content_at_stamp(project, item, *, history: bool = True) -> tuple[dict | None, str]:
     """The content ``item``'s stamp was taken over, where it can be proved, for a
     record that holds none (SR-0218). Returns ``(content, where)``: from the item
     as it stands when its content still reproduces the stamp (``where`` is
@@ -356,6 +356,8 @@ def content_at_stamp(project, item) -> tuple[dict | None, str]:
         return None, "the record carries no fingerprint"
     if fingerprint(item, project.schema) == stamp:
         return signed_content(item, project.schema), "current"
+    if not history:
+        return None, "the content has moved and there is no history to resolve it in"
     sha, reason, _cached = resolve_revision(project, item)
     if sha is None:
         return None, reason
@@ -371,41 +373,54 @@ def content_at_stamp(project, item) -> tuple[dict | None, str]:
     return content, sha
 
 
-def _change_from_record(project, item, stamp: str, recorded: dict) -> RatificationChange:
-    """The change since ratification, from recorded content alone (SR-0216). The
-    comparison is the one the history route makes — the fingerprint's scalar
-    inputs, then every attribute normative either when signed or now — so the two
-    routes report the same fields for the same content."""
+def _field_changes(was_scalars, was_attrs: dict, item, names) -> list[FieldChange]:
+    """The fields that differ between the content a stamp was taken over and the
+    item as it stands. One comparison for both routes (SR-0216), so a record and a
+    revision holding the same content report the same fields.
+
+    ``was_scalars`` answers each fingerprint scalar for the earlier content;
+    ``was_attrs`` holds its normative attributes; ``names`` is every attribute
+    normative in the earlier content or now."""
     changes: list[FieldChange] = []
     for name in FINGERPRINT_SCALARS:
         if name == "uid":
             continue                  # an item's UID never changes; none is recorded
-        was, now = recorded[name], getattr(item, name, None)
+        was, now = was_scalars(name), getattr(item, name, None)
         if was != now:
             changes.append(FieldChange(field=name, was=was, now=now))
-    signed_attrs = recorded["attrs"]
-    for name, was in signed_attrs.items():
-        # An attribute absent when signed is recorded as the empty string the
-        # fingerprint hashes for it; it is reported as absent, as history would.
+    for name in names:
+        # An attribute absent from the earlier content is reported as absent, and a
+        # record writes the empty string the fingerprint hashes for such a one.
+        was = was_attrs.get(name)
         was = None if was == "" else was
         now = item.attrs.get(name)
         if was != now:
             changes.append(FieldChange(field=f"attrs.{name}", was=was, now=now))
+    return changes
+
+
+def _change_from_record(project, item, stamp: str, recorded: dict) -> RatificationChange:
+    """The change since ratification, from recorded content alone (SR-0216)."""
+    signed_attrs = recorded["attrs"]
+    changes = _field_changes(lambda n: recorded[n], signed_attrs, item, signed_attrs)
     # An attribute normative now but not when signed was never recorded, so its
-    # signed value is unknown here. Reporting it as absent would claim something
-    # the record cannot know (SR-0165); it is named in the reason instead.
+    # signed value is unknown here. Reporting it as absent would claim something the
+    # record cannot know (SR-0165), and leaving it unsaid would let a field the
+    # signature does not cover pass unmentioned, so it is named either way.
     unrecorded = [n for n in normative_attr_names(item, project.schema)
                   if n not in signed_attrs]
+    unsaid = ("" if not unrecorded else
+              ", ".join(unrecorded) + (" became" if len(unrecorded) == 1 else " became")
+              + " normative after the signature, so the record does not hold "
+                "what was signed for " + ("it" if len(unrecorded) == 1 else "them"))
     if not changes:
         why = ("the recorded content reproduces the stamp yet no recorded field "
                "differs, so what moved is outside the fields the record holds")
-        if unrecorded:
-            why += (" — " + ", ".join(unrecorded) + " became normative after the "
-                    "signature, and its signed value was not recorded")
         return RatificationChange(uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
-                                  source=RECORD, reason=why)
+                                  source=RECORD,
+                                  reason=why + (" — " + unsaid if unsaid else ""))
     return RatificationChange(uid=item.uid, outcome=CHANGED, stamp=stamp,
-                              changes=tuple(changes), source=RECORD)
+                              changes=tuple(changes), source=RECORD, reason=unsaid)
 
 
 def change_since_ratification(project, item) -> RatificationChange:
@@ -447,15 +462,13 @@ def change_since_ratification(project, item) -> RatificationChange:
             reason=f"the item could not be re-read at {sha[:9]}")
     past_schema = _schema_at(top, sha, cfg_rel, project.schema)
 
-    changes: list[FieldChange] = []
-    for name in FINGERPRINT_SCALARS:
-        was, now = getattr(past, name, None), getattr(item, name, None)
-        if was != now:
-            changes.append(FieldChange(field=name, was=was, now=now))
-    for name in _normative_names(project, item, past_schema):
-        was, now = past.attrs.get(name), item.attrs.get(name)
-        if was != now:
-            changes.append(FieldChange(field=f"attrs.{name}", was=was, now=now))
+    changes = _field_changes(lambda n: getattr(past, n, None), past.attrs, item,
+                             _normative_names(project, item, past_schema))
+    # The UID is a fingerprint input the record cannot hold, so the shared
+    # comparison skips it; a revision can differ there and nothing else may.
+    if past.authored_uid != item.authored_uid:       # pragma: no cover - defensive
+        changes.insert(0, FieldChange(field="uid", was=past.authored_uid,
+                                      now=item.authored_uid))
 
     # A resolved revision with no differing field means the two fingerprints
     # disagree over something this comparison does not cover — a real gap, and one
@@ -695,6 +708,8 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
              if change.revision else "from the record")
     lines = [f"changed since it was ratified{who} "
              f"(stamp {change.stamp}, ratified content {where}):"]
+    if change.reason:
+        lines.append(f"{pad}{change.reason}.")
     for c in change.changes:
         if is_prose(c.was, c.now):
             lines.extend(_render_prose(c.field, c.was, c.now, pad=pad,

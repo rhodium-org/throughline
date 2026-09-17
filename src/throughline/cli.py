@@ -249,9 +249,13 @@ def cmd_migrate(args) -> int:
               "version control")
     if result.unprovable:
         print(f"could not prove the signed content of {len(result.unprovable)} "
-              "ratification record(s) — neither the item as it stands nor any "
-              "readable revision reproduces the stamp; what changed since those "
-              "signatures still needs their history")
+              "ratification record(s); what changed since those signatures still "
+              "needs their history:")
+        counts: dict[str, int] = {}
+        for why in result.unprovable.values():
+            counts[why] = counts.get(why, 0) + 1
+        for why, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+            print(f"  {n} — {why}")
     # Items whose normative flag disagreed with their type (SR-0203). Named in
     # full: the flag is a fingerprint input, so each rewrite is a content change
     # the graph will hold someone to. The ratification records are left alone —
@@ -675,6 +679,14 @@ def cmd_new(args) -> int:
         attrs = _parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
+    # A declared default naming a record a single verb owns is never written
+    # (SR-0170, SR-0213, SR-0219); say so rather than drop it silently.
+    ignored = [name for name, spec in schema.attrs_for(args.type).items()
+               if spec.default is not None and attribute_owner(name) is not None]
+    for name in ignored:
+        record, owner = attribute_owner(name)
+        print(f"ignored the declared default for '{name}': it is part of the "
+              f"{record} and only `tl {owner}` writes it")
     item = birth_item(schema, reg, uid, item_type=args.type,
                       title=args.title or "", text=args.text or "",
                       status=args.status, origin=args.origin, attrs=attrs)
