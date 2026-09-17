@@ -1,0 +1,35 @@
+uid: SR-0214
+type: system_requirement
+status: implemented
+title: Ratify shows an item's clarification record before asking for the signature
+text: Where an item carries the record of a clarification (SR-0213), ratify shall
+  show who removed the ambiguity flag, why, and what check reported for it, together
+  with the rest of the item and before it asks for the signature. It shall do so
+  wherever it shows the item (SR-0195). An item with no such record shall be shown
+  as before.
+rationale: |-
+  The ambiguity was about the words being signed. A ratifier who is not told about it judges the text with no hint of where to look, and a flag removed by the item's own author would never reach the person who signs.
+
+  This is what makes it safe to let anyone clarify an item (UR-0034): the person who signs still sees what was flagged and why the flag was removed.
+
+  Shown only where ratify already shows the item, so a run without a terminal is unchanged (SR-0195).
+
+  Rejected — showing the item's whole `suspect_reasons` list instead. It also holds reasons from invalidation and withdrawal, and showing those would change what every re-ratification displays. That is a separate decision.
+
+  Who pays: a ratifier reads a few more lines on an item that was flagged and clarified. throughline-compose and throughline-ratify draw their own ratification screens and need their own change to show the record. UR-0029 records the same gap for the item itself.
+normative: true
+links:
+- target: UR-0034
+  type: implements
+- target: SR-0195
+  type: refines
+- target: SR-0213
+  type: relates
+- target: UR-0029
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d55bc0c91b8396efb0bfebab88e8ae0da695188022fdba2200cc7baf854a55e8

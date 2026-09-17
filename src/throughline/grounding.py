@@ -94,6 +94,62 @@ def set_status(schema, item: Item, to: str) -> None:
     item.status = to
 
 
+# The clarification record (SR-0213): who removed an item's ambiguity flag, why,
+# and what check reported for the flag at that moment. Held once, as the withdrawal
+# record is — a later clarification of a flag raised again replaces it, and the
+# succession is recoverable from version control.
+CLARIFIED_BY_ATTR = "clarified_by"
+CLARIFIED_REASON_ATTR = "clarified_reason"
+CLARIFIED_AMBIGUITY_ATTR = "clarified_ambiguity"
+
+# Guarded like the ratification record (SR-0170): a hand-written one would claim
+# that somebody judged an ambiguity resolved when nobody did.
+CLARIFICATION_ATTRS = {
+    CLARIFIED_BY_ATTR: "clarify",
+    CLARIFIED_REASON_ATTR: "clarify",
+    CLARIFIED_AMBIGUITY_ATTR: "clarify",
+}
+
+
+def attribute_owner(name: str) -> tuple[str, str] | None:
+    """The record ``name`` belongs to and the one command that owns it, or ``None``
+    for an attribute no single command owns. Every operation that sets or removes
+    attributes generally asks this, so it refuses the same things (SR-0170,
+    SR-0213)."""
+    owner = RATIFICATION_ATTRS.get(name)
+    if owner is not None:
+        return "ratification record", owner
+    owner = CLARIFICATION_ATTRS.get(name)
+    if owner is not None:
+        return "clarification record", owner
+    return None
+
+
+def is_flagged_ambiguous(item: Item) -> bool:
+    """True while ``item`` carries the ambiguity flag. The one predicate the gate,
+    ratify and clarify read, so an item is flagged for all of them or for none."""
+    return bool(item.attrs.get("ambiguous"))
+
+
+def ambiguity_report(item: Item) -> str:
+    """What check reports for ``item``'s ambiguity flag. `tl clarify` copies this
+    into its record, so the record holds the words the person removing the flag was
+    shown (SR-0213)."""
+    return "; ".join(item.attrs.get("suspect_reasons", [])) or "flagged ambiguous"
+
+
+def ambiguity_change_refusal(item: Item, to) -> str | None:
+    """Why ``item``'s ambiguity flag may not be set to ``to``, or ``None`` when it
+    may (SR-0213). Only `tl clarify` removes the flag, because removing it is a
+    judgement that the ambiguity is resolved and that judgement is recorded; a
+    value that no longer flags the item would remove it with no record at all."""
+    if is_flagged_ambiguous(item) and not to:
+        return (f"{item.uid} is flagged ambiguous, and the flag is removed only by "
+                "`tl clarify`, which records who judged the ambiguity resolved "
+                "and why")
+    return None
+
+
 def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     """Why ``item`` may not be signed off, or ``None`` when it may — the two
     states that must not be ratified (scope-avalanche briefing §5).
@@ -104,7 +160,7 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     accepted" is the same drift the ratification record exists to prevent, and
     a repair that ran ahead of these rules would complete records the Tool would
     refuse to write in the first place."""
-    if item.attrs.get("ambiguous"):
+    if is_flagged_ambiguous(item):
         return f"{item.uid} is flagged ambiguous and cannot be ratified until clarified"
     if not schema.is_root(item) and not reaches_root(idx, schema, item.uid):
         return f"{item.uid} is not grounded to a root and cannot be ratified"
@@ -137,17 +193,20 @@ def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
     Removal reaches an attribute whether or not the type still declares it, since
     a withdrawn attribute is exactly what it exists to clear. It stops at the
     attributes a gate reads: the ratification record keeps the owners SR-0170
-    gives it, an origin stays under SR-0208, and removing the ambiguity flag would
-    let an item be ratified without anyone clarifying it."""
+    gives it, an origin stays under SR-0208, and the ambiguity flag and the record
+    of its removal belong to `tl clarify` (SR-0213)."""
     if name not in item.attrs:
         return f"{item.uid} carries no attribute '{name}'"
-    owner = RATIFICATION_ATTRS.get(name)
-    if owner is not None:
-        return (f"'{name}' on {item.uid} is part of the ratification record and "
+    owned = attribute_owner(name)
+    if owned is not None:
+        record, owner = owned
+        return (f"'{name}' on {item.uid} is part of the {record} and "
                 f"cannot be removed — `tl {owner}` owns it")
-    if name == "ambiguous":
+    # Only a value that flags the item is the flag; a false one blocks nothing.
+    if name == "ambiguous" and is_flagged_ambiguous(item):
         return (f"'ambiguous' marks {item.uid} as unable to be ratified until it is "
-                "clarified, and removing the flag does not clarify it")
+                "clarified, and removing the flag does not clarify it — "
+                "`tl clarify` removes it and records who judged it resolved and why")
     if name == "origin":
         refusal = origin_change_refusal(schema, item, None)
         if refusal is not None:
@@ -401,6 +460,54 @@ def withdraw(project, uids, *, by: str, reason: str,
         item.attrs.setdefault("suspect_reasons", []).append(
             f"ratification by {ratifier} withdrawn by {by}: {reason}")
     return items
+
+
+def clarification_refusal(project, uid: str) -> str | None:
+    """Why the item ``uid`` cannot be clarified, or ``None`` when it can. Asked by
+    the command before it asks anyone for a reason or a name, and by
+    :func:`clarify` itself, so the refusal a user sees early is the one the write
+    would have raised."""
+    item = project.get(uid)
+    if item is None:
+        return f"{uid} does not exist"
+    if item.is_deleted:
+        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+    if not is_flagged_ambiguous(item):
+        return f"{uid} carries no ambiguity flag to remove"
+    return None
+
+
+def clarify(project, uid: str, *, by: str, reason: str) -> Item:
+    """Remove ``uid``'s ambiguity flag and record who judged the ambiguity resolved,
+    why, and what check reported for the flag (SR-0213).
+
+    Its own verb, not a mode of amend: removing the flag is a judgement, whether
+    the item was reworded or the flag was wrong, and a judgement is recorded with a
+    name and a reason, as a withdrawal is. Nothing else on the item moves: a
+    rewording was made by `tl amend`, which reports what it made stale, and an
+    item that scout ingestion moved to suspect goes back through `tl ratify`, which
+    shows it before anyone signs.
+
+    Anyone may clarify, because clarifying accepts nothing: a machine-authored item
+    still needs a human to ratify it, and ratify shows that human this record
+    (SR-0214). One item per call, because each flag carries its own reasons.
+    """
+    if not by or not by.strip():
+        raise GroundingError("a clarification must name who judged the ambiguity "
+                             "resolved — pass --by")
+    if not reason or not reason.strip():
+        raise GroundingError("a clarification must state why the ambiguity is "
+                             "resolved — pass --reason")
+    refusal = clarification_refusal(project, uid)
+    if refusal is not None:
+        raise GroundingError(refusal)
+    item = project.get(uid)
+    reported = ambiguity_report(item)
+    del item.attrs["ambiguous"]
+    item.attrs[CLARIFIED_BY_ATTR] = by
+    item.attrs[CLARIFIED_REASON_ATTR] = reason
+    item.attrs[CLARIFIED_AMBIGUITY_ATTR] = reported
+    return item
 
 
 def scout_ingest(project, report: dict) -> dict:

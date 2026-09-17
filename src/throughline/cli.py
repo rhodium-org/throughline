@@ -22,8 +22,16 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .links import LinkError, add_link, remove_link, retype_link
 from .grounding import (
+    CLARIFICATION_ATTRS,
+    CLARIFIED_AMBIGUITY_ATTR,
+    CLARIFIED_BY_ATTR,
+    CLARIFIED_REASON_ATTR,
     GroundingError,
+    ambiguity_change_refusal,
+    attribute_owner,
     attribute_removal_refusal,
+    clarification_refusal,
+    clarify,
     invalidate,
     origin_change_refusal,
     ratification_obstacle,
@@ -33,7 +41,6 @@ from .grounding import (
     withdraw,
 )
 from .identity import (
-    RATIFICATION_ATTRS,
     RATIFIED_BY_ATTR,
     RATIFIED_ID_ATTR,
     WITHDRAWN_RATIFIER_ATTR,
@@ -555,11 +562,13 @@ def _parse_attrs(schema, item_type: str, pairs: list[str] | None,
             raise UidError(f"--attr expects a non-empty key, got '{pair}'")
         # The ratification record is evidence that a named person took
         # accountability, and evidence is worth what it costs to forge. No verb but
-        # the one that owns it may write it (SR-0170).
-        owner = RATIFICATION_ATTRS.get(key)
-        if owner is not None:
+        # the one that owns it may write it (SR-0170), and the record of a removed
+        # ambiguity flag is guarded the same way (SR-0213).
+        owned = attribute_owner(key)
+        if owned is not None:
+            record, owner = owned
             raise UidError(
-                f"--attr {key}: '{key}' is part of the ratification record and "
+                f"--attr {key}: '{key}' is part of the {record} and "
                 f"cannot be set by `tl {command}` — `tl {owner}` owns it")
         if declared_only and schema.attr(item_type, key) is None:
             raise UidError(
@@ -865,9 +874,14 @@ def cmd_amend(args) -> int:
                     "say which you mean")
     # Every refusal is decided before anything moves, so a refused amendment
     # changes nothing. An origin leaves the machine-origin set only by ratification
-    # (SR-0208); removal stops at the attributes a gate reads (SR-0206).
+    # (SR-0208), the ambiguity flag leaves an item only by clarification (SR-0213),
+    # and removal stops at the attributes a gate reads (SR-0206).
     if "origin" in attrs:
         refusal = origin_change_refusal(schema, item, attrs["origin"])
+        if refusal is not None:
+            return _err(refusal)
+    if "ambiguous" in attrs:
+        refusal = ambiguity_change_refusal(item, attrs["ambiguous"])
         if refusal is not None:
             return _err(refusal)
     for name in unset:
@@ -1490,6 +1504,7 @@ _CTX_COMMAND_USAGE = {
     "status": "tl status <UID> <STATUS>",
     "invalidate": "tl invalidate <UID> [--reason …]",
     "withdraw": "tl withdraw <UID> [<UID> …] --reason <why> --by <who>",
+    "clarify": "tl clarify <UID> --reason <why> --by <who>",
     "delete": "tl delete <UID>",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
@@ -1510,6 +1525,9 @@ _CTX_COMMAND_EMPHASIS = {
     "withdraw": "removes a signature that should not stand (wrong name, signed in "
                 "error) without touching content or dependents; the item awaits a "
                 "human again — not `invalidate`, which says the item is false",
+    "clarify": "removes an item's ambiguity flag once someone judges the ambiguity "
+               "resolved, recording who and why; it accepts nothing — a proposed "
+               "item still needs a human to ratify it",
     "delete": "tombstones an item; the file stays, the item stops counting",
     "amend": "change content through the tool, never by opening the YAML",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
@@ -1882,6 +1900,20 @@ def _render_for_ratification(project, item, *, emit) -> None:
         emit("")
         emit("normative attributes (a change here breaks this signature): "
              + " · ".join(f"{n}={item.attrs[n]}" for n in normative))
+    # A removed ambiguity flag goes in front of the signer with the item (SR-0214).
+    # The ambiguity was about these words, and a flag removed by the item's own
+    # author would otherwise never reach the person who signs.
+    if any(name in item.attrs for name in CLARIFICATION_ATTRS):
+        emit("")
+        emit("clarified — this item was flagged ambiguous and the flag was removed:")
+        for label, name in (("removed by", CLARIFIED_BY_ATTR),
+                            ("reason", CLARIFIED_REASON_ATTR),
+                            ("check had reported", CLARIFIED_AMBIGUITY_ATTR)):
+            value = item.attrs.get(name)
+            lines = str(value).splitlines() if value is not None else ["(not recorded)"]
+            emit(f"  {label}: {lines[0] if lines else ''}")
+            for line in lines[1:]:
+                emit(f"    {line}")
     emit("")
 
 
@@ -2104,6 +2136,37 @@ def cmd_withdraw(args) -> int:
         write_item(item, project.register_of(item.uid))
         print(f"{item.uid}: ratification by {item.attrs[WITHDRAWN_RATIFIER_ATTR]} "
               f"withdrawn by {by}; now '{item.status}', awaiting ratification")
+    return OK
+
+
+def cmd_clarify(args) -> int:
+    """Remove an item's ambiguity flag once someone judges the ambiguity resolved,
+    recording who, why, and what check reported for the flag (SR-0213). Refused
+    before anyone is asked for a reason or a name, as ratify refuses before it
+    renders (SR-0195). It accepts nothing: a proposed item still awaits a human."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uid = _resolve_uid(project, args.uid, "clarify", "UID")
+    if uid is None:
+        return USAGE
+    refusal = clarification_refusal(project, uid)
+    if refusal is not None:
+        return _err(refusal)
+    reason = _resolve_value(args.reason, "reason", "--reason")
+    if reason is None:
+        return USAGE
+    by = _resolve_value(args.by, "clarifier", "--by",
+                        default=default_ratifier(args.path))
+    if by is None:
+        return USAGE
+    try:
+        item = clarify(project, uid, by=by, reason=reason)
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    write_item(item, project.register_of(uid))
+    print(f"{uid}: ambiguity flag removed by {by}")
     return OK
 
 
@@ -2554,6 +2617,23 @@ def build_parser() -> argparse.ArgumentParser:
                    help="optional stable identifier for the withdrawer, e.g. "
                         "github:octocat or email:ada@example.com")
     s.set_defaults(func=cmd_withdraw)
+
+    # Its own verb, not a mode of amend (SR-0213): removing the ambiguity flag is a
+    # judgement that the ambiguity is resolved, recorded with a name and a reason.
+    # One item per run, because each flag carries its own reasons.
+    s = sub.add_parser("clarify",
+                       help="remove an item's ambiguity flag once the ambiguity is "
+                            "resolved, recording who judged it and why")
+    s.add_argument("uid", nargs="?", default=None,
+                   help="the flagged item (omit on a terminal to pick one)")
+    s.add_argument("--reason", default=None,
+                   help="why the ambiguity is resolved: how the item was reworded, "
+                        "or why the flag was wrong (required; prompted for on a "
+                        "terminal)")
+    s.add_argument("--by", default=None,
+                   help="who judged it resolved (omit on a terminal to be prompted; "
+                        "defaults to the identity this repository signs with)")
+    s.set_defaults(func=cmd_clarify)
 
     s = sub.add_parser("status",
                        help="move an item to a status (transition-validated)")
