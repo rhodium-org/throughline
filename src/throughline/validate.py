@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from .fingerprint import fingerprint
 from .filters import FilterError, safe_eval
 from .graph import Index
-from .grounding import grounding_gap, is_unserved
+from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .identity import WITHDRAWN_BY_ATTR, WITHDRAWN_RATIFIER_ATTR, WITHDRAWN_REASON_ATTR
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -341,10 +341,11 @@ def validate(project, strict: bool = False,
             add("unpublished", item.uid, f,
                 "normative item is referenced by no published document")
 
-        # Quality — grounded but ambiguous is still not deliverable.
-        if item.attrs.get("ambiguous"):
-            reasons = "; ".join(item.attrs.get("suspect_reasons", [])) or "flagged ambiguous"
-            add("ambiguous", item.uid, f, reasons)
+        # Quality — grounded but ambiguous is still not deliverable. The wording
+        # is the one `tl clarify` records, so its record holds what the person
+        # removing the flag was shown here (SR-0213).
+        if is_flagged_ambiguous(item):
+            add("ambiguous", item.uid, f, ambiguity_report(item))
 
         # Suspect links (SR-0034): stored stamp != target's current fingerprint.
         for link in item.links:

@@ -1,0 +1,47 @@
+uid: SR-0213
+type: system_requirement
+status: implemented
+title: Clarify removes an item's ambiguity flag and records who removed it and why
+text: 'The Tool shall provide an operation that removes the ambiguity flag from one
+  item and requires a stated reason. It shall record on the item that reason, the
+  identity of the person removing the flag, and what check reported for the flag.
+  It shall change nothing else on the item: its title, text, rationale, other attributes,
+  status and links stay as they were. It shall refuse an item that carries no ambiguity
+  flag. No other operation shall remove the flag or set it to a value that no longer
+  flags the item, and no other operation shall write or remove that record.'
+rationale: |-
+  The flag is written by scout ingestion (`scout_ingest`), or when an item is created with it. The operation is named `tl clarify`, because ratify's refusal already says a flagged item cannot be ratified until it is clarified.
+
+  One item per run. Each flag carries its own reasons, so one reason for a batch would not describe most of the items it lands on. Withdrawal takes a batch because its reason is shared (SR-0197); a clarification's reason is not.
+
+  What check reported is copied into the record, because the reasons behind it sit in `suspect_reasons` beside reasons added by invalidation and withdrawal. A later reader could not tell which entries belonged to the flag. The copy is what check showed the person who removed it.
+
+  Nothing else on the item changes. A reworded item was changed with `tl amend`, which already reports what the change made stale (SR-0169). An item that scout ingestion moved from ratified to suspect goes back through `tl ratify`, which shows the item before it is signed (SR-0195).
+
+  No other operation may remove the flag. `tl amend --unset` already refuses (SR-0206). In a project that declares `ambiguous` as an attribute, `tl amend --attr ambiguous=false` removes it today and records nothing (SR-0144). No graph in the estate declares it, so closing that route breaks nobody. The record is guarded like the ratification record (SR-0170): creation and amendment cannot set it (SR-0142, SR-0144), and amendment cannot remove it.
+
+  Who pays: whoever clarifies an item gives a name and a reason. Nothing changes until the operation is used, so existing graphs see no new finding and no rewrite.
+normative: true
+links:
+- target: UR-0034
+  type: implements
+- target: SR-0197
+  type: relates
+- target: SR-0169
+  type: relates
+- target: SR-0195
+  type: relates
+- target: SR-0206
+  type: relates
+- target: SR-0144
+  type: relates
+- target: SR-0170
+  type: relates
+- target: SR-0142
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:e08d79ebfb624089a064631dceb929dbff61940b26066783afea3bac47940142

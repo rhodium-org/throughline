@@ -1,0 +1,39 @@
+uid: UR-0034
+type: user_requirement
+status: ratified
+title: An item flagged ambiguous can be clarified, with a record of who did it and
+  why
+text: Where an item is flagged ambiguous, a user who judges the ambiguity resolved,
+  because the item was reworded or because the flag was wrong, shall be able to remove
+  the flag through the Tool. Removing the flag shall not change what the item says.
+  The item shall keep a record of who removed the flag, why, and what check reported
+  for it, and where the Tool later asks a person to ratify the item it shall show
+  them that record.
+rationale: |-
+  A flagged item cannot be ratified and fails `tl check --strict`, but nothing in the Tool removes the flag. `tl amend --unset` refuses to, because removing the flag does not clarify anything. The only route left is a hand edit that records nothing. The flag is the kind of ambiguity warning UR-0017 asks for, and a warning that blocks ratification needs a supported way to be closed.
+
+  Clarifying is a judgement that the ambiguity is resolved, so it is recorded with a name and a reason, as withdrawing a signature is (UR-0031). Anyone may clarify an item, because clarifying accepts nothing. A machine-authored item still needs a human to ratify it (UR-0023), and that human is shown the record (UR-0029).
+
+  Rejected — removing the flag when the item is ratified. Ratify refuses a flagged item on purpose, and throughline-compose and throughline-ratify rely on that refusal. One signature would also say two things: that the ambiguity is resolved, and that the item is accepted. And the flag fails the gate on items that no rule requires anyone to ratify, such as human-authored items.
+
+  Rejected — removing the flag whenever the item's text changes. A wrong flag needs no rewording, and an edit made only to remove it would mark confirmed dependents suspect for nothing. A text change is also not evidence that the ambiguity was resolved.
+
+  Who pays: whoever clarifies an item names themselves and gives a reason, and a ratifier reads a few more lines on an item that was flagged. throughline-compose and throughline-ratify ask for signatures on their own screens and need their own change to show the record. Existing graphs see no new finding and no rewrite. No item in the 346 graphs of the estate carries the flag (measured 2026-09-17).
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0017
+  type: relates
+- target: UR-0031
+  type: relates
+- target: UR-0023
+  type: relates
+- target: UR-0029
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bcbc529aca09443ba545fbeef14580e02d157573be13eba144427a752fa868b3
