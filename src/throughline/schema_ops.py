@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from .grounding import attribute_owner
 from .model import Item, Project
 from .schema import Schema, SchemaError
 from .storage import CONFIG_NAME, ProjectError, load_project, write_item
@@ -483,6 +484,14 @@ def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None
     attrs = body.setdefault("attrs", {})
     if name in attrs:
         raise SchemaOpError(f"'{itype}' already declares attribute '{name}'")
+    owned = attribute_owner(name)
+    if owned is not None:
+        # Declared, it could carry a default written at birth — a record the verb
+        # that owns it never wrote (SR-0170, SR-0213, SR-0219).
+        record, owner = owned
+        raise SchemaOpError(
+            f"'{name}' is part of the {record} and cannot be declared as an "
+            f"attribute — `tl {owner}` owns it")
     spec: dict = {}
     if kind:
         spec["type"] = kind

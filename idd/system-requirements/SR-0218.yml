@@ -1,6 +1,6 @@
 uid: SR-0218
 type: system_requirement
-status: ratified
+status: implemented
 title: Migration records the signed content of ratifications made before it was recorded
 text: '`tl migrate` shall add recorded content to each ratification record that has
   a stamp and no recorded content, wherever the content can be proved: from the item

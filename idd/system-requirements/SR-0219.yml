@@ -1,6 +1,6 @@
 uid: SR-0219
 type: system_requirement
-status: ratified
+status: implemented
 title: The recorded content is part of the ratification record
 text: The recorded content shall be part of the ratification record. Only ratification
   and migration shall write it, and any other operation that sets attributes shall

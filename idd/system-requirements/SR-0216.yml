@@ -1,6 +1,6 @@
 uid: SR-0216
 type: system_requirement
-status: ratified
+status: implemented
 title: What changed since a signature is read from the recorded content when the
   record holds it
 text: Where a ratification record holds recorded content that reproduces its stamp,

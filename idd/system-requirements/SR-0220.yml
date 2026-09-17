@@ -1,6 +1,6 @@
 uid: SR-0220
 type: system_requirement
-status: ratified
+status: implemented
 title: Generated documents leave the recorded ratified content out of item blocks
 text: Where a generated document renders an item block — for a tl:item marker (SR-0094)
   or a tl:catalog directive (SR-0111) — the Tool shall leave the recorded ratified

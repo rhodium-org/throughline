@@ -39,7 +39,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .fingerprint import fingerprint
+from .fingerprint import content_fingerprint, fingerprint, normative_attr_names, signed_content
 from .identity import RATIFIED_BY_ATTR
 from .model import Item
 from .schema import Schema
@@ -52,6 +52,10 @@ REVISION_ATTR = "ratified_revision"
 
 STAMP_ATTR = "ratified_fingerprint"
 
+# The content the stamp was taken over, recorded beside it (SR-0215). Read before
+# any history is touched, and only when it reproduces the stamp (SR-0216).
+CONTENT_ATTR = "ratified_content"
+
 # The identity a corrected record replaced (SR-0196). Written only by ratify, and
 # only for a record that had not been published, so it never names a signature
 # anyone else could have seen.
@@ -63,6 +67,11 @@ CHANGED = "changed"
 UNCHANGED = "unchanged"
 UNRESOLVABLE = "unresolvable"
 UNRATIFIED = "unratified"
+
+#: Where the earlier content came from (SR-0216): the recorded content on the
+#: ratification record, or a revision found in version-control history.
+RECORD = "record"
+HISTORY = "history"
 
 # The fingerprint's own scalar inputs, in the order it hashes them. Only these
 # and the normative attributes are reported: they are the fields whose change
@@ -92,8 +101,10 @@ class RatificationChange:
 
     ``outcome`` is one of :data:`CHANGED`, :data:`UNCHANGED`, :data:`UNRESOLVABLE`
     or :data:`UNRATIFIED`. ``revision`` is the commit whose content reproduced the
-    stamp, present only when the difference could be resolved. ``reason`` says why
-    it could not, and is empty otherwise.
+    stamp, present only when the difference was resolved from history. ``source``
+    says where the earlier content came from — :data:`RECORD` or :data:`HISTORY` —
+    and is empty when no earlier content was looked for (SR-0216). ``reason`` says
+    why the difference could not be resolved, and is empty otherwise.
     """
     uid: str
     outcome: str
@@ -104,6 +115,7 @@ class RatificationChange:
     #: True when the resolved revision came from the cached attribute rather than
     #: a walk. Diagnostic only — the stamp is what made it acceptable either way.
     cached: bool = False
+    source: str = ""
 
     @property
     def stale(self) -> bool:
@@ -121,6 +133,7 @@ class RatificationChange:
             "revision": self.revision,
             "reason": self.reason,
             "cached": self.cached,
+            "source": self.source,
             "changes": [{"field": c.field, "was": c.was, "now": c.now}
                         for c in self.changes],
         }
@@ -315,6 +328,86 @@ def _normative_names(project, item, past_schema: Schema | None) -> list[str]:
     return names
 
 
+def recorded_content(item) -> dict | None:
+    """The content recorded on ``item``'s ratification record, only where it
+    reproduces the record's stamp (SR-0216). A record holding none, or holding
+    content that does not reproduce the stamp, answers None: such content is not
+    evidence of what was signed, so nothing may show it as the earlier wording."""
+    stamp = item.attrs.get(STAMP_ATTR)
+    content = item.attrs.get(CONTENT_ATTR)
+    if not stamp or content is None:
+        return None
+    if content_fingerprint(item.authored_uid, content) != stamp:
+        return None
+    return content
+
+
+def content_at_stamp(project, item) -> tuple[dict | None, str]:
+    """The content ``item``'s stamp was taken over, where it can be proved, for a
+    record that holds none (SR-0218). Returns ``(content, where)``: from the item
+    as it stands when its content still reproduces the stamp (``where`` is
+    ``"current"``), otherwise from the revision history resolves for the stamp
+    (``where`` is that revision). ``(None, reason)`` when neither proves it.
+
+    Proof is the stamp and nothing else, the same test SR-0165 applies to a
+    revision, so what this returns is always content the stamp reproduces."""
+    stamp = item.attrs.get(STAMP_ATTR)
+    if not stamp:
+        return None, "the record carries no fingerprint"
+    if fingerprint(item, project.schema) == stamp:
+        return signed_content(item, project.schema), "current"
+    sha, reason, _cached = resolve_revision(project, item)
+    if sha is None:
+        return None, reason
+    top = repo_top(Path(item._path).parent)
+    rel = _relative(top, Path(item._path)) if top else None
+    past = _item_at(top, sha, rel) if (top and rel) else None
+    if past is None:
+        return None, f"the item could not be re-read at {sha[:9]}"
+    cfg_rel = _relative(top, Path(project.path) / "throughline.toml") or ""
+    content = signed_content(past, _schema_at(top, sha, cfg_rel, project.schema))
+    if content_fingerprint(item.authored_uid, content) != stamp:  # pragma: no cover - defensive
+        return None, f"the content at {sha[:9]} does not reproduce the stamp"
+    return content, sha
+
+
+def _change_from_record(project, item, stamp: str, recorded: dict) -> RatificationChange:
+    """The change since ratification, from recorded content alone (SR-0216). The
+    comparison is the one the history route makes — the fingerprint's scalar
+    inputs, then every attribute normative either when signed or now — so the two
+    routes report the same fields for the same content."""
+    changes: list[FieldChange] = []
+    for name in FINGERPRINT_SCALARS:
+        if name == "uid":
+            continue                  # an item's UID never changes; none is recorded
+        was, now = recorded[name], getattr(item, name, None)
+        if was != now:
+            changes.append(FieldChange(field=name, was=was, now=now))
+    signed_attrs = recorded["attrs"]
+    for name, was in signed_attrs.items():
+        # An attribute absent when signed is recorded as the empty string the
+        # fingerprint hashes for it; it is reported as absent, as history would.
+        was = None if was == "" else was
+        now = item.attrs.get(name)
+        if was != now:
+            changes.append(FieldChange(field=f"attrs.{name}", was=was, now=now))
+    # An attribute normative now but not when signed was never recorded, so its
+    # signed value is unknown here. Reporting it as absent would claim something
+    # the record cannot know (SR-0165); it is named in the reason instead.
+    unrecorded = [n for n in normative_attr_names(item, project.schema)
+                  if n not in signed_attrs]
+    if not changes:
+        why = ("the recorded content reproduces the stamp yet no recorded field "
+               "differs, so what moved is outside the fields the record holds")
+        if unrecorded:
+            why += (" — " + ", ".join(unrecorded) + " became normative after the "
+                    "signature, and its signed value was not recorded")
+        return RatificationChange(uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
+                                  source=RECORD, reason=why)
+    return RatificationChange(uid=item.uid, outcome=CHANGED, stamp=stamp,
+                              changes=tuple(changes), source=RECORD)
+
+
 def change_since_ratification(project, item) -> RatificationChange:
     """The difference between ``item``'s current normative content and the content
     its ratification stamp was taken over (SR-0165).
@@ -331,10 +424,18 @@ def change_since_ratification(project, item) -> RatificationChange:
         # answer that needs no revision to justify it.
         return RatificationChange(uid=item.uid, outcome=UNCHANGED, stamp=stamp)
 
+    # The record first (SR-0216): it exists wherever the item file does, so the
+    # answer needs no version control. Content that does not reproduce the stamp
+    # is passed over, never shown, and history is asked instead — a revision is
+    # itself accepted only when it reproduces the stamp.
+    recorded = recorded_content(item)
+    if recorded is not None:
+        return _change_from_record(project, item, stamp, recorded)
+
     sha, reason, cached = resolve_revision(project, item)
     if sha is None:
         return RatificationChange(uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
-                                  reason=reason)
+                                  reason=reason, source=HISTORY)
 
     top = repo_top(Path(item._path).parent)
     rel = _relative(top, Path(item._path)) if top else None
@@ -342,7 +443,7 @@ def change_since_ratification(project, item) -> RatificationChange:
     past = _item_at(top, sha, rel) if (top and rel) else None
     if past is None:                                  # pragma: no cover - defensive
         return RatificationChange(
-            uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
+            uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp, source=HISTORY,
             reason=f"the item could not be re-read at {sha[:9]}")
     past_schema = _schema_at(top, sha, cfg_rel, project.schema)
 
@@ -362,12 +463,13 @@ def change_since_ratification(project, item) -> RatificationChange:
     if not changes:
         return RatificationChange(
             uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp, revision=sha,
-            cached=cached,
+            cached=cached, source=HISTORY,
             reason=(f"{sha[:9]} reproduces the stamp yet no reported field "
                     "differs, so what moved is outside the fields this comparison "
                     "covers"))
     return RatificationChange(uid=item.uid, outcome=CHANGED, stamp=stamp,
-                              revision=sha, changes=tuple(changes), cached=cached)
+                              revision=sha, changes=tuple(changes), cached=cached,
+                              source=HISTORY)
 
 
 # -------------------------------------------------------------------- rendering
@@ -589,9 +691,10 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
             f"{pad}stamp {change.stamp}",
             f"{pad}nobody can state what you would be accepting.",
         ]
+    where = (f"at {change.revision[:9]}{', cached' if change.cached else ''}"
+             if change.revision else "from the record")
     lines = [f"changed since it was ratified{who} "
-             f"(stamp {change.stamp}, ratified content at {change.revision[:9]}"
-             f"{', cached' if change.cached else ''}):"]
+             f"(stamp {change.stamp}, ratified content {where}):"]
     for c in change.changes:
         if is_prose(c.was, c.now):
             lines.extend(_render_prose(c.field, c.was, c.now, pad=pad,

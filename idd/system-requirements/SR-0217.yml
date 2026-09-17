@@ -1,6 +1,6 @@
 uid: SR-0217
 type: system_requirement
-status: ratified
+status: implemented
 title: Recorded content that does not reproduce its stamp is reported
 text: Validation shall report as an error each item whose ratification record holds
   recorded content that does not reproduce the record's stamp, naming the item. It

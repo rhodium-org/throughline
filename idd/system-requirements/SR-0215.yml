@@ -1,6 +1,6 @@
 uid: SR-0215
 type: system_requirement
-status: ratified
+status: implemented
 title: A ratification records the content it was taken over
 text: 'When the Tool writes a ratification stamp, it shall record beside the stamp,
   as part of the ratification record, the content the stamp was taken over: the item''s
