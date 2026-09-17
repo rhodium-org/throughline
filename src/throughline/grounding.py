@@ -104,6 +104,11 @@ def set_status(schema, item: Item, to: str) -> None:
     item.status = to
 
 
+# The attribute the Tool reads as "this item's wording is in doubt" (SR-0221,
+# SR-0222). Named once, because the gate, ratify, flag and clarify must all mean
+# the same attribute by it.
+AMBIGUOUS_ATTR = "ambiguous"
+
 # The clarification record (SR-0213): who removed an item's ambiguity flag, why,
 # and what check reported for the flag at that moment. Held once, as the withdrawal
 # record is — a later clarification of a flag raised again replaces it, and the
@@ -138,14 +143,21 @@ def attribute_owner(name: str) -> tuple[str, str] | None:
 def is_flagged_ambiguous(item: Item) -> bool:
     """True while ``item`` carries the ambiguity flag. The one predicate the gate,
     ratify and clarify read, so an item is flagged for all of them or for none."""
-    return bool(item.attrs.get("ambiguous"))
+    return bool(item.attrs.get(AMBIGUOUS_ATTR))
 
 
 def ambiguity_report(item: Item) -> str:
     """What check reports for ``item``'s ambiguity flag. `tl clarify` copies this
     into its record, so the record holds the words the person removing the flag was
-    shown (SR-0213)."""
-    return "; ".join(item.attrs.get("suspect_reasons", [])) or "flagged ambiguous"
+    shown (SR-0213).
+
+    A flag raised when the item was created carries no reason (SR-0223), which left
+    the author nothing to act on, so the report names the gap and the operation that
+    fills it (SR-0222)."""
+    recorded = "; ".join(item.attrs.get("suspect_reasons", []))
+    return recorded or (
+        f"flagged ambiguous with no reason recorded — `tl flag {item.uid} "
+        "--reason ...` records one")
 
 
 def ambiguity_change_refusal(item: Item, to) -> str | None:
@@ -213,7 +225,7 @@ def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
         return (f"'{name}' on {item.uid} is part of the {record} and "
                 f"cannot be removed — `tl {owner}` owns it")
     # Only a value that flags the item is the flag; a false one blocks nothing.
-    if name == "ambiguous" and is_flagged_ambiguous(item):
+    if name == AMBIGUOUS_ATTR and is_flagged_ambiguous(item):
         return (f"'ambiguous' marks {item.uid} as unable to be ratified until it is "
                 "clarified, and removing the flag does not clarify it — "
                 "`tl clarify` removes it and records who judged it resolved and why")
@@ -522,56 +534,54 @@ def clarify(project, uid: str, *, by: str, reason: str) -> Item:
         raise GroundingError(refusal)
     item = project.get(uid)
     reported = ambiguity_report(item)
-    del item.attrs["ambiguous"]
+    del item.attrs[AMBIGUOUS_ATTR]
     item.attrs[CLARIFIED_BY_ATTR] = by
     item.attrs[CLARIFIED_REASON_ATTR] = reason
     item.attrs[CLARIFIED_AMBIGUITY_ATTR] = reported
     return item
 
 
-def scout_ingest(project, report: dict) -> dict:
-    """Fold a scout report in. Scout PROPOSES; humans RATIFY.
+def flag_refusal(project, uid: str) -> str | None:
+    """Why the item ``uid`` cannot be flagged, or ``None`` when it can. Asked by the
+    command before it asks anyone for a reason or a name, and by :func:`flag`
+    itself, so the refusal a user sees early is the one the write would have
+    raised."""
+    item = project.get(uid)
+    if item is None:
+        return f"{uid} does not exist"
+    if item.is_deleted:
+        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+    return None
 
-    report = {proposed_roots:[{id,type,title,rationale}],
-              ambiguities:[{id,reason}], coverage_gaps:[{root,detail}]}
-    Returns a summary and the Registers that changed (for write-back).
+
+def flag(project, uid: str, *, by: str, reason: str) -> Item:
+    """Flag ``uid`` as ambiguous, recording who flagged it and why (SR-0221).
+
+    The counterpart of :func:`clarify`. Flagging is a judgement about someone
+    else's words and it blocks their ratification, so it is recorded with a name
+    and a reason — and the reason is what the author needs in order to fix the
+    wording. Both go into the reasons recorded against the item, where check
+    already reads them (SR-0222) and where clarify copies them from.
+
+    Nothing else on the item moves. Scout ingestion moved a ratified item to
+    suspect, which forces a new signature even where the flag turns out to be
+    wrong; the flag already fails the gate and blocks ratification, and a rewording
+    breaks the stamp on its own. An item already flagged keeps its flag and gains
+    the reason, because two reviewers can have different doubts.
     """
-    summary = {"roots_proposed": [], "ambiguities_flagged": [], "gaps": [], "touched": set()}
-
-    # proposed roots need a home register; use the first register whose prefix
-    # looks right, else the first register in the project.
-    for r in report.get("proposed_roots", []):
-        if project.get(r["id"]) is not None:
-            continue
-        reg = project.register_of(r["id"]) or next(iter(project.registers.values()), None)
-        if reg is None:
-            continue
-        item = Item(uid=r["id"], type=r.get("type", "business_need"),
-                    status=project.schema.status_role("proposed"),
-                    title=r.get("title", ""), text=r.get("rationale", ""))
-        item.attrs["origin"] = "ai"
-        item._register_prefix = reg.prefix
-        reg.items[item.uid] = item
-        summary["roots_proposed"].append(item.uid)
-        summary["touched"].add((reg.prefix, item.uid))
-
-    for a in report.get("ambiguities", []):
-        item = project.get(a["id"])
-        if not item:
-            continue
-        item.attrs["ambiguous"] = True
-        item.attrs.setdefault("suspect_reasons", []).append(f"scout: {a['reason']}")
-        suspect = project.schema.status_role("suspect")
-        if item.status == project.schema.status_role("ratified") \
-                and project.schema.allows_transition(item.status, suspect):
-            item.status = suspect
-        summary["ambiguities_flagged"].append(item.uid)
-        summary["touched"].add((item._register_prefix, item.uid))
-
-    for gap in report.get("coverage_gaps", []):
-        summary["gaps"].append((gap.get("root"), gap.get("detail")))
-
-    return summary
+    if not by or not by.strip():
+        raise GroundingError("a flag must name who is flagging the item — pass --by")
+    if not reason or not reason.strip():
+        raise GroundingError("a flag must state why the wording is ambiguous — "
+                             "pass --reason")
+    refusal = flag_refusal(project, uid)
+    if refusal is not None:
+        raise GroundingError(refusal)
+    item = project.get(uid)
+    item.attrs[AMBIGUOUS_ATTR] = True
+    item.attrs.setdefault("suspect_reasons", []).append(
+        f"flagged ambiguous by {by}: {reason}")
+    return item
 
 
 def link(item: Item, target: str, kind: str) -> None:

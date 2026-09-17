@@ -46,6 +46,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0032 | Several items can be ratified in one run, each shown and confirmed on its own | SR-0199 |
 | UR-0033 | Whether an item is normative is decided by its kind, not by which command wrote it | SR-0201, SR-0202, SR-0203 |
 | UR-0034 | An item flagged ambiguous can be clarified, with a record of who did it and why | SR-0213, SR-0214 |
+| UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223 |
 <!-- tl:end -->
 
 ## Coverage check

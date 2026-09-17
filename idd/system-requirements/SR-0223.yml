@@ -1,0 +1,30 @@
+uid: SR-0223
+type: system_requirement
+status: implemented
+title: A flag set when an item is created is read as true or false
+text: 'When an item is created with the ambiguity flag and its type does not declare
+  that attribute, the Tool shall read the value as it reads a declared boolean attribute:
+  a true or false value is stored as a boolean, and any other value is refused. A
+  false value shall leave the item unflagged.'
+rationale: |-
+  `tl new --attr ambiguous=false` stored the string 'false', because an attribute the type does not declare is stored as the text given (SR-0142). Any non-empty text counts as flagged, so asking for no flag raised one: check reported the item and ratify refused it. Reproduced with tl 3.7.0 on 2026-09-17.
+
+  The Tool reads this attribute as a flag everywhere, in check, ratify and clarify, so it writes it as one. A project that declares the attribute keeps the kind it declares.
+
+  Rejected — changing what counts as flagged, so that the text 'false' no longer flags an item. That changes how existing files are read, and any other text would still raise a flag.
+
+  Rejected — refusing the flag at creation, so that only `tl flag` raises it. Raising a flag only ever blocks a signature, so a flag raised without a record costs the author a missing reason and nothing more. Refusing it would break scripts that create flagged items today.
+
+  Who pays: a script that passes a value other than true or false now gets an error instead of a flagged item. No existing file is read differently.
+normative: true
+links:
+- target: UR-0035
+  type: implements
+- target: SR-0142
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:290c6bbfa1d9067f869827f8129b4db11b95f47b92e8f255e67e73ee81e30308

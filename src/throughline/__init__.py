@@ -12,9 +12,12 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
     GroundingError,
+    clarify,
+    flag,
     invalidate,
     ratify,
     reaches_root,
+    withdraw,
 )
 from .model import Item, Link, Project, Register
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
@@ -46,7 +49,8 @@ __all__ = [
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
     "validate", "Finding", "is_external", "is_namespace_qualified",
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
-    "GroundingError", "reaches_root", "ratify", "invalidate",
+    "GroundingError", "reaches_root", "ratify", "invalidate", "withdraw",
+    "flag", "clarify",
     "distribution_version", "is_editable",
     "__version__",
 ]

@@ -25,9 +25,8 @@ from throughline.grounding import (
     CLARIFIED_REASON_ATTR,
     GroundingError,
     clarify,
-    scout_ingest,
 )
-from throughline.storage import load_project, write_item
+from throughline.storage import load_project
 from throughline.validate import validate
 
 RECORD = [CLARIFIED_BY_ATTR, CLARIFIED_REASON_ATTR, CLARIFIED_AMBIGUITY_ATTR]
@@ -45,11 +44,9 @@ def _file(root: Path, uid: str) -> Path:
     return next(root.rglob(f"{uid}.yml"))
 
 
-def _scout(root: Path, uid: str, reason: str) -> None:
-    """Flag ``uid`` the way scout ingestion does, and write it back."""
-    project = load_project(root)
-    scout_ingest(project, {"ambiguities": [{"id": uid, "reason": reason}]})
-    write_item(project.get(uid), project.register_of(uid))
+def _flag(root: Path, uid: str, reason: str, by: str = "Scout") -> None:
+    """Flag ``uid`` the way a reviewer does (SR-0221)."""
+    assert _cli(["-C", root, "flag", uid, "--reason", reason, "--by", by]) == 0
 
 
 def _ambiguous_finding(root: Path, uid: str) -> str | None:
@@ -60,7 +57,7 @@ def _ambiguous_finding(root: Path, uid: str) -> str | None:
 
 @pytest.fixture
 def graph(tmp_path) -> Path:
-    """An intent, a machine-authored requirement flagged by scout ingestion, a second
+    """An intent, a machine-authored requirement a reviewer has flagged, a second
     requirement linked to the first through a stamped link, and a machine-authored
     one never flagged."""
     root = tmp_path / "proj"
@@ -79,7 +76,7 @@ def graph(tmp_path) -> Path:
     assert _cli(["-C", root, "new", "REQ", "--title", "Plain", "--text",
                  "The Tool shall log.", "--origin", "ai", "--ground", "INT-0001",
                  "--no-interactive"]) == 0
-    _scout(root, "REQ-0001", "'fast' is not measurable")
+    _flag(root, "REQ-0001", "'fast' is not measurable")
     return root
 
 
@@ -87,7 +84,7 @@ def graph(tmp_path) -> Path:
 
 def test_clarify_removes_the_flag_and_records_who_why_and_what_check_reported(graph):
     reported = _ambiguous_finding(graph, "REQ-0001")
-    assert reported == "scout: 'fast' is not measurable"
+    assert reported == "flagged ambiguous by Scout: 'fast' is not measurable"
     assert _cli(["-C", graph, "clarify", "REQ-0001", "--reason",
                  "reworded to a 200 ms limit", "--by", "Ada Lovelace"]) == 0
     a = _item(graph, "REQ-0001").attrs
@@ -125,7 +122,8 @@ def test_a_flag_set_at_creation_is_recorded_as_check_reports_it(graph):
                  "ambiguous=true", "--ground", "INT-0001", "--no-interactive"]) == 0
     assert _cli(["-C", graph, "clarify", "REQ-0004", "--reason", "flag was wrong",
                  "--by", "Ada"]) == 0
-    assert _item(graph, "REQ-0004").attrs[CLARIFIED_AMBIGUITY_ATTR] == "flagged ambiguous"
+    recorded = _item(graph, "REQ-0004").attrs[CLARIFIED_AMBIGUITY_ATTR]
+    assert "no reason recorded" in recorded and "tl flag REQ-0004" in recorded
 
 
 def test_a_clarified_item_can_be_ratified(graph, capsys):
@@ -141,7 +139,10 @@ def test_a_clarified_item_can_be_ratified(graph, capsys):
     assert _item(graph, "REQ-0001").attrs["ratified_by"] == "Ada"
 
 
-def test_an_item_scout_moved_to_suspect_stays_there_until_ratified_again(tmp_path):
+def test_flagging_a_ratified_item_leaves_its_status_and_signature_alone(tmp_path):
+    """SR-0221 leaves the status where it is, so a flag that turns out to be wrong
+    costs nobody a second signature. The flag still blocks ratification while it
+    stands."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Why",
@@ -149,19 +150,23 @@ def test_an_item_scout_moved_to_suspect_stays_there_until_ratified_again(tmp_pat
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.", "--origin",
                  "ai", "--ground", "INT-0001", "--no-interactive"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
-    _scout(root, "REQ-0001", "'T' is undefined")
-    assert _item(root, "REQ-0001").status == "suspect"
+    stamp = _item(root, "REQ-0001").attrs["ratified_fingerprint"]
+    _flag(root, "REQ-0001", "'T' is undefined")
+    item = _item(root, "REQ-0001")
+    assert item.status == "ratified"
+    assert item.attrs["ratified_by"] == "Ada" and item.attrs["ratified_fingerprint"] == stamp
+    assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 2
     assert _cli(["-C", root, "clarify", "REQ-0001", "--reason", "defined in the "
                  "glossary", "--by", "Bob"]) == 0
-    assert _item(root, "REQ-0001").status == "suspect"          # status untouched
-    assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
-    assert _item(root, "REQ-0001").status == "ratified"
+    item = _item(root, "REQ-0001")
+    assert item.status == "ratified"
+    assert item.attrs["ratified_fingerprint"] == stamp     # the signature still holds
 
 
 def test_a_flag_raised_again_is_clarified_again_and_the_record_replaced(graph):
     assert _cli(["-C", graph, "clarify", "REQ-0001", "--reason", "first",
                  "--by", "Ada"]) == 0
-    _scout(graph, "REQ-0001", "'limit' is unbounded")
+    _flag(graph, "REQ-0001", "'limit' is unbounded")
     assert _item(graph, "REQ-0001").attrs["ambiguous"] is True
     assert _cli(["-C", graph, "clarify", "REQ-0001", "--reason", "second",
                  "--by", "Bob"]) == 0
@@ -338,7 +343,8 @@ def test_ratify_shows_who_removed_the_flag_why_and_what_was_reported(graph,
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada"]) == 0
     err = capsys.readouterr().err
     for shown in ("removed by: Bob Malory", "reason: reworded to a 200 ms limit",
-                  "check had reported: scout: 'fast' is not measurable"):
+                  "check had reported: flagged ambiguous by Scout: "
+                  "'fast' is not measurable"):
         assert shown in err, shown
         assert err.index(shown) < err.index("<<asked>>")
 
