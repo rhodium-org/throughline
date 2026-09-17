@@ -844,92 +844,182 @@ def read_project(path: str | Path) -> Project:
 
 # -------------------------------------------------------------- git baseline
 
-def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | None:
-    """Map ``uid -> status`` as each item stood at git ``ref`` — the snapshot the
-    working tree is measured against.
+class Baseline(NamedTuple):
+    """The status each item had at the baseline check measures the working tree
+    against (SR-0083, SR-0093), or why it could not be read (SR-0209).
 
-    Two consumers read this: transition legality (SR-0083), which only looks up
-    items still present in the working tree, and tombstone permanence (SR-0093),
-    which needs items that existed at ``ref`` but are *gone* now — a UID whose
-    file was erased by a bad merge or a stray ``git rm``. So the map covers both
-    the current items' prior status and any file present at ``ref`` but absent
-    today.
+    ``statuses`` maps ``uid -> status`` and is ``None`` exactly when
+    ``unavailable`` says why. A baseline that was read but holds nothing, as in a
+    repository with no commits yet, is an empty map: every item is new."""
+    statuses: dict[str, str] | None
+    unavailable: str | None = None
 
-    Returns ``None`` — both checks then silently no-op — when the project is not
-    inside a git work tree or ``ref`` cannot be resolved. Items absent at ``ref``
-    (newly added) are simply omitted: creation is not a transition.
-    """
+
+class _GitTree:
+    """The project's files as they stood at a git revision, read through one
+    batched `git cat-file` rather than a process per file."""
+
+    def __init__(self, top: Path, ref: str, prefix: str):
+        self.top, self.ref, self.prefix = top, ref, prefix
+
+    def files(self) -> list[str]:
+        out = subprocess.run(
+            ["git", "-C", str(self.top), "ls-tree", "-r", "-z", "--name-only",
+             self.ref, "--", self.prefix or "."],
+            capture_output=True, check=True).stdout
+        names = [n.decode("utf-8", "surrogateescape") for n in out.split(b"\0") if n]
+        return [n[len(self.prefix):] for n in names if n.startswith(self.prefix)]
+
+    def read(self, rels: list[str]) -> dict[str, str]:
+        if not rels:
+            return {}
+        request = "".join(f"{self.ref}:{self.prefix}{rel}\n" for rel in rels)
+        out = subprocess.run(
+            ["git", "-C", str(self.top), "cat-file", "--batch"],
+            input=request.encode("utf-8", "surrogateescape"),
+            capture_output=True, check=True).stdout
+        found: dict[str, str] = {}
+        at = 0
+        for rel in rels:
+            nl = out.index(b"\n", at)
+            header = out[at:nl].decode("utf-8", "surrogateescape")
+            at = nl + 1
+            if header.endswith((" missing", " ambiguous")):
+                continue
+            _sha, kind, size = header.rsplit(" ", 2)
+            body = out[at:at + int(size)]
+            at += int(size) + 1
+            if kind == "blob":
+                found[rel] = body.decode("utf-8", "replace")
+        return found
+
+
+class _DirectoryTree:
+    """The project's files as they stood, supplied by a host as a directory laid
+    out as the working tree is (SR-0210)."""
+
+    def __init__(self, root: Path):
+        self.root = root
+
+    def files(self) -> list[str]:
+        return sorted(p.relative_to(self.root).as_posix()
+                      for p in self.root.rglob("*.yml") if p.is_file())
+
+    def read(self, rels: list[str]) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for rel in rels:
+            path = self.root / rel
+            if path.is_file():
+                found[rel] = path.read_text(encoding="utf-8", errors="replace")
+        return found
+
+
+def _statuses_in(project: Project, tree) -> dict[str, str]:
+    """Map ``uid -> status`` from the project's files as ``tree`` holds them.
+
+    The one reading of a baseline, whichever source supplies the files. Two rules
+    consume it: transition legality (SR-0083), which looks up items still present,
+    and tombstone permanence (SR-0093), which needs items present at the baseline
+    but gone now, a UID whose file was erased by a bad merge or a stray `git rm`.
+    A current item's status is read from its own path first; a file at a path no
+    current item occupies is keyed by the UID it names, so an item moved between
+    registers keeps the status it had."""
     root = Path(project.path).resolve()
-    try:
-        top = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, check=True).stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-        return None
-    top = Path(top)
-
-    # Resolve the ref once: an unborn HEAD or a bad --base makes the whole
-    # baseline unavailable (inert) rather than "everything looks new".
-    if subprocess.run(["git", "-C", str(top), "rev-parse", "--verify", "--quiet",
-                       f"{ref}^{{commit}}"], capture_output=True).returncode != 0:
-        return None
-
-    out: dict[str, str] = {}
+    present: dict[str, str] = {}
     for item in project.items():
         if item._path is None:
             continue
         try:
-            rel = item._path.resolve().relative_to(top)
+            present[item._path.resolve().relative_to(root).as_posix()] = item.uid
         except ValueError:
             continue
+    rels = [r for r in tree.files() if Path(r).name not in _ALL_MANIFEST_NAMES]
+    out: dict[str, str] = {}
+    absent: list[tuple[str, str]] = []
+    for rel, text in tree.read(rels).items():
         try:
-            blob = subprocess.run(
-                ["git", "-C", str(top), "show", f"{ref}:{rel.as_posix()}"],
-                capture_output=True, text=True, check=True).stdout
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-            continue  # not present at ref (new file) or bad ref for this path
-        data = _load_yaml(blob) or {}
+            data = _load_yaml(text) or {}
+        except yaml.YAMLError:
+            continue
+        if not isinstance(data, dict):
+            continue
         status = data.get("status")
-        if isinstance(status, str):
-            out[item.uid] = status
-
-    # Files that existed at `ref` but are gone from the working tree now. No
-    # current item carries their status, so a transition can't be measured — but
-    # a vanished tombstone must still reach the gate (SR-0093). Read their status
-    # straight from the tree.
-    present = {i._path.resolve() for i in project.items() if i._path is not None}
-    # Scope the scan to this project's own subtree: a project may be a
-    # subdirectory of a larger repo (e.g. examples/ alongside the self-host
-    # graph), and a tombstone in a *sibling* project must not be read as this
-    # project's erased record.
-    try:
-        proj_rel = root.relative_to(top)
-        prefix = "" if proj_rel == Path(".") else proj_rel.as_posix() + "/"
-    except ValueError:
-        prefix = ""
-    try:
-        tree = subprocess.run(
-            ["git", "-C", str(top), "ls-tree", "-r", "--name-only", ref,
-             "--", prefix or "."],
-            capture_output=True, text=True, check=True).stdout.splitlines()
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-        tree = []
-    for rel in tree:
-        if not rel.endswith(".yml") or Path(rel).name == MANIFEST_NAME:
+        if not isinstance(status, str):
             continue
-        if (top / rel).resolve() in present:
-            continue  # a current item — already handled above
-        try:
-            blob = subprocess.run(
-                ["git", "-C", str(top), "show", f"{ref}:{rel}"],
-                capture_output=True, text=True, check=True).stdout
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-            continue
-        data = _load_yaml(blob) or {}
-        uid, status = data.get("uid"), data.get("status")
-        if isinstance(uid, str) and isinstance(status, str):
-            out.setdefault(uid, status)
+        if rel in present:
+            out[present[rel]] = status
+        elif isinstance(data.get("uid"), str):
+            absent.append((data["uid"], status))
+    for uid, status in absent:
+        out.setdefault(uid, status)
     return out
+
+
+def read_baseline(project: Project, *, ref: str | None = "HEAD",
+                  base_dir: str | Path | None = None) -> Baseline:
+    """Read the baseline from ``base_dir``, a copy of the project as it stood
+    (SR-0210), or else from git revision ``ref``. A falsy ``ref`` means the caller
+    disabled the baseline. Where it cannot be read, the result says why rather than
+    passing for a baseline in which nothing moved (SR-0209).
+
+    Raises ``ProjectError`` when ``base_dir`` names no directory: a baseline the
+    caller supplied and mistyped fails the command, rather than reading as absent."""
+    if base_dir is not None:
+        root = Path(base_dir)
+        if not root.is_dir():
+            raise ProjectError(f"baseline directory {root} does not exist")
+        return Baseline(_statuses_in(project, _DirectoryTree(root.resolve())))
+    if not ref:
+        return Baseline(None, "the baseline was disabled")
+    root = Path(project.path).resolve()
+    try:
+        top = Path(subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, check=True).stdout.strip())
+    except subprocess.CalledProcessError:
+        return Baseline(None, "the project is not in a git work tree")
+    except (FileNotFoundError, OSError):
+        return Baseline(None, "git cannot be run")
+    try:
+        if subprocess.run(["git", "-C", str(top), "rev-parse", "--verify", "--quiet",
+                           f"{ref}^{{commit}}"], capture_output=True).returncode != 0:
+            # With no commits at all there is nothing earlier to compare, so every
+            # item is new; otherwise the revision named really is missing.
+            commits = subprocess.run(["git", "-C", str(top), "rev-list", "-n", "1", "--all"],
+                                     capture_output=True, text=True).stdout.strip()
+            if not commits:
+                return Baseline({})
+            return Baseline(None, f"the revision '{ref}' cannot be resolved")
+        # Scope to this project's own subtree: a project may sit beside another in
+        # one repository, and a sibling's tombstone is not this project's record.
+        try:
+            proj_rel = root.relative_to(top)
+            prefix = "" if proj_rel == Path(".") else proj_rel.as_posix() + "/"
+        except ValueError:
+            prefix = ""
+        return Baseline(_statuses_in(project, _GitTree(top, ref, prefix)))
+    except (FileNotFoundError, OSError):
+        return Baseline(None, "git cannot be run")
+    except subprocess.CalledProcessError:
+        return Baseline(None, f"the revision '{ref}' cannot be read")
+
+
+def baseline_note(schema, baseline: Baseline) -> str | None:
+    """The line check prints beside its result when the baseline rules did not run
+    (SR-0209): which rules, and why. ``None`` when they ran. Transition legality is
+    named only where the project declares transitions, since without a table it
+    has nothing to check."""
+    if baseline.unavailable is None:
+        return None
+    rules = (["transition legality"] if schema.transitions is not None else [])
+    rules.append("tombstone permanence")
+    return f"not checked: {' and '.join(rules)} — {baseline.unavailable}"
+
+
+def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | None:
+    """``uid -> status`` at git ``ref``, or ``None`` where it cannot be read. Kept
+    for callers of earlier releases; :func:`read_baseline` also says why."""
+    return read_baseline(project, ref=ref).statuses
 
 
 def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:

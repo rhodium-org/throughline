@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from .fingerprint import fingerprint
 from .filters import FilterError, safe_eval
 from .graph import Index
-from .grounding import reaches_root
+from .grounding import grounding_gap, is_unserved
 from .identity import WITHDRAWN_BY_ATTR, WITHDRAWN_RATIFIER_ATTR, WITHDRAWN_REASON_ATTR
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -272,17 +272,15 @@ def validate(project, strict: bool = False,
             elif target.is_deleted:
                 add("deleted-link-target", item.uid, f, f"link target '{link.target}' is deleted")
 
-        # Grounding coverage — the anti-avalanche core (upward).
-        if not schema.is_root(item):
-            if not idx.out_links(item.uid, ground_kinds):
-                add("orphan", item.uid, f,
-                    f"{item.type} has no grounding link — nothing justifies it")
-            elif not reaches_root(idx, schema, item.uid):
-                add("orphan", item.uid, f,
-                    "grounding chain never reaches a root")
+        # Grounding coverage — the anti-avalanche core (upward). The predicate is
+        # shared with the link operations, which refuse a change this would report
+        # (SR-0211).
+        gap = grounding_gap(schema, idx, item)
+        if gap is not None:
+            add("orphan", item.uid, f, gap)
 
         # Downward coverage — every delivery root must be served (mirror).
-        if item.type in schema.delivery_roots and not idx.in_links(item.uid, ground_kinds):
+        if is_unserved(schema, idx, item):
             add("unserved-root", item.uid, f,
                 f"{item.type} has nothing deriving from / mitigating it — unserved")
 

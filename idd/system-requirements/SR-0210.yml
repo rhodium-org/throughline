@@ -1,0 +1,31 @@
+uid: SR-0210
+type: system_requirement
+status: ratified
+title: A host can supply the baseline as a directory
+text: Check shall accept, in place of a git revision, a directory holding the project
+  as it stood at the baseline, laid out as the working tree is, and shall read each
+  item's earlier status from it by the same rules it applies to a revision, so a
+  host without git runs every rule a git work tree would.
+rationale: 'throughline-editor runs the unmodified Tool in a browser, where no subprocess
+  can run, so both baseline rules were always inert there although the host holds
+  the full history (issue #5). A directory rather than a map of statuses, because
+  reading an item''s status from its file is the Tool''s own rule, and a host that
+  computed the map would carry a second copy of it. Rejected, a Python callback,
+  because a host driving the command line cannot pass one. Rejected, an environment
+  variable, because an option shows in the command that was run.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0083
+  type: refines
+- target: SR-0093
+  type: relates
+- target: SR-0209
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:aa2c75047f26ab4ad4117164f69978195a691df30e45ec889f77c36721e08354

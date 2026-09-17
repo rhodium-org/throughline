@@ -36,6 +36,45 @@ def reaches_root(idx: Index, schema, uid: str) -> bool:
     return idx.reaches(uid, schema.is_root, schema.ground_link_types)
 
 
+def grounding_gap(schema, idx: Index, item: Item) -> str | None:
+    """Why ``item`` is not grounded, in the words the gate's `orphan` finding uses,
+    or ``None`` when it is. A root is grounded by definition. Shared by the gate
+    and by the link operations, so a change is refused by exactly the rule that
+    would have reported it (SR-0211)."""
+    if schema.is_root(item):
+        return None
+    if not idx.out_links(item.uid, schema.ground_link_types):
+        return f"{item.type} has no grounding link — nothing justifies it"
+    if not reaches_root(idx, schema, item.uid):
+        return "grounding chain never reaches a root"
+    return None
+
+
+def is_unserved(schema, idx: Index, item: Item) -> bool:
+    """True when ``item`` is a delivery root that nothing grounds into, the
+    gate's `unserved-root` finding."""
+    return (item.type in schema.delivery_roots
+            and not idx.in_links(item.uid, schema.ground_link_types))
+
+
+def ungrounded_by(schema, items, before: Index, after: Index) -> tuple[list[str], list[str]]:
+    """The items a change from ``before`` to ``after`` would leave reaching no root,
+    and the delivery roots it would leave served by nothing (SR-0211). Measured as
+    a difference, so an item already ungrounded before the change is not blamed on
+    it and a graph red elsewhere does not block an unrelated change."""
+    orphaned: list[str] = []
+    unserved: list[str] = []
+    for item in items:
+        if item.is_deleted:
+            continue
+        if grounding_gap(schema, before, item) is None \
+                and grounding_gap(schema, after, item) is not None:
+            orphaned.append(item.uid)
+        if not is_unserved(schema, before, item) and is_unserved(schema, after, item):
+            unserved.append(item.uid)
+    return sorted(orphaned), sorted(unserved)
+
+
 # ------------------------------------------------------------------ operations
 
 class GroundingError(ValueError):

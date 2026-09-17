@@ -15,7 +15,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0145 |
 | UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
-| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143 |
+| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
 | UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
@@ -27,7 +27,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0013 | Baselines | SR-0036, SR-0090 |
 | UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093 |
 | UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137 |
-| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194 |
+| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210 |
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
 | UR-0018 | Migration path in | — |
 | UR-0019 | Requirements-to-code traceability | — |

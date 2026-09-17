@@ -44,6 +44,21 @@ class Index:
                 idx.backward.setdefault(link.target, []).append((item.uid, link.type))
         return idx
 
+    def with_edges(self, uid: str, *, remove=(), add=()) -> "Index":
+        """This index with ``uid``'s outgoing edges changed, leaving this one as it
+        was. ``remove`` and ``add`` are ``(target, type)`` pairs; every occurrence of
+        a removed pair goes. It is how a link operation sees the graph after the
+        change it is about to make (SR-0211)."""
+        gone = set(remove)
+        forward = dict(self.forward)
+        backward = dict(self.backward)
+        forward[uid] = [e for e in self.forward.get(uid, []) if e not in gone] + list(add)
+        for target in {t for t, _k in gone} | {t for t, _k in add}:
+            kept = [(s, k) for s, k in self.backward.get(target, [])
+                    if not (s == uid and (target, k) in gone)]
+            backward[target] = kept + [(uid, k) for t, k in add if t == target]
+        return Index(items=self.items, forward=forward, backward=backward)
+
     def out_links(self, uid: str, types: set[str] | None = None) -> list[tuple[str, str]]:
         return [(t, k) for t, k in self.forward.get(uid, [])
                 if types is None or k in types]
