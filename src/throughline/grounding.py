@@ -81,16 +81,26 @@ class GroundingError(ValueError):
     pass
 
 
+def transition_refusal(schema, item: Item, to: str) -> str | None:
+    """Why ``item`` may not move to status ``to``, or ``None`` when it may. The one
+    wording for a move the configured [transitions] forbid, asked by
+    :func:`set_status` when it writes and by :func:`ratification_obstacle` before
+    anything is written (SR-0130, SR-0195)."""
+    if not schema.allows_transition(item.status, to):
+        return (f"{item.uid}: status change '{item.status}' -> '{to}' is not an "
+                "allowed transition")
+    return None
+
+
 def set_status(schema, item: Item, to: str) -> None:
     """The single choke point for a status change (SR-0130). Every operation
     moves an item through here, so a move the configured [transitions] forbid is
     refused at the source rather than written and caught later by `check`. When a
     project declares no transitions the move is unconstrained, matching the tool's
     other optional vocabularies."""
-    if not schema.allows_transition(item.status, to):
-        raise GroundingError(
-            f"{item.uid}: status change '{item.status}' -> '{to}' is not an "
-            "allowed transition")
+    refusal = transition_refusal(schema, item, to)
+    if refusal is not None:
+        raise GroundingError(refusal)
     item.status = to
 
 
@@ -249,6 +259,15 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
                     f"{item.attrs.get('ratified_by', 'a human')} and its content has "
                     "not changed since — there is nothing to accept; pass "
                     "--replacing to correct the recorded ratifier instead")
+    # The move :func:`ratify` makes is asked about here too, so a status the
+    # transitions do not let reach the ratified role is refused before anything is
+    # rendered or asked (SR-0195) and before any item in a run is written
+    # (SR-0199). Only where ratification moves the status: where a project declares
+    # it does not (SR-0172), no move is made and nothing can be in the way.
+    if schema.ratify_moves_status:
+        refusal = transition_refusal(schema, item, schema.status_role("ratified"))
+        if refusal is not None:
+            return refusal
     return None
 
 
