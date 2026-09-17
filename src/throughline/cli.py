@@ -20,6 +20,7 @@ from pathlib import Path
 from .dump import build_dump
 from .fingerprint import fingerprint
 from .graph import Index
+from .links import LinkError, add_link, remove_link, retype_link
 from .grounding import (
     GroundingError,
     attribute_removal_refusal,
@@ -48,7 +49,8 @@ from .storage import (
     CONFIG_NAME,
     MANIFEST_NAME,
     ProjectError,
-    baseline_statuses,
+    baseline_note,
+    read_baseline,
     init_project,
     load_project,
     load_project_at_ref,
@@ -695,48 +697,23 @@ def cmd_link(args) -> int:
     ltype = _resolve_value(args.type, "link type", "--type", options=link_types)
     if ltype is None:
         return USAGE
-    stamp = fingerprint(dst, project.schema) if args.stamp else None
-    if getattr(args, "retype", False):
-        # Retype changes an existing edge in place rather than adding a parallel
-        # one (SR-0143), so the semantic-link review the tool is built for — e.g.
-        # narrowing a mitigates to a relates — needs no hand-editing.
-        existing = [ln for ln in src.links if ln.target == dst_uid]
-        if not existing:
-            return _err(f"no existing link {src_uid} -> {dst_uid} to retype "
-                        f"(drop --retype to add a new one)")
-        present_types = {ln.type for ln in existing}
-        if len(present_types) > 1:
-            return _err(f"multiple link types {src_uid} -> {dst_uid} "
-                        f"({', '.join(sorted(present_types))}); remove the "
-                        f"unwanted one with `tl unlink` first")
-        old_type = existing[0].type
-        for ln in existing:
-            ln.type = ltype
-            if args.stamp:
-                ln.stamp = stamp
-        write_item(src, project.register_of(src.uid))
-        print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
-              + (" (stamped)" if args.stamp else ""))
-        return OK
-    # The same edge twice is never wanted: with --stamp it is the re-confirm
-    # command SR-0034 promises, refreshing the stored fingerprint in place;
-    # without it there is nothing to add, and a parallel duplicate would hide
-    # a stale stamp behind a fresh one.
-    same = [ln for ln in src.links if ln.target == dst_uid and ln.type == ltype]
-    if same:
-        if not args.stamp:
-            return _err(f"{src_uid} --{ltype}--> {dst_uid} already exists "
-                        f"(add --stamp to refresh its stamp, or --retype to "
-                        f"change its type)")
-        for ln in same:
-            ln.stamp = stamp
-        write_item(src, project.register_of(src.uid))
+    try:
+        if getattr(args, "retype", False):
+            # Retype changes an existing edge in place rather than adding a parallel
+            # one (SR-0143), refused where it would leave the graph ungrounded
+            # (SR-0211).
+            old_type = retype_link(project, src_uid, dst_uid, ltype, stamp=args.stamp)
+            print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
+                  + (" (stamped)" if args.stamp else ""))
+            return OK
+        outcome = add_link(project, src_uid, dst_uid, ltype, stamp=args.stamp)
+    except LinkError as e:
+        return _err(str(e))
+    if outcome == "restamped":
         print(f"restamped {src_uid} --{ltype}--> {dst_uid}")
-        return OK
-    src.links.append(Link(target=dst_uid, type=ltype, stamp=stamp))
-    write_item(src, project.register_of(src.uid))
-    print(f"linked {src_uid} --{ltype}--> {dst_uid}"
-          + (" (stamped)" if stamp else ""))
+    else:
+        print(f"linked {src_uid} --{ltype}--> {dst_uid}"
+              + (" (stamped)" if args.stamp else ""))
     return OK
 
 
@@ -754,25 +731,13 @@ def cmd_unlink(args) -> int:
     dst_uid = _resolve_uid(project, args.dst, "unlink to (destination)", "DST")
     if dst_uid is None:
         return USAGE
-    src = project.get(src_uid)
-    if src is None:
-        return _err(f"source {src_uid} does not exist")
-
-    def _matches(ln) -> bool:
-        return ln.target == dst_uid and (args.type is None or ln.type == args.type)
-
-    matched = [ln for ln in src.links if _matches(ln)]
-    if not matched:
-        what = f" of type '{args.type}'" if args.type else ""
-        return _err(f"no link {src_uid} -> {dst_uid}{what} to remove")
-    present_types = {ln.type for ln in matched}
-    if args.type is None and len(present_types) > 1:
-        return _err(f"multiple link types {src_uid} -> {dst_uid} "
-                    f"({', '.join(sorted(present_types))}); pass --type to "
-                    f"choose which to remove")
-    src.links = [ln for ln in src.links if not _matches(ln)]
-    write_item(src, project.register_of(src.uid))
-    for ltype in sorted(present_types):
+    # Removing a link is refused where it would leave the graph ungrounded
+    # (SR-0211); the operation is shared with composing tools (SR-0212).
+    try:
+        removed = remove_link(project, src_uid, dst_uid, args.type)
+    except LinkError as e:
+        return _err(str(e))
+    for ltype in removed:
         print(f"unlinked {src_uid} --{ltype}--> {dst_uid}")
     return OK
 
@@ -1011,14 +976,23 @@ def cmd_check(args) -> int:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    baseline = None
-    if project.schema.transitions is not None and args.base:
-        baseline = baseline_statuses(project, args.base)
+    # The baseline serves transition legality (SR-0083) and tombstone permanence
+    # (SR-0093), so it is read whether or not transitions are declared. A host
+    # without git supplies it as a directory (SR-0210); where it cannot be read,
+    # the result says which rules did not run (SR-0209).
+    try:
+        baseline = read_baseline(project, ref=args.base,
+                                 base_dir=getattr(args, "base_dir", None))
+    except ProjectError as e:
+        return _err(str(e))
+    note = baseline_note(project.schema, baseline)
     published = referenced_uids(project)  # None unless [docs] paths configured
-    findings = validate(project, strict=args.strict, baseline=baseline,
+    findings = validate(project, strict=args.strict, baseline=baseline.statuses,
                         published=published)
     if args.format == "json":
         print(json.dumps([f.to_dict() for f in findings], indent=2))
+        if note:
+            print(note, file=sys.stderr)
         return FINDINGS if any(f.severity == ERROR for f in findings) else OK
 
     for f in sorted(findings, key=lambda x: (x.severity != ERROR, x.uid)):
@@ -1029,6 +1003,10 @@ def cmd_check(args) -> int:
     if not args.quiet:
         for line in _check_summary(project):
             print(line, file=sys.stderr)
+    # Not a finding, so neither the findings nor the exit status move; printed
+    # even when quiet, because it qualifies the result a quiet run still reports.
+    if note:
+        print(f"\n{note}", file=sys.stderr)
     tally = f"\n{errs} error(s), {warns} warning(s)"
     if not args.quiet and errs == 0:
         tally += "  — graph is sound" + (" (strict)" if args.strict else "")
@@ -1500,7 +1478,7 @@ _CTX_COMMAND_USAGE = {
              "[--unset K]",
     "link": "tl link <SRC> <DST> --type <kind>",
     "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
-    "check": "tl check [--strict] [--format json]",
+    "check": "tl check [--strict] [--format json] [--base REF | --base-dir DIR]",
     "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>]",
     "trace": "tl trace <UID> [--direction in|out]",
     "blast": "tl blast <UID>",
@@ -2442,6 +2420,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--base", default="HEAD", metavar="REF",
                    help="git ref for the status-transition baseline "
                         "(default HEAD; empty to disable)")
+    s.add_argument("--base-dir", default=None, metavar="DIR",
+                   help="read the baseline from DIR, a copy of the project as it "
+                        "stood, instead of from git (for a host without git)")
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.add_argument("--quiet", "-q", action="store_true",
                    help="suppress the graph summary (findings + tally only)")

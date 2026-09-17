@@ -1,0 +1,35 @@
+uid: SR-0209
+type: system_requirement
+status: ratified
+title: Check says which rules it could not run
+text: 'When check cannot read the status each item had at the baseline, it shall
+  say beside its result which rules were not checked and why: transition legality,
+  where the project declares transitions, and tombstone permanence. The reasons it
+  shall distinguish are that the project is not in a git work tree, that git cannot
+  be run, that the named revision cannot be resolved, and that the caller disabled
+  the baseline. The statement shall not be a finding, so the findings and the exit
+  status are unchanged. A repository with no commits yet shall be read as a baseline
+  in which every item is new, since there is nothing earlier to compare.'
+rationale: 'SR-0083 makes both rules inert without a baseline, and check then printed
+  an unqualified pass. Where git is absent that pass is quietly weaker than the same
+  command in CI, with nothing to show that two rules did not run (issue #5). Rejected,
+  a finding at warning severity: strict CI running outside a git work tree, such
+  as a container build, would go red on upgrade. Rejected, treating a repository
+  with no commits as unavailable: the statement would then appear on every project
+  before its first commit, where it would teach readers to ignore it.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0083
+  type: refines
+- target: SR-0093
+  type: relates
+- target: SR-0210
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bead03dd012dc68822f763a62cc6ddd8eeaef7c68414623b1b55b29ba39f133b

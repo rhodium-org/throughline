@@ -1,0 +1,34 @@
+uid: SR-0211
+type: system_requirement
+status: ratified
+title: Removing or retyping a link never leaves the graph ungrounded
+text: The Tool shall refuse to remove a link, or to retype one to a type that confers
+  no grounding, when the change would leave an item of the project that reaches a
+  root now reaching none, or a delivery root of the project that is served now unserved.
+  It shall name every such item, change nothing, and judge this by the same reachability
+  the gate applies.
+rationale: 'Removing an item''s last grounding link succeeded silently and left check
+  red, and a ratifying cockpit had to reimplement the guard over the union to avoid
+  it (issue #3). Retyping a grounding link to one that confers none loses grounding
+  in the same way, so it is held to the same rule. The refusal is measured as a difference,
+  so a graph already red elsewhere does not block an unrelated change. Rejected,
+  a flag that forces the change, for the reason SR-0182 gives: an item is re-grounded
+  by linking the new parent before removing the old one, which the refusal names,
+  and a determined author can still edit the file and own the red check. Who pays:
+  a script that removed a link before adding its replacement must add first.'
+normative: true
+links:
+- target: UR-0004
+  type: implements
+- target: SR-0143
+  type: refines
+- target: SR-0182
+  type: relates
+- target: SR-0151
+  type: relates
+attrs:
+  origin: ai
+  priority: must
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:6e269cff44d9623b5920c7c7c456f32e090598ee4c0cbb8042f7eb35041154ce

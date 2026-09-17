@@ -1,0 +1,35 @@
+uid: SR-0212
+type: system_requirement
+status: ratified
+title: Link operations are offered to a tool that grounds over a wider graph
+text: The Tool shall offer adding, restamping, retyping and removing a link through
+  the Python API, accepting the grounding index of a wider graph together with how
+  a target written on an item is found in it. With neither supplied, the operations
+  shall behave exactly as the link commands do. A composing tool shall thereby perform
+  every link operation, and have SR-0211 judged, over the union it grounds in, without
+  keeping a copy of the operation.
+rationale: 'tl-compose kept its own copy of adding a link to a borrowed clause, and
+  it drifted: on tl-compose 0.20.0, --stamp on an existing cross-source edge added
+  a second edge where bare tl refreshes the stamp in place, and --retype added a
+  third link instead of changing the type. Offering the operations with a seam is
+  what SR-0151 did for ratify and SR-0205 did for an item''s birth, for the same
+  reason: a composing tool needs to vary only the graph it judges against, and a
+  copy of the rest falls behind.'
+normative: true
+links:
+- target: UR-0004
+  type: implements
+- target: SR-0211
+  type: relates
+- target: SR-0143
+  type: refines
+- target: SR-0151
+  type: relates
+- target: SR-0205
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a89f3530b59bab814feeb5e4bb77b7baeddab3664edcda42c55e79b778004dea
