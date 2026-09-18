@@ -1,0 +1,35 @@
+uid: SR-0220
+type: system_requirement
+status: implemented
+title: Generated documents leave the recorded ratified content out of item blocks
+text: Where a generated document renders an item block — for a tl:item marker (SR-0094)
+  or a tl:catalog directive (SR-0111) — the Tool shall leave the recorded ratified
+  content (SR-0215) out of the block's attributes and render every other attribute
+  as before. The recorded content shall stay in the item file and in the Tool's structured
+  exports.
+rationale: |-
+  The recorded content is a copy of the item's own text and normative attributes, which the block already shows, and the stamp beside it already identifies the signature. Rendered as an attribute it prints a whole map of words inline, once per signed item, and a reader learns nothing the block does not already say.
+
+  Omitted only from documents. The item file keeps it because it is the record, and structured exports such as tl dump keep it because a consumer needs it to show what changed without version control (SR-0216).
+
+  Rejected: a short marker in its place, such as 'recorded'. The fingerprint and the ratifier already say the item was signed, so a marker adds a line and no information. Rejected: rendering it as it is. That is a raw map of the item's own words.
+
+  Who pays: nobody reading a document loses anything. A consumer that renders item attributes itself, such as an export tool, decides the same question on its own.
+normative: true
+links:
+- target: UR-0024
+  type: implements
+- target: SR-0094
+  type: relates
+- target: SR-0111
+  type: relates
+- target: SR-0215
+  type: relates
+- target: SR-0216
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a137a7f09f0aa553627a05a337e9be65532026f0c78fdf64ff47751def542d84

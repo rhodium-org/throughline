@@ -188,7 +188,8 @@ def cmd_migrate(args) -> int:
     elif result.repaired is None:
         print(f"already at format version {result.end}"
               + ("" if result.bound or result.declared or result.routed
-                 or result.cached or result.normative else " — nothing to migrate"))
+                 or result.cached or result.normative or result.contents
+                 or result.unprovable else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -238,6 +239,23 @@ def cmd_migrate(args) -> int:
         print(f"cached the ratified revision for {len(result.cached)} record(s) so "
               "that what changed since a signature can be shown without walking "
               "history each time")
+    # Signed content recorded on older signatures (SR-0218). Counts, as for the
+    # revision cache: the content is proved by the stamp and decides nothing on its
+    # own. The unprovable are counted too, because a record that stays without its
+    # content still needs history to show what changed.
+    if result.contents:
+        print(f"recorded the signed content on {len(result.contents)} ratification "
+              "record(s), so what changed since each signature can be shown without "
+              "version control")
+    if result.unprovable:
+        print(f"could not prove the signed content of {len(result.unprovable)} "
+              "ratification record(s); what changed since those signatures still "
+              "needs their history:")
+        counts: dict[str, int] = {}
+        for why in result.unprovable.values():
+            counts[why] = counts.get(why, 0) + 1
+        for why, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+            print(f"  {n} — {why}")
     # Items whose normative flag disagreed with their type (SR-0203). Named in
     # full: the flag is a fingerprint input, so each rewrite is a content change
     # the graph will hold someone to. The ratification records are left alone —
@@ -624,6 +642,11 @@ def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
     # (e.g. a priority meaning "no human has decided yet") appears automatically
     # without overwriting an explicit value.
     for name, spec in schema.attrs_for(item_type).items():
+        # Never a record a single verb owns, whatever a hand-edited config
+        # declares: only that verb writes it (SR-0170, SR-0213, SR-0219), and
+        # `tl schema attr add` refuses to declare one.
+        if attribute_owner(name) is not None:
+            continue
         if spec.default is not None and name not in item.attrs:
             item.attrs[name] = spec.default
     item._register_prefix = reg.prefix
@@ -656,6 +679,14 @@ def cmd_new(args) -> int:
         attrs = _parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
+    # A declared default naming a record a single verb owns is never written
+    # (SR-0170, SR-0213, SR-0219); say so rather than drop it silently.
+    ignored = [name for name, spec in schema.attrs_for(args.type).items()
+               if spec.default is not None and attribute_owner(name) is not None]
+    for name in ignored:
+        record, owner = attribute_owner(name)
+        print(f"ignored the declared default for '{name}': it is part of the "
+              f"{record} and only `tl {owner}` writes it")
     item = birth_item(schema, reg, uid, item_type=args.type,
                       title=args.title or "", text=args.text or "",
                       status=args.status, origin=args.origin, attrs=attrs)

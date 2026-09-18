@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from .fingerprint import fingerprint
+from .fingerprint import fingerprint, signed_content
 from .graph import Index
 from .identity import (
     RATIFICATION_ATTRS,
@@ -348,6 +348,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     if identifier is not None:
         item.attrs[RATIFIED_ID_ATTR] = identifier
     item.attrs["ratified_fingerprint"] = current
+    # The words the stamp was taken over, beside it (SR-0215). A digest proves only
+    # that content moved; this is what lets anyone show what the person agreed to,
+    # with no version control at all — which a browser holding one commit, a
+    # shallow clone and rewritten history all lack.
+    item.attrs["ratified_content"] = signed_content(item, schema)
     # Kept so a correction never reads as the original record (SR-0148's condition
     # that an accountability record never changes without the graph showing it).
     if superseded is not None and superseded != by:

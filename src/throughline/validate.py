@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .fingerprint import fingerprint
+from .fingerprint import content_fingerprint, fingerprint
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
@@ -52,7 +52,7 @@ _DEFAULT_SEVERITY = {
     "undeclared-vocabulary": ERROR,
     "no-status-roles": WARNING, "suspect-unreachable": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
-    "ratified-stale": WARNING,
+    "ratified-stale": WARNING, "ratified-content-mismatch": ERROR,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING, "normative-mismatch": WARNING,
 }
@@ -373,6 +373,23 @@ def validate(project, strict: bool = False,
             add("ratified-stale", item.uid, f,
                 f"normative content changed since {who} ratified it — re-ratify "
                 "to accept the new wording, or revert it")
+
+        # The recorded signed content (SR-0217): the Tool writes it so that it
+        # reproduces the stamp beside it (SR-0215), so a record that does not was
+        # edited by something else, or the Tool is at fault. Silent where no content
+        # is recorded, so a graph gains this finding only once its records carry it.
+        content = item.attrs.get("ratified_content")
+        if content is not None and not stamp:
+            add("ratified-content-mismatch", item.uid, f,
+                "ratified content is recorded but no ratification stamp stands beside "
+                "it, so it shows a signature that is not there — restore the record "
+                "from version control, or ratify the item again, which rewrites both")
+        elif content is not None and content_fingerprint(item.authored_uid, content) != stamp:
+            add("ratified-content-mismatch", item.uid, f,
+                "the recorded ratified content does not reproduce the ratification "
+                "stamp, so it no longer shows what was signed — restore the record "
+                "from version control, or ratify the item again (`tl ratify`, or "
+                "`tl withdraw` first where its content has not moved)")
 
     out.extend(_coverage_rules(project, idx, strict))
     return out

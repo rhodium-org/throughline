@@ -59,6 +59,14 @@ RATIFICATION_ATTRS = {
     # a false difference — but a hand-written one would still be a claim about an
     # accountability record made by something other than the verb that owns it.
     "ratified_revision": "migrate",
+    # The content the stamp was taken over, recorded so that what changed since a
+    # signature can be shown with no version control at all (SR-0215, SR-0219).
+    # Ratify writes it beside every stamp; migration also completes it for a
+    # record made before it existed (SR-0218). Owned like the stamp, because a
+    # hand-made copy could otherwise pass as the words someone agreed to — and so
+    # withdrawal, which clears every attribute it does not own, removes it with
+    # the signature.
+    "ratified_content": "ratify",
     # The identity a correction replaced (SR-0196). Ratify writes it, because a
     # correction is itself a ratification; it is guarded like the rest of the
     # record because a hand-written one would claim that a signature succeeded

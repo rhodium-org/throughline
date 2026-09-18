@@ -1,0 +1,30 @@
+uid: SR-0219
+type: system_requirement
+status: implemented
+title: The recorded content is part of the ratification record
+text: The recorded content shall be part of the ratification record. Only ratification
+  and migration shall write it, and any other operation that sets attributes shall
+  refuse it by name (SR-0170). Withdrawing a ratification (SR-0197) shall remove
+  it with the stamp.
+rationale: |-
+  A copy of what was signed is as much a claim about accountability as the stamp beside it. If any attribute-setting operation could write it, a hand-made copy could pass as the words someone agreed to.
+
+  Withdrawal removes the signature, and content with no signature beside it would describe an agreement that no longer stands.
+
+  Who pays: nobody outside the Tool. The guard names ratify and migrate as the owners, as it already does for the rest of the record.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0170
+  type: relates
+- target: SR-0197
+  type: relates
+- target: SR-0215
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:53e47949b364d79bd8d0c004e5559ed0234e351dca7ccd58c19b49f80a2e2a4d

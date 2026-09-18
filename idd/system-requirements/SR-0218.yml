@@ -1,0 +1,37 @@
+uid: SR-0218
+type: system_requirement
+status: implemented
+title: Migration records the signed content of ratifications made before it was recorded
+text: '`tl migrate` shall add recorded content to each ratification record that has
+  a stamp and no recorded content, wherever the content can be proved: from the item
+  as it stands when its current content reproduces the stamp, and otherwise from
+  the revision that history resolves for the stamp (SR-0165). It shall leave a record
+  whose content cannot be proved without recorded content. It shall change no stamp,
+  ratifier, identifier, backfill marking or status. It shall report how many records
+  it completed and how many it could not.'
+rationale: |-
+  Most signatures in existing graphs predate recorded content, and a browser opening those graphs would still show nothing. Migration is where the Tool repairs records in place, as it already fills the revision cache (SR-0166).
+
+  Only content the stamp reproduces is recorded, so migration never writes a guess into an accountability record. A record it cannot prove keeps resolving from history wherever history exists.
+
+  A count, as for the revision cache, because the content is checked against the stamp and decides nothing on its own. A record marked as backfilled (SR-0152) keeps that marking: recording the content does not claim the ratifier read it.
+
+  Who pays: running migrate rewrites every ratified item file whose content it can prove, in a commit the operator makes and can review.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0152
+  type: relates
+- target: SR-0165
+  type: relates
+- target: SR-0166
+  type: relates
+- target: SR-0215
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8ebd98271bebcce27ca2bf7a538c1d81acb7037e15caa278efd39f48209d0e57

@@ -1,0 +1,35 @@
+uid: SR-0215
+type: system_requirement
+status: implemented
+title: A ratification records the content it was taken over
+text: 'When the Tool writes a ratification stamp, it shall record beside the stamp,
+  as part of the ratification record, the content the stamp was taken over: the item''s
+  type, its text, its normative and derived flags, and the name and value of each
+  normative attribute, exactly as the item holds them at that moment. With the item''s
+  UID, the recorded content shall reproduce the stamp written beside it. This shall
+  hold for every ratification the Tool writes, including a re-ratification and a
+  corrected ratifier (SR-0196).'
+rationale: |-
+  What changed since a signature is found today by walking version-control history for a revision whose content reproduces the stamp (SR-0165). That fails wherever the history is not there: a browser holding one commit of a repository, a shallow CI clone, a repository imported without its history, or history rewritten by a squash or a force-push. The Tool can then say only that something changed, and the reader re-ratifies blind, which UR-0028 exists to prevent.
+
+  The record should hold what the person agreed to, not only a digest of it. Recorded beside the stamp, the earlier content needs no history, no network and no git, and it proves itself: it reproduces the stamp or it does not.
+
+  Rejected: reading earlier revisions from the git host over its API. It needs a network, a credential and a client for each host, and it fails the same way on rewritten history. Rejected: caching only the revision (SR-0166), which still needs the history to read.
+
+  Who pays: every ratified item file holds a second copy of its normative content until it is next signed, and a ratification commit shows that copy in its diff. The fingerprint itself is unchanged, so no existing signature goes stale.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0165
+  type: relates
+- target: SR-0166
+  type: relates
+- target: SR-0196
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bbf977f4451060e30e7cff51f0157d8acc38e23d4e73f3165b9539ce1ab97f82

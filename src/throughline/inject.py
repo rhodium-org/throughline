@@ -372,8 +372,12 @@ def render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> 
     if link_lines:
         lines += link_lines
         lines.append("")
-    if item.attrs:
-        lines.append(" · ".join(f"**{k}**: {v}" for k, v in item.attrs.items()))
+    # The recorded ratified content is a copy of the text and normative attributes
+    # the block already shows, so it stays in the item file and the structured
+    # exports and out of a document (SR-0220).
+    shown = {k: v for k, v in item.attrs.items() if k != "ratified_content"}
+    if shown:
+        lines.append(" · ".join(f"**{k}**: {v}" for k, v in shown.items()))
         lines.append("")
     return "\n".join(lines).rstrip()
 

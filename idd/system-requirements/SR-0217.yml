@@ -1,0 +1,25 @@
+uid: SR-0217
+type: system_requirement
+status: implemented
+title: Recorded content that does not reproduce its stamp is reported
+text: Validation shall report as an error each item whose ratification record holds
+  recorded content that does not reproduce the record's stamp, naming the item. It
+  shall report nothing about a record that holds no recorded content.
+rationale: |-
+  The Tool records content that reproduces its stamp by construction (SR-0215), so a mismatch means something other than the Tool edited the record, or the Tool has a defect. Either way the record no longer shows what was signed, and the people relying on it should be told.
+
+  The rule fires only where recorded content is present, so no existing graph gains a finding until its records carry content, by a new signature or by migration.
+
+  Who pays: a graph whose record was edited by hand fails the gate until the item is signed again or the record is restored.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0215
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f435c0843a85e342019844d86335c9bdfd2d877ade1cc6488746dea811d6066e

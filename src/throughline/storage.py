@@ -33,7 +33,10 @@ def _load_yaml(text: str):
     """Parse one YAML document safely, through the loader chosen above."""
     return yaml.load(text, Loader=_YAML_LOADER)
 
-from .fingerprint import fingerprint
+from collections.abc import Mapping
+from types import MappingProxyType
+
+from .fingerprint import content_fingerprint, fingerprint, signed_content
 from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
@@ -309,6 +312,10 @@ def _backfill_ratification_stamps(root: Path, *,
         stamp = fingerprint(item, schema)
         item.attrs["ratified_fingerprint"] = stamp
         item.attrs["ratified_backfilled"] = True
+        # Every stamp the Tool writes carries the content it was taken over
+        # (SR-0215); the backfilled marking beside it still says nobody is known
+        # to have read that content.
+        item.attrs["ratified_content"] = signed_content(item, schema)
         write_item(item)
         bound[item.uid] = stamp
     return bound
@@ -355,6 +362,49 @@ def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
         write_item(item)
         cached[item.uid] = sha
     return cached
+
+
+def _backfill_ratification_contents(root: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """Record, on each ratification record that has a stamp and no recorded content,
+    the content the stamp was taken over — wherever it can be proved (SR-0218).
+    Returns ``(completed, unprovable)``: ``uid -> where`` for each record completed
+    (``"current"``, or the revision the content came from), and ``uid -> reason``
+    for each whose content could not be proved, so the run can say why rather than
+    name a revision problem a project with no repository never had.
+
+    Proof is the stamp alone, as it is for the revision cache (SR-0166): the item as
+    it stands when its content still reproduces the stamp, otherwise the revision
+    history resolves for it. Nothing else is written. No stamp, ratifier, identifier,
+    backfill marking or status moves, so a record completed here says no more about
+    who read what than it said before; it only makes the words it already vouched
+    for readable without version control.
+
+    A record whose content cannot be proved is left as it is, and keeps resolving
+    from history wherever history exists. A record already carrying content is
+    left alone, which is what makes this idempotent — including content that does
+    not reproduce its stamp, which is a finding for a person (SR-0217), not
+    something a repair may overwrite.
+    """
+    from .ratification import CONTENT_ATTR, STAMP_ATTR, content_at_stamp, repo_top
+
+    project = load_project(root)
+    # Asked once. Without a work tree no record resolves from history, and asking
+    # per item would run git for every one of them to learn the same thing.
+    history = repo_top(root) is not None
+    completed: dict[str, str] = {}
+    unprovable: dict[str, str] = {}
+    for item in project.items():
+        if not item.attrs.get(STAMP_ATTR) or CONTENT_ATTR in item.attrs:
+            continue
+        content, why = content_at_stamp(project, item, history=history)
+        if content is None:
+            unprovable[item.uid] = why
+            continue
+        where = why
+        item.attrs[CONTENT_ATTR] = content
+        write_item(item)
+        completed[item.uid] = where
+    return completed, unprovable
 
 
 def _backfill_vocabularies(root: Path) -> dict[str, list[str]]:
@@ -470,6 +520,10 @@ def _backfill_suspect_routes(root: Path) -> dict[str, str]:
     return {status: suspect for status in gaps}
 
 
+#: The empty mapping the two record fields default to, shared but unwritable.
+_NO_STRINGS: Mapping[str, str] = MappingProxyType({})
+
+
 class RepairResult(NamedTuple):
     """What a major's repair wrote: the configuration bindings it backfilled
     (SR-0137), the routes to suspicion it restored (SR-0188), the vocabularies it
@@ -486,6 +540,11 @@ class RepairResult(NamedTuple):
     normative: dict[str, bool] = {}
     restamped: list[tuple[str, str]] = []
     stale: list[str] = []
+    # The ratification records given the content their stamp was taken over, and
+    # the reason each unproved one could not be. Immutable defaults: a NamedTuple
+    # evaluates a default once and hands the same object to every caller.
+    contents: Mapping[str, str] = _NO_STRINGS
+    unprovable: Mapping[str, str] = _NO_STRINGS
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -571,6 +630,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     roles = _backfill_status_roles(root)
     routes = _backfill_suspect_routes(root)
     vocabularies = _backfill_vocabularies(root)
+    # Signed content before the flags (SR-0218): a record whose item reproduces its
+    # stamp now is proved by the item as it stands, and the flag repair below may
+    # change a fingerprint input and leave only history to prove it from.
+    contents, unprovable = _backfill_ratification_contents(root)
     # The flags before the record backfill (SR-0203): a record bound below is
     # bound to the content as it stands, which should be the content after the
     # flag has been put right, not a stamp that goes stale a line later.
@@ -579,9 +642,9 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # Last, and after the stamps: a record bound a moment ago has a stamp to
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
-    return RepairResult(roles, routes, vocabularies, stamps,
-                        _backfill_ratification_revisions(root),
-                        normative, restamped, stale)
+    revisions = _backfill_ratification_revisions(root)
+    return RepairResult(roles, routes, vocabularies, stamps, revisions,
+                        normative, restamped, stale, contents, unprovable)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -655,6 +718,10 @@ class MigrationResult(NamedTuple):
     normative: dict[str, bool] = {}
     restamped: list[tuple[str, str]] = []
     stale: list[str] = []
+    # Ratification records completed with their signed content, and the reason each
+    # unproved one could not be (SR-0218).
+    contents: Mapping[str, str] = _NO_STRINGS
+    unprovable: Mapping[str, str] = _NO_STRINGS
 
 
 def migrate_project(path: str | Path, *,
@@ -704,7 +771,8 @@ def migrate_project(path: str | Path, *,
               else RepairResult(None, {}, {}, {}, {}))
     return MigrationResult(start, current, result.config, result.routes,
                            result.vocabularies, result.stamps, result.revisions,
-                           result.normative, result.restamped, result.stale)
+                           result.normative, result.restamped, result.stale,
+                           result.contents, result.unprovable)
 
 
 # ------------------------------------------------------------------- YAML dump

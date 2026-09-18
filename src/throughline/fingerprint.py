@@ -22,6 +22,7 @@ on content nobody had touched.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import unicodedata
 
@@ -37,28 +38,84 @@ def _norm(value: str) -> str:
     return "\n".join(line.rstrip() for line in text.split("\n")).strip()
 
 
-def fingerprint(item, schema: Schema | None = None) -> str:
-    parts = [
-        ("uid", item.authored_uid),
-        ("type", item.type),
-        ("text", _norm(item.text)),
-        ("normative", str(item.normative)),
-        ("derived", str(item.derived)),
-    ]
-    # Which attributes count is the authoring graph's judgement, not the reading
-    # graph's (SR-0162). A union is governed by the consumer's schema, so without
-    # this the set of attributes hashed would change the moment an item was
-    # borrowed and every stamp written in a source graph would read as drifted on
-    # content nobody had touched — the hazard SR-0154 closed for the UID, in the
-    # other half of the input. An empty tuple is a real answer ("that graph marked
-    # none"), so only None falls through to the reading schema.
+def normative_attr_names(item, schema: Schema | None = None) -> list[str]:
+    """The attributes the fingerprint reads for ``item``, in the order it reads them.
+
+    Which attributes count is the authoring graph's judgement, not the reading
+    graph's (SR-0162). A union is governed by the consumer's schema, so without
+    this the set of attributes hashed would change the moment an item was
+    borrowed and every stamp written in a source graph would read as drifted on
+    content nobody had touched — the hazard SR-0154 closed for the UID, in the
+    other half of the input. An empty tuple is a real answer ("that graph marked
+    none"), so only None falls through to the reading schema."""
     authored = item._authored_normative_attrs
     if authored is not None:
-        names = list(authored)
-    else:
-        names = schema.normative_attrs(item.type) if schema is not None else []
-    for name in names:
-        parts.append((f"attr:{name}", _norm(item.attrs.get(name, ""))))
+        return list(authored)
+    return schema.normative_attrs(item.type) if schema is not None else []
+
+
+def _digest(uid, type_, text, normative, derived, attrs) -> str:
+    parts = [
+        ("uid", uid),
+        ("type", type_),
+        ("text", _norm(text)),
+        ("normative", str(normative)),
+        ("derived", str(derived)),
+    ]
+    for name, value in attrs:
+        parts.append((f"attr:{name}", _norm(value)))
     canonical = _REC.join(f"{k}{_UNIT}{v}" for k, v in parts)
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     return f"sha256:{digest}"
+
+
+def fingerprint(item, schema: Schema | None = None) -> str:
+    names = normative_attr_names(item, schema)
+    return _digest(item.authored_uid, item.type, item.text, item.normative,
+                   item.derived, [(name, item.attrs.get(name, "")) for name in names])
+
+
+# The keys of a recorded content map (SR-0215): every input the fingerprint reads
+# except the UID, which an item never changes. Held as values, not a digest, so the
+# words a person agreed to can be shown without version control.
+CONTENT_KEYS = ("type", "text", "normative", "derived", "attrs")
+
+
+def signed_content(item, schema: Schema | None = None) -> dict:
+    """The content a ratification stamp is taken over, as the item holds it now
+    (SR-0215). With the item's UID it reproduces :func:`fingerprint` exactly: the
+    attributes are the ones the fingerprint reads, in its order, each holding the
+    value the fingerprint reads — an absent one as the empty string it hashes.
+
+    Values are copied, never shared with the item. A list or a date held by both
+    the item and its record is written once with a YAML anchor and read back as one
+    object, so an edit to the item would silently rewrite what was signed."""
+    return copy.deepcopy({
+        "type": item.type,
+        "text": item.text,
+        "normative": item.normative,
+        "derived": item.derived,
+        "attrs": {name: item.attrs.get(name, "")
+                  for name in normative_attr_names(item, schema)},
+    })
+
+
+def content_fingerprint(uid: str, content: object) -> str | None:
+    """The fingerprint a recorded content map reproduces for ``uid`` (SR-0216,
+    SR-0217), or None when the map is not one the Tool could have written — a
+    hand edit that dropped a key or replaced the map with something else. None is
+    never equal to a stamp, so a malformed record can only read as not reproducing
+    it.
+
+    Its values are read exactly as :func:`fingerprint` reads an item's, which hashes
+    each as text: whatever the fingerprint accepted when the stamp was written, the
+    record reproduces, so the Tool never writes a record its own check rejects."""
+    # Every key this version reads must be there; a later version may record more
+    # beside them, and those do not change what this one hashes.
+    if not isinstance(content, dict) or not set(CONTENT_KEYS) <= set(content):
+        return None
+    attrs = content["attrs"]
+    if not isinstance(attrs, dict) or not all(isinstance(k, str) for k in attrs):
+        return None
+    return _digest(uid, content["type"], content["text"], content["normative"],
+                   content["derived"], list(attrs.items()))

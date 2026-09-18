@@ -31,7 +31,7 @@ from throughline.ratification import (
     is_prose,
     wrap_words,
 )
-from throughline.storage import load_project
+from throughline.storage import load_project, write_item
 
 
 def _cli(argv) -> int:
@@ -48,6 +48,17 @@ def _commit(root: Path, message: str) -> str:
     _git(root, "commit", "-m", message)
     return _git(root, "rev-parse", "HEAD").strip()
 
+
+
+def _as_older_record(root: Path, uid: str) -> None:
+    """Make ``uid``'s ratification record one written before the signed content was
+    recorded beside the stamp (SR-0215). These tests exercise the route such a
+    record still takes — recovering the stamped content from history (SR-0165) —
+    which SR-0216 keeps for exactly that case. The record route is tested in
+    ``test_ratified_content.py``."""
+    item = load_project(root).get(uid)
+    item.attrs.pop("ratified_content", None)
+    write_item(item)
 
 
 def _declare_intent_origin(root: Path) -> None:
@@ -80,6 +91,7 @@ def graph(tmp_path) -> Path:
                  "--origin", "ai", "--attr", "priority=should",
                  "--no-interactive"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
+    _as_older_record(root, "REQ-0001")
     _commit(root, "ratified REQ-0001")
     return root
 
@@ -127,6 +139,7 @@ def test_unchanged_is_not_the_same_answer_as_cannot_show(graph):
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--origin", "ai", "--no-interactive"]) == 0
     assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada Lovelace"]) == 0
+    _as_older_record(graph, "REQ-0002")
     assert _cli(["-C", graph, "amend", "REQ-0002", "--text", "Reworded."]) == 0
     project = load_project(graph)
     lost = change_since_ratification(project, project.get("REQ-0002"))
@@ -213,6 +226,7 @@ def test_unresolvable_rendering_says_nobody_can_state_what_is_accepted(graph):
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--origin", "ai", "--no-interactive"]) == 0
     assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 0
+    _as_older_record(graph, "REQ-0002")
     assert _cli(["-C", graph, "amend", "REQ-0002", "--text", "Changed."]) == 0
     project = load_project(graph)
     rendered = "\n".join(render_change(
@@ -537,6 +551,7 @@ def test_an_unshowable_change_stops_at_least_as_hard(graph, monkeypatch, capsys)
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--origin", "ai", "--no-interactive"]) == 0
     assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 0
+    _as_older_record(graph, "REQ-0002")
     assert _cli(["-C", graph, "amend", "REQ-0002", "--text", "Changed."]) == 0
 
     # non-interactive: refused, exactly as a showable change is
@@ -572,8 +587,9 @@ def test_the_cache_attribute_is_part_of_the_guarded_record(graph):
 
 
 def test_outside_a_git_work_tree_the_change_cannot_be_shown(tmp_path):
-    """No history means no way to recover the stamped content, which is named
-    rather than smoothed over (SR-0165)."""
+    """A record holding no recorded content, with no history, has no way to
+    recover the stamped content, which is named rather than smoothed over
+    (SR-0165, SR-0216)."""
     root = tmp_path / "nogit"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
     _declare_intent_origin(root)
@@ -583,6 +599,7 @@ def test_outside_a_git_work_tree_the_change_cannot_be_shown(tmp_path):
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--origin", "ai", "--no-interactive"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
+    _as_older_record(root, "REQ-0001")
     assert _cli(["-C", root, "amend", "REQ-0001", "--text", "Moved."]) == 0
 
     project = load_project(root)
