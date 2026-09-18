@@ -1,6 +1,6 @@
 uid: SR-0229
 type: system_requirement
-status: ratified
+status: implemented
 title: The model a review interface draws is part of the exported names
 text: The items awaiting a signature, each with why it can or cannot be ratified
   as the graph stands, and the report drawn from that list, shall be among the names

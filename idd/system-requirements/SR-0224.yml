@@ -1,6 +1,6 @@
 uid: SR-0224
 type: system_requirement
-status: ratified
+status: implemented
 title: Every operation is reachable through the names the package exports, returning
   data
 text: The Tool shall offer every operation its command line performs through the

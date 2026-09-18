@@ -1,6 +1,6 @@
 uid: SR-0228
 type: system_requirement
-status: ratified
+status: implemented
 title: The exported names are listed in the documentation, and a change to the list
   fails the build
 text: The names the package exports shall be listed in the Tool's published documentation,

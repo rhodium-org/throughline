@@ -49,6 +49,10 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 `inject_text` · `inject_documents` · `document_paths` · `DocumentRender` · `referenced_uids` · `has_markers` · `render_item` · `register_directive` · `TargetResolver` · `InjectError` · `build_dump` · `diagram_types` · `diagram_transitions` · `schema_ops`
 
+### Showing a project and its items
+
+`context_markdown` · `context_item_section` · `check_summary` · `render_trace` · `render_subgraph` · `subgraph_json` · `render_for_ratification` · `ground_line`
+
 ### The running build
 
 `distribution_version` · `is_editable` · `__version__`
