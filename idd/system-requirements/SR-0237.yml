@@ -1,0 +1,55 @@
+uid: SR-0237
+type: system_requirement
+status: ratified
+title: A re-signature over amended content is recorded where the item stands
+text: 'When an item that already carries a ratification record is amended, the record
+  goes stale until a human signs it again. Where the project moves an item''s status
+  on ratification, that second signature shall not move the status if the transition
+  to the ratified status is not allowed from where the item stands. The record is
+  refreshed and the status is left alone. A first signature still moves the status
+  as before, and a first signature that cannot reach the ratified status is still
+  refused. An item whose content has not changed since its record was taken is refused
+  with the same words whatever its status, never with a transition refusal. A suspect
+  item is not covered: the ratified status is reachable from it, and re-signing it
+  is how a human confirms it again. The worklist judges an amended item past the
+  ratified status by its record, not by whether that status can be reached.'
+rationale: |-
+  An implemented or verified item is the common case for an amendment. The graph lives on after its items are signed, and their wording moves with the code. Before this, tl ratify on an amended item at implemented was refused as an illegal move to ratified, and the whole run with it (throughline-editor SR-0031 and SR-0144, 2026-09-18). The routes left were a status dance through suspect, or reverting words a human had already accepted.
+
+  Rejected: moving the status back to ratified. The workflow's record of what happened to the item would be falsified for the sake of a signature. Rejected: asking projects to turn off the switch SR-0172 declares. That changes what a first signature does for every item, to fix the second.
+
+  Verified by test: under a workflow whose transitions allow ratified to done and not done to ratified, an item signed, moved to done and amended is signed again and stays at done with a fresh record; the same item unamended is refused as already ratified with nothing to accept; a never-signed item at done is still refused as a transition; the worklist calls the amended item stale and ratifiable, and ratified once re-signed.
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0172
+  type: relates
+- target: SR-0148
+  type: relates
+- target: SR-0195
+  type: relates
+attrs:
+  origin: ai
+  verification: test
+  priority: must
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:d6d001aa68e8812dc37169bb1950614ac1b1ee10269420a662c5108ec42da42d
+  ratified_content:
+    type: system_requirement
+    text: 'When an item that already carries a ratification record is amended, the
+      record goes stale until a human signs it again. Where the project moves an
+      item''s status on ratification, that second signature shall not move the status
+      if the transition to the ratified status is not allowed from where the item
+      stands. The record is refreshed and the status is left alone. A first signature
+      still moves the status as before, and a first signature that cannot reach the
+      ratified status is still refused. An item whose content has not changed since
+      its record was taken is refused with the same words whatever its status, never
+      with a transition refusal. A suspect item is not covered: the ratified status
+      is reachable from it, and re-signing it is how a human confirms it again. The
+      worklist judges an amended item past the ratified status by its record, not
+      by whether that status can be reached.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
