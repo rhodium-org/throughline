@@ -223,3 +223,4 @@ def _eval_call(node, ns):
     if not callable(method):
         raise FilterError(f"value has no method '{func.attr}'")
     return method(*[_eval(a, ns) for a in node.args])
+

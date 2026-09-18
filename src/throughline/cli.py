@@ -56,8 +56,10 @@ from .items import (
     amend_item,
     birth_item,
     coerce_attr,
+    delete_item,
     newly_suspect,
     parse_attrs,
+    review_items,
 )
 from .ratification import change_since_ratification, render_change
 from .model import Link, Register
@@ -77,7 +79,15 @@ from .storage import (
     write_manifest,
 )
 from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
-from .validate import ERROR, OFF, WARNING, FilterError, eval_filter, validate
+from .validate import (
+    ERROR,
+    OFF,
+    WARNING,
+    FilterError,
+    eval_filter,
+    query_items,
+    validate,
+)
 from .version import distribution_version
 
 OK, FINDINGS, USAGE = 0, 1, 2
@@ -689,6 +699,7 @@ def cmd_unlink(args) -> int:
 
 
 def cmd_delete(args) -> int:
+    """Parse, call :func:`throughline.items.delete_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
@@ -696,64 +707,38 @@ def cmd_delete(args) -> int:
     uid = _resolve_uid(project, args.uid, "delete", "UID")
     if uid is None:
         return USAGE
-    item = project.get(uid)
-    if item is None:
-        return _err(f"{uid} does not exist")
-    schema = project.schema
     try:
-        tombstone = schema.status_role("tombstone")
-    except SchemaError as e:
+        retired = delete_item(project, uid, reason=args.reason)
+    except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
-    # A tombstone is permanent (SR-0093), and so is what it records. Deleting an
-    # item already retired changes nothing, rather than writing a second date and
-    # reason over the first.
-    if item.status == tombstone:
+    if not retired:
         print(f"{uid} is already deleted — its tombstone is permanent and was left "
               "unchanged (SR-0093)")
         return OK
-    try:
-        set_status(schema, item, tombstone)
-    except (GroundingError, SchemaError) as e:
-        return _err(str(e))
-    # What the tombstone keeps (SR-0012): the day the UID was retired, why, and the
-    # fingerprint of the content it last held, so the record says what was retired
-    # wherever the file travels without its history. The day is taken in UTC so
-    # it does not depend on where the command was run, and the fingerprint is the
-    # one stamps, reviews and ratifications record (SR-0033).
-    item.deleted = {
-        "date": datetime.now(timezone.utc).date().isoformat(),
-        "reason": args.reason or "unspecified",
-        "fingerprint": fingerprint(item, schema),
-    }
-    write_item(item, project.register_of(item.uid))
+    write_item(project.get(uid), project.register_of(uid))
     print(f"tombstoned {uid} (UID retired, never reused)")
     return OK
 
 
 def cmd_review(args) -> int:
+    """Parse, call :func:`throughline.items.review_items`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    if args.all_clean:
-        targets = list(project.items())
-    else:
+    uids = None
+    if not args.all_clean:
         uid = _resolve_uid(project, args.uid, "mark reviewed", "UID")
         if uid is None:
             return USAGE
-        targets = [project.get(uid)]
-        if targets[0] is None:
-            return _err(f"{uid} does not exist")
-    n = 0
-    for item in targets:
-        if item is None or item.is_deleted:
-            continue
-        fp = fingerprint(item, project.schema)
-        if item.reviewed != fp:
-            item.reviewed = fp
-            write_item(item, project.register_of(item.uid))
-            n += 1
-    print(f"marked {n} item(s) reviewed at current content")
+        uids = [uid]
+    try:
+        moved = review_items(project, uids, all_items=args.all_clean)
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    for item in moved:
+        write_item(item, project.register_of(item.uid))
+    print(f"marked {len(moved)} item(s) reviewed at current content")
     return OK
 
 
@@ -898,18 +883,15 @@ def cmd_check(args) -> int:
 
 
 def cmd_query(args) -> int:
+    """Parse, call :func:`throughline.validate.query_items`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    candidates = [it for it in project.items()
-                  if args.all or not it.is_deleted]
-    idx = Index.build(project)
     try:
-        matched = [it for it in candidates if eval_filter(it, args.expr, idx)]
+        matched = query_items(project, args.expr, include_deleted=args.all)
     except FilterError as e:
         return _err(f"bad filter expression: {e}")
-    matched.sort(key=lambda it: it.uid)
 
     if args.format == "json":
         print(json.dumps([it.to_dict() for it in matched], indent=2, default=str))

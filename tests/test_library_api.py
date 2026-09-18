@@ -24,6 +24,9 @@ import throughline
 from throughline import (
     Index,
     amend_item,
+    delete_item,
+    query_items,
+    review_items,
     birth_item,
     build_dump,
     clarify,
@@ -188,3 +191,52 @@ def test_the_default_identity_survives_a_host_with_no_subprocess(tmp_path, no_ho
     """`git_identity` is the default of SR-0226's parameter, so it must fail soft
     rather than raise where there is no subprocess to run git in."""
     assert isinstance(default_ratifier(tmp_path), str)
+
+
+# --------------------------- SR-0224: the operations answer as data, not as text
+
+def test_delete_review_and_query_are_operations_a_caller_can_use(tmp_path):
+    root = tmp_path / "proj"
+    project = _rooted(root)
+    reg = project.registers["REQ"]
+    for n, title in ((1, "First"), (2, "Second")):
+        item = birth_item(project.schema, reg, f"REQ-000{n}", item_type="requirement",
+                          title=title, text=f"The Tool shall do {title}.")
+        item.links.append(throughline.Link(target="INT-0001", type="derives_from"))
+        reg.items[item.uid] = item
+        write_item(item, reg)
+
+    # query: the filter grammar the documents use, answered as items
+    project = load_project(root)
+    assert [i.uid for i in query_items(project, "type == 'requirement'")] == [
+        "REQ-0001", "REQ-0002"]
+    assert [i.uid for i in query_items(project, "title == 'Second'")] == ["REQ-0002"]
+
+    # review: only the items whose record moved come back, so the caller writes those
+    moved = review_items(project, ["REQ-0001"])
+    assert [i.uid for i in moved] == ["REQ-0001"]
+    for item in moved:
+        write_item(item, project.register_of(item.uid))
+    project = load_project(root)
+    assert review_items(project, ["REQ-0001"]) == []
+
+    # delete: True the first time, False for a tombstone that is already permanent
+    project = load_project(root)
+    assert delete_item(project, "REQ-0002", reason="superseded") is True
+    write_item(project.get("REQ-0002"), project.register_of("REQ-0002"))
+    project = load_project(root)
+    item = project.get("REQ-0002")
+    assert item.is_deleted and item.deleted["reason"] == "superseded"
+    assert item.deleted["date"] and item.deleted["fingerprint"]
+    assert delete_item(project, "REQ-0002") is False
+    # and a deleted item leaves the live view
+    assert [i.uid for i in query_items(load_project(root))] == ["INT-0001", "REQ-0001"]
+
+
+def test_a_missing_uid_raises_the_tools_error(tmp_path):
+    project = _rooted(tmp_path / "proj")
+    for call in (lambda: delete_item(project, "REQ-0404"),
+                 lambda: review_items(project, ["REQ-0404"]),
+                 lambda: amend_item(project, "REQ-0404", title="x")):
+        with pytest.raises(throughline.GroundingError):
+            call()

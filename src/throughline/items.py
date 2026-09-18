@@ -14,11 +14,13 @@ happened; writing it back is the caller's (SR-0072).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 from .fingerprint import fingerprint
 from .grounding import (
     AMBIGUOUS_ATTR,
     GroundingError,
+    set_status,
     ambiguity_change_refusal,
     attribute_owner,
     attribute_removal_refusal,
@@ -268,3 +270,57 @@ def amend_item(project, uid: str, *, title: str | None = None,
         ratifier=item.attrs.get("ratified_by"),
         ratification_stale=bool(stamp and stamp != now),
     )
+
+
+def delete_item(project, uid: str, *, reason: str = "unspecified") -> bool:
+    """Tombstone ``uid``: the file stays, the item stops counting, and the UID is
+    never reused (SR-0012, SR-0093). True when this call retired it, False when it
+    was already retired.
+
+    A tombstone is permanent, and so is what it records, so an item already retired
+    is left exactly as it stands rather than gaining a second date and reason over
+    the first. The item is changed and returned to the caller to write."""
+    item = project.get(uid)
+    if item is None:
+        raise GroundingError(f"{uid} does not exist")
+    schema = project.schema
+    tombstone = schema.status_role("tombstone")
+    if item.status == tombstone:
+        return False
+    set_status(schema, item, tombstone)
+    # What the tombstone keeps (SR-0012): the day the UID was retired, why, and the
+    # fingerprint of the content it last held, so the record says what was retired
+    # wherever the file travels without its history. The day is taken in UTC so it
+    # does not depend on where the command was run.
+    item.deleted = {
+        "date": datetime.now(timezone.utc).date().isoformat(),
+        "reason": reason or "unspecified",
+        "fingerprint": fingerprint(item, schema),
+    }
+    return True
+
+
+def review_items(project, uids=None, *, all_items: bool = False) -> list:
+    """Mark items reviewed at their current content (SR-0038), returning the ones
+    whose review record moved so the caller writes those and no others.
+
+    A review confirms content, so re-confirming content already confirmed writes
+    nothing. A deleted item is dead scope and is passed over."""
+    if all_items:
+        targets = list(project.items())
+    else:
+        targets = []
+        for uid in uids or ():
+            item = project.get(uid)
+            if item is None:
+                raise GroundingError(f"{uid} does not exist")
+            targets.append(item)
+    moved = []
+    for item in targets:
+        if item is None or item.is_deleted:
+            continue
+        fp = fingerprint(item, project.schema)
+        if item.reviewed != fp:
+            item.reviewed = fp
+            moved.append(item)
+    return moved

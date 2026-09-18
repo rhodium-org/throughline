@@ -48,8 +48,10 @@ from .items import (
     amend_item,
     birth_item,
     coerce_attr,
+    delete_item,
     newly_suspect,
     parse_attrs,
+    review_items,
 )
 from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
@@ -68,7 +70,15 @@ from .storage import (
     write_manifest,
 )
 from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
-from .validate import Finding, is_external, is_namespace_qualified, validate
+from .validate import (
+    Finding,
+    FilterError,
+    eval_filter,
+    is_external,
+    is_namespace_qualified,
+    query_items,
+    validate,
+)
 from .version import distribution_version, is_editable
 
 # Read from the installed distribution, never restated here (SR-0164). Held as a
@@ -95,10 +105,11 @@ __all__ = [
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
     # creating and changing an item
     "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
-    "newly_suspect",
+    "newly_suspect", "delete_item", "review_items",
     "add_link", "remove_link", "retype_link", "LinkError",
     # the gate
     "validate", "Finding", "is_external", "is_namespace_qualified",
+    "query_items", "eval_filter", "FilterError",
     # the grounding layer
     "GroundingError", "reaches_root", "grounding_gap", "is_unserved",
     "set_status", "transition_refusal",
