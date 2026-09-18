@@ -1,6 +1,6 @@
 uid: SR-0226
 type: system_requirement
-status: ratified
+status: implemented
 title: Work the host environment provides is taken as a parameter
 text: Where an operation needs something only the host environment can provide —
   reaching a source held elsewhere, or the identity the repository signs with — the

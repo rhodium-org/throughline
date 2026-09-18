@@ -1089,7 +1089,7 @@ def test_every_subcommand_reaches_the_brief(tmp_path):
     parser, so a new subcommand appears in the brief automatically; what cannot be
     derived is the worked usage line, and *that* omission is what this gates. If
     it fails, add an entry to ``_CTX_COMMAND_USAGE`` for the name it prints."""
-    from throughline.cli import _ctx_commands, _ctx_commands_uncovered, _subcommands
+    from throughline.brief import _ctx_commands, _ctx_commands_uncovered, _subcommands
     missing = _ctx_commands_uncovered()
     assert missing == [], (
         f"subcommands with no usage line in the context brief: {missing}")

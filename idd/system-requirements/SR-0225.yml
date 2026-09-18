@@ -1,6 +1,6 @@
 uid: SR-0225
 type: system_requirement
-status: ratified
+status: implemented
 title: The command line is a client of the exported names
 text: 'The command line shall obtain everything it does from the names the package
   exports: it shall read its arguments, call those functions, and render what they

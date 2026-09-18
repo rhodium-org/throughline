@@ -9,6 +9,7 @@ CLI (``throughline.cli``) is the primary entry point.
 from __future__ import annotations
 
 from . import schema_ops
+from .brief import context_item_section, context_markdown
 from .diagrams import diagram_transitions, diagram_types
 from .dump import build_dump
 from .fingerprint import fingerprint
@@ -63,6 +64,14 @@ from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
 from .ratification import change_since_ratification, ratification_is_committed
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
+from .views import (
+    check_summary,
+    ground_line,
+    render_for_ratification,
+    render_subgraph,
+    render_trace,
+    subgraph_json,
+)
 from .worklist import (
     CONCERNS,
     WorklistEntry,
@@ -144,6 +153,10 @@ __all__ = [
     "referenced_uids", "has_markers", "render_item", "register_directive",
     "TargetResolver", "InjectError", "build_dump",
     "diagram_types", "diagram_transitions", "schema_ops",
+    # showing an item, its neighbourhood, and the project itself
+    "context_markdown", "context_item_section", "check_summary",
+    "render_trace", "render_subgraph",
+    "subgraph_json", "render_for_ratification", "ground_line",
     # the running build
     "distribution_version", "is_editable",
     "__version__",

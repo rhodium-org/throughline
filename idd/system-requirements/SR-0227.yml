@@ -1,6 +1,6 @@
 uid: SR-0227
 type: system_requirement
-status: ratified
+status: implemented
 title: The exported names need no subprocess, no network and no terminal
 text: Every function the package exports shall complete its work where the caller
   has no subprocess, no network socket and no terminal, given the parameters of SR-0226.
