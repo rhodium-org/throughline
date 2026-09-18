@@ -1,0 +1,36 @@
+uid: SR-0236
+type: system_requirement
+status: ratified
+title: tl-compose is a second name for tl
+text: The Tool shall install tl-compose and throughline-compose as command names
+  that run the same program as tl, with no difference in function or output beyond
+  the name that was typed. A gate that calls tl-compose therefore keeps working unchanged
+  once the Tool composes.
+rationale: |-
+  Henry Grech-Cini, 2026-09-18: "There should be no distinction in function once the fold is complete for tl or tl-compose. tl-compose will become an alias of tl." Forty-nine workflows in the estate call tl-compose in their gates and the browser editor runs it for every graph; an alias shipped by the Tool itself keeps every one of them working with no second package to install or keep in step.
+
+  Rejected — a forwarding release of throughline-compose as the only route. It keeps a package alive whose only job is to run another, and a consumer that installs both gets two owners of one command name.
+
+  Who pays: nobody. The second package's final release drops its own command names so the two cannot collide.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0230
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:725d58f9f6b0670eeb257735f39c0eaa8a2d712ffabef8b37a124c31e06d96cf
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall install tl-compose and throughline-compose as command names
+      that run the same program as tl, with no difference in function or output beyond
+      the name that was typed. A gate that calls tl-compose therefore keeps working
+      unchanged once the Tool composes.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
