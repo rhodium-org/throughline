@@ -16,6 +16,8 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
     GroundingError,
+    Invalidation,
+    Refusal,
     ambiguity_report,
     attribute_owner,
     clarify,
@@ -62,7 +64,25 @@ from .items import (
 )
 from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
-from .ratification import change_since_ratification, ratification_is_committed
+from .ratification import (
+    ADDED,
+    CHANGED,
+    HISTORY,
+    KEPT,
+    RECORD,
+    REMOVED,
+    UNCHANGED,
+    UNRATIFIED,
+    UNRESOLVABLE,
+    DiffUnit,
+    FieldChange,
+    RatificationChange,
+    change_since_ratification,
+    diff_prose,
+    is_prose,
+    ratification_is_committed,
+    wrap_words,
+)
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
 from .views import (
     check_summary,
@@ -138,11 +158,15 @@ __all__ = [
     "query_items", "eval_filter", "FilterError",
     # the grounding layer
     "GroundingError", "reaches_root", "grounding_gap", "is_unserved",
-    "set_status", "transition_refusal",
+    "set_status", "transition_refusal", "Refusal", "Invalidation",
     "ratify", "ratification_obstacle", "invalidate", "withdraw",
     "flag", "clarify", "is_flagged_ambiguous", "ambiguity_report",
     "attribute_owner",
+    # what a signature covered, and what has moved since
     "change_since_ratification", "ratification_is_committed",
+    "RatificationChange", "FieldChange",
+    "CHANGED", "UNCHANGED", "UNRESOLVABLE", "UNRATIFIED", "RECORD", "HISTORY",
+    "is_prose", "diff_prose", "DiffUnit", "KEPT", "REMOVED", "ADDED", "wrap_words",
     # what awaits a signature, for an interface to draw
     "worklist", "WorklistEntry", "entry_for", "CONCERNS", "depths_from_roots",
     "is_ratified", "signature_is_stale", "ratification_progress",

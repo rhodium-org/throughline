@@ -194,6 +194,43 @@ def test_the_default_identity_survives_a_host_with_no_subprocess(tmp_path, no_ho
     assert isinstance(default_ratifier(tmp_path), str)
 
 
+def test_what_a_signature_covered_is_readable_where_there_is_no_git(tmp_path, no_host):
+    """SR-0165 and SR-0200 promise the change since a signature, and the diff of a
+    changed prose field, as data for a consumer with a screen of its own. A consumer
+    with no subprocess must reach both: the outcome says it could not resolve the
+    earlier content rather than raising, and the prose comparison is pure."""
+    root = tmp_path / "proj"
+    project = _rooted(root)
+    reg = project.registers["REQ"]
+    item = birth_item(project.schema, reg, "REQ-0001", item_type="requirement",
+                      title="Fast", text="The Tool shall be fast.", origin="ai")
+    item.links.append(throughline.Link(target="INT-0001", type="derives_from"))
+    reg.items[item.uid] = item
+    write_item(item, reg)
+
+    project = load_project(root)
+    ratify(project, "REQ-0001", by="Ada", index=Index.build(project))
+    write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
+    project = load_project(root)
+    amend_item(project, "REQ-0001", text="The Tool shall answer within 200 ms.")
+    write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
+
+    change = throughline.change_since_ratification(load_project(root),
+                                                   load_project(root).get("REQ-0001"))
+    assert isinstance(change, throughline.RatificationChange)
+    assert change.outcome in (throughline.CHANGED, throughline.UNRESOLVABLE)
+
+    assert throughline.is_prose("The Tool shall be fast.",
+                                "The Tool shall answer within 200 ms.")
+    units = throughline.diff_prose("The Tool shall be fast.",
+                                   "The Tool shall answer within 200 ms.")
+    assert units and {u.mark for u in units} <= {throughline.KEPT,
+                                                 throughline.REMOVED,
+                                                 throughline.ADDED}
+    assert throughline.wrap_words([("a", False), ("b", True)], first="", rest="",
+                                  width=80)
+
+
 # --------------------------- SR-0224: the operations answer as data, not as text
 
 def test_delete_review_and_query_are_operations_a_caller_can_use(tmp_path):

@@ -35,7 +35,11 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### The grounding layer
 
-`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `change_since_ratification` · `ratification_is_committed`
+`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `Refusal` · `Invalidation`
+
+### What a signature covered, and what has moved since
+
+`change_since_ratification` · `ratification_is_committed` · `RatificationChange` · `FieldChange` · `CHANGED` · `UNCHANGED` · `UNRESOLVABLE` · `UNRATIFIED` · `RECORD` · `HISTORY` · `is_prose` · `diff_prose` · `DiffUnit` · `KEPT` · `REMOVED` · `ADDED` · `wrap_words`
 
 ### What awaits a signature
 
