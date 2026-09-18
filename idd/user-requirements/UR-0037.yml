@@ -1,0 +1,44 @@
+uid: UR-0037
+type: user_requirement
+status: ratified
+title: A project that composes other graphs is worked with the Tool alone
+text: As someone working a project that declares sources, I want the Tool itself
+  to resolve those sources and work the composed graph, so that I run one command
+  for everything, and a change inside the Tool never obliges me to install or update
+  a second program to keep composing.
+rationale: |-
+  Composition lives in a second package today. That package reaches into the Tool's private names, so a rename inside the Tool is a release of both, and the Tool ran twelve releases in five days to keep the pair working. Every composing project in the estate runs the second command in its gate, and the browser editor runs it for every graph, so the pair must match on every machine that checks a graph.
+
+  The Tool now offers its operations by name (UR-0036). Composition is the one part of working a graph that still lives outside that interface. Bringing it inside removes the last private reach-in and gives the browser core one interface to build on.
+
+  Rejected — keeping the second package and moving it onto the published names. That ends the reach-ins but keeps two release trains, two commands and a version pair to hold in step, which is the cost this requirement removes.
+
+  Rejected — moving the second package's own requirements graph into this one at the same time. Its ratified items would all need re-signing here. This requirement covers the code and the behaviour; where those requirements are recorded is a separate decision.
+
+  Who pays: the maintainer, who carries composition's code, tests and fixtures in this repository from now on. A consumer changes one line in each gate, from tl-compose to tl; whether the old command forwards for a time is the second package's own decision.
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+- target: BN-0008
+  type: relates
+- target: UR-0036
+  type: relates
+- target: NFR-0011
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:e0f8d104325a950c3ac9b96d33840991fd5f9163a36e84f9c11a0abef6c2ca22
+  ratified_content:
+    type: user_requirement
+    text: As someone working a project that declares sources, I want the Tool itself
+      to resolve those sources and work the composed graph, so that I run one command
+      for everything, and a change inside the Tool never obliges me to install or
+      update a second program to keep composing.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

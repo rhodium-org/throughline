@@ -1,0 +1,48 @@
+uid: SR-0234
+type: system_requirement
+status: ratified
+title: The composition names are exported and listed in the library document
+text: The names a program needs in order to compose — to read a project's declared
+  sources, to resolve them through the resolver interface and its default, to build
+  the union and name a borrowed item, to apply the seam that decides which findings
+  a consumer sees, to render the sourced mirror, and to resolve a borrowed target
+  in a document — shall be among the names the package exports and listed in document
+  10 under SR-0228. A program that composes shall need nothing the list does not
+  name. In particular, what throughline-compose 0.21.0 gives the review cockpit only
+  through its private function that resolves a project's sources shall be reachable
+  by a published name.
+rationale: |-
+  UR-0036 promises that a program embedding the Tool can perform every operation through named functions that return data, and SR-0228 makes the list the interface. Composition is the operation the list still lacks. The review cockpit imports a private function from the composing package to draw its worklist over a composed project — the one reach-in its own graph names as a bounded exception (throughline-ratify SR-0057) — and it cannot move its floor until the names it needs are published (throughline-ratify SR-0059, SR-0060). The browser core composes too and needs the same names.
+
+  Rejected — exporting the whole of the folded package. A name on the list is a promise, and each is added because a caller needs it (SR-0228).
+
+  Who pays: the maintainer, who adds each name to one line of the document and keeps it steady, or changes it by a release that says so.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: UR-0036
+  type: implements
+- target: SR-0228
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bb78e4b99c40805657399d454a07469c5839541c806afb3d56ae6c2fc0d278bc
+  ratified_content:
+    type: system_requirement
+    text: The names a program needs in order to compose — to read a project's declared
+      sources, to resolve them through the resolver interface and its default, to
+      build the union and name a borrowed item, to apply the seam that decides which
+      findings a consumer sees, to render the sourced mirror, and to resolve a borrowed
+      target in a document — shall be among the names the package exports and listed
+      in document 10 under SR-0228. A program that composes shall need nothing the
+      list does not name. In particular, what throughline-compose 0.21.0 gives the
+      review cockpit only through its private function that resolves a project's
+      sources shall be reachable by a published name.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

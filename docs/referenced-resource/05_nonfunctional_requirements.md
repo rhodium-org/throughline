@@ -29,11 +29,14 @@ with `tl docs --check` (SR-0094).
 <!-- tl:item NFR-0003 -->
 **NFR-0003 — Offline and private** — `nfr`, status `ratified`
 
-> All specified functionality shall work with no network access, and the Tool shall send no telemetry or project data anywhere by default.
+> All specified functionality shall work with no network access, and the Tool shall send no telemetry or project data anywhere by default. The one exception is resolving a url source the project itself declares, on the terms SR-0233 states: at the pinned ref, cache first, never for a project that declares no sources, and never in cache-only mode.
+
+*Rationale:* Amended 2026-09-18 when composition moved into the Tool. A url source the project declares is the one thing the Tool may fetch. SR-0233 states the cases and NG-0008 bounds them; the promise for every project that declares no sources is unchanged.
 
 *Implements:* UR-0015
+*Relates:* SR-0233, NG-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:114baa091965e3bdf9ebea6de123e059c68b3c8f583356933551dba3e708b09d · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a146e845f10c574b5cfc5496b72a7e86a66e24302599f13cfe46771a2e0a5e25 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 ## Portability and installation

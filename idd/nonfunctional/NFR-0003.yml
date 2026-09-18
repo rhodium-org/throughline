@@ -2,16 +2,38 @@ uid: NFR-0003
 type: nfr
 status: ratified
 title: Offline and private
-text: All specified functionality shall work with no network access, and the Tool
-  shall send no telemetry or project data anywhere by default.
+text: 'All specified functionality shall work with no network access, and the Tool
+  shall send no telemetry or project data anywhere by default. The one exception
+  is resolving a url source the project itself declares, on the terms SR-0233 states:
+  at the pinned ref, cache first, never for a project that declares no sources, and
+  never in cache-only mode.'
+rationale: Amended 2026-09-18 when composition moved into the Tool. A url source
+  the project declares is the one thing the Tool may fetch. SR-0233 states the cases
+  and NG-0008 bounds them; the promise for every project that declares no sources
+  is unchanged.
 normative: true
 links:
 - target: UR-0015
   type: implements
+- target: SR-0233
+  type: relates
+- target: NG-0008
+  type: relates
 attrs:
   priority: must
   verification: test
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:114baa091965e3bdf9ebea6de123e059c68b3c8f583356933551dba3e708b09d
+  ratified_fingerprint: sha256:a146e845f10c574b5cfc5496b72a7e86a66e24302599f13cfe46771a2e0a5e25
   ratified_backfilled: true
   ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  ratified_content:
+    type: nfr
+    text: 'All specified functionality shall work with no network access, and the
+      Tool shall send no telemetry or project data anywhere by default. The one exception
+      is resolving a url source the project itself declares, on the terms SR-0233
+      states: at the pinned ref, cache first, never for a project that declares no
+      sources, and never in cache-only mode.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

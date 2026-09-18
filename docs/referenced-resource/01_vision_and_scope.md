@@ -128,6 +128,28 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:4d8f75810f57dd50a3e5be699842adfbd9b5bdc2b90796699512d09b01e927de
 <!-- tl:end -->
 
+<!-- tl:item NG-0008 -->
+**NG-0008 — Composition in the Tool reaches only what a project declares** — `non_goal`, status `ratified`
+
+> Composition inside the Tool shall not:
+>
+> - open a network connection unless the project declares a url source, and then only to that source's origin at the ref it pins;
+> - fetch anything the cache already holds, or fetch at all in cache-only mode; a cold cache in that mode is a refusal, not a download;
+> - resolve a source for an operation whose answer does not depend on the union, or for any project that declares no sources;
+> - follow a moving head; a url without a ref is refused when the declaration is read;
+> - write to any source or authority it reads; composition is read-only over its sources;
+> - check the union with any rule the Tool does not apply to a standalone graph; there is one validator;
+> - run a server, a daemon or any process that outlives the command (NG-0006 stands).
+>
+> This is the negative space that replaces throughline-compose's NG-0001, which kept composition out of the Tool altogether. Composition is now in; these are the things it still will not do, so that a proposal to fetch on a reader's behalf, to track a branch quietly, or to write back to a tracker is measured against a decision already taken.
+
+*Rationale:* NG-0001 in the composing package's graph was retired on 2026-09-18 with the reason that a core non-goal would record what composition still will not do; this is that record. NFR-0003's promise of offline, private operation is the ground it stands on, and SR-0233 states the bounded cases positively. The write-back line carries throughline-compose's NG-0002 over, because its reason — a composition can be validated anywhere with no side effects and no credentials to mutate a third-party system — is unchanged by the fold.
+
+*Relates:* NFR-0003, NG-0006, SR-0233
+
+**origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:0bb6b0488285d4aaa583113a79d8c5dc0c080b64018f409d63fde660cb9cdb7f
+<!-- tl:end -->
+
 ## 5. Target users
 
 - **The requirements author** — writes and restructures specs frequently;

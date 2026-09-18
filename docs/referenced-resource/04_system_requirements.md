@@ -369,15 +369,15 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0107 -->
 **SR-0107 — Namespace-qualified references fail fast toward composition** — `system_requirement`, status `ratified`
 
-> A reference target of the form `<namespace>:<UID>` — a namespace name, a colon, and an otherwise-valid UID, for example `gds:SR-0001` — asserts that the target resolves inside a declared external source. The core Tool performs no composition and cannot resolve such a target, so `tl check` shall recognise this form from the reference alone and fail with a distinct finding that names the composing tool (`tl-compose`), rather than report it as an ordinary dangling link to a missing local UID. The Tool shall reach this verdict from the reference's syntax only — it shall not read any source configuration and shall remain entirely source-unaware. Free external references — a URL, a repository path, or any other out-of-graph pointer (SR-0031) — shall stay opaque and shall not trigger this rule, because being unresolvable is those forms' intended purpose.
+> A reference target of the form <namespace>:<UID> — a namespace name, a colon, and an otherwise-valid UID, for example gds:SR-0001 — asserts that the target resolves inside a source the project declares. Where the project declares that namespace, the reference shall resolve into the union (SR-0230). Where it declares no such namespace, tl check shall recognise the form from the reference alone and fail, naming the namespace nothing declares, rather than report an ordinary dangling link to a missing local UID. Free external references — a URL, a repository path, or any other out-of-graph pointer (SR-0031) — shall stay opaque and shall not trigger this rule, because being unresolvable is those forms' intended purpose.
 
-*Rationale:* Without a distinct rule the namespace-qualified form falls through to the dangling-link check (SR-0032) and is reported as a missing local UID, which misleads a composer into hunting for a typo when the real remedy is to run the composing tool. Recognising the syntax as a first-class token turns the wrong tool into a signpost to the right one. It also keeps the core's only concession to composition minimal — the Tool gains no ability to resolve, fetch, or merge; it merely refuses to pretend a cross-source reference is a broken local one. Composition itself stays outside the core and lives in throughline-compose.
+*Rationale:* Without a distinct rule the namespace-qualified form falls through to the dangling-link check (SR-0032) and is reported as a missing local UID, which sends a composer hunting for a typo when the real remedy is a declaration. Recognising the syntax as a first-class token turns the wrong answer into a signpost to the right one. Amended 2026-09-18 when composition moved into the Tool. The text as ratified said the core performs no composition and stays source-unaware, and pointed the composer at a second tool. The Tool now composes (SR-0230), so the finding points at the declaration to add. The distinct finding itself is unchanged.
 
 *Implements:* UR-0004
 *Refines:* SR-0032
-*Relates:* SR-0031
+*Relates:* SR-0031, SR-0230
 
-**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:02525c21bb3a60c1b3d82a71b0611c1dffde952e5b79c5b5df3de192f524a8e9 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**origin**: human · **priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2487aad762eb7c37350001cd92d61761c637dc71cc14308cc9ef88b383ae5b87 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
 <!-- tl:end -->
 
 <!-- tl:item SR-0108 -->

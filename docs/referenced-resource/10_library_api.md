@@ -57,6 +57,12 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 `context_markdown` · `context_item_section` · `check_summary` · `render_trace` · `render_subgraph` · `subgraph_json` · `render_for_ratification` · `ground_line`
 
+### Composing other graphs
+
+A project that declares `[[sources]]` is worked as one graph (SR-0230); these are the names a program composes with, so that nothing is reached by module path (SR-0234). Reaching a source is a parameter with a default (SR-0232): `resolve_sources` and `compose` take a `Resolver`, and the registry's default reaches the file system and git.
+
+`Source` · `SourceError` · `parse_sources` · `Resolver` · `ResolvedSource` · `ResolverError` · `register_resolver` · `resolver_for` · `GitResolver` · `resolve_source` · `content_fingerprint` · `cache_root` · `cache_only` · `resolve_sources` · `Resolution` · `compose` · `Composition` · `Union` · `build_union` · `translate_finding` · `ComposeError` · `SEAM_RULES` · `parse_seam` · `apply_seam` · `is_borrowed` · `SeamError` · `UnionResolver` · `render_sourced` · `composed_check_summary`
+
 ### The running build
 
 `distribution_version` · `is_editable` · `__version__`

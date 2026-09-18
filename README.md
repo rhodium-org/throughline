@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-195
+202
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-33
+34
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -188,6 +188,34 @@ Every rule's severity is configurable per project under `[rules]`; `--strict`
 promotes every warning to an error for CI.
 
 ---
+
+## Composing other graphs
+
+A project may adopt requirements that live in *other* throughline graphs — a
+published standard, a house style, a sibling requirement set — by reference rather
+than by copy. Declare each one in `throughline.toml` under a namespace you choose:
+
+```toml
+[[sources]]
+namespace = "asvs"
+url = "https://github.com/rhodium-org/throughline-asvs"
+ref = "v4.0.3"          # a git tag pins the edition; a `path` works for a source developed beside you
+```
+
+Cite a borrowed clause as `asvs:SR-0001`. `tl check` then composes the consumer and
+its sources — and the sources those sources declare, to any depth — into one union
+under your schema, validates it with the same rules as a standalone graph, and
+reports every finding in `namespace:UID` vocabulary. `query`, `dump`, `docs`,
+`trace`, `subgraph`, `new`, `link`, `unlink`, `ratify`, `migrate` and `context`
+answer over the union too; everything else reads your graph alone, and a project
+that declares no sources is untouched by any of this.
+
+Sources are read-only, fetched once into a per-user cache and reached again only
+when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A
+program embedding the Tool reaches a source through the `Resolver` it supplies, so
+a browser can compose without git or a network of its own. `tl-compose` is a
+second name for `tl` and behaves identically; the separate `throughline-compose`
+package is no longer needed.
 
 ## Try it
 

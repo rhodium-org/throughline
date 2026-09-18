@@ -10,6 +10,15 @@ from __future__ import annotations
 
 from . import schema_ops
 from .brief import context_item_section, context_markdown
+from .composition import (
+    Composition,
+    Resolution,
+    UnionResolver,
+    compose,
+    composed_check_summary,
+    render_sourced,
+    resolve_sources,
+)
 from .diagrams import diagram_transitions, diagram_types
 from .dump import build_dump
 from .fingerprint import fingerprint
@@ -64,6 +73,21 @@ from .items import (
 )
 from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
+from .resolvers import (
+    GitResolver,
+    ResolvedSource,
+    Resolver,
+    ResolverError,
+    cache_only,
+    cache_root,
+    content_fingerprint,
+    register_resolver,
+    resolve_source,
+    resolver_for,
+)
+from .seam import SEAM_RULES, SeamError, apply_seam, is_borrowed, parse_seam
+from .sources import Source, SourceError, parse_sources
+from .union import ComposeError, Union, build_union, translate_finding
 from .ratification import (
     ADDED,
     CHANGED,
@@ -181,6 +205,14 @@ __all__ = [
     "context_markdown", "context_item_section", "check_summary",
     "render_trace", "render_subgraph",
     "subgraph_json", "render_for_ratification", "ground_line",
+    # composing other graphs
+    "Source", "SourceError", "parse_sources",
+    "Resolver", "ResolvedSource", "ResolverError", "register_resolver", "resolver_for",
+    "GitResolver", "resolve_source", "content_fingerprint", "cache_root", "cache_only",
+    "resolve_sources", "Resolution", "compose", "Composition",
+    "Union", "build_union", "translate_finding", "ComposeError",
+    "SEAM_RULES", "parse_seam", "apply_seam", "is_borrowed", "SeamError",
+    "UnionResolver", "render_sourced", "composed_check_summary",
     # the running build
     "distribution_version", "is_editable",
     "__version__",
