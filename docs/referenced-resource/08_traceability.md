@@ -47,7 +47,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0033 | Whether an item is normative is decided by its kind, not by which command wrote it | SR-0201, SR-0202, SR-0203 |
 | UR-0034 | An item flagged ambiguous can be clarified, with a record of who did it and why | SR-0213, SR-0214 |
 | UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223 |
-| UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229 |
+| UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234 |
+| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235 |
 <!-- tl:end -->
 
 ## Coverage check

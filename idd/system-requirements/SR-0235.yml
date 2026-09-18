@@ -1,0 +1,46 @@
+uid: SR-0235
+type: system_requirement
+status: ratified
+title: The Tool provides the tl:sourced mirror now that it holds the sources
+text: The Tool shall provide the tl:sourced document directive. It shall render in
+  full the distinct external clauses that the items matching the directive's filter
+  reference by a namespace-qualified target, in target order, each stated under the
+  identity the citing document uses for it and never under the source graph's own
+  UID, exactly as throughline-compose 0.21.0 renders it. Over a project that declares
+  no sources, a document that carries the marker shall fail injection naming the
+  marker, as it does today, rather than render a placeholder.
+rationale: |-
+  SR-0114 was rejected because the Tool carried a renderer for state it did not hold, and NG-0007 records the principle: a directive that depends on state the Tool does not hold belongs to the layer that holds it. After the fold the Tool holds the sources, so the same principle places the directive in the Tool. The rendering rules are throughline-compose's SR-0039 and are not redecided here.
+
+  Rejected — reviving SR-0114 by amendment. Its text specifies a resolver-supplied mirror that degrades to a placeholder, which is the design NG-0007 rejected.
+
+  Who pays: nobody new. The directive renders the same blocks from the same sources.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0114
+  type: relates
+- target: NG-0007
+  type: relates
+- target: SR-0186
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:11aee1dcdd863ba4c1ffd398e7181359183e4fa6593d2a36fb0098d8c70b767f
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall provide the tl:sourced document directive. It shall render
+      in full the distinct external clauses that the items matching the directive's
+      filter reference by a namespace-qualified target, in target order, each stated
+      under the identity the citing document uses for it and never under the source
+      graph's own UID, exactly as throughline-compose 0.21.0 renders it. Over a project
+      that declares no sources, a document that carries the marker shall fail injection
+      naming the marker, as it does today, rather than render a placeholder.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

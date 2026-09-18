@@ -1,0 +1,52 @@
+uid: SR-0232
+type: system_requirement
+status: ratified
+title: The resolver is a parameter with a default, and the default refuses where
+  it cannot run git
+text: The Tool shall resolve sources through one resolver interface, taken as a parameter
+  with a default (SR-0226). The default reads a path source from the file system
+  and fetches a url source with git into the per-user cache. A caller with no subprocess
+  and no network shall be able to supply its own resolver, or the sources it has
+  already staged, and obtain the same union. Where the default cannot run git, the
+  failure shall reach the caller as the Tool's own refusal, saying whether git is
+  not installed or this host runs no subprocess at all, never as an unhandled error.
+  The composition names shall pass the test of SR-0227 with a resolver supplied.
+rationale: |-
+  The browser editor composes graphs under Pyodide, where there is no subprocess and no socket. Today it stages every source itself and sets the cache-only switch, and an unstaged url source still reaches git and raises an error the tool does not catch (throughline-compose issue #5; the editor's CAP-0141 searches stderr for exception names because of it). A parameter with a default is the shape SR-0226 already fixed for the identity a repository signs with; this applies it to the other thing that reaches outside the process.
+
+  Rejected — detecting the host and choosing a strategy inside the Tool. SR-0226 rejected it already: a wrong guess is a hang or a crash in a place the caller cannot reach.
+
+  Rejected — a registry of resolvers as the only way in. Registration at import time is how a connector package adds an authority today and may stay, but a caller that holds the sources should be able to pass them without registering anything.
+
+  Who pays: nobody new. The default is what runs today; the browser core gains a parameter it has been simulating with an environment variable.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0226
+  type: relates
+- target: SR-0227
+  type: relates
+- target: SR-0230
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a7f322c01329dd8ae1d0c5ce84455df7f79cc96ca836ac06d7ea7e46b6dee516
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall resolve sources through one resolver interface, taken as
+      a parameter with a default (SR-0226). The default reads a path source from
+      the file system and fetches a url source with git into the per-user cache.
+      A caller with no subprocess and no network shall be able to supply its own
+      resolver, or the sources it has already staged, and obtain the same union.
+      Where the default cannot run git, the failure shall reach the caller as the
+      Tool's own refusal, saying whether git is not installed or this host runs no
+      subprocess at all, never as an unhandled error. The composition names shall
+      pass the test of SR-0227 with a resolver supplied.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

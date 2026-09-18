@@ -1,0 +1,50 @@
+uid: SR-0231
+type: system_requirement
+status: ratified
+title: The Tool's answers over every existing project are unchanged by the fold
+text: For every project that declares sources, the Tool's check findings, plain and
+  strict, the counts its check summary reports, its rendered documents and the files
+  its migration writes shall be identical to those of throughline-compose 0.21.0
+  paired with the Tool as it stood before this change. For every project that declares
+  none, they shall be identical to the Tool as it stood before this change. Any finding,
+  count, document or migrated file that differs is a failure of this requirement
+  unless a ratified item calls for the difference. The maintainer shall prove this
+  before release by running every graph in the estate through the old pair and the
+  new Tool and comparing all four.
+rationale: |-
+  A change to composition is the change most likely to move a gate somewhere in the estate, and a gate that moves when nobody meant it to is the cost this programme exists to stop. Identity is the only bar that needs no judgement. A finding that differs is a regression or a decision, and either way it is named before release rather than met by a consumer.
+
+  The comparison is the estate sweep the earlier steps of this programme already ran over every graph under the maintainer's workspace. It compares findings, summaries and migrated trees, not the wording of progress messages, because a message serves a reader and may change.
+
+  Rejected — the package's shipped tests as the only proof. They move with the code and still run, but they cover what someone thought to test; the estate covers what people actually built.
+
+  Who pays: the maintainer, once per release that touches composition.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: NFR-0011
+  type: relates
+- target: NFR-0012
+  type: relates
+attrs:
+  priority: must
+  verification: demonstration
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:5bd0dc78688345da1c65384cb115af45ec36cd09274bbf4a68d8adf0cab53994
+  ratified_content:
+    type: system_requirement
+    text: For every project that declares sources, the Tool's check findings, plain
+      and strict, the counts its check summary reports, its rendered documents and
+      the files its migration writes shall be identical to those of throughline-compose
+      0.21.0 paired with the Tool as it stood before this change. For every project
+      that declares none, they shall be identical to the Tool as it stood before
+      this change. Any finding, count, document or migrated file that differs is
+      a failure of this requirement unless a ratified item calls for the difference.
+      The maintainer shall prove this before release by running every graph in the
+      estate through the old pair and the new Tool and comparing all four.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

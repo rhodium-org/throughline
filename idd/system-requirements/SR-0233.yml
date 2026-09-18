@@ -1,0 +1,57 @@
+uid: SR-0233
+type: system_requirement
+status: ratified
+title: The network is reached only for a declared url source, and only when the cache
+  cannot answer
+text: The Tool shall open a network connection only to resolve a url source the project
+  declares, at the ref it pins. A ref that names a commit already in the cache shall
+  be reused with no connection. A tag or branch already in the cache shall cost one
+  look-up of the ref on its origin, and a fetch only when the ref has moved. A cache-only
+  switch, offered as a parameter of the resolver and as an environment variable,
+  shall turn the look-up off; when the cache is cold it shall refuse rather than
+  fetch. The variable throughline-compose 0.21.0 reads for this shall be honoured
+  until the next major release. No operation over a project that declares no sources
+  shall touch the network, and no operation whose answer does not depend on the union
+  shall resolve a source.
+rationale: |-
+  These are the terms throughline-compose 0.21.0 already keeps (throughline-compose SR-0006 and throughline-compose SR-0043), restated as the Tool's own because NFR-0003 promises that the Tool works without network access and sends nothing anywhere by default. The fold would break that promise silently unless the exact cases that reach the network are written down and bounded. NFR-0003 is amended alongside this item to admit them, and NG-0008 records what composition still will not do.
+
+  The old variable stays honoured because the browser core sets it at boot and at least one consumer's tests set it.
+
+  Rejected — fetching whatever is missing whenever the cache is cold, even in cache-only mode. The caller who set the switch is the one who cannot fetch; a preference is not a guarantee.
+
+  Rejected — a lock file recording each tag's commit. It adds state whose staleness is a new class of fault; one look-up on the origin is cheaper and always right, as throughline-compose SR-0044 found.
+
+  Who pays: a composer whose pin is a tag pays one look-up per run, as today.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: NFR-0003
+  type: relates
+- target: NG-0008
+  type: relates
+- target: SR-0232
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:af130d7684bcd48e7bb4ee78fb79b3e015326197d530a3995d37a5d3759b0c75
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall open a network connection only to resolve a url source the
+      project declares, at the ref it pins. A ref that names a commit already in
+      the cache shall be reused with no connection. A tag or branch already in the
+      cache shall cost one look-up of the ref on its origin, and a fetch only when
+      the ref has moved. A cache-only switch, offered as a parameter of the resolver
+      and as an environment variable, shall turn the look-up off; when the cache
+      is cold it shall refuse rather than fetch. The variable throughline-compose
+      0.21.0 reads for this shall be honoured until the next major release. No operation
+      over a project that declares no sources shall touch the network, and no operation
+      whose answer does not depend on the union shall resolve a source.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

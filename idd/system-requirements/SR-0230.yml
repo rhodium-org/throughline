@@ -1,0 +1,50 @@
+uid: SR-0230
+type: system_requirement
+status: ratified
+title: The Tool composes the sources a project declares
+text: Where a project's throughline.toml declares [[sources]], the Tool shall resolve
+  each declared source, and every source those sources declare, to any depth, and
+  build one union graph under the consumer's schema. A source is bound to a namespace
+  the consumer chooses and is located by a local path or by a git url pinned to a
+  ref; a url with no ref is refused. Every operation whose answer depends on the
+  union shall run over the union, and a borrowed item shall be named namespace:UID
+  in everything the Tool reports. A project that declares no sources shall be unchanged
+  in every answer.
+rationale: |-
+  This is the behaviour throughline-compose 0.21.0 already has, moved to where the rest of the Tool lives. Its rules are recorded and ratified in that package's own graph: importer-chosen namespaces (throughline-compose SR-0001), source-native UIDs (throughline-compose SR-0002), a pinned origin and a per-user cache (throughline-compose SR-0006), a graph in a subdirectory (throughline-compose SR-0008), a source that composes what it composes (throughline-compose SR-0045), and a union the unchanged validator checks (throughline-compose SR-0004). Nothing in those rules is redecided here; SR-0231 binds the Tool to give the same answers.
+
+  Which operations read the union is settled by that package too. Check, query, dump, docs, trace, subgraph, ratify, migrate, link, unlink, new and context read it. Amend, delete, review, status, invalidate, withdraw, clarify, flag, register, schema, init, shape, diagram and blast read the local graph only and resolve nothing.
+
+  Rejected — a flag or a second entry point that turns composition on. The project's configuration already says whether it composes, and a second entry point is the thing this fold removes.
+
+  Who pays: nobody new. A consumer's gate gives the same verdict; the command it runs changes name.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0107
+  type: relates
+- target: SR-0226
+  type: relates
+- target: SR-0231
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:234566ea442fb618389c8f1b9164ede2416f5f58cd0cf943dddb695bb1fbe251
+  ratified_content:
+    type: system_requirement
+    text: Where a project's throughline.toml declares [[sources]], the Tool shall
+      resolve each declared source, and every source those sources declare, to any
+      depth, and build one union graph under the consumer's schema. A source is bound
+      to a namespace the consumer chooses and is located by a local path or by a
+      git url pinned to a ref; a url with no ref is refused. Every operation whose
+      answer depends on the union shall run over the union, and a borrowed item shall
+      be named namespace:UID in everything the Tool reports. A project that declares
+      no sources shall be unchanged in every answer.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
