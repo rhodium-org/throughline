@@ -50,7 +50,26 @@ from .identity import (
     IdentityError,
     default_ratifier,
 )
-from .inject import InjectError, has_markers, inject_text, referenced_uids
+from .diagrams import diagram_transitions, diagram_types
+from .inject import (
+    InjectError,
+    document_paths,
+    has_markers,
+    inject_documents,
+    inject_text,
+    referenced_uids,
+)
+from .items import (
+    Amendment,
+    amend_item,
+    birth_item,
+    coerce_attr,
+    delete_item,
+    new_item,
+    newly_suspect,
+    parse_attrs,
+    review_items,
+)
 from .ratification import change_since_ratification, render_change
 from .model import Link, Register
 from .schema import Schema, SchemaError
@@ -63,13 +82,22 @@ from .storage import (
     read_baseline,
     init_project,
     load_project,
+    create_register,
     load_project_at_ref,
     migrate_project,
     write_item,
     write_manifest,
 )
 from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
-from .validate import ERROR, OFF, WARNING, FilterError, eval_filter, validate
+from .validate import (
+    ERROR,
+    OFF,
+    WARNING,
+    FilterError,
+    eval_filter,
+    query_items,
+    validate,
+)
 from .version import distribution_version
 
 OK, FINDINGS, USAGE = 0, 1, 2
@@ -79,6 +107,15 @@ def _version() -> str:
     # One implementation of "what am I running?" serves the library and the CLI
     # alike (SR-0164 / SR-0076), including the +editable marker for a working tree.
     return distribution_version("throughline")
+
+
+# The spellings throughline-compose 0.21.0 imports from this module. The operations
+# live in `throughline.items` now (SR-0224), and nothing new should reach for a
+# command line to find them (SR-0225); these stay until the major release that
+# drops the private surface.
+_parse_attrs = parse_attrs
+_coerce_attr = coerce_attr
+_newly_suspect = newly_suspect
 
 
 def _err(msg: str) -> int:
@@ -278,31 +315,14 @@ def cmd_migrate(args) -> int:
 
 
 def cmd_register_new(args) -> int:
-    root = Path(args.path)
+    """Parse, call :func:`throughline.storage.create_register`, render (SR-0225)."""
     try:
-        project = load_project(root)
+        project = load_project(args.path)
+        reg = create_register(project, args.prefix, args.dir, title=args.title,
+                              digits=args.digits, parent=args.parent)
     except ProjectError as e:
         return _err(str(e))
-    # The prefix must satisfy the UID grammar (doc 06 §3, SR-0140). A prefix that
-    # does not — a single character, say — would be silently accepted here and
-    # then break UID allocation for every item it owns, so we reject it up front.
-    if not valid_prefix(args.prefix):
-        return _err(f"prefix '{args.prefix}' is not a valid UID prefix — expected "
-                    f"{PREFIX_GRAMMAR}; see doc 06 §3")
-    # Prefixes own a UID namespace and must be unique across the project (SR-0101);
-    # a duplicate would make the loader silently drop one register's items.
-    existing = project.registers.get(args.prefix)
-    if existing is not None:
-        return _err(f"prefix '{args.prefix}' is already used by the register at "
-                    f"{existing.path} — prefixes must be unique across the project")
-    reg_dir = root / args.dir
-    if (reg_dir / MANIFEST_NAME).exists():
-        return _err(f"{reg_dir} already has a {MANIFEST_NAME}")
-    reg_dir.mkdir(parents=True, exist_ok=True)
-    reg = Register(prefix=args.prefix, title=args.title or args.prefix,
-                   digits=args.digits, parent=args.parent, path=reg_dir)
-    write_manifest(reg)
-    print(f"created register {args.prefix} at {reg_dir}")
+    print(f"created register {reg.prefix} at {reg.path}")
     return OK
 
 
@@ -534,192 +554,51 @@ def _resolve_value(value, purpose: str, flag: str, *, options=None, default=None
     return raw
 
 
-def _coerce_attr(schema, item_type: str, key: str, raw: str):
-    """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
-    the attribute (SR-0142). An undeclared attribute is stored verbatim as a
-    string; a declared int/float/bool is converted so it round-trips as the right
-    YAML scalar rather than a quoted string, and a declared enum is checked for
-    membership (SR-0023). A value the schema cannot accept is a hard error at
-    creation (fail-fast), not a surprise the loader raises later."""
-    spec = schema.attr(item_type, key)
-    # An undeclared attribute is stored as the text given, which made
-    # `--attr ambiguous=false` a non-empty string and so a flag: asking for no flag
-    # raised one. The Tool reads this attribute as a flag everywhere, so it reads
-    # the value as one here (SR-0223). A project that declares it keeps its kind.
-    default_kind = "bool" if key == AMBIGUOUS_ATTR else "string"
-    kind = spec.kind if spec is not None else default_kind
-    try:
-        if kind == "enum":
-            if raw not in spec.values:
-                raise ValueError(f"not in {list(spec.values)}")
-            return raw
-        if kind == "int":
-            return int(raw)
-        if kind == "float":
-            return float(raw)
-        if kind == "bool":
-            low = raw.strip().lower()
-            if low in ("true", "1", "yes"):
-                return True
-            if low in ("false", "0", "no"):
-                return False
-            raise ValueError(f"expected a boolean, got '{raw}'")
-    except ValueError as e:
-        raise UidError(f"--attr {key}={raw}: {e}") from e
-    return raw
-
-
-def _parse_attrs(schema, item_type: str, pairs: list[str] | None,
-                 *, command: str, declared_only: bool = False) -> dict:
-    """Parse repeated ``--attr KEY=VALUE`` options into a coerced attrs dict.
-
-    ``command`` names the verb doing the setting, so a refusal can say which command
-    owns an attribute it will not write. ``declared_only`` rejects an attribute the
-    item's type does not declare instead of storing it verbatim — what `amend`
-    requires (SR-0144) and what creation deliberately does not, since an attribute
-    an evolving schema has not caught up with is a reasonable thing to author."""
-    attrs: dict = {}
-    for pair in pairs or []:
-        if "=" not in pair:
-            raise UidError(f"--attr expects KEY=VALUE, got '{pair}'")
-        key, raw = pair.split("=", 1)
-        key = key.strip()
-        if not key:
-            raise UidError(f"--attr expects a non-empty key, got '{pair}'")
-        # The ratification record is evidence that a named person took
-        # accountability, and evidence is worth what it costs to forge. No verb but
-        # the one that owns it may write it (SR-0170), and the record of a removed
-        # ambiguity flag is guarded the same way (SR-0213).
-        owned = attribute_owner(key)
-        if owned is not None:
-            record, owner = owned
-            raise UidError(
-                f"--attr {key}: '{key}' is part of the {record} and "
-                f"cannot be set by `tl {command}` — `tl {owner}` owns it")
-        if declared_only and schema.attr(item_type, key) is None:
-            raise UidError(
-                f"--attr {key}: '{item_type}' declares no attribute '{key}'")
-        attrs[key] = _coerce_attr(schema, item_type, key, raw)
-    return attrs
-
-
-def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
-               text: str = "", status: str | None = None,
-               origin: str | None = None, attrs: dict | None = None):
-    """Everything an item receives at birth, in one place (SR-0205), offered to
-    any tool that creates items in a project so `tl new` and a composing tool
-    bear an item identically. ``attrs`` are the author's already-parsed values
-    (see :func:`_parse_attrs`); ``status`` overrides the birth status explicitly.
-    The caller adds grounding links and writes the item."""
-    from .model import Item
-    attrs = dict(attrs or {})
-    # --origin is the canonical way to set provenance, but honour origin given via
-    # --attr too so birth status stays consistent with what actually lands on the
-    # item.
-    origin = origin or attrs.get("origin")
-    # Birth status comes from the project's status roles, never a value fixed in
-    # code (SR-0131); ``status`` overrides it explicitly. A machine-origin item is
-    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
-    # actually engages and a named human must ratify it before it counts; without
-    # this a machine-authored item would enter the ordinary initial status and
-    # silently escape the gate the tool exists to enforce (SR-0141). If the
-    # project declares no 'proposed' role we fall back to 'initial'.
-    has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
-    if status is None:
-        if origin in schema.ai_origins and has_proposed_role:
-            status = schema.status_role("proposed")
-        else:
-            status = schema.status_role("initial")
-    # The flag is the kind's, not the command's (SR-0201): an intent or a
-    # non-goal is born non-normative because its type says so.
-    item = Item(uid=uid, type=item_type, status=status, title=title, text=text,
-                normative=schema.is_normative(item_type))
-    item.attrs.update(attrs)
-    if origin:
-        item.attrs["origin"] = origin
-    # Apply schema-declared attribute defaults (SR-0138): a default only ever
-    # lands at birth on an attribute the author did not set, so a schema sentinel
-    # (e.g. a priority meaning "no human has decided yet") appears automatically
-    # without overwriting an explicit value.
-    for name, spec in schema.attrs_for(item_type).items():
-        # Never a record a single verb owns, whatever a hand-edited config
-        # declares: only that verb writes it (SR-0170, SR-0213, SR-0219), and
-        # `tl schema attr add` refuses to declare one.
-        if attribute_owner(name) is not None:
-            continue
-        if spec.default is not None and name not in item.attrs:
-            item.attrs[name] = spec.default
-    item._register_prefix = reg.prefix
-    return item
-
-
 def cmd_new(args) -> int:
+    """Parse, ask for a parent where a terminal allows it, call
+    :func:`throughline.items.new_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    reg = project.registers.get(args.prefix)
-    if reg is None:
-        return _err(f"no register with prefix '{args.prefix}' (run `tl register new`)")
-    if args.uid:
-        try:
-            pfx, _ = parse_uid(args.uid)
-        except UidError as e:
-            return _err(str(e))
-        if pfx != args.prefix:
-            return _err(f"--uid {args.uid} does not match prefix {args.prefix}")
-        if project.get(args.uid) is not None:
-            return _err(f"{args.uid} already exists")
-        uid = args.uid
-    else:
-        uid = next_uid(reg)
-    from .model import Item
     schema = project.schema
     try:
-        attrs = _parse_attrs(schema, args.type, args.attr, command="new")
+        attrs = parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
     # A declared default naming a record a single verb owns is never written
     # (SR-0170, SR-0213, SR-0219); say so rather than drop it silently.
-    ignored = [name for name, spec in schema.attrs_for(args.type).items()
-               if spec.default is not None and attribute_owner(name) is not None]
-    for name in ignored:
-        record, owner = attribute_owner(name)
-        print(f"ignored the declared default for '{name}': it is part of the "
-              f"{record} and only `tl {owner}` writes it")
-    item = birth_item(schema, reg, uid, item_type=args.type,
-                      title=args.title or "", text=args.text or "",
-                      status=args.status, origin=args.origin, attrs=attrs)
+    for name, spec in schema.attrs_for(args.type).items():
+        if spec.default is not None and attribute_owner(name) is not None:
+            record, owner = attribute_owner(name)
+            print(f"ignored the declared default for '{name}': it is part of the "
+                  f"{record} and only `tl {owner}` writes it")
 
-    # Grounding-assisted authoring (SR-0073): attach a parent at birth so the
-    # item is justified the moment it exists, rather than being created orphaned
-    # and only caught later by `check`. Roots are exempt — they *are* the 'why'.
+    # Grounding-assisted authoring (SR-0073): attach a parent at birth so the item
+    # is justified the moment it exists, rather than being created orphaned and
+    # only caught later by `check`. A parent named on the command line is always
+    # honoured, including for a root type (SR-0091).
     default_type = args.ground_type or "derives_from"
-    grounds: list[tuple[str, str]] = []
-    if args.ground:
-        # Explicit grounding is ALWAYS honored — even for root types (e.g. a
-        # business_need that `derives_from` the vision). An explicitly requested
-        # link is authoring intent and must never be silently discarded; if it
-        # cannot be added we fail loudly, we do not drop it (SR-0091, fail-fast).
-        for target in args.ground:
-            dst = project.get(target)
-            if dst is None:
-                return _err(f"grounding target {target} does not exist")
-            grounds.append((target, default_type))
-    elif not schema.is_root(item) and not args.no_interactive \
+    named = list(args.ground or ())
+    try:
+        item = new_item(project, args.prefix, item_type=args.type, uid=args.uid,
+                        title=args.title or "", text=args.text or "",
+                        status=args.status, origin=args.origin, attrs=attrs,
+                        ground=named, ground_type=default_type)
+    except (ProjectError, GroundingError, SchemaError, UidError) as e:
+        return _err(str(e))
+    grounds = [(target, default_type) for target in named]
+    # No parent named: offer one for non-roots, where a terminal can be asked.
+    if not grounds and not args.no_interactive and not schema.is_root(item) \
             and sys.stdin.isatty() and sys.stdout.isatty():
-        # No explicit parent: offer to attach one for non-roots only. Roots are
-        # exempt from the prompt because they *are* the 'why'.
         grounds = _prompt_grounding(project, schema, item, default_type)
+        for target, ltype in grounds:
+            item.links.append(Link(target=target, type=ltype))
 
+    path = write_item(item, project.register_of(item.uid))
+    print(f"created {item.uid} -> {path}")
     for target, ltype in grounds:
-        item.links.append(Link(target=target, type=ltype))
-
-    reg.items[uid] = item
-    path = write_item(item, reg)
-    print(f"created {uid} -> {path}")
-    for target, ltype in grounds:
-        print(f"  grounded: {uid} --{ltype}--> {target}")
+        print(f"  grounded: {item.uid} --{ltype}--> {target}")
     return OK
 
 
@@ -791,6 +670,7 @@ def cmd_unlink(args) -> int:
 
 
 def cmd_delete(args) -> int:
+    """Parse, call :func:`throughline.items.delete_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
@@ -798,88 +678,43 @@ def cmd_delete(args) -> int:
     uid = _resolve_uid(project, args.uid, "delete", "UID")
     if uid is None:
         return USAGE
-    item = project.get(uid)
-    if item is None:
-        return _err(f"{uid} does not exist")
-    schema = project.schema
     try:
-        tombstone = schema.status_role("tombstone")
-    except SchemaError as e:
+        retired = delete_item(project, uid, reason=args.reason)
+    except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
-    # A tombstone is permanent (SR-0093), and so is what it records. Deleting an
-    # item already retired changes nothing, rather than writing a second date and
-    # reason over the first.
-    if item.status == tombstone:
+    if not retired:
         print(f"{uid} is already deleted — its tombstone is permanent and was left "
               "unchanged (SR-0093)")
         return OK
-    try:
-        set_status(schema, item, tombstone)
-    except (GroundingError, SchemaError) as e:
-        return _err(str(e))
-    # What the tombstone keeps (SR-0012): the day the UID was retired, why, and the
-    # fingerprint of the content it last held, so the record says what was retired
-    # wherever the file travels without its history. The day is taken in UTC so
-    # it does not depend on where the command was run, and the fingerprint is the
-    # one stamps, reviews and ratifications record (SR-0033).
-    item.deleted = {
-        "date": datetime.now(timezone.utc).date().isoformat(),
-        "reason": args.reason or "unspecified",
-        "fingerprint": fingerprint(item, schema),
-    }
-    write_item(item, project.register_of(item.uid))
+    write_item(project.get(uid), project.register_of(uid))
     print(f"tombstoned {uid} (UID retired, never reused)")
     return OK
 
 
 def cmd_review(args) -> int:
+    """Parse, call :func:`throughline.items.review_items`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    if args.all_clean:
-        targets = list(project.items())
-    else:
+    uids = None
+    if not args.all_clean:
         uid = _resolve_uid(project, args.uid, "mark reviewed", "UID")
         if uid is None:
             return USAGE
-        targets = [project.get(uid)]
-        if targets[0] is None:
-            return _err(f"{uid} does not exist")
-    n = 0
-    for item in targets:
-        if item is None or item.is_deleted:
-            continue
-        fp = fingerprint(item, project.schema)
-        if item.reviewed != fp:
-            item.reviewed = fp
-            write_item(item, project.register_of(item.uid))
-            n += 1
-    print(f"marked {n} item(s) reviewed at current content")
+        uids = [uid]
+    try:
+        moved = review_items(project, uids, all_items=args.all_clean)
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    for item in moved:
+        write_item(item, project.register_of(item.uid))
+    print(f"marked {len(moved)} item(s) reviewed at current content")
     return OK
 
 
-def _newly_suspect(project, uid: str, was: str, now: str) -> list[str]:
-    """Dependents whose confirmed link to ``uid`` this content change has just
-    invalidated (SR-0034, SR-0169).
-
-    A link carries the target's fingerprint as at the last confirmation, so what
-    makes a dependent *newly* suspect is a stamp that matched the old content and
-    does not match the new. A stamp that already disagreed was suspect before this
-    change and is not this change's doing; an unstamped link was never confirmed
-    and so has nothing to lose."""
-    if was == now:
-        return []
-    out = []
-    for it in project.items():
-        if it.is_deleted:
-            continue
-        if any(l.target == uid and l.stamp == was for l in it.links):
-            out.append(it.uid)
-    return sorted(out)
-
-
 def cmd_amend(args) -> int:
+    """Parse, call :func:`throughline.items.amend_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
@@ -890,18 +725,15 @@ def cmd_amend(args) -> int:
     item = project.get(uid)
     if item is None:
         return _err(f"{uid} does not exist")
-    if item.is_deleted:
-        return _err(f"{uid} is deleted — a tombstone is permanent (SR-0093)")
     # Amending nothing is a mistake worth naming. Succeeding silently would let a
     # typo in an option name read as a change that was made.
     if args.title is None and args.text is None and args.rationale is None \
             and not args.attr and not args.unset:
         return _err("amend needs at least one of --title, --text, --rationale, "
                     "--attr or --unset")
-    schema = project.schema
     try:
-        attrs = _parse_attrs(schema, item.type, args.attr,
-                             command="amend", declared_only=True)
+        attrs = parse_attrs(project.schema, item.type, args.attr,
+                            command="amend", declared_only=True)
     except UidError as e:
         return _err(str(e))
     unset = list(dict.fromkeys(name.strip() for name in (args.unset or [])))
@@ -911,78 +743,32 @@ def cmd_amend(args) -> int:
     if both:
         return _err(f"--attr and --unset both name {', '.join(both)} — "
                     "say which you mean")
-    # Every refusal is decided before anything moves, so a refused amendment
-    # changes nothing. An origin leaves the machine-origin set only by ratification
-    # (SR-0208), the ambiguity flag leaves an item only by clarification (SR-0213),
-    # and removal stops at the attributes a gate reads (SR-0206).
-    if "origin" in attrs:
-        refusal = origin_change_refusal(schema, item, attrs["origin"])
-        if refusal is not None:
-            return _err(refusal)
-    if "ambiguous" in attrs:
-        refusal = ambiguity_change_refusal(item, attrs["ambiguous"])
-        if refusal is not None:
-            return _err(refusal)
-    for name in unset:
-        refusal = attribute_removal_refusal(schema, item, name)
-        if refusal is not None:
-            return _err(refusal)
-
-    before = fingerprint(item, schema)
-    was_reviewed = item.reviewed is not None
-    changed: list[str] = []
-    # None means "option not given"; an empty string is a real value that clears the
-    # field, which is the only way to withdraw a rationale without opening the YAML.
-    if args.title is not None and args.title != item.title:
-        item.title = args.title
-        changed.append("title")
-    if args.text is not None and args.text != item.text:
-        item.text = args.text
-        changed.append("text")
-    if args.rationale is not None and args.rationale != item.rationale:
-        item.rationale = args.rationale
-        changed.append("rationale")
-    for key, value in attrs.items():
-        if item.attrs.get(key) != value:
-            item.attrs[key] = value
-            changed.append(key)
-    # Removal reaches an attribute the type no longer declares (SR-0206), which is
-    # what a withdrawn attribute leaves behind and what nothing could clear before.
-    for name in unset:
-        del item.attrs[name]
-        changed.append(f"{name} (unset)")
-    if not changed:
+    try:
+        result = amend_item(project, uid, title=args.title, text=args.text,
+                            rationale=args.rationale, attrs=attrs, unset=unset)
+    except (ProjectError, GroundingError, SchemaError, UidError) as e:
+        return _err(str(e))
+    if not result.changed:
         print(f"{uid} already says that — nothing changed")
         return OK
-
-    now = fingerprint(item, schema)
-    suspects = _newly_suspect(project, uid, before, now)
-    # A review confirms content, so content that has moved is no longer confirmed
-    # (SR-0038, SR-0144). Only a normative change can invalidate it — retitling
-    # leaves the fingerprint alone, and clearing a review it did not disturb would
-    # cost the author a re-review for nothing.
-    review_cleared = was_reviewed and now != before
-    if review_cleared:
-        item.reviewed = None
-    write_item(item, project.register_of(uid))
+    write_item(project.get(uid), project.register_of(uid))
 
     # What the change cost, reported and not asked about (SR-0169). The gate stays
     # where it already stands — `check`, and the re-ratification that shows what
     # moved before it asks for a signature.
-    print(f"amended {uid} — {', '.join(changed)}")
-    if now == before:
+    print(f"amended {uid} — {', '.join(result.changed)}")
+    if not result.normative_change:
         print("  normative content unchanged — nothing was made suspect")
     else:
-        if suspects:
-            print(f"  {len(suspects)} dependent item(s) now suspect: "
-                  f"{', '.join(suspects)}")
+        if result.suspects:
+            print(f"  {len(result.suspects)} dependent item(s) now suspect: "
+                  f"{', '.join(result.suspects)}")
         else:
             print("  no dependent item was confirmed against the old content")
-        if review_cleared:
+        if result.review_cleared:
             print("  review record cleared — `tl review` to confirm the new wording")
-        stamp = item.attrs.get("ratified_fingerprint")
-        if stamp and stamp != now:
-            who = item.attrs.get("ratified_by") or "a human"
+        if result.ratification_stale:
+            who = result.ratifier or "a human"
             print(f"  ratification by {who} no longer matches this content — "
                   f"`tl ratify {uid}` shows what moved and asks again")
     return OK
@@ -1068,18 +854,15 @@ def cmd_check(args) -> int:
 
 
 def cmd_query(args) -> int:
+    """Parse, call :func:`throughline.validate.query_items`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    candidates = [it for it in project.items()
-                  if args.all or not it.is_deleted]
-    idx = Index.build(project)
     try:
-        matched = [it for it in candidates if eval_filter(it, args.expr, idx)]
+        matched = query_items(project, args.expr, include_deleted=args.all)
     except FilterError as e:
         return _err(f"bad filter expression: {e}")
-    matched.sort(key=lambda it: it.uid)
 
     if args.format == "json":
         print(json.dumps([it.to_dict() for it in matched], indent=2, default=str))
@@ -1136,30 +919,6 @@ def cmd_shape(args) -> int:
     return OK
 
 
-def _mermaid_types(idx) -> str | None:
-    """A Mermaid flowchart of the type model: item types as nodes, one labelled
-    edge per (source type, link type, target type) observed in the graph. Edges
-    to external/unknown targets are omitted (SR-0086)."""
-    edges = sorted({(s, lt, t) for (s, lt, t) in idx.link_shape() if t is not None})
-    if not edges:
-        return None
-    lines = ["flowchart LR"]
-    lines += [f"    {s} -->|{lt}| {t}" for s, lt, t in edges]
-    return "\n".join(lines)
-
-
-def _mermaid_transitions(schema) -> str | None:
-    """A Mermaid state diagram of the declared status lifecycle (SR-0086).
-    ``None`` when the project declares no [transitions]."""
-    if not schema.transitions:
-        return None
-    lines = ["stateDiagram-v2"]
-    for frm in sorted(schema.transitions):
-        for to in sorted(schema.transitions[frm]):
-            lines.append(f"    {frm} --> {to}")
-    return "\n".join(lines)
-
-
 def cmd_diagram(args) -> int:
     try:
         project = load_project(args.path)
@@ -1168,7 +927,7 @@ def cmd_diagram(args) -> int:
     idx = Index.build(project)
     blocks = []  # (heading, mermaid-source-or-None, empty-note)
     if args.kind in ("types", "both"):
-        blocks.append(("Type model", _mermaid_types(idx),
+        blocks.append(("Type model", diagram_types(idx),
                        "no links in the graph yet"))
     if args.kind in ("transitions", "both"):
         blocks.append(("Status transitions", _mermaid_transitions(project.schema),
@@ -1213,10 +972,10 @@ def _resolve_doc_paths(project, explicit: list[str]) -> list[Path]:
 
 
 def cmd_docs(args, resolver=None) -> int:
-    """Inject the configured documents from the local project. ``resolver`` is an
-    optional target resolver (SR-0110); when a composing front end supplies one,
-    tl:matrix target cells resolve attributes and liveness through it — e.g. over
-    tl-compose's union graph — instead of the local project alone."""
+    """Render every configured document, then write them or report them stale
+    (SR-0095, SR-0225). ``resolver`` is an optional target resolver (SR-0110): a
+    composing front end supplies one so tl:matrix cells resolve over its union.
+    """
     try:
         if args.at:
             project, _sha = load_project_at_ref(args.path, args.at)
@@ -1225,8 +984,7 @@ def cmd_docs(args, resolver=None) -> int:
     except ProjectError as e:
         return _err(str(e))
 
-    paths = _resolve_doc_paths(project, args.file)
-    if not paths:
+    if not document_paths(project, args.file):
         # In --check mode (the CI gate, SR-0095) an unconfigured project has no
         # documents to be stale, so the gate is inert and passes. In write mode a
         # caller who ran `tl docs` with nothing to inject wants to know.
@@ -1234,55 +992,34 @@ def cmd_docs(args, resolver=None) -> int:
             return OK
         return _err("no documents to inject — pass a Markdown file, or configure "
                     "[docs] paths in throughline.toml")
+    try:
+        renders = inject_documents(project, args.file, resolver=resolver)
+    except InjectError as e:
+        return _err(str(e))
+    except OSError as e:
+        return _err(f"cannot read a document: {e}")
 
-    # Render every document before writing any of it (SR-0186). An unprovided
-    # directive — or any other injection failure — in the last document must not
-    # leave the earlier ones rewritten: a partially injected tree is drift of
-    # exactly the kind this seam exists to prevent, and it is invisible because
-    # the command that caused it exited non-zero.
-    pending: list[tuple[Path, str]] = []
-    for path in paths:
-        try:
-            original = path.read_text(encoding="utf-8")
-        except OSError as e:
-            return _err(f"cannot read {path}: {e}")
-        if not has_markers(original):
-            continue  # SR-0094/0095: a file with no tl: markers is left untouched
-        try:
-            rendered = inject_text(project, original, resolver=resolver)
-        except InjectError as e:
-            return _err(f"{path}: {e}")
-        if rendered != original:
-            pending.append((path, rendered))
-
-    stale: list[Path] = []
-    changed = 0
-    for path, rendered in pending:
-        if args.check:
-            stale.append(path)
-            print(f"stale: {path}", file=sys.stderr)
-        else:
-            path.write_text(rendered, encoding="utf-8")
-            changed += 1
-            print(f"injected {path}")
-
+    pending = [r for r in renders if r.changed]
     if args.check:
         # Separate gate: write-then-diff. A drifted document fails CI; nothing is
         # rewritten. This is deliberately NOT part of `tl check` so routine checks
         # stay friction-free (SR-0095).
-        if stale:
-            print(f"{len(stale)} document(s) out of date — run `tl docs` to "
+        for render in pending:
+            print(f"stale: {render.path}", file=sys.stderr)
+        if pending:
+            print(f"{len(pending)} document(s) out of date — run `tl docs` to "
                   "regenerate", file=sys.stderr)
             return FINDINGS
         print("documents up to date")
         return OK
-    if changed == 0:
+    for render in pending:
+        render.path.write_text(render.rendered, encoding="utf-8")
+        print(f"injected {render.path}")
+    if not pending:
         print("documents already up to date")
     sys.stdout.flush()
     return OK
 
-
-# --------------------------------------------------------------- agent context
 
 def _fmt_set(items) -> str:
     """`` `a`, `b` `` from any iterable; ``(none)`` when empty."""

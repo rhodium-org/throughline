@@ -1491,3 +1491,35 @@ Each requirement, what it grounds up to, and what verifies it.
 <!-- tl:matrix type == 'requirement' -->
 <!-- tl:end -->
 '''
+
+
+def create_register(project, prefix: str, directory, *, title: str | None = None,
+                    digits: int = 4, parent: str | None = None):
+    """Add a register — the prefix-owning collection a UID namespace belongs to
+    (SR-0011, SR-0102) — and write its manifest.
+
+    The prefix must satisfy the UID grammar (SR-0140): one that does not would be
+    accepted here and then break allocation for every item it owns. It must also be
+    unused, because a prefix owns a namespace across the whole project (SR-0101)
+    and a duplicate makes the loader drop one register's items silently.
+    """
+    from .model import Register
+    from .uid import PREFIX_GRAMMAR, valid_prefix
+    root = Path(project.path)
+    if not valid_prefix(prefix):
+        raise ProjectError(f"prefix '{prefix}' is not a valid UID prefix — expected "
+                           f"{PREFIX_GRAMMAR}; see doc 06 §3")
+    existing = project.registers.get(prefix)
+    if existing is not None:
+        raise ProjectError(f"prefix '{prefix}' is already used by the register at "
+                           f"{existing.path} — prefixes must be unique across the "
+                           "project")
+    reg_dir = root / directory
+    if (reg_dir / MANIFEST_NAME).exists():
+        raise ProjectError(f"{reg_dir} already has a {MANIFEST_NAME}")
+    reg_dir.mkdir(parents=True, exist_ok=True)
+    reg = Register(prefix=prefix, title=title or prefix, digits=digits,
+                   parent=parent, path=reg_dir)
+    write_manifest(reg)
+    project.registers[prefix] = reg
+    return reg

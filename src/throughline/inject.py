@@ -60,6 +60,8 @@ never a document editor (see the ``non_goal`` NG-0001).
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import re
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -823,3 +825,54 @@ register_directive("chart", _ignores_resolver(_render_chart),
                    publishes=False, selects=_selects_filter)
 register_directive("stats", _ignores_resolver(_render_stats),
                    publishes=False, selects=_selects_filter)
+
+
+@dataclass(frozen=True)
+class DocumentRender:
+    """One document as injection found it and would leave it (SR-0094, SR-0095)."""
+
+    path: "Path"
+    original: str
+    rendered: str
+
+    @property
+    def changed(self) -> bool:
+        return self.rendered != self.original
+
+
+def document_paths(project, explicit=None) -> list["Path"]:
+    """The Markdown files injection reads: the ones given, or the `[docs] paths`
+    globs from the project's configuration, resolved from the project root
+    (SR-0094). A marker-free file is returned too — injecting it is a no-op, and
+    it is the same uniform set publication coverage reasons over (SR-0096)."""
+    from pathlib import Path as _Path
+    if explicit:
+        return [_Path(p) for p in explicit]
+    root = _Path(project.path)
+    out: list[_Path] = []
+    for pattern in project.schema.docs_paths:
+        for candidate in sorted(root.glob(pattern)):
+            if candidate.is_file():
+                out.append(candidate)
+    return out
+
+
+def inject_documents(project, paths=None, *, resolver=None) -> list[DocumentRender]:
+    """Render every configured document without writing any of it.
+
+    Rendering all of them first is the point (SR-0186): an unprovided directive in
+    the last document must not leave the earlier ones rewritten, because a
+    partially injected tree is drift of exactly the kind the seam exists to
+    prevent. The caller decides what to do with the answer — write it, or report
+    it stale as the documents gate does (SR-0095). Files with no markers are left
+    out, because injecting them changes nothing.
+    """
+    renders: list[DocumentRender] = []
+    for path in document_paths(project, paths):
+        original = path.read_text(encoding="utf-8")
+        if not has_markers(original):
+            continue
+        renders.append(DocumentRender(path=path, original=original,
+                                      rendered=inject_text(project, original,
+                                                           resolver=resolver)))
+    return renders

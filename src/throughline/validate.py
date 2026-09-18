@@ -498,6 +498,22 @@ def eval_filter(item, expr: str, idx: Index | None = None) -> bool:
     return bool(safe_eval(expr, _filter_namespace(item, idx)))
 
 
+def query_items(project, expr: str | None = None, *, include_deleted: bool = False,
+                index=None) -> list:
+    """The project's items matching ``expr`` (SR-0045, SR-0079), in UID order.
+
+    The grammar is the one documents and coverage rules use, so a program
+    embedding the Tool selects items exactly as a document does. An absent
+    expression matches everything, and a deleted item is left out unless asked
+    for. Raises :class:`FilterError` for an expression the grammar cannot accept;
+    it never falls back to evaluating it (SR-0103)."""
+    candidates = [it for it in project.items() if include_deleted or not it.is_deleted]
+    if expr:
+        idx = index if index is not None else Index.build(project)
+        candidates = [it for it in candidates if eval_filter(it, expr, idx)]
+    return sorted(candidates, key=lambda it: it.uid)
+
+
 def is_external(target: str) -> bool:
     """True if a link target is a free external reference — a URL, a repository path,
     or an anchor (SR-0031) — that the graph deliberately leaves opaque. Public so a

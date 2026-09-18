@@ -119,14 +119,19 @@ def _git_config(key: str, path: str | Path | None) -> str | None:
     return value or None
 
 
-def default_ratifier(path: str | Path | None = None) -> str:
+def default_ratifier(path: str | Path | None = None, *, identity=None) -> str:
     """The ratifier to *offer* when none was named (SR-0156).
 
     The identity the repository already signs commits with, falling back to the
     operating-system account name only where none is configured. This is a default a
     human may overrule, never a value written without their assent — the caller is
-    responsible for that, and must not write this straight to an item."""
-    name, _ = git_identity(path)
+    responsible for that, and must not write this straight to an item.
+
+    ``identity`` is the work the host environment does, taken as a parameter
+    (SR-0226): a callable with :func:`git_identity`'s shape, which it defaults to.
+    A caller with no subprocess — a browser runtime — supplies its own and gets the
+    same operation."""
+    name, _ = (identity or git_identity)(path)
     if name:
         return name
     try:

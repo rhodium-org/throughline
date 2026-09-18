@@ -1,0 +1,30 @@
+uid: SR-0225
+type: system_requirement
+status: ratified
+title: The command line is a client of the exported names
+text: 'The command line shall obtain everything it does from the names the package
+  exports: it shall read its arguments, call those functions, and render what they
+  return. No other program shall need to import the command-line module to reach
+  an operation or its result.'
+rationale: |-
+  One direction of dependency, and it is this one. While operations live in the command-line module, every other program either imports that module or reimplements what it holds, and both have happened here.
+
+  It also keeps the two interfaces honest with each other. A capability the command line has and the exported names lack would be a capability a browser cannot reach (SR-0060 asks the command line to expose all of them).
+
+  Rejected — allowing the command line to keep small pieces of behaviour that no caller has asked for yet. That is how `_parse_attrs` and `birth_item` came to live there, and the composing tool now imports both.
+
+  Who pays: nobody outside. The move is internal, and the command line behaves as it did.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: SR-0060
+  type: relates
+- target: SR-0224
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:ffd7da4b7ee642d5b6eda7d0ccee0f9f648ca839a7c292e14d0539d170ca0739
