@@ -37,6 +37,10 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 `GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `change_since_ratification` · `ratification_is_committed`
 
+### What awaits a signature
+
+`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress`
+
 ### Who signs
 
 `default_ratifier` · `git_identity` · `normalise_identifier` · `IdentityError`

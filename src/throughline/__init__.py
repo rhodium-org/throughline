@@ -57,6 +57,16 @@ from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
 from .ratification import change_since_ratification, ratification_is_committed
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
+from .worklist import (
+    CONCERNS,
+    WorklistEntry,
+    depths_from_roots,
+    entry_for,
+    is_ratified,
+    ratification_progress,
+    signature_is_stale,
+    worklist,
+)
 from .storage import (
     CONFIG_NAME,
     MANIFEST_NAME,
@@ -117,6 +127,9 @@ __all__ = [
     "flag", "clarify", "is_flagged_ambiguous", "ambiguity_report",
     "attribute_owner",
     "change_since_ratification", "ratification_is_committed",
+    # what awaits a signature, for an interface to draw
+    "worklist", "WorklistEntry", "entry_for", "CONCERNS", "depths_from_roots",
+    "is_ratified", "signature_is_stale", "ratification_progress",
     # who signs
     "default_ratifier", "git_identity", "normalise_identifier", "IdentityError",
     # publishing
