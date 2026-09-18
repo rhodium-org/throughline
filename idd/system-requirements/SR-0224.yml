@@ -1,0 +1,35 @@
+uid: SR-0224
+type: system_requirement
+status: ratified
+title: Every operation is reachable through the names the package exports, returning
+  data
+text: The Tool shall offer every operation its command line performs through the
+  names the package exports. Those functions shall return values and raise the Tool's
+  own kinds of error. They shall print nothing and shall not end the program. Everything
+  the command line reports shall be obtainable as data through them.
+rationale: |-
+  Behaviour a caller needs sits in the command-line module today, so a program reaching for it imports the command line: the composing tool takes `_parse_attrs` and `birth_item` from `throughline.cli`, and the cockpit takes `force_utf`. A private name is not a promise, so each of those is a release waiting to happen.
+
+  Returning data rather than text is what makes the interface a contract. Printed output changes to serve a reader, and a caller parsing it cannot tell a rewording from a change of behaviour.
+
+  Rejected — offering a function that runs a command line string and returns its output. That keeps the parsing problem and adds a second way to spell every operation.
+
+  Who pays: the maintainer, who moves behaviour out of the command-line module and keeps it where callers can reach it. No existing caller loses anything: the names it reaches for privately today become named.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: SR-0060
+  type: relates
+- target: SR-0151
+  type: relates
+- target: SR-0205
+  type: relates
+- target: SR-0061
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f349cc2f878398db79dac596ac7d941d844e70c4f714373806aea23591fdc36a

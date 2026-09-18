@@ -1,0 +1,31 @@
+uid: SR-0227
+type: system_requirement
+status: ratified
+title: The exported names need no subprocess, no network and no terminal
+text: Every function the package exports shall complete its work where the caller
+  has no subprocess, no network socket and no terminal, given the parameters of SR-0226.
+  The Tool shall carry a test that proves it by making all three unavailable.
+rationale: |-
+  This is the promise a browser runtime needs, and the one a reader cannot check by reading. Under Pyodide there is no subprocess and no socket, and the terminal a command line assumes is not there either.
+
+  Proved by removing the thing rather than by inspection. A test that runs the exported names with subprocess, sockets and the terminal made unavailable fails the moment a function starts depending on one, and it runs in ordinary CI with no browser.
+
+  NFR-0003 already promises the Tool works with no network access. This says where that promise is kept and how it is shown.
+
+  Rejected — a rule that the Tool imports no such module anywhere. Importing is not using, the default parameters of SR-0226 legitimately use both, and a rule that bans the import would push those defaults out to every caller.
+
+  Who pays: nobody today. It records what the Tool already does and stops the next change from taking it away quietly.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: NFR-0003
+  type: relates
+- target: SR-0226
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:f7b3d3112ebdf3e72a29260f7031c51f7ee57d7ec475fad2f7db080034acad60

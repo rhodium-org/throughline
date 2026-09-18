@@ -1,0 +1,30 @@
+uid: SR-0229
+type: system_requirement
+status: ratified
+title: The model a review interface draws is part of the exported names
+text: The items awaiting a signature, each with why it can or cannot be ratified
+  as the graph stands, and the report drawn from that list, shall be among the names
+  the package exports. An interface, at a terminal or in a browser, shall draw that
+  model rather than compute it again.
+rationale: |-
+  The model already exists twice. The cockpit computes which items are ratifiable now, and the browser editor imports that computation from the cockpit's package because the Tool does not offer it. A second copy of "may this be signed?" is the drift the single precondition function (SR-0195) was made to prevent, one layer out.
+
+  It also settles where the line between engine and interface falls. What an interface owns is the drawing: colours, keys, layout, the terminal. What it must not own is the judgement about an item, because that judgement is the Tool's.
+
+  Rejected — leaving the model in the cockpit and letting other programs import it. A browser would then depend on a terminal package it cannot run, which is what it does today.
+
+  Who pays: the cockpit, which loses a copy of the model and gains the Tool's. A browser stops depending on a package built for a terminal.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: SR-0195
+  type: relates
+- target: SR-0224
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:026735f2ab4eb929cf1a254c6aa52d42a6c6480108771dcb9a2e28d76de15153

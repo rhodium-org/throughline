@@ -51,6 +51,14 @@ from .identity import (
     default_ratifier,
 )
 from .inject import InjectError, has_markers, inject_text, referenced_uids
+from .items import (
+    Amendment,
+    amend_item,
+    birth_item,
+    coerce_attr,
+    newly_suspect,
+    parse_attrs,
+)
 from .ratification import change_since_ratification, render_change
 from .model import Link, Register
 from .schema import Schema, SchemaError
@@ -79,6 +87,15 @@ def _version() -> str:
     # One implementation of "what am I running?" serves the library and the CLI
     # alike (SR-0164 / SR-0076), including the +editable marker for a working tree.
     return distribution_version("throughline")
+
+
+# The spellings throughline-compose 0.21.0 imports from this module. The operations
+# live in `throughline.items` now (SR-0224), and nothing new should reach for a
+# command line to find them (SR-0225); these stay until the major release that
+# drops the private surface.
+_parse_attrs = parse_attrs
+_coerce_attr = coerce_attr
+_newly_suspect = newly_suspect
 
 
 def _err(msg: str) -> int:
@@ -534,125 +551,6 @@ def _resolve_value(value, purpose: str, flag: str, *, options=None, default=None
     return raw
 
 
-def _coerce_attr(schema, item_type: str, key: str, raw: str):
-    """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
-    the attribute (SR-0142). An undeclared attribute is stored verbatim as a
-    string; a declared int/float/bool is converted so it round-trips as the right
-    YAML scalar rather than a quoted string, and a declared enum is checked for
-    membership (SR-0023). A value the schema cannot accept is a hard error at
-    creation (fail-fast), not a surprise the loader raises later."""
-    spec = schema.attr(item_type, key)
-    # An undeclared attribute is stored as the text given, which made
-    # `--attr ambiguous=false` a non-empty string and so a flag: asking for no flag
-    # raised one. The Tool reads this attribute as a flag everywhere, so it reads
-    # the value as one here (SR-0223). A project that declares it keeps its kind.
-    default_kind = "bool" if key == AMBIGUOUS_ATTR else "string"
-    kind = spec.kind if spec is not None else default_kind
-    try:
-        if kind == "enum":
-            if raw not in spec.values:
-                raise ValueError(f"not in {list(spec.values)}")
-            return raw
-        if kind == "int":
-            return int(raw)
-        if kind == "float":
-            return float(raw)
-        if kind == "bool":
-            low = raw.strip().lower()
-            if low in ("true", "1", "yes"):
-                return True
-            if low in ("false", "0", "no"):
-                return False
-            raise ValueError(f"expected a boolean, got '{raw}'")
-    except ValueError as e:
-        raise UidError(f"--attr {key}={raw}: {e}") from e
-    return raw
-
-
-def _parse_attrs(schema, item_type: str, pairs: list[str] | None,
-                 *, command: str, declared_only: bool = False) -> dict:
-    """Parse repeated ``--attr KEY=VALUE`` options into a coerced attrs dict.
-
-    ``command`` names the verb doing the setting, so a refusal can say which command
-    owns an attribute it will not write. ``declared_only`` rejects an attribute the
-    item's type does not declare instead of storing it verbatim — what `amend`
-    requires (SR-0144) and what creation deliberately does not, since an attribute
-    an evolving schema has not caught up with is a reasonable thing to author."""
-    attrs: dict = {}
-    for pair in pairs or []:
-        if "=" not in pair:
-            raise UidError(f"--attr expects KEY=VALUE, got '{pair}'")
-        key, raw = pair.split("=", 1)
-        key = key.strip()
-        if not key:
-            raise UidError(f"--attr expects a non-empty key, got '{pair}'")
-        # The ratification record is evidence that a named person took
-        # accountability, and evidence is worth what it costs to forge. No verb but
-        # the one that owns it may write it (SR-0170), and the record of a removed
-        # ambiguity flag is guarded the same way (SR-0213).
-        owned = attribute_owner(key)
-        if owned is not None:
-            record, owner = owned
-            raise UidError(
-                f"--attr {key}: '{key}' is part of the {record} and "
-                f"cannot be set by `tl {command}` — `tl {owner}` owns it")
-        if declared_only and schema.attr(item_type, key) is None:
-            raise UidError(
-                f"--attr {key}: '{item_type}' declares no attribute '{key}'")
-        attrs[key] = _coerce_attr(schema, item_type, key, raw)
-    return attrs
-
-
-def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
-               text: str = "", status: str | None = None,
-               origin: str | None = None, attrs: dict | None = None):
-    """Everything an item receives at birth, in one place (SR-0205), offered to
-    any tool that creates items in a project so `tl new` and a composing tool
-    bear an item identically. ``attrs`` are the author's already-parsed values
-    (see :func:`_parse_attrs`); ``status`` overrides the birth status explicitly.
-    The caller adds grounding links and writes the item."""
-    from .model import Item
-    attrs = dict(attrs or {})
-    # --origin is the canonical way to set provenance, but honour origin given via
-    # --attr too so birth status stays consistent with what actually lands on the
-    # item.
-    origin = origin or attrs.get("origin")
-    # Birth status comes from the project's status roles, never a value fixed in
-    # code (SR-0131); ``status`` overrides it explicitly. A machine-origin item is
-    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
-    # actually engages and a named human must ratify it before it counts; without
-    # this a machine-authored item would enter the ordinary initial status and
-    # silently escape the gate the tool exists to enforce (SR-0141). If the
-    # project declares no 'proposed' role we fall back to 'initial'.
-    has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
-    if status is None:
-        if origin in schema.ai_origins and has_proposed_role:
-            status = schema.status_role("proposed")
-        else:
-            status = schema.status_role("initial")
-    # The flag is the kind's, not the command's (SR-0201): an intent or a
-    # non-goal is born non-normative because its type says so.
-    item = Item(uid=uid, type=item_type, status=status, title=title, text=text,
-                normative=schema.is_normative(item_type))
-    item.attrs.update(attrs)
-    if origin:
-        item.attrs["origin"] = origin
-    # Apply schema-declared attribute defaults (SR-0138): a default only ever
-    # lands at birth on an attribute the author did not set, so a schema sentinel
-    # (e.g. a priority meaning "no human has decided yet") appears automatically
-    # without overwriting an explicit value.
-    for name, spec in schema.attrs_for(item_type).items():
-        # Never a record a single verb owns, whatever a hand-edited config
-        # declares: only that verb writes it (SR-0170, SR-0213, SR-0219), and
-        # `tl schema attr add` refuses to declare one.
-        if attribute_owner(name) is not None:
-            continue
-        if spec.default is not None and name not in item.attrs:
-            item.attrs[name] = spec.default
-    item._register_prefix = reg.prefix
-    return item
-
-
 def cmd_new(args) -> int:
     try:
         project = load_project(args.path)
@@ -859,27 +757,8 @@ def cmd_review(args) -> int:
     return OK
 
 
-def _newly_suspect(project, uid: str, was: str, now: str) -> list[str]:
-    """Dependents whose confirmed link to ``uid`` this content change has just
-    invalidated (SR-0034, SR-0169).
-
-    A link carries the target's fingerprint as at the last confirmation, so what
-    makes a dependent *newly* suspect is a stamp that matched the old content and
-    does not match the new. A stamp that already disagreed was suspect before this
-    change and is not this change's doing; an unstamped link was never confirmed
-    and so has nothing to lose."""
-    if was == now:
-        return []
-    out = []
-    for it in project.items():
-        if it.is_deleted:
-            continue
-        if any(l.target == uid and l.stamp == was for l in it.links):
-            out.append(it.uid)
-    return sorted(out)
-
-
 def cmd_amend(args) -> int:
+    """Parse, call :func:`throughline.items.amend_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
@@ -890,18 +769,15 @@ def cmd_amend(args) -> int:
     item = project.get(uid)
     if item is None:
         return _err(f"{uid} does not exist")
-    if item.is_deleted:
-        return _err(f"{uid} is deleted — a tombstone is permanent (SR-0093)")
     # Amending nothing is a mistake worth naming. Succeeding silently would let a
     # typo in an option name read as a change that was made.
     if args.title is None and args.text is None and args.rationale is None \
             and not args.attr and not args.unset:
         return _err("amend needs at least one of --title, --text, --rationale, "
                     "--attr or --unset")
-    schema = project.schema
     try:
-        attrs = _parse_attrs(schema, item.type, args.attr,
-                             command="amend", declared_only=True)
+        attrs = parse_attrs(project.schema, item.type, args.attr,
+                            command="amend", declared_only=True)
     except UidError as e:
         return _err(str(e))
     unset = list(dict.fromkeys(name.strip() for name in (args.unset or [])))
@@ -911,78 +787,32 @@ def cmd_amend(args) -> int:
     if both:
         return _err(f"--attr and --unset both name {', '.join(both)} — "
                     "say which you mean")
-    # Every refusal is decided before anything moves, so a refused amendment
-    # changes nothing. An origin leaves the machine-origin set only by ratification
-    # (SR-0208), the ambiguity flag leaves an item only by clarification (SR-0213),
-    # and removal stops at the attributes a gate reads (SR-0206).
-    if "origin" in attrs:
-        refusal = origin_change_refusal(schema, item, attrs["origin"])
-        if refusal is not None:
-            return _err(refusal)
-    if "ambiguous" in attrs:
-        refusal = ambiguity_change_refusal(item, attrs["ambiguous"])
-        if refusal is not None:
-            return _err(refusal)
-    for name in unset:
-        refusal = attribute_removal_refusal(schema, item, name)
-        if refusal is not None:
-            return _err(refusal)
-
-    before = fingerprint(item, schema)
-    was_reviewed = item.reviewed is not None
-    changed: list[str] = []
-    # None means "option not given"; an empty string is a real value that clears the
-    # field, which is the only way to withdraw a rationale without opening the YAML.
-    if args.title is not None and args.title != item.title:
-        item.title = args.title
-        changed.append("title")
-    if args.text is not None and args.text != item.text:
-        item.text = args.text
-        changed.append("text")
-    if args.rationale is not None and args.rationale != item.rationale:
-        item.rationale = args.rationale
-        changed.append("rationale")
-    for key, value in attrs.items():
-        if item.attrs.get(key) != value:
-            item.attrs[key] = value
-            changed.append(key)
-    # Removal reaches an attribute the type no longer declares (SR-0206), which is
-    # what a withdrawn attribute leaves behind and what nothing could clear before.
-    for name in unset:
-        del item.attrs[name]
-        changed.append(f"{name} (unset)")
-    if not changed:
+    try:
+        result = amend_item(project, uid, title=args.title, text=args.text,
+                            rationale=args.rationale, attrs=attrs, unset=unset)
+    except (ProjectError, GroundingError, SchemaError, UidError) as e:
+        return _err(str(e))
+    if not result.changed:
         print(f"{uid} already says that — nothing changed")
         return OK
-
-    now = fingerprint(item, schema)
-    suspects = _newly_suspect(project, uid, before, now)
-    # A review confirms content, so content that has moved is no longer confirmed
-    # (SR-0038, SR-0144). Only a normative change can invalidate it — retitling
-    # leaves the fingerprint alone, and clearing a review it did not disturb would
-    # cost the author a re-review for nothing.
-    review_cleared = was_reviewed and now != before
-    if review_cleared:
-        item.reviewed = None
-    write_item(item, project.register_of(uid))
+    write_item(project.get(uid), project.register_of(uid))
 
     # What the change cost, reported and not asked about (SR-0169). The gate stays
     # where it already stands — `check`, and the re-ratification that shows what
     # moved before it asks for a signature.
-    print(f"amended {uid} — {', '.join(changed)}")
-    if now == before:
+    print(f"amended {uid} — {', '.join(result.changed)}")
+    if not result.normative_change:
         print("  normative content unchanged — nothing was made suspect")
     else:
-        if suspects:
-            print(f"  {len(suspects)} dependent item(s) now suspect: "
-                  f"{', '.join(suspects)}")
+        if result.suspects:
+            print(f"  {len(result.suspects)} dependent item(s) now suspect: "
+                  f"{', '.join(result.suspects)}")
         else:
             print("  no dependent item was confirmed against the old content")
-        if review_cleared:
+        if result.review_cleared:
             print("  review record cleared — `tl review` to confirm the new wording")
-        stamp = item.attrs.get("ratified_fingerprint")
-        if stamp and stamp != now:
-            who = item.attrs.get("ratified_by") or "a human"
+        if result.ratification_stale:
+            who = result.ratifier or "a human"
             print(f"  ratification by {who} no longer matches this content — "
                   f"`tl ratify {uid}` shows what moved and asks again")
     return OK

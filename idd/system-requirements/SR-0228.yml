@@ -1,0 +1,32 @@
+uid: SR-0228
+type: system_requirement
+status: ratified
+title: The exported names are listed in the documentation, and a change to the list
+  fails the build
+text: The names the package exports shall be listed in the Tool's published documentation,
+  and the Tool shall carry a test that fails when what the package exports differs
+  from that list. A name leaves the list only by a release that says so.
+rationale: |-
+  NFR-0011 counts the library API as part of the compatibility surface, and SR-0061 asks for it to be documented. Neither has ever pointed at a list, so whether a change broke a caller has been a judgement made afresh each time — most recently over whether removing an unexported function needed a major release.
+
+  A list nobody checks drifts, so the test is the requirement. Failing the build on a difference makes adding a name a decision rather than an accident, and taking one away impossible to do quietly.
+
+  Rejected — treating every importable name as the interface. That makes each internal rename a breaking change, which is the position the family is trying to leave.
+
+  Who pays: whoever adds an exported name updates one line of documentation. In exchange, an internal refactor stops being a release.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: NFR-0011
+  type: relates
+- target: SR-0224
+  type: relates
+- target: SR-0061
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:ce50e8bd42d65f30cc002c435f5329b94fb840be57351647e0cab39db5136616

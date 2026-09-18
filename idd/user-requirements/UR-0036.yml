@@ -1,0 +1,35 @@
+uid: UR-0036
+type: user_requirement
+status: ratified
+title: Another program can use the Tool through a named interface that returns data
+text: A program embedding the Tool shall be able to perform every operation the Tool
+  performs, and read everything it reports, through an interface that returns data
+  rather than printed text. The interface shall name what a caller may rely on. It
+  shall work where the caller has no terminal, no subprocess and no network of its
+  own. A caller shall not need anything the interface does not name.
+rationale: |-
+  The only complete interface today is the command line. The browser editor drives it in process and reads what it prints, and where printed text will not do it imports private names from three packages: `throughline.storage.read_project`, `throughline_compose.sources.parse_sources`, `throughline_ratify.core`. Every rename inside those packages is then a release nobody meant to make, and the editor pins exact wheels to protect itself from one.
+
+  A browser runtime is the case that forces the interface to be honest. Under Pyodide there is no subprocess, no socket and no terminal, so work needing them belongs to the caller, not to the Tool.
+
+  Naming what a caller may rely on is what makes a release cheap. NFR-0011 already counts the library API as part of the compatibility surface and SR-0061 already asks for it to be documented; neither has ever pointed at anything, so every change has been a judgement about whether it broke someone.
+
+  Rejected — leaving the command line as the interface for programs. Printed text is not a contract: it changes to serve readers, and a caller parsing it cannot tell a rewording from a change of behaviour.
+
+  Rejected — a second distribution for embedders. The functions are the ones the command line already calls, and a second copy of the Tool's decisions is what this family has just spent a week paying for.
+
+  Who pays: the maintainer, who must keep the named interface steady or change it deliberately, and any caller relying on names the Tool never offered. Measured 2026-09-18: outside this repo family, no public code imports the Tool at all, and the browser editor is the only such caller inside it.
+normative: true
+links:
+- target: BN-0007
+  type: derives_from
+- target: SR-0061
+  type: relates
+- target: NFR-0011
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8358b174843cf1caf38f8301677ca67ddf0106cc18030fea6a86ee0f02c3417f

@@ -1,0 +1,33 @@
+uid: SR-0226
+type: system_requirement
+status: ratified
+title: Work the host environment provides is taken as a parameter
+text: Where an operation needs something only the host environment can provide —
+  reaching a source held elsewhere, or the identity the repository signs with — the
+  Tool shall take that work as a parameter, with a default for an ordinary environment.
+  A caller that has no subprocess and no network shall be able to supply its own
+  and get the same operation.
+rationale: |-
+  Two things in the Tool reach outside the process: fetching a source that lives in another repository, and asking git which identity the repository signs with. Both fail in a browser, and both are things a caller can do for itself there.
+
+  The composing tool already proved the shape with its resolver seam, which the browser editor registers its own fetcher against. This says the same for the Tool as a whole rather than for one package.
+
+  Rejected — detecting the environment and choosing a strategy inside the Tool. The Tool would be guessing at what the caller can do, and a wrong guess is a hang or a crash in a place the caller cannot reach.
+
+  Rejected — leaving these operations out of the interface. They are the operations a composing consumer and a browser most need.
+
+  Who pays: a caller in an ordinary environment pays nothing, because the default is what happens today.
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: SR-0061
+  type: relates
+- target: NFR-0003
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8fc5edbbfbaf8e8021660db58b8d867c0dda9ec4d86ca66da70675a77ed83623

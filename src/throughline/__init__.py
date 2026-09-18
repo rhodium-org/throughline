@@ -8,23 +8,61 @@ CLI (``throughline.cli``) is the primary entry point.
 """
 from __future__ import annotations
 
+from .dump import build_dump
 from .fingerprint import fingerprint
 from .graph import Index
 from .grounding import (
     GroundingError,
+    ambiguity_report,
+    attribute_owner,
     clarify,
     flag,
+    grounding_gap,
     invalidate,
+    is_flagged_ambiguous,
+    is_unserved,
+    ratification_obstacle,
     ratify,
     reaches_root,
+    set_status,
+    transition_refusal,
     withdraw,
 )
+from .identity import (
+    IdentityError,
+    default_ratifier,
+    git_identity,
+    normalise_identifier,
+)
+from .inject import (
+    InjectError,
+    TargetResolver,
+    has_markers,
+    inject_text,
+    referenced_uids,
+    register_directive,
+    render_item,
+)
+from .items import (
+    Amendment,
+    amend_item,
+    birth_item,
+    coerce_attr,
+    newly_suspect,
+    parse_attrs,
+)
+from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
+from .ratification import change_since_ratification, ratification_is_committed
 from .schema import AttrSpec, LinkRule, Schema, SchemaError
 from .storage import (
+    CONFIG_NAME,
+    MANIFEST_NAME,
     ProjectError,
     init_project,
     load_project,
+    load_project_at_ref,
+    migrate_project,
     read_project,
     write_item,
     write_manifest,
@@ -41,16 +79,39 @@ from .version import distribution_version, is_editable
 # release number for a working tree is the same wrong answer in a quieter form.
 __version__ = distribution_version("throughline")
 
+# What this package offers a program embedding the Tool (SR-0224). It is the
+# compatibility surface NFR-0011 names, listed in docs/referenced-resource/
+# 10_library_api.md, and a test fails when the two disagree (SR-0228).
 __all__ = [
+    # the model and its storage
     "Register", "Item", "Link", "Project",
-    "load_project", "read_project", "init_project", "write_item", "write_manifest",
-    "ProjectError",
-    "Index", "fingerprint",
+    "load_project", "read_project", "load_project_at_ref", "init_project",
+    "migrate_project", "write_item", "write_manifest",
+    "ProjectError", "CONFIG_NAME", "MANIFEST_NAME",
+    # identity of an item
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
-    "validate", "Finding", "is_external", "is_namespace_qualified",
+    "Index", "fingerprint",
+    # the schema a project declares
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
-    "GroundingError", "reaches_root", "ratify", "invalidate", "withdraw",
-    "flag", "clarify",
+    # creating and changing an item
+    "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
+    "newly_suspect",
+    "add_link", "remove_link", "retype_link", "LinkError",
+    # the gate
+    "validate", "Finding", "is_external", "is_namespace_qualified",
+    # the grounding layer
+    "GroundingError", "reaches_root", "grounding_gap", "is_unserved",
+    "set_status", "transition_refusal",
+    "ratify", "ratification_obstacle", "invalidate", "withdraw",
+    "flag", "clarify", "is_flagged_ambiguous", "ambiguity_report",
+    "attribute_owner",
+    "change_since_ratification", "ratification_is_committed",
+    # who signs
+    "default_ratifier", "git_identity", "normalise_identifier", "IdentityError",
+    # publishing
+    "inject_text", "referenced_uids", "has_markers", "render_item",
+    "register_directive", "TargetResolver", "InjectError", "build_dump",
+    # the running build
     "distribution_version", "is_editable",
     "__version__",
 ]
