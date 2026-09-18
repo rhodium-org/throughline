@@ -2136,9 +2136,36 @@ def build_parser() -> argparse.ArgumentParser:
                           if name.startswith("cmd_") and callable(obj)})
 
 
+def _extend_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """The command-line additions composition makes (SR-0230, SR-0236): `agentinfo`
+    as a second spelling of `context`, and `--local` on `query` and `dump`.
+
+    Made here, by `main`, rather than in `build_parser`, because throughline-compose
+    0.21.0 builds this parser and adds these same names itself; two owners of one
+    subcommand or one option string refuse each other, and 3.11.0 shipped exactly
+    that collision. Each addition is skipped where the name is already present, so
+    the old package keeps working on this core until the next major release."""
+    sub = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+    if "agentinfo" not in sub.choices:
+        ai = sub.add_parser(
+            "agentinfo",
+            help="alias for `context` — emit the agent brief (IDD + composition)")
+        ai.set_defaults(func=cmd_context, cmd="context")
+    for name, text in (
+        ("query", "list only this project's own items, not the ones it borrows "
+                  "through a source"),
+        ("dump", "export only this project's own items, not the ones it borrows "
+                 "through a source"),
+    ):
+        p = sub.choices[name]
+        if not any("--local" in a.option_strings for a in p._actions):
+            p.add_argument("--local", action="store_true", help=text)
+    return parser
+
+
 def main(argv: list[str] | None = None) -> int:
     force_utf8_io()
-    parser = build_parser()
+    parser = _extend_parser(build_parser())
     args = parser.parse_args(argv)
     # A union-aware command runs over the composed union when the project declares
     # sources and is the ordinary command when it declares none (SR-0230). argparse

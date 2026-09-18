@@ -315,9 +315,6 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.add_argument("--all", action="store_true",
                    help="include deleted (tombstoned) items")
-    s.add_argument("--local", action="store_true",
-                   help="list only this project's own items, not the ones it "
-                        "borrows through a source")
     s.set_defaults(func=handlers.get("cmd_query"))
 
     s = sub.add_parser("shape",
@@ -331,9 +328,6 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
              "(SR-0055) — the sanctioned interchange surface")
     s.add_argument("-o", "--output", default=None, metavar="FILE",
                    help="write to FILE (default: stdout)")
-    s.add_argument("--local", action="store_true",
-                   help="export only this project's own items, not the ones it "
-                        "borrows through a source")
     s.set_defaults(func=handlers.get("cmd_dump"))
 
     s = sub.add_parser("diagram",
@@ -356,7 +350,7 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.set_defaults(func=handlers.get("cmd_docs"))
 
     s = sub.add_parser(
-        "context", aliases=["agentinfo"],
+        "context",
         help="emit an agent-facing Markdown brief (IDD + this project's model, "
              "and the composition it declares)")
     s.add_argument("uid", nargs="?", default=None,
