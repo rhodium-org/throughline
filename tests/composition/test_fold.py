@@ -234,3 +234,27 @@ def test_the_composition_names_are_exported():
                  "apply_seam", "UnionResolver", "render_sourced"):
         assert name in throughline.__all__, name
         assert hasattr(throughline, name), name
+
+
+# ------------------------------ the old package keeps working on this core
+
+def test_the_shared_parser_leaves_room_for_throughline_compose_0_21():
+    """throughline-compose 0.21.0 builds this parser and then adds `agentinfo` and
+    `--local` on query and dump itself. Until the next major release those
+    additions must not collide with the Tool's own (SR-0231, SR-0236); 3.11.0
+    shipped the collision, and every `tl-compose` call on it failed."""
+    import argparse
+    from throughline.cli import build_parser
+    parser = build_parser()
+    sub = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+    sub.add_parser("agentinfo", help="alias")
+    sub.choices["query"].add_argument("--local", action="store_true")
+    sub.choices["dump"].add_argument("--local", action="store_true")
+    assert "agentinfo" in sub.choices
+
+
+def test_tl_itself_still_offers_agentinfo_and_local(consumer_dir, capsys):
+    assert tl_main(["-C", str(consumer_dir), "query", "--local"]) == 0
+    assert "local only" in capsys.readouterr().err
+    assert tl_main(["-C", str(consumer_dir), "agentinfo"]) == 0
+    assert "Namespaces bound in this union" in capsys.readouterr().out
