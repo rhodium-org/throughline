@@ -88,6 +88,23 @@ from .ratification import change_since_ratification, render_change
 from .model import Link, Register
 from .schema import Schema, SchemaError
 from . import schema_ops
+from .composition import (
+    UnionResolver,
+    bound_section,
+    composed_check_summary,
+    composition_brief,
+    describe_binding,
+    dump_composition,
+    local_view,
+    owning_source,
+    resolve_sources,
+    union_uid,
+    union_view,
+)
+from .resolvers import ResolverError
+from .seam import SeamError, apply_seam, parse_seam
+from .sources import SourceError, parse_sources
+from .union import ComposeError, build_union, translate_finding
 from .storage import (
     CONFIG_NAME,
     MANIFEST_NAME,
@@ -109,6 +126,7 @@ from .validate import (
     WARNING,
     FilterError,
     eval_filter,
+    is_namespace_qualified,
     query_items,
     validate,
 )
@@ -1403,6 +1421,712 @@ def cmd_status(args) -> int:
 # ------------------------------------------------------------------------ parse
 
 
+# ------------------------------------------------------------------------------
+# Working a project that declares sources (SR-0230). Each union-aware command
+# below composes the consumer with its sources and runs the same operation over
+# the union; with no sources declared every one of them is the local command
+# above, so a project that declares none is unchanged in every answer.
+# ------------------------------------------------------------------------------
+
+
+def _declared_sources(args):
+    """Load the consumer and read its ``[[sources]]``: ``(consumer, sources)``, or
+    ``(None, rc)`` when loading or parsing failed and the error is already reported."""
+    try:
+        consumer = load_project(args.path)
+    except ProjectError as e:
+        return None, _err(str(e))
+    try:
+        return consumer, parse_sources(consumer)
+    except SourceError as e:
+        return None, _err(str(e))
+
+
+def _resolve_union(consumer, sources, root):
+    """Resolve ``sources`` and fold them into ``consumer``: ``(resolution, union,
+    None)``, or ``(None, None, rc)`` with the failure reported in the composer's own
+    vocabulary (SR-0230, SR-0232)."""
+    try:
+        res = resolve_sources(sources, Path(root))
+    except ResolverError as e:
+        return None, None, _err(str(e))
+    try:
+        union = build_union(consumer, res.projects(), res.labels)
+    except ComposeError as e:
+        return None, None, _err(str(e))
+    return res, union, None
+
+
+def _composed_check(args) -> int:
+    """Check the union (SR-0230): the unchanged validator over consumer plus sources,
+    the seam deciding which findings the consumer sees, every finding in
+    ``namespace:UID`` vocabulary, and the summary computed over the union."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_check(args)
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    # The consumer's own widening of the seam, read before anything is judged so a
+    # misspelled rule name is refused rather than left silently never firing.
+    try:
+        extra_seam_rules = parse_seam(consumer)
+    except SeamError as e:
+        return _err(str(e))
+
+    # Publication coverage is read over the union so a document may cite a
+    # borrowed item, and by the same `[docs] paths` the consumer configured.
+    published = referenced_uids(union.project)  # None unless [docs] paths configured
+    # The baseline rules run over the consumer's own items exactly as a standalone
+    # check runs them (SR-0209). Borrowed items are not in the baseline, so they are
+    # never judged by it.
+    try:
+        baseline = read_baseline(consumer, ref=getattr(args, "base", "HEAD"),
+                                 base_dir=getattr(args, "base_dir", None))
+    except ProjectError as e:
+        return _err(str(e))
+    baseline_line = baseline_note(consumer.schema, baseline)
+    findings = validate(union.project, strict=args.strict, baseline=baseline.statuses,
+                        published=published)
+    # Report against a borrowed item only what this consumer can act on, and let a
+    # local item grounded through a source count as grounded, widened by any rule
+    # the consumer declared under [seam]. The same index then serves the summary,
+    # so the headline and the findings are walked over one graph.
+    index = Index.build(union.project)
+    findings, suppressed, rescued = apply_seam(
+        findings, union, union.project.schema, index, extra_seam_rules
+    )
+    pattern = union.pattern()
+    findings = [translate_finding(f, union, pattern) for f in findings]
+
+    if getattr(args, "format", "text") == "json":
+        print(json.dumps([f.to_dict() for f in findings], indent=2))
+        if baseline_line:
+            print(baseline_line, file=sys.stderr)
+        return FINDINGS if any(f.severity == ERROR for f in findings) else OK
+
+    for f in sorted(findings, key=lambda x: (x.severity != ERROR, x.uid)):
+        print(f)
+    sys.stdout.flush()
+    errs = sum(1 for f in findings if f.severity == ERROR)
+    warns = len(findings) - errs
+    if not getattr(args, "quiet", False):
+        for line in composed_check_summary(union, index):
+            print(line, file=sys.stderr)
+        # Every bound namespace in bind order, a transitive one with the path that
+        # carried it in, then what the walk folded or ignored.
+        names = ", ".join(describe_binding(res, ns) for ns in res.resolved)
+        print(f"\ntl check · {len(res.resolved)} source(s) composed: {names}",
+              file=sys.stderr)
+        for note in res.notices:
+            print(f"  note: {note}", file=sys.stderr)
+    if baseline_line:
+        print(f"\n{baseline_line}", file=sys.stderr)
+    tally = f"\n{errs} error(s), {warns} warning(s)"
+    if not getattr(args, "quiet", False) and errs == 0:
+        tally += "  — composed graph is sound" + (" (strict)" if args.strict else "")
+    print(tally, file=sys.stderr)
+    return FINDINGS if any(f.severity == ERROR for f in findings) else OK
+
+
+def _query_dict(item) -> dict:
+    """One matched item of the display view as data. The item already names itself
+    as the composer does; what the dict adds is the owning source as its own field,
+    so a consumer of the JSON reads provenance rather than parsing it back out of a
+    UID."""
+    d = item.to_dict()
+    d["source"] = owning_source(item.uid)
+    return d
+
+
+def _composed_query(args) -> int:
+    """List the items matching a filter over the composed union (throughline-compose
+    SR-0037): a borrowed clause is findable and shown as ``namespace:UID``;
+    ``--local`` narrows *which items are listed*, not which graph they are judged in
+    (the filter's link predicates are evaluated over the union either way); and the
+    count says which scope it answered over, in JSON mode too, on stderr."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_query(args)
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    view = union.displayed()
+    live = [it for it in view.items() if args.all or not it.is_deleted]
+    local = [it for it in live if not is_namespace_qualified(it.uid)]
+    pool = local if args.local else live
+
+    index = Index.build(view)
+    try:
+        matched = [it for it in pool if eval_filter(it, args.expr, index)]
+    except FilterError as e:
+        return _err(f"bad filter expression: {e}")
+    # Local UIDs are uppercase and namespaces lowercase, so sorting by the name the
+    # composer reads lists their own items first, then groups each source together.
+    matched.sort(key=lambda it: it.uid)
+
+    if args.format == "json":
+        print(json.dumps([_query_dict(it) for it in matched], indent=2, default=str))
+    else:
+        for it in matched:
+            title = f"  {it.title}" if it.title else ""
+            print(f"{it.uid}  [{it.type}/{it.status}]{title}")
+        sys.stdout.flush()
+
+    n_sources = len(res.resolved)
+    if args.local:
+        scope = (f"local only · {len(live) - len(local)} borrowed item(s) across "
+                 f"{n_sources} source(s) not searched — drop --local to search them")
+    else:
+        borrowed = sum(1 for it in matched if is_namespace_qualified(it.uid))
+        scope = (f"composed graph · {len(matched) - borrowed} local · "
+                 f"{borrowed} borrowed from {n_sources} source(s)")
+    print(f"\n{len(matched)} item(s) ({scope})", file=sys.stderr)
+    return OK
+
+
+def _composed_dump(args) -> int:
+    """Export the composed graph as one JSON document (throughline-compose SR-0040):
+    every link in the document resolves inside it, items read in ``namespace:UID``
+    vocabulary and carry their owning source as a field, and a ``composition`` block
+    states the scope that was answered over. ``--local`` narrows the document to the
+    consumer's own items and records the narrowing in the document."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_dump(args)
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    view = union.displayed()
+    composition = dump_composition(res, view, local=args.local)
+    data = build_dump(local_view(view, consumer) if args.local else view, _version())
+    for item in data["items"]:
+        item["source"] = owning_source(item["uid"])
+    data["composition"] = composition
+
+    text = json.dumps(data, indent=2, default=str, sort_keys=False)
+    if args.output:
+        Path(args.output).write_text(text + "\n", encoding="utf-8")
+        print(f"wrote {args.output}", file=sys.stderr)
+    else:
+        print(text)
+    return OK
+
+
+def _composed_docs(args) -> int:
+    """Inject the consumer's documents, resolving tl:matrix target cells and the
+    tl:sourced mirror over the union (SR-0110, SR-0235). Injection is over the
+    *local* consumer project — counts, tables and rows are byte-identical to a
+    standalone ``tl docs`` — but a namespace-qualified target renders the borrowed
+    clause's own reference number, and a mirrored clause its full block."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_docs(args)
+
+    try:
+        res = resolve_sources(sources, Path(args.path))
+    except ResolverError as e:
+        return _err(str(e))
+    return cmd_docs(args, resolver=UnionResolver(consumer, res.projects(), res.labels))
+
+
+def _composed_trace(args) -> int:
+    """Walk an item to its 'why' over the composed union (throughline-compose
+    SR-0010, SR-0020): a link whose target is a borrowed clause resolves *into* that
+    source, displayed in ``namespace:UID`` vocabulary with the clause's own type,
+    status and title, and the walk stops at the source boundary."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_trace(args)
+
+    uid = _resolve_uid(consumer, args.uid, "trace", "UID")
+    if uid is None:
+        return USAGE
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    project = union.project
+    start = union_uid(union, uid)
+    if project.get(start) is None:
+        return _err(f"{uid} does not exist")
+
+    # Show a borrowed clause but stop at the source boundary: a consumer item
+    # expands into its links; a composed source clause is rendered in the source's
+    # own vocabulary and its source-internal links are not walked.
+    local_uids = {it.uid for it in consumer.items()}
+    render_trace(project, start, direction=args.direction, max_depth=args.depth or 0,
+                 uid_display=union.qualified, expand=lambda u: u in local_uids)
+    return OK
+
+
+def _composed_subgraph(args) -> int:
+    """The neighbourhood of one item over the composed union (throughline-compose
+    SR-0041): both directed closures plus the links joining their members, in
+    ``namespace:UID`` vocabulary. The item the composer *named* is always walked, so
+    naming a borrowed clause answers which local items adopt it; everything reached
+    from it that is borrowed is not walked in turn."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_subgraph(args)
+
+    uid = _resolve_uid(consumer, args.uid, "show the neighbourhood of", "UID")
+    if uid is None:
+        return USAGE
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    project = union.project
+    start = union_uid(union, uid)
+    if project.get(start) is None:
+        return _err(f"{uid} does not exist")
+
+    local_uids = {it.uid for it in consumer.items()}
+    types = set(args.link_type) if args.link_type else None
+    view = Index.build(project).subgraph(start, types, args.depth or 0,
+                                         expand=lambda u: u in local_uids)
+    if args.format == "json":
+        print(json.dumps(subgraph_json(project, view, union.qualified), indent=2))
+    else:
+        render_subgraph(project, view, uid_display=union.qualified)
+    return OK
+
+
+def _composed_ratify(args) -> int:
+    """Ratify an item, handing the accountability gate the union as its grounding
+    view (SR-0151): an item whose grounding chain reaches a root only *through* a
+    composed source is no longer refused as orphaned. It is the identical act — same
+    refusals, same fingerprint, same record — merely able to see further, and it
+    signs the consumer's own item, never a borrowed one."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_ratify(args)
+
+    # Several items in one run (SR-0199); the picker still offers one when none is
+    # named.
+    uids = list(args.uids)
+    if not uids:
+        uid = _resolve_uid(consumer, None, "ratify", "UID")
+        if uid is None:
+            return USAGE
+        uids = [uid]
+    for uid in uids:
+        if consumer.get(uid) is None:  # fail before resolving sources over the network
+            return _err(f"{uid} does not exist"
+                        + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
+    # The same default the standalone command offers: the identity this repository
+    # already signs with, not the operating-system account name.
+    by = _resolve_value(args.by, "ratifier", "--by",
+                        default=default_ratifier(args.path))
+    if by is None:
+        return USAGE
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    # The union is built once for the run; every item is judged against the same
+    # graph. The gate is asked for all of them before any is written, so a run that
+    # cannot complete writes nothing.
+    index = Index.build(union.project)
+    for uid in uids:
+        obstacle = ratification_obstacle(consumer.schema, index, consumer.get(uid),
+                                         replacing=getattr(args, "replacing", False))
+        if obstacle is not None:
+            return _err(obstacle + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
+    for uid in uids:
+        try:
+            item = ratify(consumer, uid, by, index=index,
+                          by_id=getattr(args, "by_id", None),
+                          replacing=getattr(args, "replacing", False))
+        except IdentityError as e:
+            return _err(str(e))
+        except GroundingError as e:
+            return _err(str(e))
+        write_item(item, consumer.register_of(uid))
+        identifier = item.attrs.get(RATIFIED_ID_ATTR)
+        print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
+    return OK
+
+
+def _composed_migrate(args) -> int:
+    """Migrate the consumer, judging its ratification records over the union
+    (SR-0153).
+
+    The order is forced, not chosen: a project below the current major cannot be
+    loaded at all, so its ``[[sources]]`` cannot be read and no union can be built
+    until the upgrade has run. The standalone repair goes first and does the whole
+    job it can do alone; only then is the union available to justify what it
+    declined. The second pass is safe because the repair is idempotent (SR-0137): a
+    bound record carries a fingerprint and never matches again, so the union pass
+    can only add."""
+    rc = cmd_migrate(args)
+    if rc != OK:
+        return rc
+
+    # The project is loadable from here — the repair has upgraded it if it needed it.
+    consumer, sources = _declared_sources(args)
+    if consumer is None:  # pragma: no cover - cmd_migrate would have failed first
+        return sources
+    if not sources:
+        return OK
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    try:
+        bound = migrate_project(args.path,
+                                index=Index.build(union.project)).bound
+    except ProjectError as e:  # pragma: no cover - the first pass proved it migrates
+        return _err(str(e))
+
+    # Reported separately: what distinguishes these records is *why* they could be
+    # completed — the composition justified an item the consumer's own graph could
+    # not.
+    if bound:
+        print(f"bound {len(bound)} further ratification record(s) whose item is "
+              "grounded through a composed source, and so could not be justified "
+              "by this graph alone:")
+        for uid, stamp in bound.items():
+            print(f"  {uid} = {stamp}")
+    return OK
+
+
+def _composed_link(args) -> int:
+    """Add a link, resolving a cross-source destination over the union (SR-0212): a
+    link up into a borrowed clause is validated against the union (the clause is
+    real, just not local), then stored, namespace-qualified exactly as typed, on the
+    consumer's own item; the source is never written."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_link(args)
+
+    src_uid = _resolve_uid(consumer, args.src, "link from (source)", "SRC")
+    if src_uid is None:
+        return USAGE
+    dst_uid = _resolve_uid(consumer, args.dst, "link to (destination)", "DST")
+    if dst_uid is None:
+        return USAGE
+    src = consumer.get(src_uid)
+    if src is None:  # you may only link *from* one of your own items
+        return _err(f"source {src_uid} does not exist")
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    dst = union.project.get(union_uid(union, dst_uid))
+    if dst is None:
+        return _err(f"target {dst_uid} does not exist")
+
+    link_types = sorted(consumer.schema.link_types) if consumer.schema.link_types else None
+    ltype = _resolve_value(args.type, "link type", "--type", options=link_types)
+    if ltype is None:
+        return USAGE
+    view = union_view(union)
+    try:
+        if getattr(args, "retype", False):
+            old_type = retype_link(consumer, src_uid, dst_uid, ltype,
+                                   stamp=args.stamp, view=view)
+            print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
+                  + (" (stamped)" if args.stamp else ""))
+            return OK
+        outcome = add_link(consumer, src_uid, dst_uid, ltype, stamp=args.stamp,
+                           view=view)
+    except LinkError as e:
+        return _err(str(e))
+    if outcome == "restamped":
+        print(f"restamped {src_uid} --{ltype}--> {dst_uid}")
+    else:
+        print(f"linked {src_uid} --{ltype}--> {dst_uid}"
+              + (" (stamped)" if args.stamp else ""))
+    return OK
+
+
+def _composed_unlink(args) -> int:
+    """Remove a link, judged over the union (SR-0211): an item grounded both locally
+    and through a source is not refused a removal that leaves it grounded. The link
+    is removed from the consumer's item; the source is never written."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_unlink(args)
+
+    src_uid = _resolve_uid(consumer, args.src, "unlink from (source)", "SRC")
+    if src_uid is None:
+        return USAGE
+    dst_uid = _resolve_uid(consumer, args.dst, "unlink to (destination)", "DST")
+    if dst_uid is None:
+        return USAGE
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+    try:
+        removed = remove_link(consumer, src_uid, dst_uid, args.type,
+                              view=union_view(union))
+    except LinkError as e:
+        return _err(str(e))
+    for ltype in removed:
+        print(f"unlinked {src_uid} --{ltype}--> {dst_uid}")
+    return OK
+
+
+def _composed_new(args) -> int:
+    """Create an item, resolving an explicit cross-source ``--ground`` target over
+    the union (SR-0205): a grounding target naming a borrowed clause is validated
+    against the union rather than the bare local graph, so an item can be grounded
+    *into* a source at birth. The item is written to the consumer only. With no
+    namespace-qualified ``--ground`` target this is the standalone command, so local
+    grounding and the interactive picker keep its exact behaviour."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+
+    qualified_grounds = [t for t in (args.ground or []) if is_namespace_qualified(t)]
+    if not sources or not qualified_grounds:
+        return cmd_new(args)  # nothing cross-source to resolve
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    reg = consumer.registers.get(args.prefix)
+    if reg is None:
+        return _err(f"no register with prefix '{args.prefix}' (run `tl register new`)")
+    if args.uid:
+        try:
+            pfx, _ = parse_uid(args.uid)
+        except UidError as e:
+            return _err(str(e))
+        if pfx != args.prefix:
+            return _err(f"--uid {args.uid} does not match prefix {args.prefix}")
+        if consumer.get(args.uid) is not None:
+            return _err(f"{args.uid} already exists")
+        uid = args.uid
+    else:
+        uid = next_uid(reg)
+
+    # The birth is the one function `tl new` itself uses (SR-0205): the proposed
+    # status for a machine origin, the author's attributes, the schema's defaults
+    # and the type's normative flag. Only the cross-source grounding below differs.
+    try:
+        attrs = parse_attrs(consumer.schema, args.type, args.attr, command="new")
+    except UidError as e:
+        return _err(str(e))
+    item = birth_item(consumer.schema, reg, uid, item_type=args.type,
+                      title=args.title or "", text=args.text or "",
+                      status=args.status, origin=args.origin, attrs=attrs)
+
+    # Explicit grounding is always honoured and never silently dropped (SR-0091): a
+    # local target must exist locally, a namespace-qualified one in the union.
+    default_type = args.ground_type or "derives_from"
+    grounds: list[tuple[str, str]] = []
+    for target in args.ground:
+        exists = (union.project.get(union_uid(union, target)) is not None
+                  if is_namespace_qualified(target)
+                  else consumer.get(target) is not None)
+        if not exists:
+            return _err(f"grounding target {target} does not exist")
+        grounds.append((target, default_type))
+    for target, ltype in grounds:
+        item.links.append(Link(target=target, type=ltype))
+
+    reg.items[uid] = item
+    path = write_item(item, reg)
+    print(f"created {uid} -> {path}")
+    for target, ltype in grounds:
+        print(f"  grounded: {uid} --{ltype}--> {target}")
+    return OK
+
+
+def _composed_context(args) -> int:
+    """Emit the brief, then the composition section and the live listing of every
+    namespace this project's union binds (SR-0230). With no sources declared the
+    brief stays the standalone brief plus a short note that composition is
+    available but unused. Given a UID, the item section is computed over the
+    *union*, so a borrowed clause is not printed as unresolved a few lines above
+    the sentence that says composition resolves it."""
+    import contextlib
+    import io
+
+    try:
+        consumer = load_project(args.path)
+        sources = parse_sources(consumer)
+    except (ProjectError, SourceError):
+        consumer, sources = None, []
+    # A project that declares no sources gets the ordinary brief, byte for byte
+    # (SR-0230): composition is described only where there is a composition.
+    if not sources:
+        return cmd_context(args)
+
+    uid = getattr(args, "uid", None)
+    try:
+        res = resolve_sources(sources, Path(args.path))
+    except ResolverError as e:
+        return _err(str(e))
+    # The standalone command renders the brief; when there is a union to answer
+    # over, the item section is rendered here instead, so the standalone command is
+    # never handed a UID it would answer locally.
+    composed_section = None
+    if uid is not None:
+        try:
+            union = build_union(consumer, res.projects(), res.labels)
+        except ComposeError as e:
+            return _err(str(e))
+        start = union_uid(union, uid)
+        if union.project.get(start) is None:
+            return _err(f"{uid} does not exist")
+        local_uids = {it.uid for it in consumer.items()}
+        view = Index.build(union.project).subgraph(
+            start, expand=lambda u: u in local_uids)
+        composed_section = context_item_section(
+            union.project, view, uid_display=union.qualified)
+        args.uid = None
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = cmd_context(args)
+    sys.stdout.write(buf.getvalue())
+    if rc != OK:
+        return rc
+    if composed_section is not None:
+        sys.stdout.write("\n" + composed_section)
+    sys.stdout.write("\n" + composition_brief(_ctx_union_commands()) + "\n"
+                     + bound_section(res) + "\n")
+    sys.stdout.flush()
+    return OK
+
+
+# Every command whose behaviour differs over the composed union, bound in one place
+# to *both* the handler that makes it differ and the sentence the brief tells an
+# agent about it (throughline-compose SR-0025). `main` dispatches through this table
+# and the brief is rendered from it, so a command cannot be given union behaviour
+# without also being described — the two cannot drift, because there is only one of
+# them.
+UNION_COMMANDS: dict[str, tuple] = {
+    "check": (
+        _composed_check,
+        "composes consumer + sources, validates the union with the unchanged "
+        "validator, and reports every finding in `<namespace>:<UID>` vocabulary."),
+    "query": (
+        _composed_query,
+        "lists over the composed graph, so a borrowed clause is findable and is "
+        "shown as `<namespace>:<UID>`; `--local` narrows to your own items, and "
+        "either way the count says which scope it answered over. `ls` is an alias "
+        "for it, and `--format json` carries each item's owning source as a field."),
+    "dump": (
+        _composed_dump,
+        "exports the composed graph, so every link in the document resolves inside "
+        "it; borrowed items read as `<namespace>:<UID>` and carry their owning "
+        "source as a field, and a `composition` block states the scope — which "
+        "sources at which pin, and how many items are your own. `--local` narrows "
+        "the export to your own items and records that it did."),
+    "docs": (
+        _composed_docs,
+        "a `tl:matrix` target cell pointing at a borrowed clause renders that "
+        "clause's own reference number, and `tl:sourced` mirrors the borrowed "
+        "clauses the selected items cite, in full."),
+    "trace": (
+        _composed_trace,
+        "a link into a borrowed clause is followed *into* the source (with its own "
+        "type, status and title) instead of dead-ending at `(unresolved)`."),
+    "subgraph": (
+        _composed_subgraph,
+        "an item's neighbourhood — both directions plus the links between its "
+        "members — is built over the union, so cross-source edges are part of the "
+        "answer. Naming a borrowed clause tells you which of *your* items adopt "
+        "it; the walk then stops at the source boundary, as `trace` does."),
+    "new": (
+        _composed_new,
+        "a `--ground` target naming a borrowed clause is validated against the "
+        "union, so an item can be grounded *into* a source at birth. The item is "
+        "written to your project only."),
+    "link": (
+        _composed_link,
+        "a destination inside a source resolves over the union instead of being "
+        "refused as unknown. The link is stored on *your* item, namespace-"
+        "qualified exactly as typed; the source is never written."),
+    "unlink": (
+        _composed_unlink,
+        "the refusal to leave an item ungrounded is judged over the union, so a "
+        "link to a borrowed clause counts toward an item's grounding. The link is "
+        "removed from *your* item only."),
+    "ratify": (
+        _composed_ratify,
+        "the accountability gate judges your item against the union, so one "
+        "grounded only *through* a source is no longer refused as orphaned. It is "
+        "the identical act — same refusals, same fingerprint — merely able to see "
+        "further, and it signs **your** item, never a borrowed one."),
+    "migrate": (
+        _composed_migrate,
+        "the repair runs first and alone (a project below the current major "
+        "cannot be loaded, so no union exists yet), then a second pass offers it "
+        "the union so a record it declined as ungrounded can be completed."),
+    "context": (
+        _composed_context,
+        "emits the brief unchanged, then this composition section and the "
+        "live listing of every namespace your union binds, with the path that "
+        "carried each in. `agentinfo` is an alias for it."),
+}
+
+# The spellings argparse records for an aliased union-aware command, mapped to the
+# name the table holds it under. argparse records the spelling that was typed, so an
+# alias would otherwise fall through to the local-only command, silently, for the
+# one command whose whole complaint was silence.
+CMD_ALIASES = {"ls": "query", "agentinfo": "context"}
+
+
+def _ctx_union_commands() -> str:
+    """The union-aware command section of the brief, rendered from the dispatch
+    table rather than kept by hand."""
+    return "\n".join([
+        "## Union-aware commands",
+        "",
+        "These operate over the composed union rather than the bare local graph. "
+        "With **no** `[[sources]]` declared every one of them is the ordinary "
+        "command over the local graph:",
+        "",
+        *(f"- **`{name}`** — {note}"
+          for name, (_, note) in sorted(UNION_COMMANDS.items())),
+    ])
+
+
+def composition_uncovered() -> list[str]:
+    """Union-aware commands the brief would not describe. Empty by construction
+    while the dispatch table is the only route to union behaviour; returned rather
+    than raised so the test that gates it decides how to fail, and kept as a check
+    because 'by construction' is a claim, not a guarantee."""
+    rendered = _ctx_union_commands()
+    return [name for name in UNION_COMMANDS if f"`{name}`" not in rendered]
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The command tree with this module's handlers attached. The tree itself lives
     in :mod:`throughline.parser`, which knows nothing about how a command runs
@@ -1416,8 +2140,14 @@ def main(argv: list[str] | None = None) -> int:
     force_utf8_io()
     parser = build_parser()
     args = parser.parse_args(argv)
+    # A union-aware command runs over the composed union when the project declares
+    # sources and is the ordinary command when it declares none (SR-0230). argparse
+    # records the spelling that was typed, so an alias is mapped to the name the
+    # table holds it under.
+    cmd = CMD_ALIASES.get(getattr(args, "cmd", None), getattr(args, "cmd", None))
+    entry = UNION_COMMANDS.get(cmd)
     try:
-        return args.func(args)
+        return entry[0](args) if entry else args.func(args)
     except KeyboardInterrupt:  # pragma: no cover
         return USAGE
 

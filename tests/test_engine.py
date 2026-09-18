@@ -1495,15 +1495,16 @@ def test_item_block_identity_unchanged_without_a_resolver():
     out = inject_text(_inject_project(), "<!-- tl:item FR-1 -->\n<!-- tl:end -->\n")
     assert "**FR-1 — Wizard**" in out
 
-def test_core_does_not_provide_sourced():
-    """SR-0186/NG-0007: tl:sourced needs sources core does not hold, so core does
-    not provide it — and does not stub it. It is reported as unprovided."""
-    from throughline.inject import InjectError, directive_names, inject_text
-    assert "sourced" not in directive_names()
-    with pytest.raises(InjectError) as ei:
-        inject_text(_inject_project(),
-                    "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n")
-    assert "tl:sourced" in str(ei.value)
+def test_the_tool_provides_sourced_now_that_it_holds_the_sources():
+    """SR-0235, honouring NG-0007 the other way round: the Tool holds the sources
+    now, so it provides tl:sourced itself rather than reporting it unprovided. Over
+    a project whose selected items cite no external clause the placeholder renders,
+    and nothing is reached for."""
+    from throughline.inject import directive_names, inject_text
+    assert "sourced" in directive_names()
+    out = inject_text(_inject_project(),
+                      "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n")
+    assert "reference no external clause" in out
 
 def test_unprovided_directive_fails_by_name_not_as_unbalanced():
     """SR-0186: a kind no registered directive provides is recognised by its general
@@ -1526,7 +1527,7 @@ def test_unprovided_directive_message_names_no_front_end():
     from throughline.inject import InjectError, inject_text
     with pytest.raises(InjectError) as ei:
         inject_text(_inject_project(),
-                    "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n")
+                    "<!-- tl:nonesuch type == 'requirement' -->\n<!-- tl:end -->\n")
     assert "compose" not in str(ei.value).lower()
 
 def test_unprovided_directive_writes_nothing(tmp_path, capsys):
@@ -1538,11 +1539,11 @@ def test_unprovided_directive_writes_nothing(tmp_path, capsys):
                     encoding="utf-8")
     before = good.read_text(encoding="utf-8")
     (root / "b_bad.md").write_text(
-        "<!-- tl:sourced type == 'requirement' -->\n<!-- tl:end -->\n",
+        "<!-- tl:nonesuch type == 'requirement' -->\n<!-- tl:end -->\n",
         encoding="utf-8")
     assert _cli(["-C", str(root), "docs"]) == 2
     assert good.read_text(encoding="utf-8") == before
-    assert "tl:sourced" in capsys.readouterr().err
+    assert "tl:nonesuch" in capsys.readouterr().err
 
 def test_register_directive_adds_a_kind():
     """SR-0186: a front end registers a directive of its own and injection renders
