@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from throughline.grounding import GroundingError, ratify
+from throughline.fingerprint import fingerprint
+from throughline.grounding import GroundingError, ratify, set_status
+from throughline.worklist import entry_for
 from throughline.model import Item, Link, Project, Register
 from throughline.schema import SchemaError
 
@@ -182,3 +184,42 @@ def test_an_unknown_key_is_a_configuration_error():
 def test_a_non_table_ratify_section_is_a_configuration_error():
     with pytest.raises(SchemaError, match=r"\[ratify\]"):
         _graph({**_WORKFLOW, "ratify": "in_place"}).schema
+
+
+# --------------------------------------------------------------------------
+# A second signature is recorded where the item stands (SR-0237)
+# --------------------------------------------------------------------------
+
+def _signed_and_done(by="Ann"):
+    """A graph under the workflow, its item signed, then carried to `done` —
+    from which the ratified status (`backlog`) cannot be reached."""
+    p = _graph(_WORKFLOW)
+    item = ratify(p, "X-0002", by=by)
+    assert item.status == "backlog"
+    set_status(p.schema, item, "in_progress")
+    set_status(p.schema, item, "done")
+    return p, item
+
+
+def test_a_re_signature_over_amended_content_is_recorded_where_the_item_stands():
+    p, item = _signed_and_done()
+    item.text = "the words moved after the item was done"
+    assert entry_for(p, item).concern == "stale"
+    assert entry_for(p, item).ratifiable
+    again = ratify(p, "X-0002", by="Bob")
+    assert again.status == "done"
+    assert again.attrs["ratified_by"] == "Bob"
+    assert again.attrs["ratified_fingerprint"] == fingerprint(again, p.schema)
+    assert entry_for(p, again).concern == "ratified"
+
+
+def test_an_unamended_item_past_ratified_has_nothing_to_accept():
+    p, item = _signed_and_done()
+    with pytest.raises(GroundingError, match="nothing to accept"):
+        ratify(p, "X-0002", by="Bob")
+
+
+def test_a_first_signature_that_cannot_reach_ratified_is_still_refused():
+    p = _graph(_WORKFLOW, status="done")
+    with pytest.raises(GroundingError, match="not an allowed transition"):
+        ratify(p, "X-0002", by="Ann")

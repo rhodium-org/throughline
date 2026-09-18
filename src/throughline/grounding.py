@@ -258,7 +258,17 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     refusal = ratification_refusal(schema, idx, item)
     if refusal is not None:
         return refusal
-    already = (item.status == schema.status_role("ratified")
+    # An item the workflow has carried past the ratified status — it holds a
+    # record, it is live, and the ratified status cannot be reached from where it
+    # stands — is already ratified for every purpose here (SR-0237). A suspect
+    # item is not: the ratified status is reachable, and re-signing it is how a
+    # human confirms it again.
+    ratified_status = schema.status_role("ratified")
+    past = (schema.ratify_moves_status
+            and item.attrs.get(RATIFIED_BY_ATTR) is not None
+            and item.status not in schema.dead_statuses()
+            and transition_refusal(schema, item, ratified_status) is not None)
+    already = (item.status == ratified_status or past
                if schema.ratify_moves_status
                else item.attrs.get(RATIFIED_BY_ATTR) is not None)
     if already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema):
@@ -275,9 +285,12 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     # transitions do not let reach the ratified role is refused before anything is
     # rendered or asked (SR-0195) and before any item in a run is written
     # (SR-0199). Only where ratification moves the status: where a project declares
-    # it does not (SR-0172), no move is made and nothing can be in the way.
-    if schema.ratify_moves_status:
-        refusal = transition_refusal(schema, item, schema.status_role("ratified"))
+    # it does not (SR-0172), no move is made and nothing can be in the way. Nor is
+    # anything in the way of a second signature: an item that already holds a
+    # record and has been carried past the ratified status is signed where it
+    # stands, because it is the record that went stale, not the status (SR-0237).
+    if schema.ratify_moves_status and not past:
+        refusal = transition_refusal(schema, item, ratified_status)
         if refusal is not None:
             return refusal
     return None
@@ -337,8 +350,13 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # legally reach the ratified status is refused rather than moved illegally. A
     # project that binds the ratified role to a workflow state turns this off, and
     # the sign-off is then recorded where the item already stands (SR-0172).
+    # A re-signature over amended content on an item the workflow has carried past
+    # the ratified status is recorded where the item stands (SR-0237); the obstacle
+    # check above has already refused every first signature that cannot get there.
     if schema.ratify_moves_status:
-        set_status(schema, item, schema.status_role("ratified"))
+        target = schema.status_role("ratified")
+        if transition_refusal(schema, item, target) is None:
+            set_status(schema, item, target)
     item.attrs[RATIFIED_BY_ATTR] = by
     # A stable identifier for the same human, in its own field and never conflated
     # with the name (SR-0157). Optional, and never invented: a record given none
