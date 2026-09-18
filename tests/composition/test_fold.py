@@ -99,7 +99,16 @@ def test_a_url_source_with_no_subprocess_is_refused_in_the_tools_words(tmp_path,
     with pytest.raises(ResolverError) as exc:
         GitResolver().resolve(src, tmp_path)
     assert "runs no subprocess" in str(exc.value)
-    assert "git" in str(exc.value)
+    assert "git could not be started" in str(exc.value)
+
+
+def test_a_bad_working_directory_is_neither_of_those(tmp_path, monkeypatch):
+    """A cache directory git cannot be run in is the cache's fault; the refusal
+    names the directory rather than blaming git's absence or the platform."""
+    from throughline.resolvers import _git
+    with pytest.raises(ResolverError) as exc:
+        _git("rev-parse", "HEAD", cwd=tmp_path / "not-there")
+    assert "cannot run git in" in str(exc.value)
 
 
 def test_git_missing_from_the_path_is_the_other_sentence(tmp_path, monkeypatch):

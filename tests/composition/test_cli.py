@@ -155,7 +155,7 @@ def test_compose_check_resolves_url_source(consumer_dir, source_dir, tmp_path,
 
     toml = consumer_dir / "throughline.toml"
     toml.write_text(toml.read_text().replace(
-        'path = "../toy-source"', f'url = "{source_dir}"\nref = "v4.0.3"'))
+        'path = "../toy-source"', f'url = "{source_dir.as_posix()}"\nref = "v4.0.3"'))
 
     rc = tlc_main(["-C", str(consumer_dir), "check", "--base", ""])
     assert rc == 0

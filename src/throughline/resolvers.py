@@ -201,7 +201,9 @@ def _cache_dir(url: str, ref: str) -> Path:
     # Key by (url, ref). A short hash guarantees uniqueness; a readable slug of the
     # url's last segment and the ref makes the directory legible on disk.
     digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
-    tail = _slug(url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git"))
+    # The last segment on either separator, so a local repository named by a
+    # Windows path does not put the whole path into the directory name.
+    tail = _slug(re.split(r"[/\\]", url.rstrip("/\\"))[-1].removesuffix(".git"))
     return cache_root() / f"{tail}-{digest}@{_slug(ref)}"
 
 
@@ -219,14 +221,20 @@ def _git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
             cwd=str(cwd) if cwd else None,
             capture_output=True, text=True,
         )
+    except NotADirectoryError as e:
+        raise ResolverError(f"cannot run git in {cwd}: {e.strerror or e}") from e
     except FileNotFoundError as e:
+        # A failed change of directory arrives as the same exception with the
+        # directory as its filename; that is the cache's fault, not git's absence.
+        if cwd is not None and e.filename is not None and str(e.filename) == str(cwd):
+            raise ResolverError(f"cannot run git in {cwd}: {e.strerror or e}") from e
         raise ResolverError(
             "git is not installed here; it is required to fetch url sources") from e
     except OSError as e:
         raise ResolverError(
-            "this platform runs no subprocess, so git cannot fetch a url source "
-            "here; supply a resolver, or stage the source and compose from the "
-            f"cache ({OFFLINE_ENV}=1)") from e
+            f"git could not be started here ({e}), which is what a platform that "
+            "runs no subprocess reports; supply a resolver, or stage the source "
+            f"and compose from the cache ({OFFLINE_ENV}=1)") from e
 
 
 def _fetch(url: str, ref: str, dest: Path) -> None:
