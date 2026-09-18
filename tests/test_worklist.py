@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from throughline import (
+    invalidate,
     CONCERNS,
     Index,
     Link,
@@ -128,6 +129,35 @@ def test_a_withdrawn_signature_puts_the_item_back(graph):
     write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
     entry = _by_uid(worklist(load_project(graph)))["REQ-0001"]
     assert entry.concern in ("proposed", "ready") and entry.ratifiable
+
+
+def test_a_suspect_item_is_awaiting_a_human_again(graph):
+    """An item signed and then made suspect by a cascade is not settled, whatever
+    its record says (SR-0175): the gate would accept a signature on it again, so
+    the worklist offers it, and progress counts it as outstanding — one answer to
+    "may this be signed?", not two (SR-0195, SR-0229)."""
+    project = load_project(graph)
+    ratify(project, "REQ-0001", by="Ada", index=Index.build(project))
+    write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
+    project = load_project(graph)
+    assert "REQ-0001" not in _by_uid(worklist(project))
+    accepted_before, _ = ratification_progress(project)
+
+    project = load_project(graph)
+    invalidate(project, "INT-0001", reason="superseded")
+    for uid in ("INT-0001", "REQ-0001"):
+        write_item(project.get(uid), project.register_of(uid))
+    project = load_project(graph)
+    item = project.get("REQ-0001")
+    assert item.status == project.schema.status_role("suspect")
+    assert item.attrs.get("ratified_by") == "Ada", "the record survives the cascade"
+
+    entry = _by_uid(worklist(project))["REQ-0001"]
+    assert entry.concern in ("ready", "proposed") and entry.ratifiable
+    assert entry.obstacle is None
+    assert not entry.ratified
+    accepted_after, _ = ratification_progress(project)
+    assert accepted_after == accepted_before - 1
 
 
 def test_progress_counts_a_rewritten_signature_as_outstanding(graph):

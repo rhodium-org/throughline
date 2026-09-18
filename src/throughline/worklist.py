@@ -52,14 +52,28 @@ class WorklistEntry:
 
 
 def is_ratified(schema, item) -> bool:
-    """Whether ``item`` carries a human's acceptance. Where ratification advances
-    the status (SR-0172) either the status or the record says so; where a project
-    has declared it does not, the record is the only witness."""
+    """Whether ``item`` carries a human's acceptance that still stands. Where
+    ratification advances the status (SR-0172) either the status or the record
+    says so; where a project has declared it does not, the record is the only
+    witness. An item in the suspect role is not settled whatever its record says:
+    something it rested on was withdrawn (SR-0175), ratify would accept a signature
+    on it again, and a worklist that called it settled would disagree with the
+    gate about the one question both answer (SR-0195, SR-0229)."""
+    if _is_suspect(schema, item):
+        return False
     if item.attrs.get(RATIFIED_BY_ATTR):
         return True
     if not schema.ratify_moves_status:
         return False
     return item.status == schema.status_role("ratified")
+
+
+def _is_suspect(schema, item) -> bool:
+    """Whether ``item`` sits in the suspect role, where a project declares one."""
+    try:
+        return item.status == schema.status_role("suspect")
+    except Exception:  # the role is optional vocabulary; none declared, none held
+        return False
 
 
 def signature_is_stale(schema, item) -> bool:
