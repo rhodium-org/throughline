@@ -919,40 +919,40 @@ def test_link_shape_reports_triples():
 # -------------------------------------------------------------------- diagrams
 
 def test_mermaid_types_renders_observed_edges():
-    from throughline.cli import _mermaid_types
+    from throughline.diagrams import diagram_types
     intent = Item(uid="INT-1", type="intent")
     fr = Item(uid="FR-1", type="requirement",
               links=[Link(target="INT-1", type="derives_from"),
                      Link(target="https://x/y", type="relates")])
     idx = Index.build(_project(_doc("INT", intent), _doc("FR", fr)))
-    src = _mermaid_types(idx)
+    src = diagram_types(idx)
     assert src.startswith("flowchart LR")
     assert "requirement -->|derives_from| intent" in src
     # external targets have no node type, so no edge is emitted for them
     assert "relates" not in src
 
 def test_mermaid_types_none_when_no_internal_edges():
-    from throughline.cli import _mermaid_types
+    from throughline.diagrams import diagram_types
     fr = Item(uid="FR-1", type="requirement",
               links=[Link(target="https://x/y", type="relates")])
     idx = Index.build(_project(_doc("FR", fr)))
-    assert _mermaid_types(idx) is None
+    assert diagram_types(idx) is None
 
 def test_mermaid_transitions_renders_declared_moves():
-    from throughline.cli import _mermaid_transitions
+    from throughline.diagrams import diagram_transitions
     cfg = {"status": {"values": ["draft", "approved", "deleted"]},
            "transitions": {"draft": ["approved", "deleted"],
                            "approved": ["deleted"]}}
     schema = Schema.from_config(cfg)
-    src = _mermaid_transitions(schema)
+    src = diagram_transitions(schema)
     assert src.startswith("stateDiagram-v2")
     assert "draft --> approved" in src
     assert "approved --> deleted" in src
 
 def test_mermaid_transitions_none_when_absent():
-    from throughline.cli import _mermaid_transitions
+    from throughline.diagrams import diagram_transitions
     schema = Schema.from_config({"status": {"values": ["draft", "approved"]}})
-    assert _mermaid_transitions(schema) is None
+    assert diagram_transitions(schema) is None
 
 
 # ------------------------------------------------------------------ agent context

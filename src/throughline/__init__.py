@@ -8,6 +8,8 @@ CLI (``throughline.cli``) is the primary entry point.
 """
 from __future__ import annotations
 
+from . import schema_ops
+from .diagrams import diagram_transitions, diagram_types
 from .dump import build_dump
 from .fingerprint import fingerprint
 from .graph import Index
@@ -35,9 +37,12 @@ from .identity import (
     normalise_identifier,
 )
 from .inject import (
+    DocumentRender,
     InjectError,
     TargetResolver,
+    document_paths,
     has_markers,
+    inject_documents,
     inject_text,
     referenced_uids,
     register_directive,
@@ -72,6 +77,7 @@ from .storage import (
     CONFIG_NAME,
     MANIFEST_NAME,
     ProjectError,
+    create_register,
     init_project,
     load_project,
     load_project_at_ref,
@@ -107,7 +113,7 @@ __all__ = [
     # the model and its storage
     "Register", "Item", "Link", "Project",
     "load_project", "read_project", "load_project_at_ref", "init_project",
-    "migrate_project", "write_item", "write_manifest",
+    "migrate_project", "write_item", "write_manifest", "create_register",
     "ProjectError", "CONFIG_NAME", "MANIFEST_NAME",
     # identity of an item
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
@@ -134,8 +140,10 @@ __all__ = [
     # who signs
     "default_ratifier", "git_identity", "normalise_identifier", "IdentityError",
     # publishing
-    "inject_text", "referenced_uids", "has_markers", "render_item",
-    "register_directive", "TargetResolver", "InjectError", "build_dump",
+    "inject_text", "inject_documents", "document_paths", "DocumentRender",
+    "referenced_uids", "has_markers", "render_item", "register_directive",
+    "TargetResolver", "InjectError", "build_dump",
+    "diagram_types", "diagram_transitions", "schema_ops",
     # the running build
     "distribution_version", "is_editable",
     "__version__",

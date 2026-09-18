@@ -50,7 +50,15 @@ from .identity import (
     IdentityError,
     default_ratifier,
 )
-from .inject import InjectError, has_markers, inject_text, referenced_uids
+from .diagrams import diagram_transitions, diagram_types
+from .inject import (
+    InjectError,
+    document_paths,
+    has_markers,
+    inject_documents,
+    inject_text,
+    referenced_uids,
+)
 from .items import (
     Amendment,
     amend_item,
@@ -74,6 +82,7 @@ from .storage import (
     read_baseline,
     init_project,
     load_project,
+    create_register,
     load_project_at_ref,
     migrate_project,
     write_item,
@@ -306,31 +315,14 @@ def cmd_migrate(args) -> int:
 
 
 def cmd_register_new(args) -> int:
-    root = Path(args.path)
+    """Parse, call :func:`throughline.storage.create_register`, render (SR-0225)."""
     try:
-        project = load_project(root)
+        project = load_project(args.path)
+        reg = create_register(project, args.prefix, args.dir, title=args.title,
+                              digits=args.digits, parent=args.parent)
     except ProjectError as e:
         return _err(str(e))
-    # The prefix must satisfy the UID grammar (doc 06 §3, SR-0140). A prefix that
-    # does not — a single character, say — would be silently accepted here and
-    # then break UID allocation for every item it owns, so we reject it up front.
-    if not valid_prefix(args.prefix):
-        return _err(f"prefix '{args.prefix}' is not a valid UID prefix — expected "
-                    f"{PREFIX_GRAMMAR}; see doc 06 §3")
-    # Prefixes own a UID namespace and must be unique across the project (SR-0101);
-    # a duplicate would make the loader silently drop one register's items.
-    existing = project.registers.get(args.prefix)
-    if existing is not None:
-        return _err(f"prefix '{args.prefix}' is already used by the register at "
-                    f"{existing.path} — prefixes must be unique across the project")
-    reg_dir = root / args.dir
-    if (reg_dir / MANIFEST_NAME).exists():
-        return _err(f"{reg_dir} already has a {MANIFEST_NAME}")
-    reg_dir.mkdir(parents=True, exist_ok=True)
-    reg = Register(prefix=args.prefix, title=args.title or args.prefix,
-                   digits=args.digits, parent=args.parent, path=reg_dir)
-    write_manifest(reg)
-    print(f"created register {args.prefix} at {reg_dir}")
+    print(f"created register {reg.prefix} at {reg.path}")
     return OK
 
 
@@ -927,30 +919,6 @@ def cmd_shape(args) -> int:
     return OK
 
 
-def _mermaid_types(idx) -> str | None:
-    """A Mermaid flowchart of the type model: item types as nodes, one labelled
-    edge per (source type, link type, target type) observed in the graph. Edges
-    to external/unknown targets are omitted (SR-0086)."""
-    edges = sorted({(s, lt, t) for (s, lt, t) in idx.link_shape() if t is not None})
-    if not edges:
-        return None
-    lines = ["flowchart LR"]
-    lines += [f"    {s} -->|{lt}| {t}" for s, lt, t in edges]
-    return "\n".join(lines)
-
-
-def _mermaid_transitions(schema) -> str | None:
-    """A Mermaid state diagram of the declared status lifecycle (SR-0086).
-    ``None`` when the project declares no [transitions]."""
-    if not schema.transitions:
-        return None
-    lines = ["stateDiagram-v2"]
-    for frm in sorted(schema.transitions):
-        for to in sorted(schema.transitions[frm]):
-            lines.append(f"    {frm} --> {to}")
-    return "\n".join(lines)
-
-
 def cmd_diagram(args) -> int:
     try:
         project = load_project(args.path)
@@ -959,7 +927,7 @@ def cmd_diagram(args) -> int:
     idx = Index.build(project)
     blocks = []  # (heading, mermaid-source-or-None, empty-note)
     if args.kind in ("types", "both"):
-        blocks.append(("Type model", _mermaid_types(idx),
+        blocks.append(("Type model", diagram_types(idx),
                        "no links in the graph yet"))
     if args.kind in ("transitions", "both"):
         blocks.append(("Status transitions", _mermaid_transitions(project.schema),
@@ -1004,10 +972,10 @@ def _resolve_doc_paths(project, explicit: list[str]) -> list[Path]:
 
 
 def cmd_docs(args, resolver=None) -> int:
-    """Inject the configured documents from the local project. ``resolver`` is an
-    optional target resolver (SR-0110); when a composing front end supplies one,
-    tl:matrix target cells resolve attributes and liveness through it — e.g. over
-    tl-compose's union graph — instead of the local project alone."""
+    """Render every configured document, then write them or report them stale
+    (SR-0095, SR-0225). ``resolver`` is an optional target resolver (SR-0110): a
+    composing front end supplies one so tl:matrix cells resolve over its union.
+    """
     try:
         if args.at:
             project, _sha = load_project_at_ref(args.path, args.at)
@@ -1016,8 +984,7 @@ def cmd_docs(args, resolver=None) -> int:
     except ProjectError as e:
         return _err(str(e))
 
-    paths = _resolve_doc_paths(project, args.file)
-    if not paths:
+    if not document_paths(project, args.file):
         # In --check mode (the CI gate, SR-0095) an unconfigured project has no
         # documents to be stale, so the gate is inert and passes. In write mode a
         # caller who ran `tl docs` with nothing to inject wants to know.
@@ -1025,55 +992,34 @@ def cmd_docs(args, resolver=None) -> int:
             return OK
         return _err("no documents to inject — pass a Markdown file, or configure "
                     "[docs] paths in throughline.toml")
+    try:
+        renders = inject_documents(project, args.file, resolver=resolver)
+    except InjectError as e:
+        return _err(str(e))
+    except OSError as e:
+        return _err(f"cannot read a document: {e}")
 
-    # Render every document before writing any of it (SR-0186). An unprovided
-    # directive — or any other injection failure — in the last document must not
-    # leave the earlier ones rewritten: a partially injected tree is drift of
-    # exactly the kind this seam exists to prevent, and it is invisible because
-    # the command that caused it exited non-zero.
-    pending: list[tuple[Path, str]] = []
-    for path in paths:
-        try:
-            original = path.read_text(encoding="utf-8")
-        except OSError as e:
-            return _err(f"cannot read {path}: {e}")
-        if not has_markers(original):
-            continue  # SR-0094/0095: a file with no tl: markers is left untouched
-        try:
-            rendered = inject_text(project, original, resolver=resolver)
-        except InjectError as e:
-            return _err(f"{path}: {e}")
-        if rendered != original:
-            pending.append((path, rendered))
-
-    stale: list[Path] = []
-    changed = 0
-    for path, rendered in pending:
-        if args.check:
-            stale.append(path)
-            print(f"stale: {path}", file=sys.stderr)
-        else:
-            path.write_text(rendered, encoding="utf-8")
-            changed += 1
-            print(f"injected {path}")
-
+    pending = [r for r in renders if r.changed]
     if args.check:
         # Separate gate: write-then-diff. A drifted document fails CI; nothing is
         # rewritten. This is deliberately NOT part of `tl check` so routine checks
         # stay friction-free (SR-0095).
-        if stale:
-            print(f"{len(stale)} document(s) out of date — run `tl docs` to "
+        for render in pending:
+            print(f"stale: {render.path}", file=sys.stderr)
+        if pending:
+            print(f"{len(pending)} document(s) out of date — run `tl docs` to "
                   "regenerate", file=sys.stderr)
             return FINDINGS
         print("documents up to date")
         return OK
-    if changed == 0:
+    for render in pending:
+        render.path.write_text(render.rendered, encoding="utf-8")
+        print(f"injected {render.path}")
+    if not pending:
         print("documents already up to date")
     sys.stdout.flush()
     return OK
 
-
-# --------------------------------------------------------------- agent context
 
 def _fmt_set(items) -> str:
     """`` `a`, `b` `` from any iterable; ``(none)`` when empty."""
