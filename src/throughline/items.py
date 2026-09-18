@@ -26,8 +26,8 @@ from .grounding import (
     attribute_removal_refusal,
     origin_change_refusal,
 )
-from .model import Item
-from .uid import UidError
+from .model import Item, Link
+from .uid import UidError, next_uid, parse_uid
 
 def coerce_attr(schema, item_type: str, key: str, raw: str):
     """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
@@ -324,3 +324,40 @@ def review_items(project, uids=None, *, all_items: bool = False) -> list:
             item.reviewed = fp
             moved.append(item)
     return moved
+
+
+def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
+             title: str = "", text: str = "", status: str | None = None,
+             origin: str | None = None, attrs: dict | None = None,
+             ground=(), ground_type: str = "derives_from") -> Item:
+    """Create an item in ``prefix``'s register, grounded at birth (SR-0005, SR-0073).
+
+    The UID is allocated from the register unless one is given, in which case it
+    must match the prefix and be unused. Every grounding target named is attached,
+    including for a root type, which may legitimately carry one: an explicitly
+    requested link is authoring intent and is never silently dropped (SR-0091). A
+    target that does not exist is a refusal, not a link to nothing.
+
+    The item is returned for the caller to write, along with its register, which is
+    where `tl new` also asks a human for a parent when none was named.
+    """
+    reg = project.registers.get(prefix)
+    if reg is None:
+        raise GroundingError(
+            f"no register with prefix '{prefix}' — create one before adding items")
+    if uid is not None:
+        pfx, _number = parse_uid(uid)               # UidError if malformed
+        if pfx != prefix:
+            raise UidError(f"{uid} does not match prefix {prefix}")
+        if project.get(uid) is not None:
+            raise GroundingError(f"{uid} already exists")
+    else:
+        uid = next_uid(reg)
+    item = birth_item(project.schema, reg, uid, item_type=item_type, title=title,
+                      text=text, status=status, origin=origin, attrs=attrs)
+    for target in ground:
+        if project.get(target) is None:
+            raise GroundingError(f"grounding target {target} does not exist")
+        item.links.append(Link(target=target, type=ground_type))
+    reg.items[uid] = item
+    return item

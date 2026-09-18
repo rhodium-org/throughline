@@ -57,6 +57,7 @@ from .items import (
     birth_item,
     coerce_attr,
     delete_item,
+    new_item,
     newly_suspect,
     parse_attrs,
     review_items,
@@ -562,72 +563,50 @@ def _resolve_value(value, purpose: str, flag: str, *, options=None, default=None
 
 
 def cmd_new(args) -> int:
+    """Parse, ask for a parent where a terminal allows it, call
+    :func:`throughline.items.new_item`, render (SR-0225)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
-    reg = project.registers.get(args.prefix)
-    if reg is None:
-        return _err(f"no register with prefix '{args.prefix}' (run `tl register new`)")
-    if args.uid:
-        try:
-            pfx, _ = parse_uid(args.uid)
-        except UidError as e:
-            return _err(str(e))
-        if pfx != args.prefix:
-            return _err(f"--uid {args.uid} does not match prefix {args.prefix}")
-        if project.get(args.uid) is not None:
-            return _err(f"{args.uid} already exists")
-        uid = args.uid
-    else:
-        uid = next_uid(reg)
-    from .model import Item
     schema = project.schema
     try:
-        attrs = _parse_attrs(schema, args.type, args.attr, command="new")
+        attrs = parse_attrs(schema, args.type, args.attr, command="new")
     except UidError as e:
         return _err(str(e))
     # A declared default naming a record a single verb owns is never written
     # (SR-0170, SR-0213, SR-0219); say so rather than drop it silently.
-    ignored = [name for name, spec in schema.attrs_for(args.type).items()
-               if spec.default is not None and attribute_owner(name) is not None]
-    for name in ignored:
-        record, owner = attribute_owner(name)
-        print(f"ignored the declared default for '{name}': it is part of the "
-              f"{record} and only `tl {owner}` writes it")
-    item = birth_item(schema, reg, uid, item_type=args.type,
-                      title=args.title or "", text=args.text or "",
-                      status=args.status, origin=args.origin, attrs=attrs)
+    for name, spec in schema.attrs_for(args.type).items():
+        if spec.default is not None and attribute_owner(name) is not None:
+            record, owner = attribute_owner(name)
+            print(f"ignored the declared default for '{name}': it is part of the "
+                  f"{record} and only `tl {owner}` writes it")
 
-    # Grounding-assisted authoring (SR-0073): attach a parent at birth so the
-    # item is justified the moment it exists, rather than being created orphaned
-    # and only caught later by `check`. Roots are exempt — they *are* the 'why'.
+    # Grounding-assisted authoring (SR-0073): attach a parent at birth so the item
+    # is justified the moment it exists, rather than being created orphaned and
+    # only caught later by `check`. A parent named on the command line is always
+    # honoured, including for a root type (SR-0091).
     default_type = args.ground_type or "derives_from"
-    grounds: list[tuple[str, str]] = []
-    if args.ground:
-        # Explicit grounding is ALWAYS honored — even for root types (e.g. a
-        # business_need that `derives_from` the vision). An explicitly requested
-        # link is authoring intent and must never be silently discarded; if it
-        # cannot be added we fail loudly, we do not drop it (SR-0091, fail-fast).
-        for target in args.ground:
-            dst = project.get(target)
-            if dst is None:
-                return _err(f"grounding target {target} does not exist")
-            grounds.append((target, default_type))
-    elif not schema.is_root(item) and not args.no_interactive \
+    named = list(args.ground or ())
+    try:
+        item = new_item(project, args.prefix, item_type=args.type, uid=args.uid,
+                        title=args.title or "", text=args.text or "",
+                        status=args.status, origin=args.origin, attrs=attrs,
+                        ground=named, ground_type=default_type)
+    except (ProjectError, GroundingError, SchemaError, UidError) as e:
+        return _err(str(e))
+    grounds = [(target, default_type) for target in named]
+    # No parent named: offer one for non-roots, where a terminal can be asked.
+    if not grounds and not args.no_interactive and not schema.is_root(item) \
             and sys.stdin.isatty() and sys.stdout.isatty():
-        # No explicit parent: offer to attach one for non-roots only. Roots are
-        # exempt from the prompt because they *are* the 'why'.
         grounds = _prompt_grounding(project, schema, item, default_type)
+        for target, ltype in grounds:
+            item.links.append(Link(target=target, type=ltype))
 
+    path = write_item(item, project.register_of(item.uid))
+    print(f"created {item.uid} -> {path}")
     for target, ltype in grounds:
-        item.links.append(Link(target=target, type=ltype))
-
-    reg.items[uid] = item
-    path = write_item(item, reg)
-    print(f"created {uid} -> {path}")
-    for target, ltype in grounds:
-        print(f"  grounded: {uid} --{ltype}--> {target}")
+        print(f"  grounded: {item.uid} --{ltype}--> {target}")
     return OK
 
 

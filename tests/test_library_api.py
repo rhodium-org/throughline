@@ -25,6 +25,7 @@ from throughline import (
     Index,
     amend_item,
     delete_item,
+    new_item,
     query_items,
     review_items,
     birth_item,
@@ -240,3 +241,33 @@ def test_a_missing_uid_raises_the_tools_error(tmp_path):
                  lambda: amend_item(project, "REQ-0404", title="x")):
         with pytest.raises(throughline.GroundingError):
             call()
+
+
+def test_new_item_allocates_grounds_and_refuses(tmp_path):
+    """Creation is an operation too (SR-0224): the register allocates, the parent
+    named is attached, and what cannot be done is the Tool's error, not an exit."""
+    root = tmp_path / "proj"
+    project = _rooted(root)
+    item = new_item(project, "REQ", item_type="requirement", title="A",
+                    text="The Tool shall do A.", origin="ai", ground=["INT-0001"])
+    write_item(item, project.register_of(item.uid))
+    assert item.uid == "REQ-0001"
+    assert [(l.target, l.type) for l in item.links] == [("INT-0001", "derives_from")]
+    assert item.status == "proposed"          # a machine origin is born proposed
+
+    project = load_project(root)
+    second = new_item(project, "REQ", item_type="requirement", uid="REQ-0007",
+                      title="B", text="The Tool shall do B.", ground=["INT-0001"])
+    write_item(second, project.register_of(second.uid))
+    assert load_project(root).get("REQ-0007").title == "B"
+
+    project = load_project(root)
+    with pytest.raises(throughline.GroundingError, match="no register"):
+        new_item(project, "ZZZ", item_type="requirement")
+    with pytest.raises(throughline.GroundingError, match="already exists"):
+        new_item(project, "REQ", item_type="requirement", uid="REQ-0001")
+    with pytest.raises(throughline.GroundingError, match="grounding target"):
+        new_item(project, "REQ", item_type="requirement", ground=["REQ-0404"])
+    from throughline import UID_RE  # noqa: F401  (the grammar is exported too)
+    with pytest.raises(Exception):
+        new_item(project, "REQ", item_type="requirement", uid="NFR-0001")

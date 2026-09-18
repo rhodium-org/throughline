@@ -27,7 +27,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### Creating and changing an item
 
-`birth_item` · `parse_attrs` · `coerce_attr` · `amend_item` · `Amendment` · `newly_suspect` · `delete_item` · `review_items` · `add_link` · `remove_link` · `retype_link` · `LinkError`
+`new_item` · `birth_item` · `parse_attrs` · `coerce_attr` · `amend_item` · `Amendment` · `newly_suspect` · `delete_item` · `review_items` · `add_link` · `remove_link` · `retype_link` · `LinkError`
 
 ### The gate
 

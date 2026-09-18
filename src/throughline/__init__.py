@@ -49,6 +49,7 @@ from .items import (
     birth_item,
     coerce_attr,
     delete_item,
+    new_item,
     newly_suspect,
     parse_attrs,
     review_items,
@@ -115,7 +116,7 @@ __all__ = [
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
     # creating and changing an item
     "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
-    "newly_suspect", "delete_item", "review_items",
+    "newly_suspect", "new_item", "delete_item", "review_items",
     "add_link", "remove_link", "retype_link", "LinkError",
     # the gate
     "validate", "Finding", "is_external", "is_namespace_qualified",
