@@ -265,25 +265,30 @@ def _sparse_patterns(root: Path, subdir: str) -> list[str]:
     return patterns
 
 
-def _sparse_clone(url: str, ref: str, tmp: Path, subdir: str) -> bool:
-    """A blobless clone at depth one checked out sparsely (SR-0238); False when
-    the git in use cannot make one, so the caller falls back to a whole clone."""
-    r = _git("clone", "--filter=blob:none", "--no-checkout", "--depth", "1",
-             "--branch", ref, url, str(tmp))
-    if r.returncode != 0:
-        return False
-    if _git("sparse-checkout", "set", "--no-cone", f"/{subdir.strip('/')}/", cwd=tmp).returncode != 0:
-        return False
-    if _git("checkout", "--quiet", cwd=tmp).returncode != 0:
-        return False
+def _sparse_clone(url: str, ref: str, tmp: Path, subdir: str) -> str | None:
+    """A blobless clone at depth one checked out sparsely (SR-0238). Returns None
+    when it worked, else git's own words for the step that refused, so the caller
+    can fall back to a whole clone and say why."""
+    steps = [
+        ("clone", "--filter=blob:none", "--no-checkout", "--depth", "1", "--branch", ref, url, str(tmp)),
+    ]
+    for args in steps:
+        r = _git(*args)
+        if r.returncode != 0:
+            return r.stderr.strip() or f"git {args[0]} failed"
+    for args in (("sparse-checkout", "set", "--no-cone", f"/{subdir.strip('/')}/"),
+                 ("checkout", "--quiet")):
+        r = _git(*args, cwd=tmp)
+        if r.returncode != 0:
+            return r.stderr.strip() or f"git {args[0]} failed"
     patterns = _sparse_patterns(tmp, subdir)
     if len(patterns) > 1:
-        if _git("sparse-checkout", "add", "--no-cone", *patterns[1:], cwd=tmp).returncode != 0:
-            return False
-        if _git("checkout", "--quiet", cwd=tmp).returncode != 0:
-            return False
+        for args in (("sparse-checkout", "add", "--no-cone", *patterns[1:]), ("checkout", "--quiet")):
+            r = _git(*args, cwd=tmp)
+            if r.returncode != 0:
+                return r.stderr.strip() or f"git {args[0]} failed"
     (tmp / SPARSE_MARKER).write_text("\n".join(patterns) + "\n", encoding="utf-8")
-    return True
+    return None
 
 
 def _sparse_covers(dest: Path, subdir: str | None) -> bool:
@@ -303,10 +308,11 @@ def _fetch(url: str, ref: str, dest: Path, *, subdir: str | None = None) -> None
         # A source with a subdir needs that directory and the documents it
         # declares, not the repository around them (SR-0238).
         if subdir:
-            if _sparse_clone(url, ref, tmp, subdir):
+            why = _sparse_clone(url, ref, tmp, subdir)
+            if why is None:
                 _publish(tmp, dest)
                 return
-            _announce("git here cannot make a partial clone — fetching the whole repository once")
+            _announce(f"git here cannot make a partial clone ({why}) — fetching the whole repository once")
             shutil.rmtree(tmp, ignore_errors=True)
             tmp = Path(tempfile.mkdtemp(prefix=".fetch-", dir=dest.parent))
         # --branch accepts a tag or branch name; a bare commit SHA needs a second
