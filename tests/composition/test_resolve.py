@@ -351,3 +351,90 @@ def test_publish_leaves_no_residue_behind(tmp_path):
 
     assert (dest / "which").read_text() == "new"
     assert [p.name for p in tmp_path.iterdir()] == ["cached"]
+
+
+# ------------------------------------------------------------ sparse fetch (SR-0238)
+
+def _wide_origin(tmp_path: Path) -> Path:
+    """A repository with a graph under a subdir, a document the graph declares
+    beside it, a second graph, and source files the resolver has no use for."""
+    repo = tmp_path / "origin"
+    repo.mkdir()
+    _git("init", "-b", "main", cwd=repo)
+    (repo / "graph").mkdir()
+    (repo / "graph" / "throughline.toml").write_text(
+        _TOML + '\n[docs]\npaths = ["../docs/overview.md"]\n')
+    (repo / "docs").mkdir()
+    (repo / "docs" / "overview.md").write_text("# overview\n")
+    (repo / "other").mkdir()
+    (repo / "other" / "throughline.toml").write_text(_TOML)
+    (repo / "src").mkdir()
+    (repo / "src" / "big.bin").write_bytes(os.urandom(200_000))
+    (repo / "README.md").write_text("# a product\n")
+    _git("add", ".", cwd=repo)
+    _git("commit", "-m", "edition", cwd=repo)
+    _git("tag", "v1", cwd=repo)
+    # A local origin filters blobs only when told it may, as GitHub does by default.
+    _git("config", "uploadpack.allowFilter", "true", cwd=repo)
+    return repo
+
+
+def test_subdir_source_is_fetched_sparsely(tmp_path):  # SR-0238
+    origin = _wide_origin(tmp_path)
+    # A file:// address goes through upload-pack, which honours the blob filter; a bare
+    # path copies the object store whole, as a local transport does.
+    src = Source(namespace="g", url=f"file://{origin}", ref="v1", subdir="graph")
+    got = resolve_source(src, tmp_path)
+    root = got.parent
+    assert (got / "throughline.toml").is_file()
+    assert (root / "docs" / "overview.md").is_file(), "the declared document is held"
+    assert not (root / "src").exists(), "source files are not downloaded"
+    assert not (root / "README.md").exists()
+    assert not (root / "other").exists(), "another graph is not held until asked for"
+    assert (root / ".tl-sparse").is_file()
+    # The blobs outside the sparse set were never fetched, not merely left unchecked out.
+    listed = subprocess.run(["git", "rev-list", "--objects", "--missing=print", "HEAD"],
+                            cwd=str(root), check=True, capture_output=True, text=True).stdout
+    assert any(line.startswith("?") for line in listed.splitlines()), "some blobs are missing from the clone"
+
+
+def test_a_wider_subdir_refetches_the_sparse_edition(tmp_path):  # SR-0238
+    origin = _wide_origin(tmp_path)
+    first = resolve_source(Source(namespace="g", url=str(origin), ref="v1", subdir="graph"), tmp_path)
+    assert not (first.parent / "other").exists()
+    second = resolve_source(Source(namespace="o", url=str(origin), ref="v1", subdir="other"), tmp_path)
+    assert (second / "throughline.toml").is_file()
+    assert second.parent == first.parent
+
+
+def test_a_wider_subdir_offline_fails_rather_than_reading_a_missing_graph(tmp_path, monkeypatch):  # SR-0238
+    origin = _wide_origin(tmp_path)
+    resolve_source(Source(namespace="g", url=str(origin), ref="v1", subdir="graph"), tmp_path)
+    monkeypatch.setenv("TL_OFFLINE", "1")
+    with pytest.raises(ResolverError, match="not in the sparse cache"):
+        resolve_source(Source(namespace="o", url=str(origin), ref="v1", subdir="other"), tmp_path)
+
+
+def test_a_git_without_partial_clone_falls_back_to_the_whole_clone(tmp_path, monkeypatch, capsys):  # SR-0238
+    import throughline.resolvers as resolvers
+    origin = _wide_origin(tmp_path)
+    real = resolvers._git
+
+    def no_filter(*args, **kwargs):
+        if any(a.startswith("--filter") for a in args):
+            return subprocess.CompletedProcess(args, 128, "", "fatal: unknown option --filter")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(resolvers, "_git", no_filter)
+    got = resolve_source(Source(namespace="g", url=str(origin), ref="v1", subdir="graph"), tmp_path)
+    assert (got / "throughline.toml").is_file()
+    assert (got.parent / "src" / "big.bin").is_file(), "the whole repository, as before"
+    assert not (got.parent / ".tl-sparse").exists()
+    assert capsys.readouterr().err.count("cannot make a partial clone") == 1
+
+
+def test_a_source_without_a_subdir_is_still_cloned_whole(tmp_path):  # SR-0238
+    origin = _origin(tmp_path)
+    got = resolve_source(Source(namespace="s", url=str(origin), ref="v4.0.3"), tmp_path)
+    assert (got / "throughline.toml").is_file()
+    assert not (got / ".tl-sparse").exists()

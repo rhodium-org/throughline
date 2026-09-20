@@ -50,9 +50,9 @@ def test_the_notice_precedes_the_fetch(tmp_path, monkeypatch, capsys):
     said_before: list[str] = []
     real_fetch = resolve_mod._fetch
 
-    def watched(url, ref, dest):
+    def watched(url, ref, dest, **kwargs):
         said_before.append(capsys.readouterr().err)
-        return real_fetch(url, ref, dest)
+        return real_fetch(url, ref, dest, **kwargs)
 
     monkeypatch.setattr(resolve_mod, "_fetch", watched)
     origin = _origin(tmp_path)

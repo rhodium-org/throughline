@@ -237,10 +237,78 @@ def _git(*args: str, cwd: Path | None = None) -> subprocess.CompletedProcess:
             f"and compose from the cache ({OFFLINE_ENV}=1)") from e
 
 
-def _fetch(url: str, ref: str, dest: Path) -> None:
+SPARSE_MARKER = ".tl-sparse"
+
+
+def _sparse_patterns(root: Path, subdir: str) -> list[str]:
+    """The sparse-checkout patterns a source needs (SR-0238): its subdir, and the
+    document paths its throughline.toml declares under [docs], relative to the
+    subdir and kept within the tree. Read with tomllib: the Tool's own reader
+    of the file is `load_project`, which needs the registers this clone has not
+    fetched yet."""
+    import posixpath
+    import tomllib
+    patterns = [f"/{subdir.strip('/')}/"]
+    config = root / subdir / "throughline.toml"
+    if config.is_file():
+        try:
+            paths = (tomllib.loads(config.read_text(encoding="utf-8")).get("docs") or {}).get("paths") or []
+        except (tomllib.TOMLDecodeError, OSError):
+            paths = []
+        for doc in paths:
+            if not isinstance(doc, str) or not doc.strip():
+                continue
+            joined = posixpath.normpath(posixpath.join(subdir.strip("/"), doc.strip()))
+            if joined.startswith("..") or joined.startswith("/"):
+                continue
+            patterns.append(f"/{joined}")
+    return patterns
+
+
+def _sparse_clone(url: str, ref: str, tmp: Path, subdir: str) -> bool:
+    """A blobless clone at depth one checked out sparsely (SR-0238); False when
+    the git in use cannot make one, so the caller falls back to a whole clone."""
+    r = _git("clone", "--filter=blob:none", "--no-checkout", "--depth", "1",
+             "--branch", ref, url, str(tmp))
+    if r.returncode != 0:
+        return False
+    if _git("sparse-checkout", "set", "--no-cone", f"/{subdir.strip('/')}/", cwd=tmp).returncode != 0:
+        return False
+    if _git("checkout", "--quiet", cwd=tmp).returncode != 0:
+        return False
+    patterns = _sparse_patterns(tmp, subdir)
+    if len(patterns) > 1:
+        if _git("sparse-checkout", "add", "--no-cone", *patterns[1:], cwd=tmp).returncode != 0:
+            return False
+        if _git("checkout", "--quiet", cwd=tmp).returncode != 0:
+            return False
+    (tmp / SPARSE_MARKER).write_text("\n".join(patterns) + "\n", encoding="utf-8")
+    return True
+
+
+def _sparse_covers(dest: Path, subdir: str | None) -> bool:
+    """Whether a cached edition, fetched sparsely, holds what this source needs:
+    a whole clone covers everything; a sparse one covers its own subdir."""
+    marker = dest / SPARSE_MARKER
+    if not marker.is_file():
+        return True
+    held = marker.read_text(encoding="utf-8").split()
+    return subdir is not None and f"/{subdir.strip('/')}/" in held
+
+
+def _fetch(url: str, ref: str, dest: Path, *, subdir: str | None = None) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix=".fetch-", dir=dest.parent))
     try:
+        # A source with a subdir needs that directory and the documents it
+        # declares, not the repository around them (SR-0238).
+        if subdir:
+            if _sparse_clone(url, ref, tmp, subdir):
+                _publish(tmp, dest)
+                return
+            _announce("git here cannot make a partial clone — fetching the whole repository once")
+            shutil.rmtree(tmp, ignore_errors=True)
+            tmp = Path(tempfile.mkdtemp(prefix=".fetch-", dir=dest.parent))
         # --branch accepts a tag or branch name; a bare commit SHA needs a second
         # step, so fall back to a full clone + checkout when the pinned clone fails.
         r = _git("clone", "--depth", "1", "--branch", ref, url, str(tmp))
@@ -361,7 +429,7 @@ def _revalidate(source: Source, dest: Path, *, offline: bool) -> None:
         return
     _announce(f"source '{source.namespace}' ref {source.ref} moved "
               f"{head[:9] or 'unknown'} -> {current[:9]} — refetching")
-    _fetch(source.url, source.ref, dest)
+    _fetch(source.url, source.ref, dest, subdir=source.subdir)
     _announce(f"resolved source '{source.namespace}'")
 
 
@@ -413,7 +481,17 @@ def resolve_source(source: Source, consumer_root: Path, *,
     offline = globals()["cache_only"]() if cache_only is None else cache_only
     assert source.url is not None and source.ref is not None
     dest = _cache_dir(source.url, source.ref)
-    if dest.is_dir() and (dest / ".git").exists():
+    if dest.is_dir() and (dest / ".git").exists() and not _sparse_covers(dest, source.subdir):
+        # Fetched sparsely for another subdir: this source needs more of the tree (SR-0238).
+        if offline:
+            raise ResolverError(
+                f"source '{source.namespace}' subdir '{source.subdir}' is not in the sparse "
+                f"cache of {source.url}@{source.ref} and {OFFLINE_ENV} forbids fetching it.")
+        _announce(f"source '{source.namespace}' needs more of {source.url}@{source.ref} "
+                  "than the cache holds — refetching")
+        _fetch(source.url, source.ref, dest, subdir=source.subdir)
+        _announce(f"resolved source '{source.namespace}'")
+    elif dest.is_dir() and (dest / ".git").exists():
         _revalidate(source, dest, offline=offline)
     else:
         if offline:
@@ -431,7 +509,7 @@ def resolve_source(source: Source, consumer_root: Path, *,
         # to sit silent for the whole of it. Announced before, not after.
         _announce(f"resolving source '{source.namespace}' from "
                   f"{source.url}@{source.ref} (not cached — fetching)")
-        _fetch(source.url, source.ref, dest)
+        _fetch(source.url, source.ref, dest, subdir=source.subdir)
         _announce(f"resolved source '{source.namespace}'")
     project = _descend(dest, source)
     if not (project / "throughline.toml").is_file():
