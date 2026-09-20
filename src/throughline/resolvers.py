@@ -268,25 +268,35 @@ def _sparse_patterns(root: Path, subdir: str) -> list[str]:
 def _sparse_clone(url: str, ref: str, tmp: Path, subdir: str) -> str | None:
     """A blobless clone at depth one checked out sparsely (SR-0238). Returns None
     when it worked, else git's own words for the step that refused, so the caller
-    can fall back to a whole clone and say why."""
-    steps = [
-        ("clone", "--filter=blob:none", "--no-checkout", "--depth", "1", "--branch", ref, url, str(tmp)),
-    ]
-    for args in steps:
-        r = _git(*args)
-        if r.returncode != 0:
-            return r.stderr.strip() or f"git {args[0]} failed"
-    for args in (("sparse-checkout", "set", "--no-cone", f"/{subdir.strip('/')}/"),
-                 ("checkout", "--quiet")):
-        r = _git(*args, cwd=tmp)
-        if r.returncode != 0:
-            return r.stderr.strip() or f"git {args[0]} failed"
-    patterns = _sparse_patterns(tmp, subdir)
-    if len(patterns) > 1:
-        for args in (("sparse-checkout", "add", "--no-cone", *patterns[1:]), ("checkout", "--quiet")):
+    can fall back to a whole clone and say why.
+
+    The sparse patterns are written to the repository's own sparse-checkout file
+    and applied with read-tree, the form every git since 1.7 understands; the
+    `sparse-checkout` command's cone and no-cone modes came later and differ
+    between the releases CI runs."""
+    r = _git("clone", "--filter=blob:none", "--no-checkout", "--depth", "1",
+             "--branch", ref, url, str(tmp))
+    if r.returncode != 0:
+        return r.stderr.strip() or "git clone failed"
+
+    def apply(patterns: list[str]) -> str | None:
+        info = tmp / ".git" / "info"
+        info.mkdir(parents=True, exist_ok=True)
+        (info / "sparse-checkout").write_text("\n".join(patterns) + "\n", encoding="utf-8")
+        for args in (("config", "core.sparseCheckout", "true"), ("read-tree", "-mu", "HEAD")):
             r = _git(*args, cwd=tmp)
             if r.returncode != 0:
                 return r.stderr.strip() or f"git {args[0]} failed"
+        return None
+
+    why = apply([f"/{subdir.strip('/')}/"])
+    if why is not None:
+        return why
+    patterns = _sparse_patterns(tmp, subdir)
+    if len(patterns) > 1:
+        why = apply(patterns)
+        if why is not None:
+            return why
     (tmp / SPARSE_MARKER).write_text("\n".join(patterns) + "\n", encoding="utf-8")
     return None
 
