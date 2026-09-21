@@ -941,7 +941,7 @@ def cmd_diagram(args) -> int:
         blocks.append(("Type model", diagram_types(idx),
                        "no links in the graph yet"))
     if args.kind in ("transitions", "both"):
-        blocks.append(("Status transitions", _mermaid_transitions(project.schema),
+        blocks.append(("Status transitions", diagram_transitions(project.schema),
                        "no [transitions] declared"))
 
     emitted = 0

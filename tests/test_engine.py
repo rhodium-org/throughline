@@ -954,6 +954,24 @@ def test_mermaid_transitions_none_when_absent():
     schema = Schema.from_config({"status": {"values": ["draft", "approved"]}})
     assert diagram_transitions(schema) is None
 
+@pytest.mark.parametrize("kind", ["transitions", "both"])
+@pytest.mark.parametrize("fmt", [None, "markdown"])
+def test_diagram_command_renders_transitions(tmp_path, capsys, kind, fmt):
+    """`tl diagram transitions` and `tl diagram both` (the default kind) render the
+    lifecycle state machine end to end (SR-0086). The renderers live in
+    `throughline.diagrams` (SR-0224); the command must call them by their exported
+    names — a stale private name crashed both kinds with a NameError while the
+    function-level tests above stayed green."""
+    root = _scaffold(tmp_path)  # init's throughline.toml declares [transitions]
+    argv = ["-C", str(root), "diagram", kind] + (["--format", fmt] if fmt else [])
+    assert _cli(argv) == 0
+    out = capsys.readouterr().out
+    assert "stateDiagram-v2" in out
+    assert "proposed --> ratified" in out
+    if fmt == "markdown":
+        assert "### Status transitions" in out
+        assert "```mermaid" in out
+
 
 # ------------------------------------------------------------------ agent context
 
