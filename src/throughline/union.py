@@ -45,11 +45,16 @@ class Union:
         """Reconstruct the original ``<namespace>:<UID>`` for any union UID whose
         prefix is a mangled one — including a reference to a source clause that
         does *not* exist, so a dangling cross-source link reads in the composer's
-        own vocabulary. A consumer-local UID is returned unchanged."""
+        own vocabulary. A mangled prefix on its own, which a finding about a
+        borrowed register carries (SR-0240), reads back as ``<namespace>:<PREFIX>``.
+        A consumer-local UID is returned unchanged."""
         m = UID_RE.match(uid)
         if m and m.group(1) in self.owners:
             namespace, src_prefix = self.owners[m.group(1)]
             return f"{namespace}:{src_prefix}-{m.group(2)}"
+        if uid in self.owners:
+            namespace, src_prefix = self.owners[uid]
+            return f"{namespace}:{src_prefix}"
         return uid
 
     def displayed(self) -> Project:
@@ -85,12 +90,14 @@ class Union:
         return out
 
     def pattern(self) -> re.Pattern | None:
-        """A regex matching any mangled UID token, for message translation."""
+        """A regex matching any mangled UID token, or a mangled prefix standing
+        alone (SR-0240), for message translation. Only a whole token matches, so a
+        local UID whose prefix merely ends in a mangled one is left alone."""
         if not self.owners:
             return None
         prefixes = "|".join(re.escape(p) for p in
                             sorted(self.owners, key=len, reverse=True))
-        return re.compile(rf"(?:{prefixes})-[0-9]+")
+        return re.compile(rf"\b(?:{prefixes})(?:-[0-9]+)?\b")
 
 
 def _sanitize_ns(namespace: str) -> str:
@@ -205,6 +212,16 @@ def build_union(consumer: Project, sources: dict[str, Project],
 
     union = Project(path=consumer.path, config=consumer.config)
 
+    # What loading recorded travels with the registers (SR-0240). The validator
+    # reads prefix clashes, UIDs repeated within one folder and malformed links off
+    # the project it is given, not off its items, so a union holding only the
+    # registers passes a graph that a standalone check of the consumer fails. The
+    # projects nested in the tree are the consumer's alone (SR-0239).
+    union.prefix_conflicts = {p: list(d) for p, d in consumer.prefix_conflicts.items()}
+    union.duplicate_uids = set(consumer.duplicate_uids)
+    union.load_errors = list(consumer.load_errors)
+    union.nested_projects = list(consumer.nested_projects)
+
     # Consumer items keep their own UIDs; only their ns-qualified references are
     # rewritten. Copy registers so the loaded consumer objects stay untouched.
     for prefix, reg in consumer.registers.items():
@@ -216,6 +233,15 @@ def build_union(consumer: Project, sources: dict[str, Project],
     for namespace, source in sources.items():
         own_labels = label_maps.get(namespace, {})
         source_schema = source.schema
+        # A source's own load findings are named in union space like its items, so
+        # translation reads them back as namespace:UID or namespace:PREFIX and the
+        # seam judges them as it judges any finding on a borrowed item.
+        for prefix, dirs in source.prefix_conflicts.items():
+            union.prefix_conflicts[mangler.prefix(namespace, prefix)] = list(dirs)
+        union.duplicate_uids |= {mangler.uid(namespace, uid)
+                                 for uid in source.duplicate_uids}
+        union.load_errors += [(mangler.uid(namespace, uid), file, msg)
+                              for uid, file, msg in source.load_errors]
         for reg in source.registers.values():
             for uid, it in reg.items.items():
                 mangled_uid = mangler.uid(namespace, uid)
