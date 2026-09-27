@@ -1,0 +1,33 @@
+uid: SR-0240
+type: system_requirement
+status: proposed
+title: A composed check reports what loading found
+text: 'When the Tool checks a project that declares sources, it shall report every
+  problem found while loading the consumer and each source: a prefix declared by
+  more than one register, a UID repeated within one register folder, and a malformed
+  link. A problem in a source shall be named in the composer''s vocabulary, as namespace:UID
+  or namespace:PREFIX, and the seam shall decide whether it is reported, as for any
+  other finding. A composed check shall not report the graph sound where a standalone
+  check of the consumer would fail on one of these problems.'
+rationale: |-
+  The union was built as a new project that copied only the registers, so every composing project lost its prefix-collision, uid-collision and malformed-link findings. The seam lists those rules as reportable on borrowed items, but nothing produced them. Found on 27 September 2026 with SR-0239: a standalone check would have failed on the prefix clash, while the composed check reported the stale graph with no errors.
+
+  Who pays: a composing project whose source carries one of these problems. Its gate now fails until the pin moves to a fixed edition or the source's owner fixes it.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0230
+  type: relates
+- target: SR-0101
+  type: relates
+- target: SR-0006
+  type: relates
+- target: SR-0134
+  type: relates
+- target: SR-0239
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
