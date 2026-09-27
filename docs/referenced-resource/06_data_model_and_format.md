@@ -31,6 +31,11 @@ project/
    └─ SR-0007.yml             # tombstone (status: deleted/retired)
 ```
 
+A project is its root directory and everything below it, except a directory whose
+name begins with `.` and a directory holding its own `throughline.toml`, which is
+another project's root. Registers in either are not part of the project and are
+never read (SR-0239).
+
 ## 3. UID grammar
 
 ```

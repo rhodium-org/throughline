@@ -110,6 +110,7 @@ from .storage import (
     MANIFEST_NAME,
     ProjectError,
     baseline_note,
+    nested_note,
     read_baseline,
     init_project,
     load_project,
@@ -853,6 +854,11 @@ def cmd_check(args) -> int:
     if not args.quiet:
         for line in check_summary(project):
             print(line, file=sys.stderr)
+        # Part of the summary, not a finding (SR-0239): another project in the tree
+        # is not this graph's defect, so naming it never moves the verdict.
+        nested = nested_note(project)
+        if nested:
+            print(f"\n{nested}", file=sys.stderr)
     # Not a finding, so neither the findings nor the exit status move; printed
     # even when quiet, because it qualifies the result a quiet run still reports.
     if note:
@@ -1524,6 +1530,11 @@ def _composed_check(args) -> int:
               file=sys.stderr)
         for note in res.notices:
             print(f"  note: {note}", file=sys.stderr)
+        # A project nested in this one that is composed as a path source was read
+        # after all, so only the rest are named (SR-0239).
+        nested = nested_note(consumer, read=[p.path for p in res.projects().values()])
+        if nested:
+            print(f"\n{nested}", file=sys.stderr)
     if baseline_line:
         print(f"\n{baseline_line}", file=sys.stderr)
     tally = f"\n{errs} error(s), {warns} warning(s)"
