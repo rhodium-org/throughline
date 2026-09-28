@@ -214,6 +214,11 @@ class Project:
     # missing its target), as (uid, file, message). The loader records them here
     # rather than crashing, so `check` reports each as a named finding (SR-0134).
     load_errors: list[tuple[str, str, str]] = field(default_factory=list)
+    # Roots of other projects found in this project's tree, each a directory
+    # holding a throughline.toml of its own, where the loader stopped rather than
+    # read them as part of this one (SR-0239). Hidden directories are not searched,
+    # so none is recorded from inside one.
+    nested_projects: list[Path] = field(default_factory=list)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property

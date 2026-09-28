@@ -76,21 +76,94 @@ class ProjectError(Exception):
     pass
 
 
+# ------------------------------------------------------------ the project's tree
+
+# A project is the directory holding its throughline.toml and everything below it,
+# except what belongs to something else (SR-0239): a hidden directory is some tool's
+# own state (.git, .claude, .venv), and a directory holding a throughline.toml of its
+# own is another project's root, however it got there. The Claude desktop app checks
+# out git worktrees under .claude/worktrees/ of the directory a session starts in, and
+# a loader that walked into them read another branch's copy of the graph instead of
+# this one.
+
+
+def _hidden(name: str) -> bool:
+    """Whether a directory of this name lies outside every project (SR-0239)."""
+    return name.startswith(".")
+
+
+def _walk_project(root: Path, nested: list[Path] | None = None):
+    """Yield ``(directory, filenames)`` for ``root`` and for every directory below it
+    that belongs to the project there (SR-0239), stopping at hidden directories and
+    at other projects' roots. Each project root it stops at is appended to
+    ``nested`` when a list is given; hidden directories are not looked into at all.
+    Symlinked directories are not followed, as ``rglob`` did not follow them, so the
+    walk cannot loop."""
+    for dirpath, dirnames, filenames in os.walk(root):
+        here = Path(dirpath)
+        kept = []
+        for name in dirnames:
+            if _hidden(name):
+                continue
+            if (here / name / CONFIG_NAME).is_file():
+                if nested is not None:
+                    nested.append(here / name)
+                continue
+            kept.append(name)
+        dirnames[:] = kept
+        yield here, filenames
+
+
+def _own_paths(rels: list[str]) -> list[str]:
+    """Those of ``rels``, POSIX paths relative to a project root as a git tree lists
+    them, that lie in the project's own tree as :func:`_walk_project` draws it
+    (SR-0239)."""
+    roots = {rel[:-len(CONFIG_NAME) - 1] for rel in rels
+             if rel.endswith("/" + CONFIG_NAME)}
+
+    def own(rel: str) -> bool:
+        dirs = rel.split("/")[:-1]
+        return not any(_hidden(name) or "/".join(dirs[:i + 1]) in roots
+                       for i, name in enumerate(dirs))
+
+    return [rel for rel in rels if own(rel)]
+
+
+def _outside_own_tree(root: Path, directory: Path) -> str | None:
+    """Why ``directory`` lies outside the tree of the project at ``root``, or None
+    when it lies within (SR-0239)."""
+    base = root.resolve()
+    try:
+        rel = directory.resolve().relative_to(base)
+    except ValueError:
+        return f"it is not inside the project at {base}"
+    here = base
+    for name in rel.parts:
+        here = here / name
+        if _hidden(name):
+            return f"'{name}' is a hidden directory"
+        if (here / CONFIG_NAME).is_file():
+            return f"{here} holds its own {CONFIG_NAME}, so it is another project"
+    return None
+
+
 def _infer_format_version(root: Path) -> int:
     """Guess the format major of a config that omits format_version, by content.
 
     A missing field means a hand-authored or pre-versioning project. Rather than
     blindly assume the current major — which would silently load a v1 tree as an
-    empty v2 graph, since the v2 loader rglobs for `.register.yml` and never sees
+    empty v2 graph, since the v2 loader looks for `.register.yml` and never sees
     the v1 `.document.yml` — we read the layout on disk. A `.register.yml` present
     means v2; only `.document.yml` present means v1; neither (a bare/empty project)
     assumes the current major. This is the content inference that lets an
     unversioned old project still be routed to `tl migrate` (NFR-0010, UR-0015).
+    Only the project's own tree is read (SR-0239), so another project's manifests
+    cannot decide this one's format.
     """
-    if next(root.rglob(_MANIFEST_BY_VERSION[2]), None) is not None:
-        return 2
-    if next(root.rglob(_MANIFEST_BY_VERSION[1]), None) is not None:
-        return 1
+    for major in (2, 1):
+        manifest = _MANIFEST_BY_VERSION[major]
+        if any(manifest in names for _here, names in _walk_project(root)):
+            return major
     return FORMAT_VERSION
 
 
@@ -173,9 +246,12 @@ def _migrate_1_to_2(root: Path) -> None:
     """Upgrade a v1 tree to v2 by renaming every register manifest from the old
     `.document.yml` to `.register.yml` (SR-0102). Only the filename changed — the
     manifest's keys are identical across the two majors — so the rename is the
-    whole migration and it preserves every item untouched."""
+    whole migration and it preserves every item untouched. Only the project's own
+    manifests are renamed (SR-0239): another project inside the tree is left as it
+    stands."""
     old, new = _MANIFEST_BY_VERSION[1], _MANIFEST_BY_VERSION[2]
-    for manifest in sorted(root.rglob(old)):
+    for manifest in sorted(here / old for here, names in _walk_project(root)
+                           if old in names):
         target = manifest.with_name(new)
         if target.exists():
             raise ProjectError(
@@ -829,25 +905,29 @@ _CONFIG_UPGRADES: dict[int, Callable[[dict], dict]] = {2: _backfill_status_roles
 
 def _build_project(root: Path, config: dict, manifest_names: set[str]) -> Project:
     """Assemble a :class:`Project` from an already-parsed config and the register
-    manifests found under ``root``. ``manifest_names`` bounds which filenames count
-    as a register manifest — one name for the strict current-major load, every known
-    name for the tolerant read of a possibly-older source."""
+    manifests found in the project's own tree under ``root`` (SR-0239).
+    ``manifest_names`` bounds which filenames count as a register manifest — one name
+    for the strict current-major load, every known name for the tolerant read of a
+    possibly-older source."""
     cfg_file = root / CONFIG_NAME
     project = Project(path=root, config=config)
     try:
         project.schema  # build + validate now, so bad config fails fast (SR-0082)
     except SchemaError as e:
         raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
-    manifests = sorted(m for name in manifest_names for m in root.rglob(name))
+    nested: list[Path] = []
+    manifests = sorted(here / name for here, names in _walk_project(root, nested)
+                       for name in names if name in manifest_names)
+    project.nested_projects = sorted(nested)
     for manifest in manifests:
         reg_dir = manifest.parent
         raw = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
         reg = Register.from_manifest(raw, path=reg_dir)
         if reg.prefix in project.registers:
             # A second register folder claims a prefix already loaded. Keeping the
-            # first-seen register is deterministic (rglob is sorted); merging the
-            # duplicate's items would clobber UID numbering, so record the clash
-            # for `check` to fail on (SR-0101) and skip loading this folder.
+            # first-seen register is deterministic (the manifests are sorted);
+            # merging the duplicate's items would clobber UID numbering, so record
+            # the clash for `check` to fail on (SR-0101) and skip loading this folder.
             conflict = project.prefix_conflicts.setdefault(
                 reg.prefix, [str(project.registers[reg.prefix].path)])
             conflict.append(str(reg_dir))
@@ -936,7 +1016,8 @@ class _GitTree:
              self.ref, "--", self.prefix or "."],
             capture_output=True, check=True).stdout
         names = [n.decode("utf-8", "surrogateescape") for n in out.split(b"\0") if n]
-        return [n[len(self.prefix):] for n in names if n.startswith(self.prefix)]
+        return _own_paths([n[len(self.prefix):] for n in names
+                           if n.startswith(self.prefix)])
 
     def read(self, rels: list[str]) -> dict[str, str]:
         if not rels:
@@ -970,8 +1051,9 @@ class _DirectoryTree:
         self.root = root
 
     def files(self) -> list[str]:
-        return sorted(p.relative_to(self.root).as_posix()
-                      for p in self.root.rglob("*.yml") if p.is_file())
+        return sorted((here / name).relative_to(self.root).as_posix()
+                      for here, names in _walk_project(self.root)
+                      for name in names if name.endswith(".yml"))
 
     def read(self, rels: list[str]) -> dict[str, str]:
         found: dict[str, str] = {}
@@ -1082,6 +1164,24 @@ def baseline_note(schema, baseline: Baseline) -> str | None:
     rules = (["transition legality"] if schema.transitions is not None else [])
     rules.append("tombstone permanence")
     return f"not checked: {' and '.join(rules)} — {baseline.unavailable}"
+
+
+def nested_note(project: Project, *, read=()) -> str | None:
+    """The line check prints beside its summary when the project's tree holds
+    another project that was not read as part of it (SR-0239), or ``None``.
+    ``read`` holds resolved roots that were read all the same, as a composing
+    project's path sources are, and those are not named. Hidden directories are
+    never searched, so nothing inside one is named either."""
+    sourced = {Path(p).resolve() for p in read}
+    unread = [p for p in project.nested_projects if p.resolve() not in sourced]
+    if not unread:
+        return None
+    shown = ", ".join(f"{p.relative_to(project.path).as_posix()}/" for p in unread)
+    if len(unread) == 1:
+        return (f"not read: {shown} holds its own {CONFIG_NAME}, so it is another "
+                "project, not part of this one")
+    return (f"not read: {shown} hold their own {CONFIG_NAME}, so they are other "
+            "projects, not part of this one")
 
 
 def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | None:
@@ -1515,6 +1615,13 @@ def create_register(project, prefix: str, directory, *, title: str | None = None
                            f"{existing.path} — prefixes must be unique across the "
                            "project")
     reg_dir = root / directory
+    # A register the loader will not read would take its items out of the graph
+    # without a word, so it is refused where it would be made (SR-0239).
+    outside = _outside_own_tree(root, reg_dir)
+    if outside is not None:
+        raise ProjectError(f"cannot create a register at {reg_dir}: {outside} — "
+                           "a project is read only from its own tree, so its "
+                           "items would never be read")
     if (reg_dir / MANIFEST_NAME).exists():
         raise ProjectError(f"{reg_dir} already has a {MANIFEST_NAME}")
     reg_dir.mkdir(parents=True, exist_ok=True)

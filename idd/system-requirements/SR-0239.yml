@@ -1,0 +1,49 @@
+uid: SR-0239
+type: system_requirement
+status: ratified
+title: A project is read from its own tree only
+text: 'The Tool shall read a project only from its own directory tree. It shall not
+  descend into a subdirectory whose name begins with a dot, nor into one that holds
+  its own throughline.toml, which is the root of another project. The same boundary
+  shall apply wherever the Tool reads a project''s files: when it discovers registers,
+  infers a format version, renames manifests in tl migrate, and reads a baseline
+  from a revision or a directory. tl register new shall refuse to create a register
+  outside that boundary. check shall name each nested project it did not read in
+  its summary; that note is not a finding and shall never change the verdict.'
+rationale: |-
+  The Claude desktop app creates git worktrees at <cwd>/.claude/worktrees/<name>/ when a session starts at a graph root. The loader searched the whole tree and found each worktree's registers. .claude sorts before any letter, so those registers loaded first and the real ones were dropped as prefix clashes. On 27 September 2026, on a scratch copy of a composing project's graph, check loaded 118 requirements from a stale commit in place of the current graph's, and tl new allocated a UID already in use and wrote the item into the worktree.
+
+  Rejected: honouring .gitignore. It needs git, or a parser for git's ignore rules; it would make one tree load differently with and without git; and it does not help where nobody ignored the worktree directory.
+
+  Rejected: a finding for each nested project skipped. Under --strict it would fail the gate over a worktree another session is using, although the loader now handles it correctly.
+
+  Who pays: anyone who keeps registers in a dot-directory, or inside another project, and expects them to be read as part of this one. tl init already refuses to create a project inside another (SR-0077).
+normative: true
+links:
+- target: UR-0001
+  type: implements
+- target: SR-0101
+  type: relates
+- target: SR-0077
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:b03c39ed3e351af7974f1b3dcc8b0fa2d600aabd35a8015bba06f25361377143
+  ratified_content:
+    type: system_requirement
+    text: 'The Tool shall read a project only from its own directory tree. It shall
+      not descend into a subdirectory whose name begins with a dot, nor into one
+      that holds its own throughline.toml, which is the root of another project.
+      The same boundary shall apply wherever the Tool reads a project''s files: when
+      it discovers registers, infers a format version, renames manifests in tl migrate,
+      and reads a baseline from a revision or a directory. tl register new shall
+      refuse to create a register outside that boundary. check shall name each nested
+      project it did not read in its summary; that note is not a finding and shall
+      never change the verdict.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
