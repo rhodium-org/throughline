@@ -1,6 +1,6 @@
 uid: SR-0239
 type: system_requirement
-status: proposed
+status: ratified
 title: A project is read from its own tree only
 text: 'The Tool shall read a project only from its own directory tree. It shall not
   descend into a subdirectory whose name begins with a dot, nor into one that holds
@@ -30,3 +30,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:b03c39ed3e351af7974f1b3dcc8b0fa2d600aabd35a8015bba06f25361377143
+  ratified_content:
+    type: system_requirement
+    text: 'The Tool shall read a project only from its own directory tree. It shall
+      not descend into a subdirectory whose name begins with a dot, nor into one
+      that holds its own throughline.toml, which is the root of another project.
+      The same boundary shall apply wherever the Tool reads a project''s files: when
+      it discovers registers, infers a format version, renames manifests in tl migrate,
+      and reads a baseline from a revision or a directory. tl register new shall
+      refuse to create a register outside that boundary. check shall name each nested
+      project it did not read in its summary; that note is not a finding and shall
+      never change the verdict.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
