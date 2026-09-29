@@ -326,6 +326,25 @@ def review_items(project, uids=None, *, all_items: bool = False) -> list:
     return moved
 
 
+def item_type_for(project, prefix: str, explicit: str | None) -> str:
+    """The type an item born in ``prefix``'s register takes (SR-0241): the one
+    named, else the one the register declares. A register that declares none is a
+    refusal, never a guess — a default of ``requirement`` once gave every `tl new
+    TEST` a requirement, and nothing reported it until a coverage rule tripped."""
+    reg = project.registers.get(prefix)
+    if reg is None:
+        raise GroundingError(
+            f"no register with prefix '{prefix}' — create one before adding items")
+    if explicit:
+        return explicit
+    if reg.type:
+        return reg.type
+    raise GroundingError(
+        f"register '{prefix}' declares no item type — pass --type, or declare "
+        f"one with `type: <type>` in {reg.path}/.register.yml (`tl migrate` adds "
+        "it where the register's items agree on one)")
+
+
 def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
              title: str = "", text: str = "", status: str | None = None,
              origin: str | None = None, attrs: dict | None = None,

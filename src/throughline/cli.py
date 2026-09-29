@@ -79,6 +79,7 @@ from .items import (
     birth_item,
     coerce_attr,
     delete_item,
+    item_type_for,
     new_item,
     newly_suspect,
     parse_attrs,
@@ -272,7 +273,8 @@ def cmd_migrate(args) -> int:
         print(f"already at format version {result.end}"
               + ("" if result.bound or result.declared or result.routed
                  or result.cached or result.normative or result.contents
-                 or result.unprovable else " — nothing to migrate"))
+                 or result.unprovable or result.registers
+                 else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
         # repaired in place. Name every binding written so the change is never
@@ -344,6 +346,11 @@ def cmd_migrate(args) -> int:
     # the graph will hold someone to. The ratification records are left alone —
     # only ratification writes them (SR-0170) — so the stale ones are counted here
     # and each is re-ratified by a person who sees that only the flag moved.
+    if result.registers:
+        print(f"declared the item type of {len(result.registers)} register(s), "
+              "which `tl new` now gives items born there (SR-0241):")
+        for prefix, item_type in result.registers.items():
+            print(f"  {prefix} = {item_type}")
     if result.normative:
         print(f"rewrote the normative flag on {len(result.normative)} item(s) to "
               "what the item's type declares:")
@@ -365,7 +372,8 @@ def cmd_register_new(args) -> int:
     try:
         project = load_project(args.path)
         reg = create_register(project, args.prefix, args.dir, title=args.title,
-                              digits=args.digits, parent=args.parent)
+                              digits=args.digits, parent=args.parent,
+                              item_type=args.type)
     except ProjectError as e:
         return _err(str(e))
     print(f"created register {reg.prefix} at {reg.path}")
@@ -609,12 +617,13 @@ def cmd_new(args) -> int:
         return _err(str(e))
     schema = project.schema
     try:
-        attrs = parse_attrs(schema, args.type, args.attr, command="new")
-    except UidError as e:
+        item_type = item_type_for(project, args.prefix, args.type)
+        attrs = parse_attrs(schema, item_type, args.attr, command="new")
+    except (GroundingError, UidError) as e:
         return _err(str(e))
     # A declared default naming a record a single verb owns is never written
     # (SR-0170, SR-0213, SR-0219); say so rather than drop it silently.
-    for name, spec in schema.attrs_for(args.type).items():
+    for name, spec in schema.attrs_for(item_type).items():
         if spec.default is not None and attribute_owner(name) is not None:
             record, owner = attribute_owner(name)
             print(f"ignored the declared default for '{name}': it is part of the "
@@ -627,7 +636,7 @@ def cmd_new(args) -> int:
     default_type = args.ground_type or "derives_from"
     named = list(args.ground or ())
     try:
-        item = new_item(project, args.prefix, item_type=args.type, uid=args.uid,
+        item = new_item(project, args.prefix, item_type=item_type, uid=args.uid,
                         title=args.title or "", text=args.text or "",
                         status=args.status, origin=args.origin, attrs=attrs,
                         ground=named, ground_type=default_type)
@@ -1948,10 +1957,11 @@ def _composed_new(args) -> int:
     # status for a machine origin, the author's attributes, the schema's defaults
     # and the type's normative flag. Only the cross-source grounding below differs.
     try:
-        attrs = parse_attrs(consumer.schema, args.type, args.attr, command="new")
-    except UidError as e:
+        item_type = item_type_for(consumer, args.prefix, args.type)
+        attrs = parse_attrs(consumer.schema, item_type, args.attr, command="new")
+    except (GroundingError, UidError) as e:
         return _err(str(e))
-    item = birth_item(consumer.schema, reg, uid, item_type=args.type,
+    item = birth_item(consumer.schema, reg, uid, item_type=item_type,
                       title=args.title or "", text=args.text or "",
                       status=args.status, origin=args.origin, attrs=attrs)
 

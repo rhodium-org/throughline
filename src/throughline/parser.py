@@ -218,6 +218,9 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     d.add_argument("--title", default="")
     d.add_argument("--digits", type=int, default=4)
     d.add_argument("--parent", default=None)
+    d.add_argument("--type", default=None,
+                   help="the item type the register holds; `tl new` gives it to "
+                        "items born there when no --type is named")
     d.set_defaults(func=handlers.get("cmd_register_new"))
 
     _add_schema_parser(sub, handlers)
@@ -225,7 +228,8 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s = sub.add_parser("new", help="allocate + create an item")
     s.add_argument("prefix")
     s.add_argument("--uid", default=None, help="explicit UID (must match prefix)")
-    s.add_argument("--type", default="requirement")
+    s.add_argument("--type", default=None,
+                   help="item type (default: the type the register declares)")
     s.add_argument("--status", default=None,
                    help="birth status (default: the project's 'initial' role)")
     s.add_argument("--title", default="")
