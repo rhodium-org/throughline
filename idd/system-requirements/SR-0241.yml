@@ -1,0 +1,39 @@
+uid: SR-0241
+type: system_requirement
+status: ratified
+title: An item born without a named type takes its register's type
+text: 'When an item is created without a named type, the Tool shall give it the item
+  type its register declares, and shall refuse to create it when the register declares
+  none. The registers the Tool lays down when it initialises a project shall each
+  declare the type they are for. Migration shall declare the type of a register that
+  declares none: the laid-down type for a register the Tool laid down, otherwise
+  the one type its live items share, and none when they share none. The check shall
+  warn of an item whose type differs from the one its register declares.'
+rationale: |-
+  `tl new` fell back to the type `requirement` whatever the register, so `tl new TEST` in a graph fresh from `tl init` made a requirement and nothing reported it until a coverage rule scoped to requirements tripped over it (rhodium-org/throughline#81, found 29 September 2026 in throughline-skills). A register is still not required to be uniform; the type it declares is a default and a warning, not a constraint.
+
+  Who pays: a register made with `tl register new` and no `--type`, whose items share no one type or which is empty. `tl new` there now needs `--type` until the register declares one.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:4498e989e81397137715b9b951c16baf55158d7e35b0a234193750b476fb1d3c
+  ratified_content:
+    type: system_requirement
+    text: 'When an item is created without a named type, the Tool shall give it the
+      item type its register declares, and shall refuse to create it when the register
+      declares none. The registers the Tool lays down when it initialises a project
+      shall each declare the type they are for. Migration shall declare the type
+      of a register that declares none: the laid-down type for a register the Tool
+      laid down, otherwise the one type its live items share, and none when they
+      share none. The check shall warn of an item whose type differs from the one
+      its register declares.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -621,6 +621,8 @@ class RepairResult(NamedTuple):
     # evaluates a default once and hands the same object to every caller.
     contents: Mapping[str, str] = _NO_STRINGS
     unprovable: Mapping[str, str] = _NO_STRINGS
+    # The item type declared on each register that declared none (SR-0241).
+    registers: Mapping[str, str] = _NO_STRINGS
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -682,6 +684,44 @@ def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
     return rewritten, restamped, stale
 
 
+# The type each register `tl init` lays down holds (SR-0241), keyed by the prefix
+# and title it is written with, so a register a person renamed is not assumed to
+# still hold what the default one did.
+_SEEDED_REGISTER_TYPES = {("INT", "Vision"): "intent",
+                          ("REQ", "Requirements"): "requirement",
+                          ("NFR", "Non-functional requirements"): "nfr",
+                          ("NG", "Non-goals"): "non_goal",
+                          ("TEST", "Tests"): "test"}
+
+
+def _backfill_register_types(root: Path) -> dict[str, str]:
+    """Declare the item type of each register that declares none (SR-0241).
+    Returns ``prefix -> type`` for each manifest written.
+
+    A register `tl init` laid down gets the type it was laid down for, whatever
+    its items hold: an item there of another type was most likely born wrong by
+    the old `requirement` fallback, and `tl check` now names it. Any other
+    register gets the type its live items agree on, and is left alone when they
+    are empty or disagree — a guess there is the bug this repairs.
+
+    Idempotent: a declared type is never rewritten."""
+    project = load_project(root)
+    written: dict[str, str] = {}
+    for reg in project.registers.values():
+        if reg.type:
+            continue
+        want = _SEEDED_REGISTER_TYPES.get((reg.prefix, reg.title))
+        if want is None:
+            kinds = {i.type for i in reg.items.values() if not i.is_deleted}
+            if len(kinds) != 1:
+                continue
+            want = kinds.pop()
+        reg.type = want
+        write_manifest(reg)
+        written[reg.prefix] = want
+    return written
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -719,8 +759,11 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
     revisions = _backfill_ratification_revisions(root)
+    # Manifests only: no item, stamp or configuration reads a register's type.
+    registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
-                        normative, restamped, stale, contents, unprovable)
+                        normative, restamped, stale, contents, unprovable,
+                        registers)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -798,6 +841,8 @@ class MigrationResult(NamedTuple):
     # unproved one could not be (SR-0218).
     contents: Mapping[str, str] = _NO_STRINGS
     unprovable: Mapping[str, str] = _NO_STRINGS
+    # The item type declared on each register that declared none (SR-0241).
+    registers: Mapping[str, str] = _NO_STRINGS
 
 
 def migrate_project(path: str | Path, *,
@@ -848,7 +893,7 @@ def migrate_project(path: str | Path, *,
     return MigrationResult(start, current, result.config, result.routes,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
-                           result.contents, result.unprovable)
+                           result.contents, result.unprovable, result.registers)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -1357,12 +1402,12 @@ def _seed_registers(root: Path) -> dict[str, Register]:
     """Create the default registers (INT/REQ/NFR/NG/TEST) so a project has a place to
     author each kind of item. Returns them keyed by prefix for the demo seeder."""
     registers = [
-        Register(prefix="INT", title="Vision", path=root / "vision"),
-        Register(prefix="REQ", title="Requirements", path=root / "requirements"),
-        Register(prefix="NFR", title="Non-functional requirements",
+        Register(prefix="INT", type="intent", title="Vision", path=root / "vision"),
+        Register(prefix="REQ", type="requirement", title="Requirements", path=root / "requirements"),
+        Register(prefix="NFR", type="nfr", title="Non-functional requirements",
                  path=root / "nonfunctional"),
-        Register(prefix="NG", title="Non-goals", path=root / "non-goals"),
-        Register(prefix="TEST", title="Tests", path=root / "tests"),
+        Register(prefix="NG", type="non_goal", title="Non-goals", path=root / "non-goals"),
+        Register(prefix="TEST", type="test", title="Tests", path=root / "tests"),
     ]
     by_prefix = {r.prefix: r for r in registers}
     for reg in registers:
@@ -1594,7 +1639,8 @@ Each requirement, what it grounds up to, and what verifies it.
 
 
 def create_register(project, prefix: str, directory, *, title: str | None = None,
-                    digits: int = 4, parent: str | None = None):
+                    digits: int = 4, parent: str | None = None,
+                    item_type: str | None = None):
     """Add a register — the prefix-owning collection a UID namespace belongs to
     (SR-0011, SR-0102) — and write its manifest.
 
@@ -1625,8 +1671,8 @@ def create_register(project, prefix: str, directory, *, title: str | None = None
     if (reg_dir / MANIFEST_NAME).exists():
         raise ProjectError(f"{reg_dir} already has a {MANIFEST_NAME}")
     reg_dir.mkdir(parents=True, exist_ok=True)
-    reg = Register(prefix=prefix, title=title or prefix, digits=digits,
-                   parent=parent, path=reg_dir)
+    reg = Register(prefix=prefix, title=title or prefix, type=item_type,
+                   digits=digits, parent=parent, path=reg_dir)
     write_manifest(reg)
     project.registers[prefix] = reg
     return reg

@@ -55,6 +55,7 @@ _DEFAULT_SEVERITY = {
     "ratified-stale": WARNING, "ratified-content-mismatch": ERROR,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING, "normative-mismatch": WARNING,
+    "register-type-mismatch": WARNING,
 }
 # `rule-filter` is deliberately absent above. Every rule there describes a
 # judgement a project may reasonably make differently; a coverage rule that
@@ -328,6 +329,15 @@ def validate(project, strict: bool = False,
             add("normative-mismatch", item.uid, f,
                 f"normative: {str(item.normative).lower()} but type '{item.type}' "
                 f"declares {str(want).lower()} — run `tl migrate` to repair")
+
+        # An item of another type than its register declares (SR-0241) — most
+        # often one `tl new` born as a requirement before a register could say
+        # what it holds. A warning: a register is not required to be uniform.
+        reg = project.register_of(item.uid)
+        if reg is not None and reg.type and item.type != reg.type:
+            add("register-type-mismatch", item.uid, f,
+                f"type '{item.type}' but register '{reg.prefix}' holds "
+                f"'{reg.type}' — fix the item's type:, or pass --type to `tl new`")
 
         # Publication coverage (SR-0096): a live normative item referenced by no
         # published document is scope that can justify itself but cannot reach

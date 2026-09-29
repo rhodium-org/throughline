@@ -13,7 +13,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UID | Title | Implements (incoming) |
 |---|---|---|
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0145, SR-0239 |
-| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013 |
+| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188 |
