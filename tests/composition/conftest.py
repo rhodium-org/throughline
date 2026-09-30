@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """Materialise the CLI fixtures into a tmp dir.
 
-The fixtures are *loadable throughline projects*. They must not live inside the
-throughline-compose repo tree: the loader discovers registers by walking for
-``.register.yml`` files, so an on-disk fixture project would collide with this
-repo's own IDD spine when ``tl-compose check`` runs at the root. Writing them into
-``tmp_path`` keeps the repo tree a single, clean project.
+The fixtures are *loadable throughline projects*, written into ``tmp_path`` so that
+each test works on its own copy and may change it. They were first kept out of the
+repo tree because the loader once read every register below a graph root, so a
+fixture there joined the repo's own graph; since SR-0239 a nested project is not
+read, but a fixture a test rewrites still belongs in a directory of its own.
 """
 from __future__ import annotations
 

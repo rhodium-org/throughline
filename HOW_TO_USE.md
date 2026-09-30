@@ -137,6 +137,10 @@ tl register new FR  features --title "Functional requirements" # ./features/.reg
 A *register* is just a folder with a `.register.yml` manifest that owns a UID
 prefix (`INT`, `BN`, `FR`, …) and hands out sequential numbers. (It is distinct
 from a *document* — the reader-facing Markdown that `tl docs` publishes into.)
+It can sit anywhere in the project's folder except in a hidden directory (a name
+starting with `.`, such as `.git` or `.claude`) or inside another project (a
+folder with its own `throughline.toml`). `tl` reads neither, so a copy of the
+graph kept there, such as a git worktree, never stands in for the real one.
 
 ### Add some items (UIDs are allocated for you)
 

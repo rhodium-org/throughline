@@ -12,8 +12,8 @@ away, and the whole graph is validated by `tl check --strict`.
 <!-- tl:matrix incoming:implements type == 'user_requirement' -->
 | UID | Title | Implements (incoming) |
 |---|---|---|
-| UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0145 |
-| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013 |
+| UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0145, SR-0239 |
+| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188 |
@@ -48,7 +48,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0034 | An item flagged ambiguous can be clarified, with a record of who did it and why | SR-0213, SR-0214 |
 | UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223 |
 | UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234 |
-| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238 |
+| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238, SR-0240 |
 <!-- tl:end -->
 
 ## Coverage check

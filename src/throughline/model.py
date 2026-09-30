@@ -158,10 +158,13 @@ class Item:
 class Register:
     """A prefix-owning, numbered collection of items on disk (the folder with a
     ``.register.yml`` manifest). A register owns a UID prefix and its numbering
-    (SR-0002); it is orthogonal to item *type*. Distinct from a published
-    *document* — the reader-facing Markdown that ``tl docs`` injects into."""
+    (SR-0002). It may declare the item ``type`` it holds, which is what `tl new`
+    gives an item born in it when no ``--type`` is named (SR-0241). Distinct from
+    a published *document* — the reader-facing Markdown that ``tl docs`` injects
+    into."""
     prefix: str
     title: str = ""
+    type: str | None = None
     digits: int = 4
     parent: str | None = None
     reserved: list[int] = field(default_factory=list)
@@ -172,9 +175,10 @@ class Register:
 
     @classmethod
     def from_manifest(cls, d: dict, path: Path | None = None) -> "Register":
-        known = {"prefix", "digits", "title", "parent", "reserved", "sections"}
+        known = {"prefix", "digits", "title", "type", "parent", "reserved",
+                 "sections"}
         return cls(
-            prefix=d["prefix"], title=d.get("title", ""),
+            prefix=d["prefix"], title=d.get("title", ""), type=d.get("type"),
             digits=d.get("digits", 4), parent=d.get("parent"),
             reserved=d.get("reserved", []) or [], sections=d.get("sections", []) or [],
             path=path, extra={k: v for k, v in d.items() if k not in known},
@@ -184,6 +188,8 @@ class Register:
         d: dict = {"prefix": self.prefix, "digits": self.digits}
         if self.title:
             d["title"] = self.title
+        if self.type:
+            d["type"] = self.type
         if self.parent:
             d["parent"] = self.parent
         if self.reserved:
@@ -214,6 +220,11 @@ class Project:
     # missing its target), as (uid, file, message). The loader records them here
     # rather than crashing, so `check` reports each as a named finding (SR-0134).
     load_errors: list[tuple[str, str, str]] = field(default_factory=list)
+    # Roots of other projects found in this project's tree, each a directory
+    # holding a throughline.toml of its own, where the loader stopped rather than
+    # read them as part of this one (SR-0239). Hidden directories are not searched,
+    # so none is recorded from inside one.
+    nested_projects: list[Path] = field(default_factory=list)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
