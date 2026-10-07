@@ -1795,18 +1795,20 @@ def _composed_ratify(args) -> int:
                                          replacing=getattr(args, "replacing", False))
         if obstacle is not None:
             return _err(obstacle + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
-    # What moved since the last signature goes in the path of this one (SR-0167,
-    # SR-0246), as it does for a graph that composes nothing.
+    # Signed links that moved go in the path of the new signature (SR-0246). Only
+    # those: this command has always re-signed moved content unshown, tools built
+    # on it rely on that, and a project that declares no signed links must behave
+    # as it did (SR-0242).
     changes = {uid: change_since_ratification(consumer, consumer.get(uid))
-               for uid in uids}
+               for uid in uids if links_moved(consumer.get(uid), consumer.schema)}
     interactive = _interactive()
     if not interactive:
         for uid in uids:
-            if changes[uid].stale and not getattr(args, "accept_change", False):
+            if uid in changes and not getattr(args, "accept_change", False):
                 return _err(_UNSEEN_CHANGE.format(
                     uid=uid, who=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR, "a human")))
     for uid in uids:
-        if interactive and changes[uid].stale:
+        if interactive and uid in changes:
             for line in render_change(
                     changes[uid], ratifier=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR),
                     columns=shutil.get_terminal_size((80, 24)).columns,

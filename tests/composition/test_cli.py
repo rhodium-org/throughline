@@ -486,12 +486,7 @@ def test_compose_ratify_restamps_once_the_content_moves(consumer_dir, capsys):
         "A consumer clause used to exercise the ratify gate.",
         "The consumer shall do something materially different."), encoding="utf-8")
     capsys.readouterr()
-    # A change nobody was shown is refused unless acknowledged, as it is in a graph
-    # that composes nothing (SR-0167, SR-0246).
-    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob"]) == 2
-    assert "--accept-change" in capsys.readouterr().err
-    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob",
-                     "--accept-change"]) == 0
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob"]) == 0
     text = p.read_text(encoding="utf-8")
     assert "ratified_by: bob" in text
     assert first not in text                   # bound to the new wording, not the old
@@ -1167,3 +1162,29 @@ def test_composed_unlink_refuses_what_would_unground_the_union(consumer_dir, cap
     assert tlc_main(["-C", str(consumer_dir), "unlink", "SR-0001", "INT-0001"]) == 2
     err = capsys.readouterr().err
     assert "SR-0001 reaching no root" in err and "INT-0001 served by nothing" in err
+
+
+def test_compose_ratify_stops_at_a_signed_link_that_moved(consumer_dir, capsys):
+    # SR-0246 through the composed path: a signed link into a source, signed, then
+    # joined by a second one, is refused unseen and accepted once acknowledged.
+    cfg = consumer_dir / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8")
+                   + '\n[ratify]\nsigned_links = ["derives_from"]\n', encoding="utf-8")
+    p = _write_sr(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")])
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "alice"]) == 0
+    assert "target: toy:INT-0001" in p.read_text(encoding="utf-8").split(
+        "ratified_links:")[1]
+    capsys.readouterr()
+    assert tlc_main(["-C", str(consumer_dir), "check", "--base", ""]) == 0
+    assert "ratified-stale" not in capsys.readouterr().out
+    assert tlc_main(["-C", str(consumer_dir), "link", "SR-0002", "toy:UR-0001",
+                     "--type", "derives_from"]) == 0
+    assert "no longer covers" in capsys.readouterr().out
+    tlc_main(["-C", str(consumer_dir), "check", "--base", ""])
+    assert "carries derives_from → toy:UR-0001" in capsys.readouterr().out
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "alice"]) == 2
+    assert "--accept-change" in capsys.readouterr().err
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "alice",
+                     "--accept-change"]) == 0
+    tlc_main(["-C", str(consumer_dir), "check", "--base", ""])
+    assert "ratified-stale" not in capsys.readouterr().out
