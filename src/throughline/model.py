@@ -28,6 +28,13 @@ class Link:
     target: str
     type: str
     stamp: str | None = None          # target fingerprint when last confirmed (SR-0034)
+    # The target as the item's own file writes it, set by a tool that rewrites
+    # targets to merge the item into a wider graph (SR-0245).
+    _authored_target: str | None = field(default=None, repr=False, compare=False)
+
+    @property
+    def authored_target(self) -> str:
+        return self._authored_target or self.target
 
     def to_dict(self) -> dict:
         d = {"target": self.target, "type": self.type}
@@ -72,6 +79,10 @@ class Item:
     # empty tuple is meaningful — "that graph marked none" — so this is None when
     # unset rather than defaulting to ().
     _authored_normative_attrs: tuple[str, ...] | None = None
+    # The link types the graph that authored this item declares as signed, set by
+    # the same tool for the same reason (SR-0245). None when unset; an empty tuple
+    # means that graph signs none.
+    _authored_signed_link_types: tuple[str, ...] | None = None
 
     @property
     def authored_uid(self) -> str:

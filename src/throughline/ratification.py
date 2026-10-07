@@ -36,13 +36,14 @@ import difflib
 import re
 import subprocess
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .fingerprint import content_fingerprint, fingerprint, normative_attr_names, signed_content
 from .identity import RATIFIED_BY_ATTR
 from .model import Item
 from .schema import Schema
+from .signed_links import link_drift
 
 # The attribute holding the revision resolved for a stamp (SR-0166). Written by
 # `tl migrate`, never by ratify: the content being ratified is still uncommitted
@@ -423,7 +424,42 @@ def _change_from_record(project, item, stamp: str, recorded: dict) -> Ratificati
                               changes=tuple(changes), source=RECORD, reason=unsaid)
 
 
+#: The prefix of a :class:`FieldChange` that reports a signed link (SR-0246). The
+#: link type follows it. ``was`` is the target of a link the record holds that the
+#: item no longer carries; ``now`` is the target of a link the item carries that
+#: the record does not hold. The other side is None.
+LINK_FIELD = "links."
+
+
+def _link_changes(project, item) -> tuple[FieldChange, ...]:
+    """The signed links that moved since the signature (SR-0246), in the shape a
+    changed field has, so a caller that lists the changes shows them too. A
+    retargeted link is one of each: pairing them would be a guess."""
+    unheld, dropped = link_drift(item, project.schema)
+    return (tuple(FieldChange(field=f"{LINK_FIELD}{t}", was=target, now=None)
+                  for t, target in dropped)
+            + tuple(FieldChange(field=f"{LINK_FIELD}{t}", was=None, now=target)
+                    for t, target in unheld))
+
+
 def change_since_ratification(project, item) -> RatificationChange:
+    """The difference between ``item`` as it stands and what its ratification was
+    taken over (SR-0165): its normative content, and the links the signature
+    covers (SR-0246). The links are read from the record alone, so they are
+    reported even where the content that moved cannot be shown."""
+    content = _content_change(project, item)
+    links = _link_changes(project, item)
+    if not links:
+        return content
+    if content.outcome == UNCHANGED:
+        return RatificationChange(uid=item.uid, outcome=CHANGED, stamp=content.stamp,
+                                  changes=links, source=RECORD)
+    if content.outcome == CHANGED:
+        return replace(content, changes=content.changes + links)
+    return replace(content, changes=links)
+
+
+def _content_change(project, item) -> RatificationChange:
     """The difference between ``item``'s current normative content and the content
     its ratification stamp was taken over (SR-0165).
 
@@ -683,6 +719,15 @@ def _render_prose(field: str, was: str, now: str, *, pad: str,
     return lines
 
 
+def _link_line(c: FieldChange) -> str:
+    """One signed link that moved, in words (SR-0246)."""
+    kind = c.field[len(LINK_FIELD):]
+    if c.now is None:
+        return (f"links: no longer carries {kind} → {c.was}, which the "
+                "signature covers")
+    return f"links: carries {kind} → {c.now}, which the signature does not cover"
+
+
 def render_change(change: RatificationChange, *, ratifier: str | None = None,
                   width: int = 2, columns: int = 80,
                   colour: bool = False) -> list[str]:
@@ -703,7 +748,9 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
             f"{pad}{change.reason}.",
             f"{pad}stamp {change.stamp}",
             f"{pad}nobody can state what you would be accepting.",
-        ]
+        ] + ([f"{pad}its signed links moved as well:"]
+             + [f"{pad}{_link_line(c)}" for c in change.changes]
+             if change.changes else [])
     where = (f"at {change.revision[:9]}{', cached' if change.cached else ''}"
              if change.revision else "from the record")
     lines = [f"changed since it was ratified{who} "
@@ -711,7 +758,9 @@ def render_change(change: RatificationChange, *, ratifier: str | None = None,
     if change.reason:
         lines.append(f"{pad}{change.reason}.")
     for c in change.changes:
-        if is_prose(c.was, c.now):
+        if c.field.startswith(LINK_FIELD):
+            lines.append(f"{pad}{_link_line(c)}")
+        elif is_prose(c.was, c.now):
             lines.extend(_render_prose(c.field, c.was, c.now, pad=pad,
                                        columns=columns, colour=colour))
         else:

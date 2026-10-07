@@ -1,0 +1,54 @@
+uid: SR-0243
+type: system_requirement
+status: implemented
+title: A ratification records the links it was taken over
+text: 'When the Tool writes a ratification stamp in a project that declares signed
+  link types (SR-0242), it shall record beside the stamp each outgoing link of those
+  types that the item carries: the type of the link and its target. The record shall
+  hold each link once, in a fixed order, and shall hold no link stamp. An item that
+  carries no such link shall get no link record, and any earlier one shall be removed.
+  Only ratification shall write the record. Withdrawing the signature shall remove
+  it. Migration shall never write it. The content fingerprint and every link stamp
+  shall stay as they are.'
+rationale: |-
+  Decision: the signed links are held in a record of their own, beside the stamp and the recorded content (SR-0215).
+
+  Rejected: adding links to the content fingerprint. That fingerprint is also what a link records as its stamp of its target (SR-0034) and what a review records (SR-0038). Every link pointing at an item would turn suspect whenever that item changed its own links. Every signature, stamp and review in a graph would be invalidated on the day it declared signed links.
+
+  The link stamp is left out. A restamp confirms the content of the target, and a target whose content moved is already reported as a suspect link. Incoming links are left out. They are written on another item and signed with that item.
+
+  Migration never writes the record. Writing the links an item carries today under a signature made earlier would say a person accepted links nobody showed them. Rejected: writing them with a backfilled marking, as SR-0152 does for a stamp. A marked record would still read as current, and the gap would stay out of sight. Here the item can be put in front of the person again (SR-0246).
+
+  Who pays: each ratified item that carries signed links holds a second copy of them until it is next signed.
+
+  Verified by test: ratifying an item with two signed links and one other link records the two, sorted, without stamps; the same links in another order give the same record; an item with no signed link gets no record; signing again after the last signed link is removed removes the record; amend refuses to write the record; withdraw removes it; migrate leaves the item file unchanged; the fingerprint of the item is the same before and after.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0242
+  type: relates
+- target: SR-0215
+  type: relates
+- target: SR-0148
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:183bc01d30d0c8204ad2cee7a90e651378bd26a388f43bc3507ed877c9b9b035
+  ratified_content:
+    type: system_requirement
+    text: 'When the Tool writes a ratification stamp in a project that declares signed
+      link types (SR-0242), it shall record beside the stamp each outgoing link of
+      those types that the item carries: the type of the link and its target. The
+      record shall hold each link once, in a fixed order, and shall hold no link
+      stamp. An item that carries no such link shall get no link record, and any
+      earlier one shall be removed. Only ratification shall write the record. Withdrawing
+      the signature shall remove it. Migration shall never write it. The content
+      fingerprint and every link stamp shall stay as they are.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

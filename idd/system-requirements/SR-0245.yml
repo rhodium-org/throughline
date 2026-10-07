@@ -1,0 +1,48 @@
+uid: SR-0245
+type: system_requirement
+status: implemented
+title: Signed links are judged as the item's own graph wrote them
+text: For an item borrowed from a composed source, the Tool shall judge the signed
+  links (SR-0244) by the link types that item's own graph declares as signed, and
+  by the targets as that item's own file writes them. The namespace, alias and configuration
+  of the graph reading the item shall not change the answer. A target into a composed
+  source shall be recorded and compared as the namespace-qualified reference the
+  item's own file holds.
+rationale: |-
+  This follows SR-0154 and SR-0162. A union rewrites every link target to a relabelled UID, the namespace-qualified targets of the consumer included, and checks every item under the schema of the consumer. Were either to reach the comparison, a signature made in a source graph would read as stale in every graph that composes it, on links nobody had touched.
+
+  Rejected: identifying a target by where its source resolves, its location or its pinned edition. Moving a pin is not a change to the link. The content of the target is the business of the link stamp.
+
+  One consequence. Renaming a namespace in a declaration of the graph itself rewrites the targets its own items hold, so those items need signing again.
+
+  Who pays: a graph owner who renames a namespace signs again the items that link through it.
+
+  Verified by test: an item signed in a source graph with a signed link reads as current when composed under a different namespace, under an alias, and by a consumer that declares other signed link types or none; the same item with its link retargeted in the source reads as stale in the consumer; a local item signed with a namespace-qualified target reads as current in the union.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0244
+  type: relates
+- target: SR-0154
+  type: relates
+- target: SR-0162
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:3efe5e6ee23e94706c23adb7c2267a729b890e4ca9ca43c8fda9b60f938184e4
+  ratified_content:
+    type: system_requirement
+    text: For an item borrowed from a composed source, the Tool shall judge the signed
+      links (SR-0244) by the link types that item's own graph declares as signed,
+      and by the targets as that item's own file writes them. The namespace, alias
+      and configuration of the graph reading the item shall not change the answer.
+      A target into a composed source shall be recorded and compared as the namespace-qualified
+      reference the item's own file holds.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

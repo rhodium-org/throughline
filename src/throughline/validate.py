@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 
 from .fingerprint import content_fingerprint, fingerprint
+from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
@@ -378,11 +379,27 @@ def validate(project, strict: bool = False,
         # carries none and cannot be judged, so the rule stays silent for it
         # rather than accusing the whole back catalogue.
         stamp = item.attrs.get("ratified_fingerprint")
-        if stamp and fingerprint(item, schema) != stamp:
-            who = item.attrs.get("ratified_by") or "a human"
+        who = item.attrs.get("ratified_by") or "a human"
+        content_moved = bool(stamp) and fingerprint(item, schema) != stamp
+        # Signed links (SR-0244): the links a human accepted with the item have
+        # moved since. Silent where the project signs no link type, so no graph
+        # gains this finding until it declares one (SR-0242).
+        unheld, dropped = link_drift(item, schema)
+        if unheld or dropped:
+            what = "normative content and signed links" if content_moved else "signed links"
+            add("ratified-stale", item.uid, f,
+                f"{what} changed since {who} ratified it: it "
+                f"{describe_drift(unheld, dropped)} — re-ratify to accept the "
+                "item as it stands, or put it back")
+        elif content_moved:
             add("ratified-stale", item.uid, f,
                 f"normative content changed since {who} ratified it — re-ratify "
                 "to accept the new wording, or revert it")
+        if stamp and recorded_links(item) is None:
+            add("ratified-content-mismatch", item.uid, f,
+                "the recorded ratified links are not a list of type and target "
+                "pairs, so they no longer show what was signed — restore the "
+                "record from version control, or ratify the item again")
 
         # The recorded signed content (SR-0217): the Tool writes it so that it
         # reproduces the stamp beside it (SR-0215), so a record that does not was

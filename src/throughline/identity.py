@@ -67,6 +67,10 @@ RATIFICATION_ATTRS = {
     # withdrawal, which clears every attribute it does not own, removes it with
     # the signature.
     "ratified_content": "ratify",
+    # The links the signature covers (SR-0243). Ratify alone writes it — migration
+    # never does, because the links an item carries today are not ones anybody was
+    # shown under an earlier signature.
+    "ratified_links": "ratify",
     # The identity a correction replaced (SR-0196). Ratify writes it, because a
     # correction is itself a ratification; it is guarded like the rest of the
     # record because a hand-written one would claim that a signature succeeded

@@ -1,0 +1,59 @@
+uid: SR-0244
+type: system_requirement
+status: implemented
+title: A signature is stale when its signed links have moved
+text: Validation shall report an item as `ratified-stale` when it carries a ratification
+  stamp and, among its links of the signed types (SR-0242), it carries a link its
+  link record (SR-0243) does not hold, or its link record holds a link it no longer
+  carries. The finding shall name each such link by type and target, and say which
+  of the two it is. A ratification record with no link record holds no links. Links
+  of other types shall be ignored, on the item and in the record. The order of the
+  links, and a change to a link stamp, shall never make a signature stale. The worklist,
+  the progress count and the refusal to ratify an unchanged item shall give the same
+  answer as the finding. A link record that is not a list of type and target pairs
+  shall be reported as an error that names the item.
+rationale: |-
+  What happens to an item ratified before this: its record holds no links. In a project that declares no signed links nothing changes. In a project that declares them, the item reads as stale exactly when it carries a link of a signed type, and a person signs it again after being shown those links (SR-0246). An item that carries none stays signed, and a signed link added later makes it stale.
+
+  A retargeted link is reported as one link no longer carried and one not held. Pairing them would be a guess when an item has several links of one type.
+
+  The rule name is kept. Everything that already reads `ratified-stale`, the seam, the cockpit and the transform, treats the item as unsigned with no change of its own. The severity is kept too.
+
+  Rejected: a separate finding for a record that holds no links. Two findings would ask for the same act, signing again.
+
+  Who pays: the owner of a graph that declares signed links signs again each ratified item that carries one. A consumer that composes such a graph sees those borrowed items as stale until the owner has.
+
+  Verified by test: after ratifying, adding a signed link, removing one and retargeting one each give `ratified-stale` naming the link; adding a link of another type, reordering the links and restamping a link give none; an item ratified with no link record and carrying a signed link is stale, and one carrying none is not; the worklist and the progress count agree with the finding in each case; a malformed link record is an error.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0243
+  type: relates
+- target: SR-0148
+  type: relates
+- target: SR-0034
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:c8be7fa617b568d28448b3e755d99ed520a9241e0a7395b059ed825187def531
+  ratified_content:
+    type: system_requirement
+    text: Validation shall report an item as `ratified-stale` when it carries a ratification
+      stamp and, among its links of the signed types (SR-0242), it carries a link
+      its link record (SR-0243) does not hold, or its link record holds a link it
+      no longer carries. The finding shall name each such link by type and target,
+      and say which of the two it is. A ratification record with no link record holds
+      no links. Links of other types shall be ignored, on the item and in the record.
+      The order of the links, and a change to a link stamp, shall never make a signature
+      stale. The worklist, the progress count and the refusal to ratify an unchanged
+      item shall give the same answer as the finding. A link record that is not a
+      list of type and target pairs shall be reported as an error that names the
+      item.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

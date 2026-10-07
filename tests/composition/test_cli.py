@@ -486,7 +486,12 @@ def test_compose_ratify_restamps_once_the_content_moves(consumer_dir, capsys):
         "A consumer clause used to exercise the ratify gate.",
         "The consumer shall do something materially different."), encoding="utf-8")
     capsys.readouterr()
-    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob"]) == 0
+    # A change nobody was shown is refused unless acknowledged, as it is in a graph
+    # that composes nothing (SR-0167, SR-0246).
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob"]) == 2
+    assert "--accept-change" in capsys.readouterr().err
+    assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob",
+                     "--accept-change"]) == 0
     text = p.read_text(encoding="utf-8")
     assert "ratified_by: bob" in text
     assert first not in text                   # bound to the new wording, not the old
