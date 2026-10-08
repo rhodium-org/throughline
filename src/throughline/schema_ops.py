@@ -100,7 +100,7 @@ class Refusal:
         if composed:
             lines.append(
                 "This project declares composed sources. The check above reads "
-                "this graph alone; run `tl-compose check` for the assembled union.")
+                "this graph alone; run `tl check` for the assembled union.")
         return "\n".join(lines)
 
 

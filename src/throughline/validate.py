@@ -267,7 +267,7 @@ def validate(project, strict: bool = False,
             if namespaced:
                 add("namespace-unresolved", item.uid, f,
                     f"'{link.target}' is a namespace-qualified reference the core cannot "
-                    "resolve — run `tl-compose check` in a composed project")
+                    "resolve — run `tl check` in a project that declares its source")
                 continue
             if target is None:
                 add("dangling-link", item.uid, f, f"link target '{link.target}' does not exist")

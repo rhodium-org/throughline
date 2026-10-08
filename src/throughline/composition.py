@@ -762,8 +762,8 @@ COMPOSITION_BRIEF = """\
 # Composition: working a project that declares sources
 
 Everything above holds **unchanged**: a composed project is a normal throughline
-graph, validated by the very same rules, and `tl-compose` is simply a second name
-for `tl`. What follows is the part composition adds.
+graph, validated by the very same rules, and worked with `tl`. The name
+`tl-compose` is deprecated: it runs `tl` and goes at the next major release. What follows is the part composition adds.
 
 ## What composition does
 
