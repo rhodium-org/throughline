@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from .fingerprint import fingerprint, signed_content
+from .signed_links import LINKS_ATTR, links_moved, links_record, signed_link_types
 from .graph import Index
 from .identity import (
     RATIFICATION_ATTRS,
@@ -271,14 +272,17 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     already = (item.status == ratified_status or past
                if schema.ratify_moves_status
                else item.attrs.get(RATIFIED_BY_ATTR) is not None)
-    if already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema):
+    if (already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema)
+            and not links_moved(item, schema)):
         # A correction is the one signature over unchanged content that accepts
         # something — the identity on the record (SR-0196). Whether it is allowed
         # rests on the record being unpublished, which only :func:`ratify` can
         # establish, so the refusal is lifted here and reimposed there.
         if not replacing:
             return (f"{item.uid} is already ratified by "
-                    f"{item.attrs.get('ratified_by', 'a human')} and its content has "
+                    f"{item.attrs.get('ratified_by', 'a human')} and its content"
+                    + (" and signed links have " if signed_link_types(item, schema)
+                       else " has ") +
                     "not changed since — there is nothing to accept; pass "
                     "--replacing to correct the recorded ratifier instead")
     # The move :func:`ratify` makes is asked about here too, so a status the
@@ -371,6 +375,13 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # with no version control at all — which a browser holding one commit, a
     # shallow clone and rewritten history all lack.
     item.attrs["ratified_content"] = signed_content(item, schema)
+    # The links the signature covers, beside it (SR-0243). An item that carries
+    # none gets no record, and one left by an earlier signature is removed.
+    links = links_record(item, schema)
+    if links:
+        item.attrs[LINKS_ATTR] = links
+    else:
+        item.attrs.pop(LINKS_ATTR, None)
     # Kept so a correction never reads as the original record (SR-0148's condition
     # that an accountability record never changes without the graph showing it).
     if superseded is not None and superseded != by:

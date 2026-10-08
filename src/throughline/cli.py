@@ -86,6 +86,7 @@ from .items import (
     review_items,
 )
 from .ratification import change_since_ratification, render_change
+from .signed_links import links_moved
 from .model import Link, Register
 from .schema import Schema, SchemaError
 from . import schema_ops
@@ -687,6 +688,7 @@ def cmd_link(args) -> int:
             old_type = retype_link(project, src_uid, dst_uid, ltype, stamp=args.stamp)
             print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
                   + (" (stamped)" if args.stamp else ""))
+            _say_signature_stale(args.path, src_uid)
             return OK
         outcome = add_link(project, src_uid, dst_uid, ltype, stamp=args.stamp)
     except LinkError as e:
@@ -696,7 +698,20 @@ def cmd_link(args) -> int:
     else:
         print(f"linked {src_uid} --{ltype}--> {dst_uid}"
               + (" (stamped)" if args.stamp else ""))
+        _say_signature_stale(args.path, src_uid)
     return OK
+
+
+def _say_signature_stale(project_path, src_uid: str) -> None:
+    """Tell whoever changed a link that a signature no longer covers the item
+    (SR-0246), as `tl amend` does for content (SR-0144). Read back from disk, so
+    it reports what the gate will."""
+    project = load_project(project_path)
+    item = project.get(src_uid)
+    if item is not None and links_moved(item, project.schema):
+        who = item.attrs.get(RATIFIED_BY_ATTR) or "a human"
+        print(f"  ratification by {who} no longer covers this item's links — "
+              f"`tl ratify {src_uid}` shows what moved and asks again")
 
 
 def cmd_unlink(args) -> int:
@@ -721,6 +736,7 @@ def cmd_unlink(args) -> int:
         return _err(str(e))
     for ltype in removed:
         print(f"unlinked {src_uid} --{ltype}--> {dst_uid}")
+    _say_signature_stale(args.path, src_uid)
     return OK
 
 
@@ -1145,6 +1161,12 @@ def _confirm(question: str) -> bool:
     return raw in ("y", "yes")
 
 
+_UNSEEN_CHANGE = (
+    "{uid} has changed since {who} ratified it and this session cannot show you "
+    "what changed — pass --accept-change to record a signature over a change "
+    "accepted unseen, or run this on a terminal to see it first")
+
+
 def cmd_ratify(args) -> int:
     """Ratify one or more items (SR-0199). Every item named is checked before any
     is rendered or signed, so a run that cannot complete writes nothing; the
@@ -1186,12 +1208,8 @@ def cmd_ratify(args) -> int:
     if not interactive:
         for item in items:
             if changes[item.uid].stale and not args.accept_change:
-                return _err(
-                    f"{item.uid} has changed since "
-                    f"{item.attrs.get(RATIFIED_BY_ATTR, 'a human')} ratified it and this "
-                    "session cannot show you what changed — pass --accept-change to "
-                    "record a signature over a change accepted unseen, or run this on "
-                    "a terminal to see it first")
+                return _err(_UNSEEN_CHANGE.format(
+                    uid=item.uid, who=item.attrs.get(RATIFIED_BY_ATTR, "a human")))
     # Offer the identity this repository already signs commits with (SR-0156). It
     # is only ever a default: _resolve_value shows it and takes it on assent, and a
     # non-interactive session that names no ratifier is refused, not signed for.
@@ -1777,7 +1795,29 @@ def _composed_ratify(args) -> int:
                                          replacing=getattr(args, "replacing", False))
         if obstacle is not None:
             return _err(obstacle + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
+    # Signed links that moved go in the path of the new signature (SR-0246). Only
+    # those: this command has always re-signed moved content unshown, tools built
+    # on it rely on that, and a project that declares no signed links must behave
+    # as it did (SR-0242).
+    changes = {uid: change_since_ratification(consumer, consumer.get(uid))
+               for uid in uids if links_moved(consumer.get(uid), consumer.schema)}
+    interactive = _interactive()
+    if not interactive:
+        for uid in uids:
+            if uid in changes and not getattr(args, "accept_change", False):
+                return _err(_UNSEEN_CHANGE.format(
+                    uid=uid, who=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR, "a human")))
     for uid in uids:
+        if interactive and uid in changes:
+            for line in render_change(
+                    changes[uid], ratifier=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR),
+                    columns=shutil.get_terminal_size((80, 24)).columns,
+                    colour=not os.environ.get("NO_COLOR")):
+                print(line, file=sys.stderr)
+            print("", file=sys.stderr)
+            if not _confirm(f"ratify {uid} as {by}?"):
+                print(f"{uid} not ratified", file=sys.stderr)
+                continue
         try:
             item = ratify(consumer, uid, by, index=index,
                           by_id=getattr(args, "by_id", None),
@@ -1876,6 +1916,7 @@ def _composed_link(args) -> int:
                                    stamp=args.stamp, view=view)
             print(f"retyped {src_uid} {dst_uid}: --{old_type}--> is now --{ltype}-->"
                   + (" (stamped)" if args.stamp else ""))
+            _say_signature_stale(args.path, src_uid)
             return OK
         outcome = add_link(consumer, src_uid, dst_uid, ltype, stamp=args.stamp,
                            view=view)
@@ -1886,6 +1927,7 @@ def _composed_link(args) -> int:
     else:
         print(f"linked {src_uid} --{ltype}--> {dst_uid}"
               + (" (stamped)" if args.stamp else ""))
+        _say_signature_stale(args.path, src_uid)
     return OK
 
 
@@ -1915,6 +1957,7 @@ def _composed_unlink(args) -> int:
         return _err(str(e))
     for ltype in removed:
         print(f"unlinked {src_uid} --{ltype}--> {dst_uid}")
+    _say_signature_stale(args.path, src_uid)
     return OK
 
 

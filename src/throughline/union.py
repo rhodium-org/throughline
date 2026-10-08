@@ -187,8 +187,11 @@ def _rewrite_links(item: Item, current_ns: str | None,
                    namespaces: set[str], mangler: _Mangler,
                    labels: dict[str, str]) -> Item:
     shown = item.uid if current_ns is None else f"{current_ns}:{item.uid}"
+    # The target as the item's own file writes it travels with the link, so the
+    # links a signature covers are compared as they were signed (SR-0245).
     new_links = [replace(link, target=_rewrite_target(
-        link.target, current_ns, namespaces, mangler, labels, shown))
+        link.target, current_ns, namespaces, mangler, labels, shown),
+        _authored_target=link.authored_target)
         for link in item.links]
     return replace(item, links=new_links)
 
@@ -265,7 +268,11 @@ def build_union(consumer: Project, sources: dict[str, Project],
                                  _register_prefix=mangled_prefix,
                                  _authored_uid=uid,
                                  _authored_normative_attrs=tuple(
-                                     source_schema.normative_attrs(it.type)))
+                                     source_schema.normative_attrs(it.type)),
+                                 # Which links a signature covers is the source's
+                                 # judgement too (SR-0245).
+                                 _authored_signed_link_types=tuple(
+                                     sorted(source_schema.signed_link_types)))
                 target = union.registers.get(mangled_prefix)
                 if target is None:
                     if mangled_prefix in consumer.registers:

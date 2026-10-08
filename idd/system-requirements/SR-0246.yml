@@ -1,0 +1,53 @@
+uid: SR-0246
+type: system_requirement
+status: implemented
+title: Ratify shows what moved in the links before it asks
+text: The change since ratification (SR-0165) shall include each signed link the
+  item carries that its link record does not hold, and each link the record holds
+  that the item no longer carries, in the structured result and in the rendered text.
+  `tl ratify` shall show them and require confirmation under the rules of SR-0167.
+  An item whose content is unchanged and whose signed links have moved shall be accepted
+  for a new signature, not refused as already ratified. `tl link` and `tl unlink`
+  shall say when the change leaves the signature on the item stale.
+rationale: |-
+  UR-0028 asks that a person is shown what moved before they are asked to accept it again. A link is now part of what was signed (SR-0244), so it is part of what must be shown.
+
+  The link changes are reported in the same list as the changed fields, each named by link type. A front end that lists the changes then shows them with no change of its own.
+
+  Without the third sentence an item made stale by a link alone could never be signed again: ratify refuses an item it reads as already ratified and unchanged (SR-0148).
+
+  `tl link` and `tl unlink` speak up for the reason `tl amend` does (SR-0144). The person making the change is told at once that a signature no longer covers the item.
+
+  Who pays: a consumer of the structured result sees entries whose field name begins with links. Nothing else in the result changes.
+
+  Verified by test: for an item signed with one signed link and then retargeted, the structured result holds the link no longer carried and the link not held, and the rendered text names both; ratify without a terminal refuses unless the change is acknowledged; ratify with it acknowledged writes a new link record and the item is no longer stale; an unchanged item is still refused as already ratified; link and unlink each print that the signature is stale.
+normative: true
+links:
+- target: UR-0028
+  type: implements
+- target: SR-0244
+  type: relates
+- target: SR-0165
+  type: relates
+- target: SR-0167
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8d622aaf5fbe0306f90de1cc97b5b3456030453cf586bf59cfef893e2d9aa20c
+  ratified_content:
+    type: system_requirement
+    text: The change since ratification (SR-0165) shall include each signed link
+      the item carries that its link record does not hold, and each link the record
+      holds that the item no longer carries, in the structured result and in the
+      rendered text. `tl ratify` shall show them and require confirmation under the
+      rules of SR-0167. An item whose content is unchanged and whose signed links
+      have moved shall be accepted for a new signature, not refused as already ratified.
+      `tl link` and `tl unlink` shall say when the change leaves the signature on
+      the item stale.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,0 +1,46 @@
+uid: SR-0242
+type: system_requirement
+status: implemented
+title: A project declares which link types a signature covers
+text: 'A project may declare, under `[ratify] signed_links`, the link types a ratification
+  covers. The Tool shall refuse the configuration when the value is not a list of
+  link type names, and when a name is not one of the link types the project declares.
+  A project that declares none shall be checked exactly as before: no signature covers
+  a link, and no link record is written. The agent brief shall name the declared
+  types.'
+rationale: |-
+  Decision: link coverage is opt-in, per graph and per link type (issue 77).
+
+  Many graphs already hold signatures. A `relates` link is added to a signed item as a matter of routine and changes nothing that was agreed. Only the owner of a graph knows which links carry meaning. In throughline-to-drools they are the links a code generator follows: produces, uses, per, row_of, outcome, cites, checks.
+
+  Rejected: covering every outgoing link in every graph. Each new see-also would make a signature stale across the estate.
+
+  Rejected: a key under `[links]`. An older Tool ignores unknown keys there, and would sign in such a graph without recording the links. It refuses an unknown key under `[ratify]`, so a graph that declares signed links cannot be read by a Tool that would not honour them.
+
+  Who pays: a project that declares signed links must be read by this version or later, and that includes the browser builds. Its signed items that carry such links read as stale until signed again (SR-0244).
+
+  Verified by test: a project with no declaration gives the same findings and writes the same record as before; a value that is not a list, and a name that is not a declared link type, are each refused when the configuration is read; the brief names the declared types.
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0172
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:a00ab1985ace44bebab54adc5585cb378c339f1410064e72480ec3b7db2ef9f6
+  ratified_content:
+    type: system_requirement
+    text: 'A project may declare, under `[ratify] signed_links`, the link types a
+      ratification covers. The Tool shall refuse the configuration when the value
+      is not a list of link type names, and when a name is not one of the link types
+      the project declares. A project that declares none shall be checked exactly
+      as before: no signature covers a link, and no link record is written. The agent
+      brief shall name the declared types.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

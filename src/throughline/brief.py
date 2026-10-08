@@ -209,6 +209,12 @@ def _ctx_grounding(schema) -> str:
     out.append(
         f"- **AI origins** (items with these origins enter `proposed` and need "
         f"human ratification): {_fmt_set(schema.ai_origins)}")
+    if schema.signed_link_types:
+        out.append(
+            f"- **Signed link types:** {_fmt_set(schema.signed_link_types)} — a "
+            "ratification covers an item's links of these types, so adding, "
+            "removing or retargeting one makes the signature stale until a human "
+            "ratifies the item again.")
     return "\n".join(out)
 
 

@@ -324,12 +324,35 @@ replaced by anyone — withdraw it and sign again.
 | `suspect-link` | a link's target changed since it was last confirmed |
 | `unreviewed` | item content changed since last review |
 | `unratified` | an AI-origin item is still `proposed` |
+| `ratified-stale` | a ratified item's normative content, or one of its signed links, changed since it was signed |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 | `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
 
 Every rule's severity is configurable per project under `[rules]`; `--strict`
 promotes every warning to an error — use it in CI.
+
+#### Signed links
+
+A signature covers an item's normative content. It covers links only where the
+project says which link types carry meaning:
+
+```toml
+[ratify]
+signed_links = ["produces", "uses", "cites"]
+```
+
+`tl ratify` then records the item's outgoing links of those types (type and
+target) beside the signature. Adding, removing or retargeting one afterwards
+reports `ratified-stale`, naming the link, until a person ratifies the item again;
+`tl ratify` shows what moved before it asks. Restamping a link and reordering
+links change nothing.
+
+An item signed before the declaration holds no link record. It reads as stale
+only if it carries a link of a signed type, and a person signs it again —
+`tl migrate` never writes the record for them. A project that declares nothing is
+checked exactly as before. A project that declares `signed_links` needs
+throughline 3.15.0 or later: an older `tl` refuses the key.
 
 ---
 

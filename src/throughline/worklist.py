@@ -16,6 +16,7 @@ from collections import deque
 from dataclasses import dataclass
 
 from .fingerprint import fingerprint
+from .signed_links import links_moved
 from .graph import Index
 from .grounding import (
     is_flagged_ambiguous,
@@ -77,10 +78,12 @@ def _is_suspect(schema, item) -> bool:
 
 
 def signature_is_stale(schema, item) -> bool:
-    """Whether the signature an item carries no longer covers its content. Read
+    """Whether the signature an item carries no longer covers its content or its
+    signed links (SR-0244). Read
     from the stamp rather than from history, so no subprocess is needed."""
     stamp = item.attrs.get("ratified_fingerprint")
-    return bool(stamp) and stamp != fingerprint(item, schema)
+    return bool(stamp) and (stamp != fingerprint(item, schema)
+                            or links_moved(item, schema))
 
 
 def depths_from_roots(project, index: Index | None = None) -> dict[str, int]:

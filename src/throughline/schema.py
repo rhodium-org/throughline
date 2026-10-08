@@ -143,6 +143,9 @@ class Schema:
     # orthogonal, and advancing a finished item would fabricate a history. The
     # accountability record written is identical either way.
     ratify_moves_status: bool = True
+    # The link types a ratification covers (SR-0242). Empty — the default, and
+    # every existing project's behaviour — means no signature covers a link.
+    signed_link_types: frozenset[str] = frozenset()
     # Whether items of a type are normative (SR-0201): the flag `tl new` writes
     # on an item is the kind's, not the command's. Only types that DECLARE the
     # key are here. An undeclared type births items normative, as before, and is
@@ -259,16 +262,24 @@ class Schema:
         ratify_cfg = config.get("ratify") or {}
         if not isinstance(ratify_cfg, dict):
             raise SchemaError("[ratify] must be a table")
-        unknown = set(ratify_cfg) - {"moves_status"}
+        unknown = set(ratify_cfg) - {"moves_status", "signed_links"}
         if unknown:
             raise SchemaError(
-                f"[ratify] declares unknown key(s) {sorted(unknown)} — the only key "
-                "is 'moves_status'")
+                f"[ratify] declares unknown key(s) {sorted(unknown)} — the keys "
+                "are 'moves_status' and 'signed_links'")
         ratify_moves_status = ratify_cfg.get("moves_status", True)
         if not isinstance(ratify_moves_status, bool):
             raise SchemaError(
                 "[ratify] moves_status must be true or false, not "
                 f"{ratify_moves_status!r}")
+        # [ratify] signed_links — the link types a signature covers (SR-0242).
+        signed_links = ratify_cfg.get("signed_links", [])
+        if not isinstance(signed_links, list) or not all(
+                isinstance(n, str) and n.strip() for n in signed_links):
+            raise SchemaError(
+                "[ratify] signed_links must be a list of link type names, e.g. "
+                f'["produces", "uses"], not {signed_links!r}')
+        signed_link_types = frozenset(signed_links)
 
         schema = cls(
             name=name, types=types, link_types=link_types, statuses=statuses,
@@ -279,6 +290,7 @@ class Schema:
             suspect_link_types=suspect_link_types, ai_origins=ai_origins,
             coverage=coverage, rule_overrides=rule_overrides,
             docs_paths=docs_paths, ratify_moves_status=ratify_moves_status,
+            signed_link_types=signed_link_types,
             type_normative=type_normative,
         )
         schema._check_consistency()
@@ -318,6 +330,11 @@ class Schema:
         if stray:
             raise SchemaError(
                 f"[grounding] suspect_link_types {sorted(stray)} are not in "
+                "the declared [links] types")
+        unsigned = self.signed_link_types - self.link_types
+        if unsigned:
+            raise SchemaError(
+                f"[ratify] signed_links {sorted(unsigned)} are not in "
                 "the declared [links] types")
         unruled = set(self.link_rules) - self.link_types
         if unruled:
