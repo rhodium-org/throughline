@@ -1,0 +1,47 @@
+uid: SR-0247
+type: system_requirement
+status: implemented
+title: tl-compose says it is deprecated
+text: When the Tool is run as tl-compose or throughline-compose, it shall print one
+  line on standard error. The line shall say that the name is deprecated, that tl
+  is the same program, and that the name will be removed in the next major release.
+  Standard output and the exit code shall be those of tl. Wherever a message or a
+  document of the Tool tells a reader what to run, it shall name tl and not tl-compose.
+rationale: |-
+  Henry Grech-Cini, 2026-10-08: "fully deprecate throughline-compose". He chose a notice now and removal at the next major release, over removing the names in a 3.x release.
+
+  SR-0236 keeps the two names working. Nothing tells the person who types one that it is going away. throughline-compose SR-0053 already says its names end with the next major release of the Tool, so the date is not new.
+
+  The notice goes to standard error. A gate reads the exit code, and a tool that reads output reads standard output, so neither changes.
+
+  Rejected: removing the names now. Gates across the estate still call tl-compose, and a 3.x release would break them.
+
+  Rejected: saying nothing until 4.0. The names would then vanish with no warning to the people using them.
+
+  Who pays: anyone who runs tl-compose sees one more line in a terminal and in a CI log. A gate that fails on any standard error output would fail; none is known.
+
+  Verified by test: run as tl-compose and as throughline-compose, the Tool prints the line on standard error, and its standard output and exit code equal those of tl for the same arguments; run as tl it prints no such line; no message in the source of the Tool tells a reader to run tl-compose.
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0236
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:200960b55b35a1c035782a1aff4247d71b6d0e89bac2820f1cfa97beabeadfe0
+  ratified_content:
+    type: system_requirement
+    text: When the Tool is run as tl-compose or throughline-compose, it shall print
+      one line on standard error. The line shall say that the name is deprecated,
+      that tl is the same program, and that the name will be removed in the next
+      major release. Standard output and the exit code shall be those of tl. Wherever
+      a message or a document of the Tool tells a reader what to run, it shall name
+      tl and not tl-compose.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

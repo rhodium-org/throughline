@@ -2227,8 +2227,29 @@ def _extend_parser(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     return parser
 
 
+# The command names that are deprecated, and run the same program as tl (SR-0236,
+# SR-0247).
+DEPRECATED_NAMES = ("tl-compose", "throughline-compose")
+
+
+def deprecation_notice(program: str) -> str | None:
+    """The line the Tool prints when it is run under a deprecated name (SR-0247),
+    or None for any other name. ``program`` is the path the Tool was started as."""
+    name = Path(program).name.lower()
+    name = name[:-4] if name.endswith(".exe") else name
+    if name not in DEPRECATED_NAMES:
+        return None
+    return (f"{name} is deprecated: it is the same program as tl and will be "
+            "removed in the next major release of throughline — run tl instead")
+
+
 def main(argv: list[str] | None = None) -> int:
     force_utf8_io()
+    # Only for the program as it was started, never for a caller that passes its
+    # own arguments: that caller did not type a name.
+    notice = deprecation_notice(sys.argv[0]) if argv is None and sys.argv else None
+    if notice:
+        print(notice, file=sys.stderr)
     parser = _extend_parser(build_parser())
     args = parser.parse_args(argv)
     # A union-aware command runs over the composed union when the project declares
