@@ -1,0 +1,31 @@
+uid: SR-0249
+type: system_requirement
+status: ratified
+title: An item's file is named by its UID
+text: The Tool shall report, as an error, an item whose file name is not its UID
+  followed by .yml.
+rationale: Git detects a parallel-branch UID collision only because both branches
+  add the same path, which holds only while the file name and the UID agree. An item
+  whose uid was edited without renaming its file escapes that detection and collides
+  silently, and the merge resolution of SR-0248 cannot see it.
+normative: true
+links:
+- target: UR-0001
+  type: implements
+- target: SR-0248
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_id: github:rhodium289
+  ratified_fingerprint: sha256:2c79e4b03feecf0c56e7afc5be304e017fb1f4eecaf22e3979aff2305e1d782b
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall report, as an error, an item whose file name is not its
+      UID followed by .yml.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -288,6 +288,7 @@ _CTX_COMMAND_USAGE = {
     "clarify": "tl clarify <UID> --reason <why> --by <who>",
     "flag": "tl flag <UID> --reason <why> --by <who>",
     "delete": "tl delete <UID>",
+    "resolve": "tl resolve [--keep ours|theirs] [--trunk REF] [--dry-run]",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
     "schema": "tl schema <noun> <verb> … --because <why>",
@@ -314,6 +315,9 @@ _CTX_COMMAND_EMPHASIS = {
                "resolved, recording who and why; it accepts nothing — a proposed "
                "item still needs a human to ratify it",
     "delete": "tombstones an item; the file stays, the item stops counting",
+    "resolve": "run when `git merge` stops on an add/add conflict for an item file "
+               "(the same UID allocated on both branches); never settle that "
+               "conflict by picking a side — that silently loses an item",
     "amend": "change content through the tool, never by opening the YAML",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
               "linktype, linkrule, grounding, rule; refuses a change that would "

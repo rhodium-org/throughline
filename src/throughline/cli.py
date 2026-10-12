@@ -103,6 +103,9 @@ from .composition import (
     union_uid,
     union_view,
 )
+from .collision import OURS, CollisionError
+from .collision import apply as apply_resolution
+from .collision import plan as plan_resolution
 from .resolvers import ResolverError
 from .seam import SeamError, apply_seam, parse_seam
 from .sources import SourceError, parse_sources
@@ -759,6 +762,59 @@ def cmd_delete(args) -> int:
         return OK
     write_item(project.get(uid), project.register_of(uid))
     print(f"tombstoned {uid} (UID retired, never reused)")
+    return OK
+
+
+def cmd_resolve(args) -> int:
+    """Resolve the UID collisions a merge stopped on (SR-0248): plan with
+    :func:`throughline.collision.plan`, then write and stage, or only report."""
+    try:
+        result = plan_resolution(args.path, keep=args.keep, trunk=args.trunk)
+    except CollisionError as e:
+        return _err(str(e))
+    if not result.moves:
+        print("no UID collisions in this merge — nothing to resolve")
+        for path in result.other_conflicts:
+            print(f"  still in conflict (not a UID collision): {path}")
+        return OK
+    kept = "ours" if result.keep == OURS else "theirs"
+    moved = "theirs" if result.keep == OURS else "ours"
+    on = f", already on {result.trunk}" if result.trunk and not args.keep else ""
+    verb = "would " if args.dry_run else ""
+    for move in result.moves:
+        print(f"UID collision: {move.old} was added on both sides of this merge")
+        print(f"  kept   {move.old}  ({kept}{on})  {move.kept_title}")
+        print(f"  {verb}move {move.old} -> {move.new}  ({moved})  {move.moved_title}")
+    for relink in result.relinks:
+        print(f"  {verb}relink {Path(relink.path).stem}: {relink.count} link(s) "
+              "now name the renumbered item")
+    if not args.dry_run:
+        apply_resolution(result)
+
+    # What the tool cannot carry across, said rather than left to be discovered.
+    for move in result.moves:
+        if move.moved_ratified:
+            print(f"note: {move.new} was ratified as {move.old}; its stamp names the "
+                  f"old UID, so check will report it until a human ratifies "
+                  f"{move.new} again")
+    for relink in result.relinks:
+        if relink.signed_stale:
+            print(f"note: {Path(relink.path).stem}'s ratification record names a "
+                  "renumbered UID; it needs ratifying again")
+    for old, where, line in result.mentions:
+        print(f"note: {where} still mentions {old} in prose: {line}")
+    for old, line in result.commits:
+        sha, _, subject = line.partition(" ")
+        new = next(m.new for m in result.moves if m.old == old)
+        print(f"note: commit {sha} ({subject}) cites {old}; a commit cannot be "
+              f"rewritten, so {old} there means what is now {new}")
+    for path in result.other_conflicts:
+        print(f"still in conflict (not a UID collision): {path}")
+    if not args.dry_run:
+        # Check against the side whose items kept their paths. Against the other
+        # side, the kept item reads as the moved one having changed status.
+        base = "" if result.keep == OURS else " --base MERGE_HEAD"
+        print(f"staged — run `tl check{base}`, then `git commit` to finish the merge")
     return OK
 
 
