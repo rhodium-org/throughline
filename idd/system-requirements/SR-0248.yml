@@ -1,6 +1,6 @@
 uid: SR-0248
 type: system_requirement
-status: proposed
+status: ratified
 title: Resolve a UID collision inside the merge that exposed it
 text: 'When a git merge stops on an add/add conflict for an item file — the same
   UID allocated on both sides — the Tool shall provide a command that, run inside
@@ -30,3 +30,23 @@ attrs:
   priority: must
   verification: test
   origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_id: github:rhodium289
+  ratified_fingerprint: sha256:5f13f3daa6f3bbf72eca77f5c6dbc7ba65048fdcaa565ab2e8eb223f10c8e3de
+  ratified_content:
+    type: system_requirement
+    text: 'When a git merge stops on an add/add conflict for an item file — the same
+      UID allocated on both sides — the Tool shall provide a command that, run inside
+      that merge, recognises every such collision from the index (an unmerged item
+      path with both sides'' versions and no common ancestor), keeps the UID on the
+      side already on the trunk branch, gives the other side''s item the next number
+      unused on either side or the trunk, rewrites the links that side''s changes
+      made to the old UID, and stages the result for the author to check and commit.
+      It shall refuse, changing nothing, when it cannot tell which side keeps the
+      UID or which item a link means, and shall report what it cannot rewrite: prose
+      and commit messages citing the old UID, and ratification records that name
+      it.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,6 +1,6 @@
 uid: SR-0249
 type: system_requirement
-status: proposed
+status: ratified
 title: An item's file is named by its UID
 text: The Tool shall report, as an error, an item whose file name is not its UID
   followed by .yml.
@@ -18,3 +18,14 @@ attrs:
   priority: must
   verification: test
   origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_id: github:rhodium289
+  ratified_fingerprint: sha256:2c79e4b03feecf0c56e7afc5be304e017fb1f4eecaf22e3979aff2305e1d782b
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall report, as an error, an item whose file name is not its
+      UID followed by .yml.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
