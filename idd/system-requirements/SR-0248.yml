@@ -1,0 +1,32 @@
+uid: SR-0248
+type: system_requirement
+status: proposed
+title: Resolve a UID collision inside the merge that exposed it
+text: 'When a git merge stops on an add/add conflict for an item file — the same
+  UID allocated on both sides — the Tool shall provide a command that, run inside
+  that merge, recognises every such collision from the index (an unmerged item path
+  with both sides'' versions and no common ancestor), keeps the UID on the side already
+  on the trunk branch, gives the other side''s item the next number unused on either
+  side or the trunk, rewrites the links that side''s changes made to the old UID,
+  and stages the result for the author to check and commit. It shall refuse, changing
+  nothing, when it cannot tell which side keeps the UID or which item a link means,
+  and shall report what it cannot rewrite: prose and commit messages citing the old
+  UID, and ratification records that name it.'
+rationale: 'Git already detects a collision: item files are named by UID, so two
+  branches allocating the same number add the same path and the merge stops on add/add.
+  What was missing is the fix SR-0006 promised. No git hook can apply it — post-merge
+  and pre-merge-commit do not run on a conflicted merge, and a merge driver runs
+  per file under the index lock, so it cannot add the second file — but the conflicted
+  index holds both versions, which is exactly what a whole-graph command needs. Resolving
+  inside the merge, rather than renumbering after it, is what makes the link rewrite
+  safe: each side''s changes say which item they meant.'
+normative: true
+links:
+- target: UR-0014
+  type: implements
+- target: SR-0006
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

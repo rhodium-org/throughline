@@ -283,6 +283,7 @@ tl context                                     # agent-facing brief (IDD + this 
 tl ratify <UID> --by <who> [--by-id <scheme:value>]   # a human takes accountability
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…" --by <who>    # a signature no longer stands
+tl resolve [--keep ours|theirs] [--dry-run]    # inside a merge: renumber a UID both branches allocated
 ```
 
 Omit `--by` on a terminal and you are offered the identity this repository already
@@ -319,6 +320,7 @@ replaced by anyone — withdraw it and sign again.
 | `grounding-cycle` | circular justification |
 | `dangling-link` / `deleted-link-target` | link to a missing / tombstoned item |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (a merge clash) |
+| `uid-filename` | an item's file is not named `<UID>.yml`, so git cannot see it collide |
 | `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
 | `schema` | missing required attribute or out-of-enum value |
 | `suspect-link` | a link's target changed since it was last confirmed |
@@ -353,6 +355,27 @@ only if it carries a link of a signed type, and a person signs it again —
 `tl migrate` never writes the record for them. A project that declares nothing is
 checked exactly as before. A project that declares `signed_links` needs
 throughline 3.15.0 or later: an older `tl` refuses the key.
+
+### Two branches allocated the same UID
+
+`tl new` numbers from whatever is on the branch you are on, so two branches that
+each add an item from the same starting point both get the same number. Git
+notices for you: the item file is named by its UID, so the merge stops with
+`CONFLICT (add/add)` on that file. **Don't settle it by picking a side** — that
+silently drops one of the two items and leaves its links pointing at the other.
+Run, inside the stopped merge:
+
+```
+tl resolve            # or --dry-run first to see the plan
+```
+
+The side already on your trunk branch (the remote's default branch, else `main`
+or `master`) keeps the UID, so nothing merged ever moves; the other side's item
+takes the next number unused on either side, and the links that side made to it
+follow. Where both sides linked to the colliding UID from the same item, or
+neither side is on the trunk, it refuses and changes nothing; pass `--keep
+ours|theirs` to choose. It does not rewrite prose or commit messages that cite
+the old UID — it lists them. Then run the `tl check` it suggests and `git commit`.
 
 ---
 

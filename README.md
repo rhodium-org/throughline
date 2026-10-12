@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-213
+215
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 34
@@ -173,6 +173,7 @@ Upward and downward coverage are independent and both matter:
 | `grounding-cycle` | circular justification |
 | `dangling-link` / `deleted-link-target` | link to a missing/tombstoned item |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (merge) |
+| `uid-filename` | an item's file is not named `<UID>.yml` (git could not see it collide) |
 | `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
 | `schema` | missing required attr or out-of-enum value |
 | `suspect-link` | target changed since the link was last confirmed |

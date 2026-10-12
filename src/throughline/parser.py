@@ -277,6 +277,20 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("--reason", default="")
     s.set_defaults(func=handlers.get("cmd_delete"))
 
+    s = sub.add_parser(
+        "resolve",
+        help="inside a merge stopped on a UID collision, keep the merged side's "
+             "UID and renumber the other side's item and its links")
+    s.add_argument("--keep", choices=["ours", "theirs"], default=None,
+                   help="the side whose item keeps its UID (default: the side "
+                        "already on the trunk branch)")
+    s.add_argument("--trunk", default=None, metavar="REF",
+                   help="the branch taken as already merged (default: the "
+                        "remote's default branch, else main or master)")
+    s.add_argument("--dry-run", action="store_true",
+                   help="say what would change, and change nothing")
+    s.set_defaults(func=handlers.get("cmd_resolve"))
+
     s = sub.add_parser("amend", help="change an item's title/text/rationale/attrs")
     s.add_argument("uid", nargs="?", default=None)
     # default=None distinguishes "not given" from "given as empty", which is how a

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from .fingerprint import content_fingerprint, fingerprint
 from .signed_links import describe_drift, link_drift, recorded_links
@@ -42,6 +43,7 @@ class Finding:
 # severities a project may override under [rules] (rule_name = "error"|"warning"|"off")
 _DEFAULT_SEVERITY = {
     "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
+    "uid-filename": ERROR,
     "malformed-link": ERROR,
     "schema": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
     "empty-registers": WARNING,
@@ -204,11 +206,21 @@ def validate(project, strict: bool = False,
             "circular justification: " + " -> ".join(cyc))
 
     for item in project.items():
+        # The file is named by the UID the item was authored under (SR-0249):
+        # git sees a parallel-branch collision only because both branches add the
+        # same path, so a file under another name collides silently. A tombstone
+        # is a file like any other, so it is held to this too.
+        if item._path is not None and \
+                Path(item._path).name != f"{item.authored_uid}.yml":
+            add("uid-filename", item.uid, _file(item),
+                f"file is named {Path(item._path).name} but holds "
+                f"{item.authored_uid} — rename it to {item.authored_uid}.yml, or "
+                "a collision with another branch's item will go unseen at merge")
         if item.is_deleted:
             continue
         f = _file(item)
 
-        # UID grammar + filename agreement (SR-0002, doc 06 §11.1).
+        # UID grammar (SR-0002, doc 06 §11.1); filename agreement is above.
         if not UID_RE.match(item.uid):
             add("uid-grammar", item.uid, f, "UID does not match <PREFIX>-<NUMBER>")
 
