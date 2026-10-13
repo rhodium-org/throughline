@@ -37,6 +37,18 @@ These are named in the spec (`docs/referenced-resource/07_*`) but not implemente
   throughline is a natural part of the coding loop rather than a separate CLI chore.
   The goal is adoption — lowering the friction that keeps developers from grounding
   their work.
+- **Resolve a UID collision before a rebase or squash-merge** — `tl resolve`
+  (SR-0248) fixes a collision inside a *merge*, where each side's changes say which
+  item a link meant. It refuses during a rebase on purpose: a rebase replays the
+  branch commit by commit, so a later commit that links to the old UID applies
+  cleanly and silently points at the trunk's item instead. The safe extension is a
+  pre-emptive mode, e.g. `tl resolve --against main`, run on the branch with nothing
+  in progress: find UIDs added both on the branch and on `main` since the merge base,
+  renumber the branch's items and its links to them as one ordinary commit (on the
+  branch the old UID can only mean the branch's own item), after which a rebase,
+  merge or squash-merge applies cleanly. It reuses `tl resolve`'s planning, link
+  rewrite and numbering. Worth building once rebase or squash workflows are in real
+  use; until then, abort the rebase and merge instead.
 
 ## Exploratory / parked (post-M1)
 
