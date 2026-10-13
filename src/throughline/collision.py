@@ -19,19 +19,37 @@ versions, and that is all a whole-graph command needs:
   the same file, no rule can say which link meant which item, so the plan refuses.
 
 Everything is planned before anything is written, so a refusal changes nothing.
+
+A graph in the same repository that sources this one by ``path`` names its items
+``namespace:UID`` (SR-0250). Those links follow a move under the same rule as local
+ones — only where the moved side wrote them — in whichever order the graphs are
+resolved: resolving a graph rewrites its consumers, and resolving a consumer picks up
+what its sources already moved. What each graph moved during this merge is kept in
+``.git/tl-resolve.json``, keyed to the merge so a later one never reads it.
 """
 from __future__ import annotations
 
+import json
+import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import SimpleNamespace
 
 import yaml
 
+from .resolvers import ResolverError, resolve_source
 from .signed_links import LINKS_ATTR
+from .sources import SourceError, parse_sources
 from .storage import CONFIG_NAME, MANIFEST_NAME, _load_yaml
 from .uid import UID_RE, format_uid
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover
+    import tomli as tomllib
 
 OURS, THEIRS = "ours", "theirs"
 
@@ -62,6 +80,7 @@ class Relink:
     text: str
     count: int
     signed_stale: bool = False   # its ratification record names an old UID
+    graph: str | None = None     # another graph's root, when it is not this one
 
 
 @dataclass
@@ -77,6 +96,9 @@ class Plan:
     mentions: list[tuple[str, str, str]] = field(default_factory=list)  # (old, where, line)
     commits: list[tuple[str, str]] = field(default_factory=list)       # (old, "sha subject")
     other_conflicts: list[str] = field(default_factory=list)
+    scope: str = ""                                                   # this graph's root
+    mapping: dict[str, str] = field(default_factory=dict)             # every old -> new
+    deferred: list[tuple[str, str]] = field(default_factory=list)     # (graph, path)
 
 
 # --------------------------------------------------------------------- git plumbing
@@ -152,6 +174,94 @@ def _changed(top: Path, a: str, b: str, scope: str) -> list[str]:
     return [p for p in out.split("\0") if p]
 
 
+# ------------------------------------------------- the repository's other graphs
+
+_NOT_GRAPHS = {".git", ".venv", "venv", "node_modules", "__pycache__"}
+STATE = "tl-resolve.json"
+
+
+def _graph_roots(top: Path) -> list[Path]:
+    """Every throughline project in the work tree."""
+    roots: list[Path] = []
+    for here, dirs, files in os.walk(top):
+        dirs[:] = sorted(d for d in dirs if d not in _NOT_GRAPHS)
+        if CONFIG_NAME in files:
+            roots.append(Path(here).resolve())
+    return roots
+
+
+def _path_sources(root: Path) -> list[tuple[str, dict[str, str], Path]]:
+    """(namespace, alias, directory) for each source ``root`` reads by ``path``.
+    Read from the configuration alone: a graph mid-merge cannot be loaded."""
+    try:
+        config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
+        sources = parse_sources(SimpleNamespace(config=config), withdrawn="ignore")
+    except (OSError, tomllib.TOMLDecodeError, SourceError):
+        return []
+    out = []
+    for src in sources:
+        if src.path is None:
+            continue                  # a pinned url is another edition, not this tree
+        try:
+            out.append((src.namespace, src.alias, resolve_source(src, root).resolve()))
+        except ResolverError:
+            continue
+    return out
+
+
+def _labels(root: Path, target: Path, seen: frozenset[Path]) -> set[str]:
+    """The labels under which ``root``'s sources, to any depth, carry ``target``:
+    the namespace its declaring source gave it, renamed by any ``alias`` on the
+    way up (SR-0045)."""
+    out: set[str] = set()
+    for namespace, alias, directory in _path_sources(root):
+        if directory in seen:
+            continue
+        if directory == target:
+            out.add(namespace)
+        out |= {alias.get(label, label)
+                for label in _labels(directory, target, seen | {directory})}
+    return out
+
+
+def _names(consumer: Path, target: Path) -> set[str]:
+    """Every namespace under which ``consumer`` names ``target``'s items."""
+    return _labels(consumer, target, frozenset({consumer}))
+
+
+def _state_file(top: Path) -> Path:
+    path = Path(_git(top, "rev-parse", "--git-path", STATE).strip())
+    return path if path.is_absolute() else top / path
+
+
+def _merge_key(top: Path) -> str:
+    return f"{_rev(top, 'HEAD')}..{_rev(top, 'MERGE_HEAD')}"
+
+
+def _load_state(top: Path) -> dict[str, dict]:
+    """What each graph moved earlier in this merge, by graph root; empty for any
+    other merge, so a record left behind is never read."""
+    try:
+        data = json.loads(_state_file(top).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict) or data.get("merge") != _merge_key(top):
+        return {}
+    graphs = data.get("graphs")
+    return graphs if isinstance(graphs, dict) else {}
+
+
+def _save_state(top: Path, graphs: dict[str, dict]) -> None:
+    _state_file(top).write_text(
+        json.dumps({"merge": _merge_key(top), "graphs": graphs}, indent=2,
+                   sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _rel(top: Path, root: Path) -> str:
+    rel = root.relative_to(top).as_posix()
+    return "" if rel == "." else rel
+
+
 # ----------------------------------------------------------------- text rewriting
 
 def _load(text: str | None) -> dict:
@@ -174,8 +284,8 @@ def _targets(data: dict) -> list[str]:
 
 _UID_LINE = re.compile(r"^(uid:[ \t]*)(['\"]?)([A-Z][A-Z0-9]*-[0-9]+)\2([ \t]*)$",
                        re.MULTILINE)
-_TARGET = re.compile(r"^(\s*(?:-\s+)?target:[ \t]*)(['\"]?)([A-Z][A-Z0-9]*-[0-9]+)\2"
-                     r"([ \t]*)$")
+_TARGET = re.compile(r"^(\s*(?:-\s+)?target:[ \t]*)(['\"]?)"
+                     r"((?:[a-z][a-z0-9_-]*:)*[A-Z][A-Z0-9]*-[0-9]+)\2([ \t]*)$")
 
 
 def _expected(data: dict, mapping: dict[str, str], uid: str | None) -> dict:
@@ -333,16 +443,28 @@ def plan(project_path: str | Path, *, keep: str | None = None,
             continue
         collisions.append((path, p.stem, digits, directory))
     result = Plan(top=top, keep=keep, kept_rev=kept_rev, moved_rev=moved_rev,
-                  base=base, trunk=trunk)
+                  base=base, trunk=trunk, scope=scope)
     collided = {c[0] for c in collisions}
     result.other_conflicts = sorted(p for p in unmerged if p not in collided)
-    if not collisions:
+
+    # What the graphs this one sources have already moved in this merge (SR-0250):
+    # this graph names those items namespace:UID, and its moved side's links to
+    # them follow exactly as its links to its own items do.
+    state = _load_state(top)
+    for rel, record in sorted(state.items()):
+        source = (top / rel).resolve() if rel else top
+        if source == root:
+            continue
+        for name in sorted(_names(root, source)):
+            for old, new in (record.get("moves") or {}).items():
+                result.mapping[f"{name}:{old}"] = f"{name}:{new}"
+    if not collisions and not result.mapping:
         return result
 
     # Number the moved items. Every number either side or the trunk has ever used
     # is off limits, as is every number either side reserved (SR-0003).
     revs = [kept_rev, moved_rev] + ([trunk] if trunk else [])
-    mapping: dict[str, str] = {}
+    local: dict[str, str] = {}
     paths: dict[str, str] = {}
     taken: dict[str, set[int]] = {}
     for path, uid, digits, directory in collisions:
@@ -351,40 +473,33 @@ def plan(project_path: str | Path, *, keep: str | None = None,
         n = max(used) + 1
         used.add(n)
         new = format_uid(prefix, n, digits)
-        mapping[uid] = new
+        local[uid] = new
         paths[uid] = f"{directory}/{new}.yml"
+    result.mapping.update(local)
+    mapping = result.mapping
 
-    # Which files may be relinked: those the moved side changed. A file the kept
-    # side (or the merge base) also points at an old UID from cannot be told apart.
-    moved_changed = set(_changed(top, base, moved_rev, scope))
-    kept_changed = set(_changed(top, base, kept_rev, scope))
-    for path in sorted(moved_changed - collided):
-        if not path.endswith(".yml") or Path(path).name == MANIFEST_NAME:
-            continue
-        hits = sorted(set(_targets(_load(_show(top, f"{moved_rev}:{path}")))) & set(mapping))
-        if not hits:
-            continue
-        theirs_too = set(_targets(_load(_show(top, f"{base}:{path}"))))
-        if path in kept_changed:
-            theirs_too |= set(_targets(_load(_show(top, f"{kept_rev}:{path}"))))
-        clash = sorted(theirs_too & set(hits))
-        if clash:
-            raise CollisionError(
-                f"{path} links to {', '.join(clash)} on both sides of the merge, so "
-                "which item each link means cannot be told — resolve this collision "
-                "by hand")
-        if path in unmerged:
-            raise CollisionError(
-                f"{path} is itself in conflict and links to {', '.join(hits)} — "
-                "resolve that conflict first, then run tl resolve again")
-        work = top / path
-        if not work.is_file():
-            continue                      # the kept side deleted it; nothing to relink
-        text, count = rewrite(work.read_text(encoding="utf-8"), mapping, where=path)
-        if count:
-            signed = {t for _, t in _signed(text)}
-            result.relinks.append(Relink(path=path, text=text, count=count,
-                                         signed_stale=bool(signed & set(mapping))))
+    result.relinks += _relinks(top, result, scope, mapping, unmerged, collided, {})
+
+    # This graph's consumers in the repository name what just moved
+    # namespace:UID (SR-0250). A consumer already resolved in this merge holds its
+    # own moved item at a new path; one not yet resolved still has it in conflict,
+    # and picks this graph's moves up when it is.
+    if local:
+        for consumer in _graph_roots(top):
+            names = _names(consumer, root) if consumer != root else set()
+            if not names:
+                continue
+            cscope = _rel(top, consumer)
+            qualified = {f"{n}:{old}": f"{n}:{new}"
+                         for n in sorted(names) for old, new in local.items()}
+            moved = (state.get(cscope) or {}).get("paths") or {}
+            cunmerged = _unmerged(top, cscope)
+            pending = {p for p, st in cunmerged.items() if st == {2, 3}}
+            for path in sorted(pending & set(_changed(top, base, moved_rev, cscope))):
+                if set(_targets(_load(_show(top, f"{moved_rev}:{path}")))) & set(qualified):
+                    result.deferred.append((cscope or ".", path))
+            result.relinks += _relinks(top, result, cscope, qualified, cunmerged,
+                                       pending, moved, graph=cscope or ".")
 
     for path, uid, _digits, _dir in collisions:
         kept_text = _show(top, f":{kept_stage}:{path}") or ""
@@ -407,6 +522,51 @@ def plan(project_path: str | Path, *, keep: str | None = None,
 
     _what_cannot_move(top, result, mapping)
     return result
+
+
+def _relinks(top: Path, result: Plan, scope: str, mapping: dict[str, str],
+             unmerged: dict[str, set[int]], collided: set[str], moved: dict[str, str],
+             *, graph: str | None = None) -> list[Relink]:
+    """Rewrite, in ``scope``, the links the moved side's changes made to an old UID.
+
+    Only a file the moved side changed can have meant the moved item. One whose
+    kept side or merge base also links to that UID cannot be told apart and is
+    refused. ``collided`` paths are skipped: their moved version is renumbered with
+    its own item. ``moved`` maps a path to where a consumer resolved earlier in this
+    merge put the moved side's item that stood there."""
+    out: list[Relink] = []
+    kept_changed = set(_changed(top, result.base, result.kept_rev, scope))
+    for path in sorted(set(_changed(top, result.base, result.moved_rev, scope)) - collided):
+        if not path.endswith(".yml") or Path(path).name == MANIFEST_NAME:
+            continue
+        hits = sorted(set(_targets(_load(_show(top, f"{result.moved_rev}:{path}"))))
+                      & set(mapping))
+        if not hits:
+            continue
+        where = moved.get(path, path)
+        if path not in moved:
+            theirs_too = set(_targets(_load(_show(top, f"{result.base}:{path}"))))
+            if path in kept_changed:
+                theirs_too |= set(_targets(_load(_show(top, f"{result.kept_rev}:{path}"))))
+            clash = sorted(theirs_too & set(hits))
+            if clash:
+                raise CollisionError(
+                    f"{path} links to {', '.join(clash)} on both sides of the merge, "
+                    "so which item each link means cannot be told — resolve this "
+                    "collision by hand")
+            if path in unmerged:
+                raise CollisionError(
+                    f"{path} is itself in conflict and links to {', '.join(hits)} — "
+                    "resolve that conflict first, then run tl resolve again")
+        work = top / where
+        if not work.is_file():
+            continue                      # the kept side deleted it; nothing to relink
+        text, count = rewrite(work.read_text(encoding="utf-8"), mapping, where=where)
+        if count:
+            signed = {t for _, t in _signed(text)}
+            out.append(Relink(path=where, text=text, count=count,
+                              signed_stale=bool(signed & set(mapping)), graph=graph))
+    return out
 
 
 def _signed(text: str) -> list[tuple[str, str]]:
@@ -456,6 +616,12 @@ def apply(result: Plan) -> list[str]:
         staged.append(relink.path)
     if staged:
         _git(result.top, "add", "--", *staged)
+    if result.moves:
+        state = _load_state(result.top)
+        record = state.setdefault(result.scope, {})
+        record.setdefault("moves", {}).update({m.old: m.new for m in result.moves})
+        record.setdefault("paths", {}).update({m.path: m.new_path for m in result.moves})
+        _save_state(result.top, state)
     return staged
 
 

@@ -772,7 +772,7 @@ def cmd_resolve(args) -> int:
         result = plan_resolution(args.path, keep=args.keep, trunk=args.trunk)
     except CollisionError as e:
         return _err(str(e))
-    if not result.moves:
+    if not result.moves and not result.relinks:
         print("no UID collisions in this merge — nothing to resolve")
         for path in result.other_conflicts:
             print(f"  still in conflict (not a UID collision): {path}")
@@ -786,8 +786,12 @@ def cmd_resolve(args) -> int:
         print(f"  kept   {move.old}  ({kept}{on})  {move.kept_title}")
         print(f"  {verb}move {move.old} -> {move.new}  ({moved})  {move.moved_title}")
     for relink in result.relinks:
-        print(f"  {verb}relink {Path(relink.path).stem}: {relink.count} link(s) "
+        where = f" in {relink.graph}" if relink.graph else ""
+        print(f"  {verb}relink {Path(relink.path).stem}{where}: {relink.count} link(s) "
               "now name the renumbered item")
+    for graph, path in result.deferred:
+        print(f"  {Path(path).stem} in {graph} is itself a UID collision; its links "
+              f"follow when you run `tl -C {graph} resolve`")
     if not args.dry_run:
         apply_resolution(result)
 
@@ -805,7 +809,7 @@ def cmd_resolve(args) -> int:
         print(f"note: {where} still mentions {old} in prose: {line}")
     for old, line in result.commits:
         sha, _, subject = line.partition(" ")
-        new = next(m.new for m in result.moves if m.old == old)
+        new = result.mapping[old]
         print(f"note: commit {sha} ({subject}) cites {old}; a commit cannot be "
               f"rewritten, so {old} there means what is now {new}")
     for path in result.other_conflicts:
@@ -815,6 +819,9 @@ def cmd_resolve(args) -> int:
         # side, the kept item reads as the moved one having changed status.
         base = "" if result.keep == OURS else " --base MERGE_HEAD"
         print(f"staged — run `tl check{base}`, then `git commit` to finish the merge")
+        others = sorted({r.graph for r in result.relinks if r.graph})
+        if others:
+            print(f"also changed: {', '.join(others)} — run the same check there")
     return OK
 
 
