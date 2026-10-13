@@ -49,6 +49,19 @@ These are named in the spec (`docs/referenced-resource/07_*`) but not implemente
   merge or squash-merge applies cleanly. It reuses `tl resolve`'s planning, link
   rewrite and numbering. Worth building once rebase or squash workflows are in real
   use; until then, abort the rebase and merge instead.
+- **Rewrite a sibling graph's links when `tl resolve` renumbers** — `tl resolve`
+  (SR-0248) rewrites the links inside the graph it runs in, but a graph in the
+  same repository that sources it by `path` names the moved item `namespace:UID`,
+  and a link the moved side added there keeps the old UID, silently coming to mean
+  the item that kept it; `tl check` cannot tell. The `/tl:multigraph` skill in
+  throughline-skills covers it by hand today: list those links from the moved side's
+  diff, then link the new UID and unlink the old in each consumer. The tool can do
+  it itself: find the in-repo graphs whose `[[sources]]` resolve to this one (and the
+  namespace, or `alias`, each binds it under), and apply the same rule it applies
+  locally — rewrite `namespace:OLD` only in files the moved side changed, refuse
+  where the kept side also linked to it from the same item, and report rather than
+  touch a consumer that is itself in conflict or reaches the graph only by a pinned
+  `url`. That would retire the skill's manual step.
 
 ## Exploratory / parked (post-M1)
 
