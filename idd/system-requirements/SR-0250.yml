@@ -1,6 +1,6 @@
 uid: SR-0250
 type: system_requirement
-status: proposed
+status: ratified
 title: A UID collision's resolution follows the item into the graphs that source
   it
 text: 'When the Tool renumbers an item while resolving a UID collision in one graph,
@@ -26,3 +26,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8f2191c95bb4253b7651c1d7801d32271a0fb2aff01f4fdfb74d26442a1cd0a4
+  ratified_content:
+    type: system_requirement
+    text: 'When the Tool renumbers an item while resolving a UID collision in one
+      graph, it shall also rewrite the links to that item''s old UID in every graph
+      of the same repository that sources the resolved graph by path, directly or
+      through other sources and under whatever namespace or alias that graph names
+      it by, applying the rule it applies to its own links: rewrite only where the
+      moved side wrote the link, and refuse, changing nothing, where the kept side
+      or the merge base links to the old UID from the same item. It shall give the
+      same result whichever order the graphs are resolved in: resolving a graph rewrites
+      its consumers, and resolving a consumer applies what its sources already renumbered
+      in the same merge.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
