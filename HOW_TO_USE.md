@@ -377,6 +377,11 @@ neither side is on the trunk, it refuses and changes nothing; pass `--keep
 ours|theirs` to choose. It does not rewrite prose or commit messages that cite
 the old UID — it lists them. Then run the `tl check` it suggests and `git commit`.
 
+In a repository of several graphs, run it in each graph the merge stopped in, in
+any order. A graph that sources another by `path` names its items
+`namespace:UID`; when one of them is renumbered, the links the moved side wrote
+there follow too, whichever graph you resolve first.
+
 ---
 
 ## 7. Wire it into your pipeline

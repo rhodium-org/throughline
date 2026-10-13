@@ -1,0 +1,28 @@
+uid: SR-0250
+type: system_requirement
+status: proposed
+title: A UID collision's resolution follows the item into the graphs that source
+  it
+text: 'When the Tool renumbers an item while resolving a UID collision in one graph,
+  it shall also rewrite the links to that item''s old UID in every graph of the same
+  repository that sources the resolved graph by path, directly or through other sources
+  and under whatever namespace or alias that graph names it by, applying the rule
+  it applies to its own links: rewrite only where the moved side wrote the link,
+  and refuse, changing nothing, where the kept side or the merge base links to the
+  old UID from the same item. It shall give the same result whichever order the graphs
+  are resolved in: resolving a graph rewrites its consumers, and resolving a consumer
+  applies what its sources already renumbered in the same merge.'
+rationale: A graph that sources another names its items namespace:UID, and resolving
+  only the graph that holds the item left a consumer's link to the old UID meaning
+  the item that kept it, a wrong link no check can see. Doing the rewrite by hand
+  was the one manual step left in the throughline-skills multigraph skill.
+normative: true
+links:
+- target: UR-0014
+  type: implements
+- target: SR-0248
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
