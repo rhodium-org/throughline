@@ -1,0 +1,39 @@
+uid: UR-0038
+type: user_requirement
+status: ratified
+title: Changes drafted where tl cannot run are applied as proposals, never over a
+  newer item
+text: A user whose only assistant cannot run commands shall be able to take the changes
+  it drafts against a graph and have the Tool apply them as proposals, refused where
+  the item has changed since the assistant read it.
+rationale: 'Raised by controlled environments where users are restricted to using
+  Microsoft 365 Copilot, which reads at most 50 files, cannot run tl, and only returns
+  text. Handing the graph to the assistant is a form of output and belongs to throughline-transform;
+  applying what comes back changes the graph and belongs here. Rejected: a spreadsheet
+  round-trip, which flattens links and attributes and lets the spreadsheet rewrite
+  values (an ID read as a date, trimmed whitespace) so fingerprints break unseen.
+  Rejected: taking back rewritten register files, because the assistant''s output
+  is length-capped, so truncation reads as deletion, and it drifts items it was not
+  asked to touch. Who pays: nobody outside the project; the obligations fall on the
+  Tool.'
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+- target: BN-0007
+  type: derives_from
+attrs:
+  priority: should
+  verification: demonstration
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:c0ab0b8e33b5fe85562ad960cdf1037cefd127360c37142fd8a78a8b560c82f0
+  ratified_content:
+    type: user_requirement
+    text: A user whose only assistant cannot run commands shall be able to take the
+      changes it drafts against a graph and have the Tool apply them as proposals,
+      refused where the item has changed since the assistant read it.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

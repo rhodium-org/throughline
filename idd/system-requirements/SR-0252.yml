@@ -1,0 +1,47 @@
+uid: SR-0252
+type: system_requirement
+status: ratified
+title: tl apply carries out a change set of the Tool's own operations, all or nothing
+text: 'tl apply FILE shall read a change set: a documented JSON list of new, amend,
+  link, unlink and delete operations, each naming the item it touches. An operation
+  on an existing item carries the fingerprint it was based on. Apply shall refuse
+  the whole set, naming every offending operation, when any fingerprint differs from
+  the item''s current one, when an operation is malformed, or when it is any other
+  operation. Otherwise it shall carry out every operation through the same code as
+  the matching command, recording each item it creates or changes with origin ai.'
+rationale: 'Not the foreign-list import NG-0005 rules out: the change set holds only
+  the Tool''s own operations, and each runs through the command that already does
+  it, so no rule is written twice. Origin ai puts every result in proposed, so a
+  person still decides; ratify, withdraw, clarify, status, schema and migrate are
+  refused because those are decisions or structure, not drafting. All-or-nothing
+  with fingerprints keeps an assistant''s change from landing on an item that moved
+  after the export. Rejected: three-way merging of whole register files. Who pays:
+  an author of a change set must quote fingerprints, which the dump carries (SR-0251).'
+normative: true
+links:
+- target: UR-0038
+  type: implements
+- target: NG-0005
+  type: relates
+- target: SR-0251
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:cd9a583be48ebcedfd3878cac98f4ac22b03d0640976011d74f631063c12d398
+  ratified_content:
+    type: system_requirement
+    text: 'tl apply FILE shall read a change set: a documented JSON list of new,
+      amend, link, unlink and delete operations, each naming the item it touches.
+      An operation on an existing item carries the fingerprint it was based on. Apply
+      shall refuse the whole set, naming every offending operation, when any fingerprint
+      differs from the item''s current one, when an operation is malformed, or when
+      it is any other operation. Otherwise it shall carry out every operation through
+      the same code as the matching command, recording each item it creates or changes
+      with origin ai.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
