@@ -14,7 +14,7 @@ version control; a `check` command validates the whole graph and gates CI.
 35
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
-21
+22
 <!-- tl:end --> NFRs, every one grounded to a root and green under `tl check --strict`.
 These counts are rendered from the live graph by the `tl:count` directive (SR-0109)
 and gated fresh by `tl docs --check`, so they can never drift from the spec they describe.
@@ -40,7 +40,7 @@ requirements, 06 data format, 07 architecture).
 > validator reject an ungrounded graph, fix it, and trace a requirement back to
 > its reason for existing. Curious how the workflow relates to test-first
 > practice? [`HOW_IDD_DIFFERS_FROM_BDD.md`](https://github.com/rhodium-org/throughline/blob/main/HOW_IDD_DIFFERS_FROM_BDD.md) explains
-> Intent-Driven Development and why it is the *why* axis to BDD's *what*.
+> the discipline `tl check` enforces (IDD) and why it is the *why* axis to BDD's *what*.
 
 ---
 
@@ -58,6 +58,16 @@ this tool adds — not "are the links well-formed?" but **"should this scope exi
 at all, and who took responsibility for it?"** It is why throughline is built for
 an age where a machine can generate a hundred plausible requirements an hour:
 generation is bounded by a ranked review queue instead of silent sprawl.
+
+**A note on the name.** throughline calls its discipline Intent-Driven
+Development, IDD for short. Neither the phrase nor the acronym is unique to it:
+other projects use them, mostly to mean intent as what an AI agent builds from.
+The closest in subject is [ECC](https://github.com/affaan-m/ECC)'s
+[`intent-driven-development`](https://github.com/affaan-m/ECC/blob/main/skills/intent-driven-development/SKILL.md)
+skill, which writes acceptance criteria: a scenario, an action, the expected
+result and how it is verified. That is BDD's *what* axis, pointing outward from a
+requirement to its tests. throughline's IDD is the *why* axis, pointing upward
+from a requirement to the root that justifies it (NFR-0023).
 
 ---
 
