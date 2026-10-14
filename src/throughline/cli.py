@@ -100,6 +100,7 @@ from .composition import (
     local_view,
     owning_source,
     resolve_sources,
+    uncited_sources,
     union_uid,
     union_view,
 )
@@ -1598,6 +1599,9 @@ def _composed_check(args) -> int:
     )
     pattern = union.pattern()
     findings = [translate_finding(f, union, pattern) for f in findings]
+    # Judged on the declarations, not the union: a rule about the consumer's own
+    # [[sources]], so the seam has nothing to decide about it (SR-0253).
+    findings += uncited_sources(consumer, sources, res, strict=args.strict)
 
     if getattr(args, "format", "text") == "json":
         print(json.dumps([f.to_dict() for f in findings], indent=2))

@@ -155,8 +155,10 @@ def _capture_scene(tmp_path: Path, consumer_platform: str) -> Path:
     _write(tmp_path / "house-b", _project(
         "house-b", cites=["platform:SR-0001"],
         sources=_src("platform", "../platform-old")))
+    # The consumer cites its own `platform` as well: a declared source nothing
+    # cites is reported (SR-0253), and this scene is about binding, not that.
     return _write(tmp_path / "consumer", _project(
-        "consumer", cites=["house:SR-0001"], consumer=True,
+        "consumer", cites=["house:SR-0001", "platform:SR-0001"], consumer=True,
         sources=_src("house", "../house-b") + _src("platform", consumer_platform)))
 
 

@@ -43,7 +43,9 @@ from .resolvers import (
 from .seam import is_borrowed
 from .sources import Source, SourceError, parse_sources, withdrawn_declarations
 from .union import ComposeError, Union, build_union
-from .validate import is_namespace_qualified
+from .storage import CONFIG_NAME
+from .schema import OFF, WARNING
+from .validate import Finding, is_namespace_qualified
 from .views import check_summary
 
 # ------------------------------------------------------ resolving the closure
@@ -439,6 +441,50 @@ def describe_binding(res: Resolution, ns: str) -> str:
     return f"{line} via {_chain(res.via[ns])}" if res.via[ns] else line
 
 
+def uncited_sources(consumer: Project, sources: list[Source], res: Resolution,
+                    strict: bool = False) -> list[Finding]:
+    """The ``uncited-source`` findings for the sources ``consumer`` declares
+    (SR-0253).
+
+    A declared source that no live local item links to has no effect on the graph,
+    so a speculative or mistaken declaration is otherwise pronounced sound. A link
+    into a namespace the source carried in transitively counts as citing the source
+    that carried it. ``uncited = "<reason>"`` on the declaration exempts it, and is
+    itself reported once something does cite the source, so the reason cannot
+    outlive the fact it explains. Severity is the consumer's, through ``[rules]``.
+    """
+    sev = consumer.schema.rule_severity("uncited-source", WARNING, strict)
+    if sev == OFF:
+        return []
+    cites: dict[str, int] = {}
+    for item in consumer.items():
+        if item.is_deleted:
+            continue
+        for link in item.links:
+            ns = owning_source(link.target)
+            if ns is None or ns not in res.resolved:
+                continue
+            carrier = res.via[ns][0] if res.via.get(ns) else ns
+            cites[carrier] = cites.get(carrier, 0) + 1
+    cfg = str(Path(consumer.path) / CONFIG_NAME)
+    out: list[Finding] = []
+    for s in sources:
+        n = cites.get(s.namespace, 0)
+        if n == 0 and s.uncited is None:
+            out.append(Finding(
+                "uncited-source", sev, "", cfg,
+                f"source '{s.namespace}' ({source_location(s)}) is declared but no "
+                "item cites it, so it has no effect on the graph — link the items it "
+                "bears on, remove the declaration, or state why it is composed "
+                "anyway with uncited = \"<reason>\" (SR-0253)"))
+        elif n and s.uncited is not None:
+            out.append(Finding(
+                "uncited-source", sev, "", cfg,
+                f"source '{s.namespace}' declares uncited ({s.uncited!r}) but {n} "
+                f"link(s) cite it — remove the 'uncited' key (SR-0253)"))
+    return out
+
+
 # ------------------------------------------ naming a borrowed item (SR-0230)
 
 
@@ -797,6 +843,12 @@ ref = "v5.0.0"                     # REQUIRED for a url — pins the edition
   no `ref`).
 - **`subdir`** — optional, on either form: the graph lives in this directory relative
   to the repository (or `path`) root.
+- **`uncited`** — optional, a non-empty reason. A declared source that no local item
+  links to (directly, or through a source it carried in) has no effect on the graph,
+  and `tl check` reports it as `uncited-source`. Cite it, remove it, or — when it is
+  composed on purpose without being cited — say why: `uncited = "the graph this
+  shaping produced, composed so tl context shows it"`. The reason is reported in turn
+  once something does cite the source. Never add it just to silence the warning.
 
 `[[sources]]` is config, so it is the one part of a composed project you edit by
 hand — there is no CLI subcommand that writes it. Everything about the *graph

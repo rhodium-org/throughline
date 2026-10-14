@@ -1,0 +1,38 @@
+uid: SR-0253
+type: system_requirement
+status: proposed
+title: tl check reports a declared source that nothing cites
+text: When a project declares sources, tl check shall report each source the project
+  itself declares that no live local item links to, counting a link into a namespace
+  that source carried in transitively as a link to that source, under the rule uncited-source
+  at warning severity. A source declaration may state uncited = "<reason>", a non-empty
+  string, which exempts it; tl check shall report a source that states uncited while
+  a local item links to it, and shall refuse a declaration whose uncited value is
+  not a non-empty string. The rule's severity is set by [rules] like any other rule.
+rationale: 'A source no item cites has no effect on the graph, yet a project that
+  declared one speculatively, or the wrong one, was pronounced sound: the Crookham
+  Park implementation graph carried the EU GDPR source for a UK service, and ASVS
+  sat uncited in five graphs of the estate. A named rule with a default severity
+  follows SR-0042 and SR-0191 rather than a command-line flag, so the policy lives
+  in the graph that it governs. Warning by default so an upgrade fails no plain check;
+  --strict raises it like every warning. Some sources are rightly composed without
+  being cited (a shaping graph composing the graph it produced, a profile that is
+  an assembly of its sources), so the exemption carries its reason as data instead
+  of a comment, and goes stale loudly when the source is cited after all. Rejected:
+  a --referenced-sources flag (the policy would live in each CI script, not the graph)
+  and a fixed role vocabulary (every uncited case seen needed its own reason anyway).
+  Who pays: about 28 deliberate declarations across the estate need an uncited reason.'
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0230
+  type: relates
+- target: SR-0042
+  type: relates
+- target: SR-0191
+  type: relates
+attrs:
+  origin: ai
+  priority: should
+  verification: test
