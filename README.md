@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-218
+219
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 35
@@ -210,6 +210,21 @@ reports every finding in `namespace:UID` vocabulary. `query`, `dump`, `docs`,
 `trace`, `subgraph`, `new`, `link`, `unlink`, `ratify`, `migrate` and `context`
 answer over the union too; everything else reads your graph alone, and a project
 that declares no sources is untouched by any of this.
+
+A source that no item of yours cites has no effect on the graph, so `tl check`
+reports it under the rule `uncited-source` — a warning, which `--strict` raises like
+any other. Where a source is composed on purpose without being cited (a shaping
+graph composing the graph it produced, say), say why on the declaration and the
+rule leaves it alone until something does cite it:
+
+```toml
+[[sources]]
+namespace = "service"
+path = "../service"
+uncited = "the graph this shaping produced, composed so tl context shows it"
+```
+
+`[rules] uncited-source = "off"` turns the rule off for a whole project.
 
 Sources are read-only, fetched once into a per-user cache and reached again only
 when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A

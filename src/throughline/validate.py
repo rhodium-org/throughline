@@ -58,7 +58,7 @@ _DEFAULT_SEVERITY = {
     "ratified-stale": WARNING, "ratified-content-mismatch": ERROR,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING, "normative-mismatch": WARNING,
-    "register-type-mismatch": WARNING,
+    "register-type-mismatch": WARNING, "uncited-source": WARNING,
 }
 # `rule-filter` is deliberately absent above. Every rule there describes a
 # judgement a project may reasonably make differently; a coverage rule that

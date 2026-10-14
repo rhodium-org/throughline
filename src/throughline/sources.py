@@ -62,6 +62,10 @@ class Source:
     # gave one of its own sources — to the namespace the consumer binds it under.
     # Empty when every label is kept as its declaring source gave it.
     alias: dict[str, str] = field(default_factory=dict)
+    # SR-0253: why this source is composed although no local item cites it, or
+    # None. The exemption from the `uncited-source` rule, held as data so the
+    # reason travels with the declaration instead of in a comment beside it.
+    uncited: str | None = None
 
     @property
     def is_remote(self) -> bool:
@@ -122,6 +126,23 @@ def _parse_alias(ns: str, raw) -> dict[str, str]:
                 "one alias binds one label")
         mapping[label] = name
     return mapping
+
+
+def _parse_uncited(ns: str, raw) -> str | None:
+    """Validate an optional ``uncited`` reason (SR-0253): a non-empty string.
+
+    An empty or non-string value fails fast. A bare ``uncited = true`` would exempt
+    the source while saying nothing, which is the comment-beside-the-config this key
+    exists to replace.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not raw.strip():
+        raise SourceError(
+            f"source '{ns}' has an 'uncited' value that is not a reason — state why "
+            "the source is composed although nothing cites it, as a non-empty string "
+            "(SR-0253)")
+    return raw.strip()
 
 
 def _refuse_withdrawn(ns: str) -> SourceError:
@@ -185,6 +206,7 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
         ref = entry.get("ref")
         subdir = _parse_subdir(ns, entry.get("subdir"))
         alias = _parse_alias(ns, entry.get("alias"))
+        uncited = _parse_uncited(ns, entry.get("uncited"))
 
         has_path = bool(path)
         has_url = bool(url)
@@ -203,7 +225,8 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
                 raise SourceError(
                     f"source '{ns}' declares a 'ref' with a local 'path' — a ref "
                     "only pins a 'url' (SR-0006)")
-            src = Source(namespace=ns, path=path, subdir=subdir, alias=alias)
+            src = Source(namespace=ns, path=path, subdir=subdir, alias=alias,
+                         uncited=uncited)
         else:
             if not isinstance(url, str):
                 raise SourceError(f"source '{ns}' has a non-string 'url'")
@@ -211,7 +234,8 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
                 raise SourceError(
                     f"source '{ns}' has a 'url' but no 'ref' — pin the edition with "
                     "a git tag, branch, or commit (SR-0006)")
-            src = Source(namespace=ns, url=url, ref=ref, subdir=subdir, alias=alias)
+            src = Source(namespace=ns, url=url, ref=ref, subdir=subdir, alias=alias,
+                         uncited=uncited)
 
         seen.add(ns)
         out.append(src)
