@@ -1,10 +1,10 @@
-# Intent-Driven Development, and how it differs from BDD
+# Intent-Driven Development (IDD), and how it differs from BDD
 
 > This page exists because a requirement said it should: **NFR-0021 —
-> "Conceptual model explained"** (`requirements/nonfunctional/NFR-0021.yml`),
+> "Conceptual model explained"** (`idd/nonfunctional/NFR-0021.yml`),
 > which implements **UR-0020 "Comprehensible to newcomers"**. Newcomers adopt a
 > practice faster when they understand *why* it is shaped the way it is. This is
-> that "why".
+> that "why". The note on the name below answers **NFR-0023**.
 
 If you have done any test-first development, throughline's workflow will feel
 familiar — and that familiarity is worth a moment's care, because IDD and BDD
@@ -25,7 +25,28 @@ IDD guards the *why*. A mature project wants both.
 
 ---
 
-## Intent-Driven Development in one minute
+## A note on the name
+
+The phrase "Intent-Driven Development", and the acronym IDD, were in use before
+throughline's first release, and other projects use them today. Most mean intent
+as the thing an AI agent builds from.
+
+The closest in subject is [ECC](https://github.com/affaan-m/ECC)'s
+[`intent-driven-development`](https://github.com/affaan-m/ECC/blob/main/skills/intent-driven-development/SKILL.md)
+skill, because it also works on requirements. It turns a change request into
+acceptance criteria. Each criterion has a
+scenario, an action, the expected result, what must not happen, and how it will
+be verified. That is BDD's *what* axis: it points outward, from a requirement to
+the tests that verify it, and it belongs in the BDD column of the table below.
+
+throughline's IDD is the *why* axis: it points upward, from a requirement to the
+root that justifies it. The two answer different questions. Wherever
+throughline's documentation says IDD, it means the grounding discipline that
+`tl check` enforces.
+
+---
+
+## IDD in one minute
 
 The idea is a straight lift of the test-first instinct, moved one level up:
 
