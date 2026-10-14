@@ -1,0 +1,35 @@
+uid: SR-0251
+type: system_requirement
+status: ratified
+title: tl dump states each item's current fingerprint
+text: Each item in the canonical dump shall carry the fingerprint the Tool computes
+  for its current content, under a documented key, so a reader of the dump can quote
+  it back.
+rationale: 'An assistant working from an export has to tell apply which version of
+  an item it drafted against; the fingerprint is how the Tool already says that.
+  Computing it anywhere but here would re-implement the fingerprint rule, so throughline-transform
+  takes it from the dump rather than hashing items itself. Stays inside NG-0005:
+  it widens the dump SR-0055 already sanctions and adds no format.'
+normative: true
+links:
+- target: UR-0038
+  type: implements
+- target: SR-0055
+  type: refines
+- target: NG-0005
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:cd844b1dfa136a877c453e129b21dbd1cc9a883a5683121e7614807f850728ab
+  ratified_content:
+    type: system_requirement
+    text: Each item in the canonical dump shall carry the fingerprint the Tool computes
+      for its current content, under a documented key, so a reader of the dump can
+      quote it back.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
