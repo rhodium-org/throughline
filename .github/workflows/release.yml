@@ -27,6 +27,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: The tag names the version pyproject.toml declares
+        # A release is the package version: a tag with another number would publish a
+        # package nobody can find under the name the release bears, as v3.18.1 did on
+        # 2026-10-15, publishing 3.18.0. The build stops here instead.
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::release tag v$tag does not match the version pyproject.toml declares, $version"
+            exit 1
+          fi
       - name: Build
         run: |
           python -m pip install --upgrade build
