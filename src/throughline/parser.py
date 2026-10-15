@@ -306,6 +306,21 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                         "still declares it (repeatable)")
     s.set_defaults(func=handlers.get("cmd_amend"))
 
+    s = sub.add_parser(
+        "apply",
+        help="carry out a change set drafted where tl cannot run — new, amend, "
+             "link, unlink, delete — all or nothing (SR-0252)")
+    s.add_argument("file", nargs="?", default=None, metavar="FILE",
+                   help="the change set, a JSON file (- for stdin)")
+    s.add_argument("--describe", action="store_true",
+                   help="print the change-set format an assistant must write, "
+                        "and exit")
+    s.add_argument("--dry-run", action="store_true",
+                   help="check and carry out the set, report it, then leave every "
+                        "file as it was")
+    s.add_argument("--format", choices=["text", "json"], default="text")
+    s.set_defaults(func=handlers.get("cmd_apply"))
+
     s = sub.add_parser("review", help="mark item(s) reviewed at current content")
     s.add_argument("uid", nargs="?", default=None)
     s.add_argument("--all-clean", action="store_true")

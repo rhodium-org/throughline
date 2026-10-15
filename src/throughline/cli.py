@@ -73,6 +73,12 @@ from .brief import (
     context_markdown,
 )
 from .parser import build_parser as _command_tree
+from .apply import (
+    CHANGE_SET_FORMAT,
+    ChangeSetError,
+    apply_change_set,
+    parse_change_set,
+)
 from .items import (
     Amendment,
     amend_item,
@@ -908,6 +914,69 @@ def cmd_amend(args) -> int:
     return OK
 
 
+
+
+def _render_apply(result, fmt: str) -> None:
+    if fmt == "json":
+        print(json.dumps({"applied": not result.dry_run, "dry_run": result.dry_run,
+                          "operations": [vars(o) for o in result.operations],
+                          "files": result.files, "created": result.created,
+                          "changed": result.changed}, indent=2))
+        return
+    for o in result.operations:
+        print(f"#{o.index} {o.outcome} {o.uid}" + (f" — {o.detail}" if o.detail else ""))
+    n = len(result.operations)
+    if result.dry_run:
+        print(f"dry run: {n} operation(s) would apply and change "
+              f"{len(result.files)} file(s) — nothing was changed")
+    else:
+        print(f"applied {n} operation(s); {len(result.files)} file(s) changed")
+    touched = result.created + result.changed
+    if touched:
+        print(f"  proposed with origin ai: {', '.join(touched)} — a human decides")
+
+
+def _refuse_apply(e: ChangeSetError, fmt: str) -> int:
+    if fmt == "json":
+        print(json.dumps({"applied": False, "problems": e.problems}, indent=2))
+    else:
+        print("change set refused — nothing was changed:")
+        for problem in e.problems:
+            print(f"  {problem}")
+    return FINDINGS
+
+
+def _apply_with(args, project, *, view=None, find=None) -> int:
+    if args.file is None or args.file == "-":
+        text = sys.stdin.read()
+    else:
+        try:
+            text = Path(args.file).read_text(encoding="utf-8")
+        except OSError as e:
+            return _err(f"cannot read {args.file}: {e}")
+    try:
+        operations = parse_change_set(text)
+        result = apply_change_set(project, operations, view=view, find=find,
+                                  dry_run=args.dry_run)
+    except ChangeSetError as e:
+        return _refuse_apply(e, args.format)
+    _render_apply(result, args.format)
+    return OK
+
+
+def cmd_apply(args) -> int:
+    """Parse, call :func:`throughline.apply.apply_change_set`, render (SR-0225,
+    SR-0252). `--describe` prints the change-set form an assistant is given."""
+    if args.describe:
+        print(CHANGE_SET_FORMAT, end="")
+        return OK
+    if args.file is None and sys.stdin.isatty():
+        return _err("apply needs a change-set FILE (- for stdin), or --describe")
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    return _apply_with(args, project)
 
 
 def cmd_check(args) -> int:
@@ -2093,6 +2162,29 @@ def _composed_new(args) -> int:
     return OK
 
 
+def _composed_apply(args) -> int:
+    """Carry out a change set over the union (SR-0212, SR-0252): an operation may
+    link into a borrowed clause, judged against the union exactly as `tl link`
+    judges it, and the set is written to the consumer's own items only."""
+    if getattr(args, "describe", False):
+        return cmd_apply(args)
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_apply(args)
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    def find(target: str):
+        if is_namespace_qualified(target):
+            return union.project.get(union_uid(union, target))
+        return consumer.get(target)
+
+    return _apply_with(args, consumer, view=union_view(union), find=find)
+
+
 def _composed_context(args) -> int:
     """Emit the brief, then the composition section and the live listing of every
     namespace this project's union binds (SR-0230). With no sources declared the
@@ -2158,6 +2250,10 @@ def _composed_context(args) -> int:
 # without also being described — the two cannot drift, because there is only one of
 # them.
 UNION_COMMANDS: dict[str, tuple] = {
+    "apply": (
+        _composed_apply,
+        "carries out a change set over the union, so an operation may link into a "
+        "borrowed clause; the set is written to your own items only."),
     "check": (
         _composed_check,
         "composes consumer + sources, validates the union with the unchanged "

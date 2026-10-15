@@ -8,9 +8,16 @@ third-party tooling. It is a faithful projection of what the loader holds — th
 schema (config), every register manifest, and every item (live and tombstoned),
 with each item's typed links embedded. It is deterministic: no wall-clock field,
 so two dumps of the same graph are byte-identical and diff cleanly.
+
+Each item carries ``fingerprint``: the Tool's fingerprint of its normative
+content as it stands (SR-0251), under this documented key, so a reader working
+from the dump can quote back which version of an item it read — what a change
+set hands to ``tl apply`` (SR-0252). It is computed here by the one fingerprint
+rule and nowhere else, so a tool built on the dump never hashes an item itself.
 """
 from __future__ import annotations
 
+from .fingerprint import fingerprint
 from .model import Project
 from .storage import FORMAT_VERSION
 
@@ -31,6 +38,12 @@ def build_dump(project: Project, tool_version: str) -> dict:
         registers.append(entry)
 
     items = sorted(project.items(), key=lambda it: it.uid)
+    schema = project.schema
+
+    def entry(it) -> dict:
+        d = it.to_dict()
+        d["fingerprint"] = fingerprint(it, schema)
+        return d
 
     return {
         "throughline_dump": {
@@ -40,5 +53,5 @@ def build_dump(project: Project, tool_version: str) -> dict:
         },
         "config": project.config,
         "registers": registers,
-        "items": [it.to_dict() for it in items],
+        "items": [entry(it) for it in items],
     }

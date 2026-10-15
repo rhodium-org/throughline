@@ -29,6 +29,12 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 `new_item` · `birth_item` · `parse_attrs` · `coerce_attr` · `amend_item` · `Amendment` · `newly_suspect` · `delete_item` · `review_items` · `add_link` · `remove_link` · `retype_link` · `LinkError`
 
+### Carrying out a change set drafted elsewhere
+
+An assistant that cannot run the Tool works from an export and sends its changes back as a change set: one JSON list of the Tool's own operations, each quoting the fingerprint the item carried in the dump (SR-0251, SR-0252). The set is carried out all or nothing; `CHANGE_SET_FORMAT` is the text the assistant is given, so what it is told to write is what `parse_change_set` accepts.
+
+`parse_change_set` · `apply_change_set` · `ApplyResult` · `OperationResult` · `ChangeSetError` · `CHANGE_SET_FORMAT` · `CHANGE_SET_FORMAT_VERSION`
+
 ### The gate
 
 `validate` · `Finding` · `is_external` · `is_namespace_qualified` · `query_items` · `eval_filter` · `FilterError`

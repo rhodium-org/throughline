@@ -139,6 +139,7 @@ tl register new <PREFIX> <dir> [--parent P]   # add a register
 tl new <PREFIX> [--uid U] [--type T] [--ground UID]  # allocate + create (grounded at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
 tl delete <UID> --reason "…"                  # tombstone (never erased)
+tl apply <FILE> [--dry-run] | --describe       # carry out a change set drafted where tl cannot run, all or nothing
 tl review [<UID> | --all-clean]               # mark reviewed at current content
 tl check [--strict] [--format json]           # validate the graph — the CI gate
 tl trace <UID> [--direction in|out] [--depth N]
