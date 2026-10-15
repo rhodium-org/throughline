@@ -284,6 +284,7 @@ tl ratify <UID> --by <who> [--by-id <scheme:value>]   # a human takes accountabi
 throughline invalidate <UID> --reason "…"               # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…" --by <who>    # a signature no longer stands
 tl resolve [--keep ours|theirs] [--dry-run]    # inside a merge: renumber a UID both branches allocated
+tl apply <FILE> [--dry-run] | --describe       # carry out a change set an assistant drafted from an export, all or nothing
 ```
 
 Omit `--by` on a terminal and you are offered the identity this repository already

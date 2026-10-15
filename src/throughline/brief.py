@@ -272,6 +272,7 @@ _CTX_COMMAND_USAGE = {
     "amend": "tl amend <UID> [--title …] [--text …] [--rationale …] [--attr K=V] "
              "[--unset K]",
     "link": "tl link <SRC> <DST> --type <kind>",
+    "apply": "tl apply <FILE> [--dry-run] [--format json] | tl apply --describe",
     "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
     "check": "tl check [--strict] [--format json] [--base REF | --base-dir DIR]",
     "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>]",
@@ -319,6 +320,11 @@ _CTX_COMMAND_EMPHASIS = {
                "(the same UID allocated on both branches); never settle that "
                "conflict by picking a side — that silently loses an item",
     "amend": "change content through the tool, never by opening the YAML",
+    "apply": "carries out a change set drafted where tl cannot run (an assistant "
+             "working from an export): new, amend, link, unlink and delete, all or "
+             "nothing, refused whole when an item changed since the export; "
+             "everything it creates or changes is proposed with origin ai. "
+             "`--describe` prints the form the assistant must write",
     "schema": "change the schema itself — nouns: status, transition, type, attr, "
               "linktype, linkrule, grounding, rule; refuses a change that would "
               "invalidate existing items and says what to fix",

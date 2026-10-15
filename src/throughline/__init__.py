@@ -9,6 +9,15 @@ CLI (``throughline.cli``) is the primary entry point.
 from __future__ import annotations
 
 from . import schema_ops
+from .apply import (
+    CHANGE_SET_FORMAT,
+    CHANGE_SET_FORMAT_VERSION,
+    ApplyResult,
+    ChangeSetError,
+    OperationResult,
+    apply_change_set,
+    parse_change_set,
+)
 from .brief import context_item_section, context_markdown
 from .composition import (
     Composition,
@@ -177,6 +186,9 @@ __all__ = [
     "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
     "newly_suspect", "new_item", "delete_item", "review_items",
     "add_link", "remove_link", "retype_link", "LinkError",
+    # carrying out a change set drafted where the Tool cannot run
+    "parse_change_set", "apply_change_set", "ApplyResult", "OperationResult",
+    "ChangeSetError", "CHANGE_SET_FORMAT", "CHANGE_SET_FORMAT_VERSION",
     # the gate
     "validate", "Finding", "is_external", "is_namespace_qualified",
     "query_items", "eval_filter", "FilterError",
