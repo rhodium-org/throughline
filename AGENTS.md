@@ -192,3 +192,17 @@ IDD discipline: ground the change in an `idd/` item (create it and get it ratifi
 if it is new), reference the UID in your commit, and keep `tl -C idd check
 --strict` and `tl -C idd docs --check` green. See [`CONTRIBUTING.md`](CONTRIBUTING.md)
 and [`HOW_TO_USE.md`](HOW_TO_USE.md).
+
+### Act; ask the operator only for what needs a human
+
+The operator's part is to ratify, to approve the `pypi` deployment a release
+waits on, and to hold the secrets. Everything else a session can do, it does
+without asking and without waiting: fix red CI, merge its own pull request once
+CI is green, the branch is mergeable and no item in it is still `proposed`, and
+bump the version the release will carry. A release is a GitHub release whose tag
+is `v` plus the version `pyproject.toml` declares (the workflow refuses any
+other); where the session cannot create it, it asks once, with the exact
+`gh release create vX.Y.Z` command, and says the deployment then waits for the
+operator's approval. Never end a turn waiting on the operator for a step the
+session could take itself: on 15 October 2026 a session waited on the operator to
+merge green pull requests it could have merged, and was told so.
