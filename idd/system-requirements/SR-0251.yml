@@ -1,15 +1,19 @@
 uid: SR-0251
 type: system_requirement
 status: ratified
-title: tl dump states each item's current fingerprint
-text: Each item in the canonical dump shall carry the fingerprint the Tool computes
-  for its current content, under a documented key, so a reader of the dump can quote
-  it back.
+title: tl dump states each item's current fingerprint and revision
+text: 'Each item in the canonical dump shall carry, under documented keys, the fingerprint
+  the Tool computes for its current normative content and a revision: a digest of
+  its whole stored record that changes when any field does, so a reader of the dump
+  can quote back exactly which version of the item it read.'
 rationale: 'An assistant or agent working from an export has to tell apply which
-  version of an item it drafted against; the fingerprint is how the Tool already
-  says that. Computing it anywhere but here would re-implement the fingerprint rule,
+  version of an item it drafted against. The fingerprint alone cannot: it covers
+  only normative content, so a newer title, rationale, link, status or non-normative
+  attribute leaves it unchanged and a stale change would be written over the newer
+  one. The revision covers the whole record; the fingerprint stays, because ratification
+  is taken over it. Computing either anywhere but here would re-implement the rule,
   so a tool that builds the export (rhodium-org/throughline-ms-copilot for Microsoft
-  365 Copilot, for one) takes it from the dump rather than hashing items itself.
+  365 Copilot, for one) takes both from the dump rather than hashing items itself.
   Stays inside NG-0005: it widens the dump SR-0055 already sanctions and adds no
   format.'
 normative: true
@@ -25,12 +29,13 @@ attrs:
   verification: test
   origin: ai
   ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:cd844b1dfa136a877c453e129b21dbd1cc9a883a5683121e7614807f850728ab
+  ratified_fingerprint: sha256:0f2a31a6fd3626a48c9cd94ff1adb6662f10ca9d7bcd595339a4a82a58a21c8a
   ratified_content:
     type: system_requirement
-    text: Each item in the canonical dump shall carry the fingerprint the Tool computes
-      for its current content, under a documented key, so a reader of the dump can
-      quote it back.
+    text: 'Each item in the canonical dump shall carry, under documented keys, the
+      fingerprint the Tool computes for its current normative content and a revision:
+      a digest of its whole stored record that changes when any field does, so a
+      reader of the dump can quote back exactly which version of the item it read.'
     normative: true
     derived: false
     attrs:
