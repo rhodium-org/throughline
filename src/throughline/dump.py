@@ -14,10 +14,16 @@ content as it stands (SR-0251), under this documented key, so a reader working
 from the dump can quote back which version of an item it read — what a change
 set hands to ``tl apply`` (SR-0252). It is computed here by the one fingerprint
 rule and nowhere else, so a tool built on the dump never hashes an item itself.
+
+Each item also carries ``revision``: a digest of its whole stored record, so it
+moves on any change at all — a title, a rationale, a link, a status — where the
+fingerprint, which ratification is taken over, moves only on normative content.
+A change set quotes the revision (SR-0252), so an operation drafted against an
+item that has since changed in any way is refused rather than written over it.
 """
 from __future__ import annotations
 
-from .fingerprint import fingerprint
+from .fingerprint import fingerprint, revision
 from .model import Project
 from .storage import FORMAT_VERSION
 
@@ -43,6 +49,7 @@ def build_dump(project: Project, tool_version: str) -> dict:
     def entry(it) -> dict:
         d = it.to_dict()
         d["fingerprint"] = fingerprint(it, schema)
+        d["revision"] = revision(it)
         return d
 
     return {

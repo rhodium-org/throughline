@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import unicodedata
 
 from .schema import Schema
@@ -119,3 +120,16 @@ def content_fingerprint(uid: str, content: object) -> str | None:
         return None
     return _digest(uid, content["type"], content["text"], content["normative"],
                    content["derived"], list(attrs.items()))
+
+
+def revision(item) -> str:
+    """The revision of an item's whole stored record (SR-0251): SHA-256 over the
+    record the item's file holds — every field an operation reads or writes,
+    title, rationale, status, links and every attribute included — in canonical
+    JSON. Unlike :func:`fingerprint`, which a ratification is taken over and so
+    reads only normative content, any change to the item moves its revision, so a
+    change set quoting it is refused when anything about the item has moved since
+    the export it was drafted from (SR-0252)."""
+    record = json.dumps(item.to_dict(), sort_keys=True, ensure_ascii=False,
+                        separators=(",", ":"), default=str)
+    return "sha256:" + hashlib.sha256(record.encode("utf-8")).hexdigest()

@@ -5,18 +5,20 @@
 An assistant or agent that cannot run the Tool — one that reads a capped number
 of files and returns only text, as Microsoft 365 Copilot does in a controlled
 environment — works from an export of the graph, built on `tl dump` and the
-fingerprint each item carries there (SR-0251). The export is the business of
-whatever tool briefs that assistant (rhodium-org/throughline-ms-copilot does it
-for Copilot); the assistant sends its changes back as a *change set*: one JSON
+fingerprint and revision each item carries there (SR-0251). The export is the
+business of whatever tool briefs that assistant (rhodium-org/throughline-ms-copilot
+does it for Copilot); the assistant sends its changes back as a *change set*: one JSON
 document listing the Tool's own operations — new, amend, link, unlink, delete —
-each naming the item
-it touches and, for an item that already exists, quoting the fingerprint it was
-drafted against.
+each naming the item it touches and, for an item that already exists, quoting
+the revision it was drafted against: the digest of its whole stored record that
+the dump gives beside its fingerprint, so a change to any field since the export
+refuses the set (format 2). A format-1 set quotes the fingerprint instead and is
+still read, with the weaker check that implies.
 
 The set is carried out all or nothing. Every operation is checked against the
 graph as it stands before anything is written: a malformed operation, an
 operation the Tool does not offer an assistant (a decision, or a change to the
-structure), or a fingerprint that is not the item's current one refuses the
+structure), or a revision that is not the item's current one refuses the
 whole set, naming every offending operation. Each operation then runs through
 the same function the matching command runs — :func:`new_item`,
 :func:`amend_item`, :func:`add_link`, :func:`remove_link`, :func:`delete_item`
@@ -36,7 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .fingerprint import fingerprint
+from .fingerprint import fingerprint, revision
 from .grounding import GroundingError
 from .items import amend_item, delete_item, item_type_for, new_item, parse_attrs
 from .links import GroundingView, LinkError, add_link, remove_link
@@ -45,8 +47,16 @@ from .schema import SchemaError
 from .storage import ProjectError, write_item
 from .uid import UidError
 
-#: The version of the change-set form this release reads and documents.
-CHANGE_SET_FORMAT_VERSION = 1
+#: The version of the change-set form this release documents and writes about.
+#: Format 2 quotes each existing item's ``revision``; format 1 quoted its
+#: ``fingerprint``, which misses a change to the title, rationale, links, status
+#: or a non-normative attribute, and is still read so a set already drafted
+#: against it is not broken.
+CHANGE_SET_FORMAT_VERSION = 2
+
+#: The versions :func:`parse_change_set` reads, and the key each one quotes an
+#: existing item's version under.
+READABLE_FORMATS = {1: "fingerprint", 2: "revision"}
 
 #: The operations an assistant may ask for, in the Tool's own vocabulary.
 OPERATIONS = ("new", "amend", "link", "unlink", "delete")
@@ -57,21 +67,22 @@ _DECISIONS = ("ratify", "withdraw", "clarify", "status", "invalidate", "flag",
               "review", "schema", "migrate", "resolve", "init", "register")
 
 _LABEL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
-_FINGERPRINT_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
-# The keys each operation may carry, and the ones it must.
+# The keys each operation may carry, and the ones it must. An operation on an
+# existing item may also carry the version key of its format (READABLE_FORMATS).
 _KEYS: dict[str, tuple[set[str], set[str]]] = {
     "new": ({"register"},
             {"op", "register", "type", "title", "text", "rationale", "attrs",
              "links", "label"}),
     "amend": ({"uid"},
-              {"op", "uid", "fingerprint", "title", "text", "rationale", "attrs",
+              {"op", "uid", "title", "text", "rationale", "attrs",
                "unset"}),
     "link": ({"uid", "target", "type"},
-             {"op", "uid", "fingerprint", "target", "type", "stamp"}),
+             {"op", "uid", "target", "type", "stamp"}),
     "unlink": ({"uid", "target"},
-               {"op", "uid", "fingerprint", "target", "type"}),
-    "delete": ({"uid"}, {"op", "uid", "fingerprint", "reason"}),
+               {"op", "uid", "target", "type"}),
+    "delete": ({"uid"}, {"op", "uid", "reason"}),
 }
 
 #: The change-set form, as the text handed to an assistant with the export.
@@ -84,13 +95,15 @@ CHANGE_SET_FORMAT = f"""\
 A change set is one JSON document: a list of operations, carried out in order,
 all or nothing. `tl apply` refuses the whole set, naming every offending
 operation, when any operation is malformed, is not one of the five below, or
-quotes a fingerprint that is not the item's current one. Nothing is written
+quotes a revision that is not the item's current one. Nothing is written
 until every operation has been checked, and a refused set changes nothing.
 
-An item that already exists is named by its UID and carries the "fingerprint"
-the export gave for it (the `fingerprint` field of the item in `tl dump`). An
-item created earlier in the same set is named by its label, written "$label",
-and carries no fingerprint.
+An item that already exists is named by its UID and carries the "revision"
+the export gave for it (the `revision` field of the item in `tl dump`). Any
+change to the item since the export — its text, title, rationale, links,
+status or any attribute — refuses the set, so a change is never written over a
+newer one. An item created earlier in the same set is named by its label,
+written "$label", and carries no revision.
 
 Everything the set creates or changes is recorded with origin "ai" and waits
 as proposed: a person decides afterwards. Decisions — ratify, withdraw,
@@ -106,29 +119,29 @@ The five operations:
   where the register declares one. "links" ground the item: a non-root item
   must reach a root through them. "label" is optional.
 
-{{"op": "amend", "uid": "SR-0012", "fingerprint": "sha256:...", "title": "...",
+{{"op": "amend", "uid": "SR-0012", "revision": "sha256:...", "title": "...",
  "text": "...", "rationale": "...", "attrs": {{"priority": "must"}},
  "unset": ["owner"]}}
   changes only the fields given; an empty string clears a field. Only an
   attribute the item's type declares may be set.
 
-{{"op": "link", "uid": "SR-0012", "fingerprint": "sha256:...",
+{{"op": "link", "uid": "SR-0012", "revision": "sha256:...",
  "target": "UR-0003", "type": "implements"}}
   adds a typed link from the item to the target.
 
-{{"op": "unlink", "uid": "SR-0012", "fingerprint": "sha256:...",
+{{"op": "unlink", "uid": "SR-0012", "revision": "sha256:...",
  "target": "UR-0003", "type": "implements"}}
   removes that link; "type" may be left out when one link joins them. Refused
   where it would leave an item ungrounded.
 
-{{"op": "delete", "uid": "SR-0012", "fingerprint": "sha256:...",
+{{"op": "delete", "uid": "SR-0012", "revision": "sha256:...",
  "reason": "..."}}
   tombstones the item: its file stays and its UID is never reused.
 
 Rules: no other keys; a "uid", "target" or "label" is written exactly; every
 value is a string except "attrs" (strings, numbers or booleans), "stamp"
 (boolean), and "unset" and "links" (lists). The list may also be sent as
-{{"change_set_format": {CHANGE_SET_FORMAT_VERSION}, "operations": [...]}}. Never send rewritten
+{{"change_set_format": {CHANGE_SET_FORMAT_VERSION}, "operations": [...]}}, which is the safer form. Never send rewritten
 item files: send this change set, and nothing else.
 """
 
@@ -176,24 +189,43 @@ def _scalar(value: object) -> bool:
         or isinstance(value, bool)
 
 
+def _inferred_format(data: list) -> int:
+    """The format of a set that does not say: 1 only where its operations quote a
+    fingerprint and none quotes a revision, so a format-1 set drafted before
+    format 2 still reads as it was written. A set mixing the two is read as the
+    current format, whose rules then name each fingerprint as an unknown key."""
+    ops = [op for op in data if isinstance(op, dict)]
+    if any("fingerprint" in op for op in ops) and not any("revision" in op for op in ops):
+        return 1
+    return CHANGE_SET_FORMAT_VERSION
+
+
 def parse_change_set(text: str) -> list[dict]:
     """Read a change set from its JSON text, refusing it whole when any operation
-    is malformed or is not one an assistant may take (SR-0252). The operations
+    is malformed or is not one an assistant may take (SR-0252). A set that names
+    its ``change_set_format`` is read in that format; one that does not is read
+    as the current format unless it quotes only fingerprints. The operations
     come back as given, checked for shape; whether each can be carried out is
     :func:`apply_change_set`'s to say."""
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         raise ChangeSetError([f"the change set is not JSON: {e}"]) from None
+    version = None
     if isinstance(data, dict) and "operations" in data:
-        version = data.get("change_set_format", CHANGE_SET_FORMAT_VERSION)
-        if version != CHANGE_SET_FORMAT_VERSION:
+        version = data.get("change_set_format")
+        if version is not None and (isinstance(version, bool)
+                                    or version not in READABLE_FORMATS):
             raise ChangeSetError([f"change_set_format {version!r} is not one this "
-                                  f"release reads ({CHANGE_SET_FORMAT_VERSION})"])
+                                  "release reads ("
+                                  + ", ".join(map(str, READABLE_FORMATS)) + ")"])
         data = data["operations"]
     if not isinstance(data, list):
         raise ChangeSetError(["the change set must be a JSON list of operations "
                               "(or an object whose \"operations\" is that list)"])
+    if version is None:
+        version = _inferred_format(data)
+    quoted = READABLE_FORMATS[version]
     problems: list[str] = []
     ops: list[dict] = []
     labels: set[str] = set()
@@ -213,6 +245,8 @@ def parse_change_set(text: str) -> list[dict]:
                                 f"{', '.join(OPERATIONS)}, got {kind!r}")
             continue
         required, allowed = _KEYS[kind]
+        if kind != "new":
+            allowed = allowed | {quoted}
         name = f"{where} {kind}"
         extra = sorted(set(op) - allowed)
         if extra:
@@ -221,7 +255,7 @@ def parse_change_set(text: str) -> list[dict]:
         if missing:
             problems.append(f"{name}: missing {', '.join(missing)}")
         for key in ("uid", "target", "register", "type", "title", "text",
-                    "rationale", "label", "reason", "fingerprint"):
+                    "rationale", "label", "reason", quoted):
             if key in op and not isinstance(op[key], str):
                 problems.append(f"{name}: \"{key}\" must be a string")
         if "stamp" in op and not isinstance(op["stamp"], bool):
@@ -249,12 +283,11 @@ def parse_change_set(text: str) -> list[dict]:
                 if uid[1:] not in labels:
                     problems.append(f"{name}: {uid} names no item created earlier "
                                     "in this set")
-            elif "fingerprint" not in op:
+            elif quoted not in op:
                 problems.append(f"{name} {uid}: an operation on an existing item "
-                                "carries the \"fingerprint\" it was based on")
-            elif isinstance(op["fingerprint"], str) \
-                    and not _FINGERPRINT_RE.match(op["fingerprint"]):
-                problems.append(f"{name} {uid}: \"fingerprint\" must be the sha256:… "
+                                f"carries the \"{quoted}\" it was based on")
+            elif isinstance(op[quoted], str) and not _DIGEST_RE.match(op[quoted]):
+                problems.append(f"{name} {uid}: \"{quoted}\" must be the sha256:… "
                                 "value the export gave")
         if kind == "new":
             label = op.get("label")
@@ -313,10 +346,10 @@ def apply_change_set(project, operations: list[dict], *,
     ``project``, all or nothing (SR-0252).
 
     Every operation is first checked against the graph as it stands: the item it
-    names exists and is not deleted, the fingerprint it quotes is the item's
-    current one, and what it links to can be found. A problem anywhere refuses
-    the whole set before a file is written. Then each operation runs through the
-    function the matching command runs, and a refusal from any of them restores
+    names exists and is not deleted, the revision it quotes (or, in a format-1
+    set, the fingerprint) is the item's current one, and what it links to can be
+    found. A problem anywhere refuses the whole set before a file is written.
+    Then each operation runs through the function the matching command runs, and a refusal from any of them restores
     every file and refuses the set the same way. ``view`` and ``find`` let a
     program that grounds over a wider graph than the one it writes — a union with
     its sources — judge links and find targets there (SR-0212); left out, they are
@@ -338,10 +371,13 @@ def apply_change_set(project, operations: list[dict], *,
             problems.append(f"{name}: {uid} does not exist")
         elif item.is_deleted:
             problems.append(f"{name}: {uid} is deleted — a tombstone is permanent")
-        elif op.get("fingerprint") != fingerprint(item, schema):
-            problems.append(f"{name}: {uid} changed since the export — the set "
-                            f"quotes {op.get('fingerprint')} but the item now "
-                            f"carries {fingerprint(item, schema)}")
+        else:
+            key = "revision" if "revision" in op else "fingerprint"
+            now = revision(item) if key == "revision" else fingerprint(item, schema)
+            if op.get(key) != now:
+                problems.append(f"{name}: {uid} changed since the export — the set "
+                                f"quotes {key} {op.get(key)} but the item now "
+                                f"carries {now}")
         return item
 
     def target_known(name: str, ref: str) -> None:
