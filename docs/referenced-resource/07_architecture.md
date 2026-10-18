@@ -123,7 +123,7 @@ tl query '<filter expression>' [--columns …] [--format json|table]
 tl trace <UID> [--direction in|out] [--depth N]
 tl baseline create <name> | list | diff <a> <b>  # text or json
 tl docs [--check]                                # render Markdown by reference
-tl dump [-o FILE]                                # documented whole-project JSON dump, each item with its fingerprint
+tl dump [-o FILE]                                # documented whole-project JSON dump, each item with its fingerprint and revision
 tl apply <FILE> [--dry-run] | --describe         # carry out a change set drafted where tl cannot run (SR-0252)
 tl fix uid-collision <UID>                       # post-merge repair (SR-0006)
 ```

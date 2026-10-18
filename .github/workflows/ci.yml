@@ -7,16 +7,28 @@ on:
 
 jobs:
   test:
+    # The check is named for the platform, not the runner: the ruleset on main
+    # requires "test (ubuntu-latest, py3.12)" and its siblings by name, so a
+    # name that followed the runner label stopped every merge when the jobs
+    # moved to Blacksmith. Change a runner here freely; change a name only
+    # together with the ruleset's required checks.
     name: test (${{ matrix.os }}, py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12"]
         include:
+          - os: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
+          - os: windows-latest
+            runner: windows-latest
+          - os: macos-latest
+            runner: blacksmith-6vcpu-macos-latest
           # Prove the supported floor (README/CONTRIBUTING say Python >= 3.11).
           - os: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
             python-version: "3.11"
     steps:
       - uses: actions/checkout@v7
@@ -42,7 +54,7 @@ jobs:
         run: tl -C idd docs --check
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v7
 

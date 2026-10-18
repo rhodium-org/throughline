@@ -30,7 +30,7 @@ from .composition import (
 )
 from .diagrams import diagram_transitions, diagram_types
 from .dump import build_dump
-from .fingerprint import fingerprint
+from .fingerprint import fingerprint, revision
 from .graph import Index
 from .grounding import (
     GroundingError,
@@ -179,7 +179,7 @@ __all__ = [
     "ProjectError", "CONFIG_NAME", "MANIFEST_NAME",
     # identity of an item
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
-    "Index", "fingerprint",
+    "Index", "fingerprint", "revision",
     # the schema a project declares
     "Schema", "AttrSpec", "LinkRule", "SchemaError",
     # creating and changing an item
