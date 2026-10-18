@@ -31,7 +31,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### Carrying out a change set drafted elsewhere
 
-An assistant that cannot run the Tool works from an export and sends its changes back as a change set: one JSON list of the Tool's own operations, each quoting the fingerprint the item carried in the dump (SR-0251, SR-0252). The set is carried out all or nothing; `CHANGE_SET_FORMAT` is the text the assistant is given, so what it is told to write is what `parse_change_set` accepts.
+An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [rhodium-org/throughline-ms-copilot](https://github.com/rhodium-org/throughline-ms-copilot) builds its export and takes its reply) works from an export and sends its changes back as a change set: one JSON list of the Tool's own operations, each quoting the fingerprint the item carried in the dump (SR-0251, SR-0252). The set is carried out all or nothing; `CHANGE_SET_FORMAT` is the text the assistant is given, so what it is told to write is what `parse_change_set` accepts.
 
 `parse_change_set` · `apply_change_set` · `ApplyResult` · `OperationResult` · `ChangeSetError` · `CHANGE_SET_FORMAT` · `CHANGE_SET_FORMAT_VERSION`
 

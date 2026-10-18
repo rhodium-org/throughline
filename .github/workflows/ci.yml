@@ -12,11 +12,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [blacksmith-4vcpu-ubuntu-2404, windows-latest, blacksmith-6vcpu-macos-latest]
         python-version: ["3.12"]
         include:
           # Prove the supported floor (README/CONTRIBUTING say Python >= 3.11).
-          - os: ubuntu-latest
+          - os: blacksmith-4vcpu-ubuntu-2404
             python-version: "3.11"
     steps:
       - uses: actions/checkout@v7
@@ -42,7 +42,7 @@ jobs:
         run: tl -C idd docs --check
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@v7
 

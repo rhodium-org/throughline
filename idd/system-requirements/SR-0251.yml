@@ -5,11 +5,13 @@ title: tl dump states each item's current fingerprint
 text: Each item in the canonical dump shall carry the fingerprint the Tool computes
   for its current content, under a documented key, so a reader of the dump can quote
   it back.
-rationale: 'An assistant working from an export has to tell apply which version of
-  an item it drafted against; the fingerprint is how the Tool already says that.
-  Computing it anywhere but here would re-implement the fingerprint rule, so throughline-transform
-  takes it from the dump rather than hashing items itself. Stays inside NG-0005:
-  it widens the dump SR-0055 already sanctions and adds no format.'
+rationale: 'An assistant or agent working from an export has to tell apply which
+  version of an item it drafted against; the fingerprint is how the Tool already
+  says that. Computing it anywhere but here would re-implement the fingerprint rule,
+  so a tool that builds the export (rhodium-org/throughline-ms-copilot for Microsoft
+  365 Copilot, for one) takes it from the dump rather than hashing items itself.
+  Stays inside NG-0005: it widens the dump SR-0055 already sanctions and adds no
+  format.'
 normative: true
 links:
 - target: UR-0038

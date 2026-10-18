@@ -2,11 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Carrying out a change set drafted where the Tool cannot run (SR-0252).
 
-An assistant that reads at most a few files, cannot run commands and returns
-only text works from an export of the graph (throughline-transform's assistant
-form, built on `tl dump` and the fingerprint each item carries there, SR-0251)
-and sends its changes back as a *change set*: one JSON document listing the
-Tool's own operations — new, amend, link, unlink, delete — each naming the item
+An assistant or agent that cannot run the Tool — one that reads a capped number
+of files and returns only text, as Microsoft 365 Copilot does in a controlled
+environment — works from an export of the graph, built on `tl dump` and the
+fingerprint each item carries there (SR-0251). The export is the business of
+whatever tool briefs that assistant (rhodium-org/throughline-ms-copilot does it
+for Copilot); the assistant sends its changes back as a *change set*: one JSON
+document listing the Tool's own operations — new, amend, link, unlink, delete —
+each naming the item
 it touches and, for an item that already exists, quoting the fingerprint it was
 drafted against.
 
@@ -72,8 +75,9 @@ _KEYS: dict[str, tuple[set[str], set[str]]] = {
 }
 
 #: The change-set form, as the text handed to an assistant with the export.
-#: throughline-transform takes it from here (its SR-0018), so what an assistant
-#: is told to write cannot drift from what :func:`parse_change_set` accepts.
+#: A tool that briefs an assistant takes it from here (`tl apply --describe`),
+#: so what the assistant is told to write cannot drift from what
+#: :func:`parse_change_set` accepts.
 CHANGE_SET_FORMAT = f"""\
 # A throughline change set — the form `tl apply` accepts (format {CHANGE_SET_FORMAT_VERSION})
 

@@ -6,16 +6,17 @@ title: Changes drafted where tl cannot run are applied as proposals, never over 
 text: A user whose only assistant cannot run commands shall be able to take the changes
   it drafts against a graph and have the Tool apply them as proposals, refused where
   the item has changed since the assistant read it.
-rationale: 'Raised by controlled environments where users are restricted to using
-  Microsoft 365 Copilot, which reads at most 50 files, cannot run tl, and only returns
-  text. Handing the graph to the assistant is a form of output and belongs to throughline-transform;
-  applying what comes back changes the graph and belongs here. Rejected: a spreadsheet
-  round-trip, which flattens links and attributes and lets the spreadsheet rewrite
-  values (an ID read as a date, trimmed whitespace) so fingerprints break unseen.
-  Rejected: taking back rewritten register files, because the assistant''s output
-  is length-capped, so truncation reads as deletion, and it drifts items it was not
-  asked to touch. Who pays: nobody outside the project; the obligations fall on the
-  Tool.'
+rationale: 'Raised by assistants and agents that can read an export of a graph but
+  cannot run tl: they read a capped number of files and only return text. Microsoft
+  365 Copilot in a controlled environment, at most 50 files, is one; rhodium-org/throughline-ms-copilot
+  handles its export and reply. Producing the export belongs to such a tool; applying
+  what comes back changes the graph and belongs here, so every such tool shares one
+  apply. Rejected: a spreadsheet round-trip, which flattens links and attributes
+  and lets the spreadsheet rewrite values (an ID read as a date, trimmed whitespace)
+  so fingerprints break unseen. Rejected: taking back rewritten register files, because
+  the assistant''s output is length-capped, so truncation reads as deletion, and
+  it drifts items it was not asked to touch. Who pays: nobody outside the project;
+  the obligations fall on the Tool.'
 normative: true
 links:
 - target: BN-0008
