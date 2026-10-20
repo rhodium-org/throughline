@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import Callable
 
 from .fingerprint import fingerprint, revision
-from .grounding import GroundingError
+from .grounding import GroundingError, set_status
 from .items import amend_item, delete_item, item_type_for, new_item, parse_attrs
 from .links import GroundingView, LinkError, add_link, remove_link
 from .model import Item, Link
@@ -418,11 +418,26 @@ def apply_change_set(project, operations: list[dict], *,
     def resolve(ref: str) -> str:
         return labels[ref[1:]] if _is_label(ref) else ref
 
+    roles = schema.status_roles or {}
+    initial, proposed = roles.get("initial"), roles.get("proposed")
+
+    def put_forward(item: Item) -> None:
+        """Move an item the set changed out of the initial status into proposed,
+        as an item the set creates is born (SR-0252): machine-authored content
+        waits as proposed. Only from the initial status, and only where the
+        project's lifecycle has that move — an item a person has already moved
+        on keeps its place, and the set never writes a transition the project
+        forbids."""
+        if (initial and proposed and item.status == initial
+                and schema.allows_transition(initial, proposed)):
+            set_status(schema, item, proposed)
+
     def mark_changed(item: Item) -> None:
         """Record that the set changed this item (SR-0252): it carries the machine
         origin, so the gate asks a person before it counts (SR-0092)."""
         if item.attrs.get("origin") != ai:
             item.attrs["origin"] = ai
+        put_forward(item)
         write_item(item, project.register_of(item.uid))
         if item.uid not in changed and item.uid not in created:
             changed.append(item.uid)
@@ -459,6 +474,7 @@ def apply_change_set(project, operations: list[dict], *,
                 outcome = amend_item(project, uid, title=op.get("title"),
                                      text=op.get("text"), rationale=op.get("rationale"),
                                      attrs=attrs, unset=op.get("unset", ()))
+                put_forward(item)
                 write_item(item, project.register_of(uid))
                 if uid not in changed and uid not in created:
                     changed.append(uid)

@@ -1,0 +1,41 @@
+uid: SR-0253
+type: system_requirement
+status: ratified
+title: tl apply puts an item it changes forward as proposed, as one it creates is
+  born
+text: When tl apply changes an existing item that sits in the status bound to the
+  initial role, it shall move that item to the status bound to the proposed role,
+  provided the project's transitions allow that move. It shall leave every other
+  status as it is, and write no move the project's transitions forbid.
+rationale: 'SR-0252 records each changed item with origin ai and says the result
+  waits as proposed, but an amended draft stayed draft, so tl check reported a machine-authored
+  item that was never proposed — an error under --strict — while apply''s own report
+  said proposed. The initial status only, because an item a person has already moved
+  on (approved, deferred, implemented) carries a decision the set has no right to
+  undo; its changed content is still caught by ratification drift and the gate. Only
+  where the lifecycle allows it, because a forbidden move would be written by the
+  tool and caught later as an illegal transition. Rejected: changing the check''s
+  wording, which would hide a status that contradicts the promise.'
+normative: true
+links:
+- target: UR-0038
+  type: implements
+- target: SR-0252
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_id: github:rhodium289
+  ratified_fingerprint: sha256:99c06c03e7dc9a554c8c66f0ba7d4ed2d0aa722e7c2cb5009642b4a87eb969a6
+  ratified_content:
+    type: system_requirement
+    text: When tl apply changes an existing item that sits in the status bound to
+      the initial role, it shall move that item to the status bound to the proposed
+      role, provided the project's transitions allow that move. It shall leave every
+      other status as it is, and write no move the project's transitions forbid.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

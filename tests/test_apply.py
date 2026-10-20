@@ -343,3 +343,70 @@ def test_format_2_takes_only_the_revision_and_format_1_only_the_fingerprint(tmp_
         with pytest.raises(ChangeSetError) as e:
             parse_change_set(json.dumps(data))
         assert any(expected in p for p in e.value.problems), (expected, e.value.problems)
+
+
+# --------------------------------------------------------------------------- #
+# An item the set changes is put forward as proposed, as one it creates is born.
+# --------------------------------------------------------------------------- #
+
+
+def _status_of(root: Path, uid: str) -> str:
+    return _item(root, uid).status
+
+
+def test_an_amended_draft_item_is_put_forward_as_proposed(tmp_path, capsys):
+    root = _scaffold(tmp_path)
+    assert _status_of(root, "FR-0001") == "draft"
+    path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
+                        "text": "rewritten by an assistant"}])
+    assert _cli(["-C", str(root), "apply", str(path)]) == 0
+    assert _status_of(root, "FR-0001") == "proposed"
+    capsys.readouterr()
+    _cli(["-C", str(root), "check"])
+    out = capsys.readouterr().out
+    assert "FR-0001" in out and "awaiting human ratification" in out
+    assert "never proposed" not in out
+
+
+def test_a_draft_item_given_a_link_or_losing_one_is_put_forward_as_proposed(tmp_path):
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "new", "FR", "--type", "requirement", "--title", "other",
+                 "--ground", "INT-0001"]) == 0
+    assert _cli(["-C", str(root), "link", "FR-0002", "INT-0001", "--type", "relates"]) == 0
+    path = _set(root, [{"op": "link", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
+                        "target": "FR-0002", "type": "relates"},
+                       {"op": "unlink", "uid": "FR-0002", "revision": _rev(root, "FR-0002"),
+                        "target": "INT-0001", "type": "relates"}])
+    apply_change_set(load_project(root), parse_change_set(path.read_text(encoding="utf-8")))
+    assert _status_of(root, "FR-0001") == "proposed"
+    assert _status_of(root, "FR-0002") == "proposed"
+
+
+def test_a_draft_item_stays_draft_where_the_lifecycle_has_no_move_to_proposed(tmp_path):
+    root = _scaffold(tmp_path)
+    config = root / "throughline.toml"
+    text = config.read_text(encoding="utf-8")
+    config.write_text(text.replace(
+        'draft       = ["proposed", "approved",', 'draft       = ["approved",'), encoding="utf-8")
+    path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
+                        "text": "rewritten by an assistant"}])
+    assert _cli(["-C", str(root), "apply", str(path)]) == 0
+    first = _item(root, "FR-0001")
+    assert first.status == "draft" and first.attrs["origin"] == "ai"
+
+
+def test_an_item_past_draft_keeps_its_status_when_the_set_changes_it(tmp_path):
+    root = _scaffold(tmp_path)
+    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
+    path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
+                        "text": "rewritten by an assistant"}])
+    assert _cli(["-C", str(root), "apply", str(path)]) == 0
+    assert _status_of(root, "FR-0001") == "approved"
+
+
+def test_a_dry_run_puts_nothing_forward(tmp_path):
+    root = _scaffold(tmp_path)
+    path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
+                        "text": "rewritten by an assistant"}])
+    assert _cli(["-C", str(root), "apply", str(path), "--dry-run"]) == 0
+    assert _status_of(root, "FR-0001") == "draft"
