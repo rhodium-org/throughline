@@ -1,6 +1,6 @@
 uid: SR-0253
 type: system_requirement
-status: proposed
+status: ratified
 title: tl apply puts an item it changes forward as proposed, as one it creates is
   born
 text: When tl apply changes an existing item that sits in the status bound to the
@@ -26,3 +26,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_id: github:rhodium289
+  ratified_fingerprint: sha256:99c06c03e7dc9a554c8c66f0ba7d4ed2d0aa722e7c2cb5009642b4a87eb969a6
+  ratified_content:
+    type: system_requirement
+    text: When tl apply changes an existing item that sits in the status bound to
+      the initial role, it shall move that item to the status bound to the proposed
+      role, provided the project's transitions allow that move. It shall leave every
+      other status as it is, and write no move the project's transitions forbid.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
