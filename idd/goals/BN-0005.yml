@@ -11,8 +11,18 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8006f9dd0f91c9f68246d4ad0f8b3b788fffb1e7aa244a912f01da8479be3602
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8006f9dd0f91c9f68246d4ad0f8b3b788fffb1e7aa244a912f01da8479be3602
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: business_need
+    text: The graph's content is publishable to people who do not use the tool —
+      rendered by reference into portable Markdown documents (which external tools
+      convert to HTML or PDF), with a single documented JSON dump as the interchange
+      surface for third-party tooling. The tool itself does not generate presentation
+      or RM-vendor formats (NG-0005).
+    normative: false
+    derived: false
+    attrs: {}

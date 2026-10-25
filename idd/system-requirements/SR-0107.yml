@@ -29,11 +29,10 @@ attrs:
   origin: human
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:2487aad762eb7c37350001cd92d61761c637dc71cc14308cc9ef88b383ae5b87
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:2487aad762eb7c37350001cd92d61761c637dc71cc14308cc9ef88b383ae5b87
+  content:
     type: system_requirement
     text: A reference target of the form <namespace>:<UID> — a namespace name, a
       colon, and an otherwise-valid UID, for example gds:SR-0001 — asserts that the
@@ -49,3 +48,5 @@ attrs:
     derived: false
     attrs:
       priority: must
+  backfilled: true
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

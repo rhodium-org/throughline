@@ -36,5 +36,17 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:70d19efdcb71d1aa9baa068de5fa4852b95b8c861fee1a26379b807a35e38108
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:70d19efdcb71d1aa9baa068de5fa4852b95b8c861fee1a26379b807a35e38108
+  content:
+    type: system_requirement
+    text: The Tool shall refuse any operation that would take an item's origin out
+      of the configured machine-origin set, whether by setting another value or by
+      removing the attribute. Changing an origin to another value in the set, or
+      moving an item into the set, shall be allowed.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: c7f7d69dc377593d57f11e98fbb20c5c35ed0d00

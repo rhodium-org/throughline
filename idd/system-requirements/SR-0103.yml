@@ -31,7 +31,22 @@ attrs:
   origin: human
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:663302a57f3f9158143b336391c7c430492f474892e01194b3634e8f55f19552
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:663302a57f3f9158143b336391c7c430492f474892e01194b3634e8f55f19552
+  backfilled: true
+  revision: e04256de446ad351702edd141b1b2a0d116ee6c9
+  content:
+    type: system_requirement
+    text: The Tool shall never pass any project-supplied value — a coverage-rule
+      filter, a query expression, or any other string read from project files or
+      configuration — to eval, exec, or an equivalent dynamic-code primitive. The
+      one boolean filter language (SR-0045) shall be evaluated through a constrained
+      parser that reads only the published filter namespace (the names SR-0045 lists,
+      and the literals `true`, `false` and `none`) and can reach neither Python builtins
+      nor object internals nor imports. A filter that cannot be parsed shall fail
+      fast with an error rather than fall back to dynamic evaluation.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -22,9 +22,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:ddfe16dc92b330afb9a828c3247c3bb6044cc2ba118e6daf0ef8f1ecbaf506ed
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:ddfe16dc92b330afb9a828c3247c3bb6044cc2ba118e6daf0ef8f1ecbaf506ed
+  content:
     type: system_requirement
     text: The Tool shall install tl-compose and throughline-compose as command names
       that run the same program as tl, with no difference in function or output beyond
@@ -34,3 +35,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 4ae5b46df3eea34fcaf4680ce86c510c8009f1a4

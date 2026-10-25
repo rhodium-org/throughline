@@ -38,5 +38,22 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:6a5418bc6e949ded150fbc98a480df8fdb3319fc9df4f51bbc6b9d9f476b2650
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:6a5418bc6e949ded150fbc98a480df8fdb3319fc9df4f51bbc6b9d9f476b2650
+  content:
+    type: system_requirement
+    text: 'When an attribute is withdrawn from an item type, the Tool shall name
+      every item of that type that still carries it. With an explicit option it shall
+      also remove the attribute from each of those items in the same run, under the
+      refusals of SR-0206 and SR-0208, and name each item it changed. The same option
+      shall finish a withdrawal made before it existed: where a type no longer declares
+      an attribute that its items still carry, it shall remove the values and record
+      why beside the type. Without the option no item is changed, so an attribute
+      can still be withdrawn and declared again to change its declaration without
+      losing its values.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+  revision: c7f7d69dc377593d57f11e98fbb20c5c35ed0d00

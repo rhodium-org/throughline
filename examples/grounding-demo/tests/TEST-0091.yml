@@ -7,6 +7,13 @@ normative: true
 links:
 - target: FR-0022
   type: verifies
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:43592a2f9df28835acfa02d2a4c455bacf8fbbf0d9ce2225cbe917098f043826
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:43592a2f9df28835acfa02d2a4c455bacf8fbbf0d9ce2225cbe917098f043826
+  content:
+    type: test
+    text: New user completes the 3-step wizard.
+    normative: true
+    derived: false
+    attrs: {}
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a

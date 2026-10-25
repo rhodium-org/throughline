@@ -33,9 +33,10 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1f69eea6d7581fa898a4a7b164dfadee9a8951bcb2d96afaac27a83c4b625052
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1f69eea6d7581fa898a4a7b164dfadee9a8951bcb2d96afaac27a83c4b625052
+  content:
     type: system_requirement
     text: 'tl apply FILE shall read a change set: a documented JSON list of new,
       amend, link, unlink and delete operations, each naming the item it touches.
@@ -50,3 +51,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: 67876b148d1d6656244eb7881aa0c6be547dcada

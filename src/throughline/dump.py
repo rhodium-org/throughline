@@ -27,7 +27,11 @@ from .fingerprint import fingerprint, revision
 from .model import Project
 from .storage import FORMAT_VERSION
 
-DUMP_SCHEMA_VERSION = 1
+# 2 since format 4 (SR-0254, SR-0263): an item carries its signatures as a
+# top-level `ratifications` list and its withdrawals as `withdrawals`, and no
+# `ratified_*` or `withdrawn_*` attribute. A reader of a dump at 1 found the
+# record under `attrs`.
+DUMP_SCHEMA_VERSION = 2
 
 
 def build_dump(project: Project, tool_version: str) -> dict:

@@ -24,7 +24,24 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8390cdf39d9ebfe1c5ad091774440c5402b7b55c6c4b733c663f2aee3ae2292f
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8390cdf39d9ebfe1c5ad091774440c5402b7b55c6c4b733c663f2aee3ae2292f
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall render item content into HTML-comment marker regions (tl:item
+      / tl:table / tl:matrix ... tl:end) within existing Markdown files, overwriting
+      only the marked regions and leaving all other content unchanged. Table and
+      matrix directives shall select items using the SR-0045 filter grammar. Only
+      these three directives shall be provided in this cut; other output formats
+      are delegated to external tools (pandoc, mdBook). Every configured document
+      shall be processed uniformly — a document that currently contains no marker
+      regions is a no-op, left byte-for-byte unchanged, not an error and not a special
+      case, so a published document with nothing to inject is treated no differently
+      from one full of markers.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

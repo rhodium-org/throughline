@@ -31,5 +31,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a137a7f09f0aa553627a05a337e9be65532026f0c78fdf64ff47751def542d84
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a137a7f09f0aa553627a05a337e9be65532026f0c78fdf64ff47751def542d84
+  content:
+    type: system_requirement
+    text: Where a generated document renders an item block — for a tl:item marker
+      (SR-0094) or a tl:catalog directive (SR-0111) — the Tool shall leave the recorded
+      ratified content (SR-0215) out of the block's attributes and render every other
+      attribute as before. The recorded content shall stay in the item file and in
+      the Tool's structured exports.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+  revision: dfddcd57551da59835ebb5fa4aed6d19b50dcbcd

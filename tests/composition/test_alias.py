@@ -209,7 +209,7 @@ def _base(asvs_entry_extra: str = "") -> dict[str, str]:
 def _consumer(extra_line: str, ref_target: str) -> dict[str, str]:
     return {
         "throughline.toml": (
-            '[project]\nname = "consumer"\nformat_version = 3\n\n'
+            '[project]\nname = "consumer"\nformat_version = 4\n\n'
             '[[sources]]\nnamespace = "base"\npath = "../base"\n'
             f"{extra_line}\n\n"
             '[grounding]\nroot_types = ["intent"]\n'

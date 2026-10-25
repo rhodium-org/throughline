@@ -36,6 +36,24 @@ links:
   type: relates
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e412855223305f9c21c85012cc14ee46bce332d00a39cbbb3c36b87cf18df037
-  ratified_revision: f31213fd522bf661e943d8a6f1f3670c10821853
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e412855223305f9c21c85012cc14ee46bce332d00a39cbbb3c36b87cf18df037
+  revision: f31213fd522bf661e943d8a6f1f3670c10821853
+  content:
+    type: system_requirement
+    text: Ratify shall accept any number of item identifiers in one invocation. Before
+      it renders or asks anything it shall check every item named, and if any of
+      them cannot be ratified it shall refuse the whole run naming that item, writing
+      nothing. It shall ask for the ratifier once for the run, and on a terminal
+      not before the first item has been shown. It shall then take the items in the
+      order given and, for each, render it, show what changed since its last signature,
+      and require confirmation, exactly as it does for a single item; declining one
+      item shall leave that item unsigned and continue to the next. Where no item
+      is named it shall behave as it does today. Where there is no interactive terminal,
+      the rules already governing a single non-interactive ratification shall apply
+      to each item.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

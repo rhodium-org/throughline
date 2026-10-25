@@ -35,6 +35,25 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8e4bfd9115b518edf0079e8f3ad4871206752c3cab29a366cbf18a2177118f09
-  ratified_revision: cea1747a3be7dd2f5a984f365d5b9a5fdfb9c218
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8e4bfd9115b518edf0079e8f3ad4871206752c3cab29a366cbf18a2177118f09
+  revision: cea1747a3be7dd2f5a984f365d5b9a5fdfb9c218
+  content:
+    type: system_requirement
+    text: A project shall declare the vocabularies its items are validated against.
+      The Tool's check shall report a named finding, at a severity configurable per
+      SR-0041 and defaulting to error, when a project declares no [status] values
+      or no [links] types, naming what the graph already relies on so that the reader
+      can declare it. The current major's configuration backfill shall declare each
+      absent vocabulary as what the project already relies on — the values its live
+      items hold, together with any the rest of its own configuration names — so
+      that the declaration cannot itself invalidate an item or leave the schema unbuildable.
+      The backfill shall test for the key's presence and never its contents, so that
+      a deliberately declared vocabulary is never rewritten, and a project this rule
+      turns red shall be corrected by the same single migration command rather than
+      by hand.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

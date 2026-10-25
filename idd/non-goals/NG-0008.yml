@@ -31,9 +31,10 @@ links:
   type: relates
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0bb6b0488285d4aaa583113a79d8c5dc0c080b64018f409d63fde660cb9cdb7f
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0bb6b0488285d4aaa583113a79d8c5dc0c080b64018f409d63fde660cb9cdb7f
+  content:
     type: non_goal
     text: |-
       Composition inside the Tool shall not:
@@ -50,3 +51,4 @@ attrs:
     normative: false
     derived: false
     attrs: {}
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

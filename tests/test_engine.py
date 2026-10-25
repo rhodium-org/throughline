@@ -323,7 +323,7 @@ def test_hostile_field_value_cannot_break_yaml_structure(tmp_path):
     reloaded = load_project(tmp_path).get("SR-0001")
     assert reloaded is not None
     # The whole hostile string survives as one value; no forged siblings appear.
-    assert reloaded.attrs["ratified_by"] == hostile
+    assert reloaded.ratifications[-1]["by"] == hostile
     assert reloaded.type == "requirement"          # not flipped to 'intent'
     assert "injected_admin" not in reloaded.attrs
     assert "injected_admin" not in reloaded.extra
@@ -504,9 +504,11 @@ _ROLES = {"status": {"roles": {"initial": "draft", "proposed": "proposed",
 
 def _ai_findings(status, **attrs):
     intent = Item(uid="INT-1", type="intent", status="ratified")
+    by = attrs.pop("ratified_by", None)
     fr = Item(uid="FR-1", type="requirement", status=status,
               attrs={"origin": "ai", **attrs},
-              links=[Link(target="INT-1", type="derives_from")])
+              links=[Link(target="INT-1", type="derives_from")],
+              ratifications=[{"by": by}] if by else [])
     return validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES))
 
 def _ai_item(status, **attrs):
@@ -1877,7 +1879,7 @@ def test_ratify_succeeds_and_records_accountability():
     p = _grounded_project()
     item = ratify(p, "FR-1", by="j.doe")
     assert item.status == "ratified"
-    assert item.attrs["ratified_by"] == "j.doe"
+    assert item.ratifications[-1]["by"] == "j.doe"
 
 def test_ratify_refuses_an_unchanged_already_ratified_item():
     """A second ratify of unchanged content accepts nothing and would overwrite the
@@ -1886,18 +1888,18 @@ def test_ratify_refuses_an_unchanged_already_ratified_item():
     ratify(p, "FR-1", by="alice")
     with pytest.raises(GroundingError, match="already ratified by alice"):
         ratify(p, "FR-1", by="bob")
-    assert p.get("FR-1").attrs["ratified_by"] == "alice"
+    assert p.get("FR-1").ratifications[-1]["by"] == "alice"
 
 def test_ratify_after_content_changed_is_allowed_and_restamps():
     """Re-ratifying content that HAS moved is the legitimate case — a human accepts
     the new wording, and the stamp follows it (SR-0148)."""
     p = _grounded_project()
     item = ratify(p, "FR-1", by="alice")
-    first = item.attrs["ratified_fingerprint"]
+    first = item.ratifications[-1]["fingerprint"]
     item.text = "a materially different requirement"
     again = ratify(p, "FR-1", by="bob")
-    assert again.attrs["ratified_by"] == "bob"
-    assert again.attrs["ratified_fingerprint"] != first
+    assert again.ratifications[-1]["by"] == "bob"
+    assert again.ratifications[-1]["fingerprint"] != first
 
 # -- the composing seam (SR-0151) ------------------------------------------- #
 
@@ -1925,14 +1927,14 @@ def test_a_supplied_index_grounds_over_the_wider_graph():
     consumer, union = _consumer_and_union()
     item = ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
     assert item.status == "ratified"
-    assert item.attrs["ratified_by"] == "j.doe"
+    assert item.ratifications[-1]["by"] == "j.doe"
     # the whole point: the caller gets the full record, fingerprint included
-    assert item.attrs["ratified_fingerprint"].startswith("sha256:")
+    assert item.ratifications[-1]["fingerprint"].startswith("sha256:")
 
 def test_omitting_the_index_leaves_behaviour_exactly_as_before():
     p = _grounded_project()
     item = ratify(p, "FR-1", by="j.doe")
-    assert item.status == "ratified" and item.attrs["ratified_fingerprint"]
+    assert item.status == "ratified" and item.ratifications[-1]["fingerprint"]
 
 def test_a_supplied_index_is_only_a_grounding_view_not_a_way_past_the_gates():
     """The index varies *where grounding is judged* and nothing else — a caller
@@ -1976,7 +1978,7 @@ def test_ratified_before_the_stamp_existed_is_not_accused():
     (SR-0148)."""
     p = _grounded_project()
     p.get("FR-1").status = "ratified"
-    p.get("FR-1").attrs["ratified_by"] = "alice"
+    p.get("FR-1").ratifications.append({"by": "alice"})
     assert ("FR-1", "ratified-stale") not in _rules(validate(p))
 
 # --------------------------------------------------------------------------- #
@@ -2116,7 +2118,7 @@ def test_a_refused_cascade_does_not_exit_clean(tmp_path, capsys):
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
     (root / CONFIG_NAME).write_text(
-        '[project]\nname = "t"\nformat_version = 3\n\n'
+        '[project]\nname = "t"\nformat_version = 4\n\n'
         '[grounding]\nroot_types = ["intent"]\n'
         'ground_link_types = ["derives_from"]\n\n'
         '[links]\ntypes = ["derives_from", "relates"]\n\n'
@@ -2910,7 +2912,7 @@ def test_ratify_wizard_prompts_for_ratifier(tmp_path, monkeypatch):
     # by, then the SR-0195 confirmation.
     _make_tty(monkeypatch, ["2", "1", "henry", "y"])
     assert _cli(["-C", str(root), "ratify"]) == 0
-    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
+    assert load_project(root).get("FR-0001").ratifications[-1]["by"] == "henry"
 
 
 # ------------------------------------ ratify shows what is being signed (SR-0195)
@@ -2971,7 +2973,7 @@ def test_ratify_renders_and_confirms_even_when_by_was_supplied(tmp_path, monkeyp
     err = capsys.readouterr().err
     assert "The Tool shall evict a cached widget after an hour." in err
     assert "<<asked>>" in err                # the confirmation still happened
-    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
+    assert load_project(root).get("FR-0001").ratifications[-1]["by"] == "henry"
 
 
 def test_declining_the_confirmation_writes_no_record(tmp_path, monkeypatch):
@@ -2981,7 +2983,7 @@ def test_declining_the_confirmation_writes_no_record(tmp_path, monkeypatch):
     _make_tty(monkeypatch, ["henry", "n"])
     assert _cli(["-C", str(root), "ratify", "FR-0001"]) == 0
     item = load_project(root).get("FR-0001")
-    assert "ratified_by" not in item.attrs
+    assert not item.ratifications
     assert item.status == "proposed"
 
 
@@ -3025,7 +3027,7 @@ def test_an_already_ratified_item_is_refused_before_rendering(tmp_path, monkeypa
     assert "already ratified by alice" in err
     assert "<<asked>>" not in err
     assert "Widget cache expires" not in err
-    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "alice"
+    assert load_project(root).get("FR-0001").ratifications[-1]["by"] == "alice"
 
 
 def test_non_interactive_ratify_renders_nothing_and_confirms_nothing(tmp_path, capsys):
@@ -3038,7 +3040,7 @@ def test_non_interactive_ratify_renders_nothing_and_confirms_nothing(tmp_path, c
     assert "The Tool shall evict a cached widget after an hour." not in out.err
     assert "Stale widgets were served for days." not in out.err
     assert "FR-0001 ratified by henry" in out.out
-    assert load_project(root).get("FR-0001").attrs["ratified_by"] == "henry"
+    assert load_project(root).get("FR-0001").ratifications[-1]["by"] == "henry"
 
 
 def test_register_new_refuses_duplicate_prefix(tmp_path):
@@ -3289,9 +3291,8 @@ def _legacy_ratified(root: Path, uid: str, by: str, *, status: str | None = None
     project = load_project(root)
     item = project.get(uid)
     item.status = status or project.schema.status_role("ratified")
-    item.attrs["ratified_by"] = by
+    item.ratifications = [{"by": by}]
     item.attrs.update(attrs)
-    item.attrs.pop("ratified_fingerprint", None)
     write_item(item)
 
 
@@ -3312,9 +3313,9 @@ def test_migrate_binds_a_ratification_record_that_has_no_fingerprint(tmp_path):
 
     assert list(result.bound) == ["REQ-0001"]
     item = load_project(root).get("REQ-0001")
-    assert item.attrs["ratified_fingerprint"] == result.bound["REQ-0001"]
-    assert item.attrs["ratified_fingerprint"].startswith("sha256:")
-    assert item.attrs["ratified_backfilled"] is True
+    assert item.ratifications[-1]["fingerprint"] == result.bound["REQ-0001"]
+    assert item.ratifications[-1]["fingerprint"].startswith("sha256:")
+    assert item.ratifications[-1]["backfilled"] is True
 
 
 def test_the_bound_stamp_is_the_fingerprint_of_the_content_on_disk(tmp_path):
@@ -3324,7 +3325,7 @@ def test_the_bound_stamp_is_the_fingerprint_of_the_content_on_disk(tmp_path):
     migrate_project(root)
     project = load_project(root)
     item = project.get("REQ-0001")
-    assert item.attrs["ratified_fingerprint"] == fingerprint(item, project.schema)
+    assert item.ratifications[-1]["fingerprint"] == fingerprint(item, project.schema)
 
     findings = validate(project, strict=True)
     assert not [f for f in findings if f.rule == "ratified-stale"]
@@ -3342,7 +3343,7 @@ def test_migrate_reuses_the_recorded_ratifier_and_never_reattributes(tmp_path):
     reattribute hundreds of sign-offs (SR-0152)."""
     root = _unstamped_project(tmp_path, by="j.doe@example.org")
     migrate_project(root)
-    assert load_project(root).get("REQ-0001").attrs["ratified_by"] == "j.doe@example.org"
+    assert load_project(root).get("REQ-0001").ratifications[-1]["by"] == "j.doe@example.org"
     with pytest.raises(SystemExit):     # no seam through which to name anyone else
         _cli(["-C", str(root), "migrate", "--by", "someone.else"])
 
@@ -3360,7 +3361,7 @@ def test_migrate_leaves_an_already_bound_record_untouched(tmp_path):
     item.text = "changed after the human signed it off"
     write_item(item)
     assert migrate_project(root).bound == {}
-    assert load_project(root).get("REQ-0001").attrs["ratified_fingerprint"] == first
+    assert load_project(root).get("REQ-0001").ratifications[-1]["fingerprint"] == first
 
 
 def test_migrate_does_not_bind_an_item_it_could_not_legitimately_ratify(tmp_path):
@@ -3372,7 +3373,7 @@ def test_migrate_does_not_bind_an_item_it_could_not_legitimately_ratify(tmp_path
     assert migrate_project(root).bound == {}
     item = load_project(root).get("REQ-0001")
     assert "ratified_fingerprint" not in item.attrs
-    assert item.attrs["ratified_by"] == "alice"   # the record is left exactly as found
+    assert item.ratifications[-1]["by"] == "alice"   # the record is left exactly as found
 
 
 def test_migrate_binds_a_record_whose_item_has_moved_past_ratification(tmp_path):
@@ -3403,7 +3404,7 @@ def test_migrate_names_every_record_it_bound_on_the_cli(tmp_path, capsys):
     assert _cli(["-C", str(root), "migrate"]) == 0
     out = capsys.readouterr().out
     assert "REQ-0001 = sha256:" in out
-    assert "ratified_backfilled" in out
+    assert "backfilled" in out
     assert "nothing to migrate" not in out   # something *was* done
 
 
@@ -3475,7 +3476,7 @@ def test_migrate_binds_that_record_when_given_the_union_it_grounds_over(tmp_path
     result = migrate_project(root, index=_union_index(root))
     assert "REQ-0002" in result.bound
     item = load_project(root).get("REQ-0002")
-    assert item.attrs["ratified_fingerprint"] == result.bound["REQ-0002"]
+    assert item.ratifications[-1]["fingerprint"] == result.bound["REQ-0002"]
 
 
 def test_omitting_the_index_is_exactly_the_behaviour_without_the_argument(tmp_path):
@@ -3496,8 +3497,8 @@ def test_a_supplied_index_buys_the_whole_record_and_nothing_partial(tmp_path):
     migrate_project(root, index=_union_index(root))
     project = load_project(root)
     item = project.get("REQ-0002")
-    assert item.attrs["ratified_by"] == "j.doe@example.org"
-    assert item.attrs["ratified_backfilled"] is True
+    assert item.ratifications[-1]["by"] == "j.doe@example.org"
+    assert item.ratifications[-1]["backfilled"] is True
     assert item.status == project.schema.status_role("ratified")
 
 
@@ -4522,8 +4523,8 @@ def test_git_identity_is_silent_when_git_is_absent(monkeypatch):
 def test_ratify_records_an_identifier_in_its_own_field():
     p = _grounded_project()
     item = ratify(p, "FR-1", by="Ada Lovelace", by_id="github:ada")
-    assert item.attrs["ratified_by"] == "Ada Lovelace"
-    assert item.attrs["ratified_id"] == "github:ada", "never conflated with the name"
+    assert item.ratifications[-1]["by"] == "Ada Lovelace"
+    assert item.ratifications[-1]["id"] == "github:ada", "never conflated with the name"
 
 
 def test_ratify_invents_no_identifier():

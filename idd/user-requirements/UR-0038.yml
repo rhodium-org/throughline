@@ -27,9 +27,10 @@ attrs:
   priority: should
   verification: demonstration
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c0ab0b8e33b5fe85562ad960cdf1037cefd127360c37142fd8a78a8b560c82f0
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c0ab0b8e33b5fe85562ad960cdf1037cefd127360c37142fd8a78a8b560c82f0
+  content:
     type: user_requirement
     text: A user whose only assistant cannot run commands shall be able to take the
       changes it drafts against a graph and have the Tool apply them as proposals,
@@ -38,3 +39,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: fcb3beee42d25913263e87ece56703743f54e9f1

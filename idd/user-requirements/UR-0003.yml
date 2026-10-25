@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:7e5180cb8813d61f4d77490a595398d4aeb7f319e3cc9cf2884cde4aa6eb1847
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:7e5180cb8813d61f4d77490a595398d4aeb7f319e3cc9cf2884cde4aa6eb1847
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: user_requirement
+    text: Users shall be able to see exactly which requirements were added, removed,
+      or modified between any two versions of the requirement set.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

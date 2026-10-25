@@ -39,6 +39,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:3341fe30b4c47a46a9cf3ed2377b4ce4e6597185594627555471047e2567939e
-  ratified_revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:3341fe30b4c47a46a9cf3ed2377b4ce4e6597185594627555471047e2567939e
+  revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+  content:
+    type: system_requirement
+    text: Ratify shall accept a signature over content that has not changed since
+      it was last ratified where, and only where, the caller states that they are
+      replacing the recorded ratifier and the record being replaced does not appear
+      in the project's committed history; in every other case it shall refuse as
+      it does now. Whether the record has been committed shall be settled by asking
+      the project's version control, never assumed. A record written this way shall
+      carry the identity it replaced, and that identity shall itself be part of the
+      ratification record, writable by no other command.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

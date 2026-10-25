@@ -14,7 +14,18 @@ attrs:
   priority: must
   verification: test
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:76d3d92eea57b530cfa11b723c82528cfe1749d7bd2b08520bd4e89061721aee
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:76d3d92eea57b530cfa11b723c82528cfe1749d7bd2b08520bd4e89061721aee
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: Migrating an existing project to GUID identity shall assign every item
+      a deterministic GUID (derived from its frozen UID) and rebase every review
+      and suspect stamp to the new fingerprint basis, so the identity-basis change
+      alone never marks an unchanged item suspect. UIDs are left unchanged.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

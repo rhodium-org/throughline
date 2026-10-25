@@ -150,7 +150,7 @@ def test_a_suspect_item_is_awaiting_a_human_again(graph):
     project = load_project(graph)
     item = project.get("REQ-0001")
     assert item.status == project.schema.status_role("suspect")
-    assert item.attrs.get("ratified_by") == "Ada", "the record survives the cascade"
+    assert item.ratifications[-1]["by"] == "Ada", "the record survives the cascade"
 
     entry = _by_uid(worklist(project))["REQ-0001"]
     assert entry.concern in ("ready", "proposed") and entry.ratifiable

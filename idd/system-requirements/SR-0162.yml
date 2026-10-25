@@ -40,6 +40,21 @@ links:
   type: relates
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a4aa7039837933e3bdb6a01399d65395c2a34d36f42767bc8876ffd8c25f03d4
-  ratified_revision: 30a55fff6be70432fc879c6798e40fe414216f0a
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a4aa7039837933e3bdb6a01399d65395c2a34d36f42767bc8876ffd8c25f03d4
+  revision: 30a55fff6be70432fc879c6798e40fe414216f0a
+  content:
+    type: system_requirement
+    text: The Tool shall compute an item's fingerprint over the normative attributes
+      declared by the graph that authored the item, and shall let a tool that merges
+      a borrowed item into a wider graph declare that authoring set, so the attributes
+      a consuming graph happens to declare cannot change the fingerprint of content
+      it did not write. A ratification recorded in an item's own graph shall therefore
+      read as current wherever that item is composed, whatever the consuming graph
+      marks normative, and no consumer shall be obliged to mirror a source's normative
+      flags in order to compose it.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

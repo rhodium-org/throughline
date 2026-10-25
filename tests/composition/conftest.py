@@ -19,7 +19,7 @@ _SOURCE: dict[str, str] = {
     "throughline.toml": """\
 [project]
 name = "toy"
-format_version = 3
+format_version = 4
 
 [grounding]
 root_types = ["intent"]
@@ -83,7 +83,7 @@ _CONSUMER: dict[str, str] = {
     "throughline.toml": """\
 [project]
 name = "consumer"
-format_version = 3
+format_version = 4
 
 [[sources]]
 namespace = "toy"

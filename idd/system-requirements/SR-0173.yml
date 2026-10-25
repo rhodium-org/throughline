@@ -32,6 +32,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d67662fe09eb88d3cde3c9b8d8e0d4e3756c10709416bab7ddc7e30b6f407086
-  ratified_revision: 2ab1af4a39f0de58d8209c3a67895176b377f25d
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d67662fe09eb88d3cde3c9b8d8e0d4e3756c10709416bab7ddc7e30b6f407086
+  revision: 2ab1af4a39f0de58d8209c3a67895176b377f25d
+  content:
+    type: system_requirement
+    text: When the Tool invalidates an item it shall mark suspect only those dependents
+      whose configured lifecycle permits the move, and shall report the dependents
+      it marked separately from those it could not, naming each dependent it could
+      not mark together with the transition that was refused. It shall exit non-zero
+      when any dependent could not be marked, so an incomplete cascade is never reported
+      as a complete one.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

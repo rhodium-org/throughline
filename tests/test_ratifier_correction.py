@@ -70,8 +70,9 @@ def _commit(root: Path) -> None:
 
 
 def _by(root: Path):
-    a = load_project(root).get("REQ-0001").attrs
-    return a.get("ratified_by"), a.get(SUPERSEDED_ATTR)
+    held = load_project(root).get("REQ-0001").ratifications
+    entry = held[-1] if held else {}
+    return entry.get("by"), entry.get(SUPERSEDED_ATTR)
 
 
 # --------------------------------------------------------- correcting a slip
@@ -90,8 +91,8 @@ def test_the_correction_names_what_it_replaced(graph):
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada Lovelace",
                  "--replacing"]) == 0
     item = load_project(graph).get("REQ-0001")
-    assert item.attrs[SUPERSEDED_ATTR] == "AAda Lovelace"
-    assert item.attrs["ratified_fingerprint"]          # still stamped
+    assert item.ratifications[-1][SUPERSEDED_ATTR] == "AAda Lovelace"
+    assert item.ratifications[-1]["fingerprint"]          # still stamped
 
 
 def test_without_the_flag_it_is_still_refused(graph):
@@ -163,7 +164,7 @@ def test_outside_a_work_tree_the_correction_is_refused(tmp_path):
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Typo"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Real",
                  "--replacing"]) == 2
-    assert load_project(root).get("REQ-0001").attrs["ratified_by"] == "Typo"
+    assert load_project(root).get("REQ-0001").ratifications[-1]["by"] == "Typo"
 
 
 def test_a_work_tree_with_no_commits_is_an_answer_not_a_gap(graph):
@@ -201,14 +202,14 @@ def test_an_item_with_no_ratification_has_published_none(graph):
 def test_the_superseded_field_is_owned_by_ratify(graph):
     """A hand-written predecessor would claim that one signature succeeded another
     when none did, so it is guarded like the rest of the record (SR-0170)."""
-    assert RATIFICATION_ATTRS[SUPERSEDED_ATTR] == "ratify"
+    assert RATIFICATION_ATTRS["ratified_supersedes"] == "ratify"
     assert _cli(["-C", graph, "amend", "REQ-0001",
-                 "--attr", f"{SUPERSEDED_ATTR}=Bob Malory"]) == 2
-    assert SUPERSEDED_ATTR not in load_project(graph).get("REQ-0001").attrs
+                 "--attr", "ratified_supersedes=Bob Malory"]) == 2
+    assert SUPERSEDED_ATTR not in load_project(graph).get("REQ-0001").ratifications[-1]
 
 
 def test_correcting_to_the_same_name_records_no_predecessor(graph):
     """Nothing succeeded anything, so the record gains no claim that it did."""
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "AAda Lovelace",
                  "--replacing"]) == 0
-    assert SUPERSEDED_ATTR not in load_project(graph).get("REQ-0001").attrs
+    assert SUPERSEDED_ATTR not in load_project(graph).get("REQ-0001").ratifications[-1]

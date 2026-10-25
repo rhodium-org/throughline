@@ -32,5 +32,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1f967cba24324f665af8d5f3fb3d6d927108b802f061dea7fedbfabf3a008c38
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1f967cba24324f665af8d5f3fb3d6d927108b802f061dea7fedbfabf3a008c38
+  content:
+    type: system_requirement
+    text: Where a ratification record holds recorded content that reproduces its
+      stamp, the Tool shall compute the change since ratification (SR-0165) from
+      that content and shall not read version-control history. The structured result
+      shall say that the earlier content came from the record rather than from a
+      revision. Where the record holds no recorded content, or holds content that
+      does not reproduce its stamp, the Tool shall resolve the earlier content from
+      history as it does now, and shall never show that content as what was signed.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: dfddcd57551da59835ebb5fa4aed6d19b50dcbcd

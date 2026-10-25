@@ -26,10 +26,11 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_id: github:rhodium289
-  ratified_fingerprint: sha256:99c06c03e7dc9a554c8c66f0ba7d4ed2d0aa722e7c2cb5009642b4a87eb969a6
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  fingerprint: sha256:99c06c03e7dc9a554c8c66f0ba7d4ed2d0aa722e7c2cb5009642b4a87eb969a6
+  content:
     type: system_requirement
     text: When tl apply changes an existing item that sits in the status bound to
       the initial role, it shall move that item to the status bound to the proposed
@@ -39,3 +40,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: cfd8a39645472d5e24982cdfbaa3d5f93477b5ef

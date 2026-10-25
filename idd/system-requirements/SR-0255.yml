@@ -30,9 +30,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:94efc2f69ec6f4a9d604b745ec6b0ddc718cadd74f9be3a7fb819abeaa226132
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:94efc2f69ec6f4a9d604b745ec6b0ddc718cadd74f9be3a7fb819abeaa226132
+  content:
     type: system_requirement
     text: The migration to the major that introduces the list shall turn each item's
       flat ratification record into a list of one entry, carrying the ratifier, identifier,
@@ -45,3 +46,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

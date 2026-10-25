@@ -1,3 +1,4 @@
 prefix: BN
 digits: 4
 title: Business Needs
+type: business_need

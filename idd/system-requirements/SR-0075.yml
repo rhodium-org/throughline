@@ -15,7 +15,20 @@ attrs:
   origin: human
   priority: should
   verification: demonstration
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f67fbe1fefd9d1ec9ac1db61bccdf8eece65ad26ceebee2eba4864117b6f6429
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f67fbe1fefd9d1ec9ac1db61bccdf8eece65ad26ceebee2eba4864117b6f6429
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The project shall provide a contributor setup/doctor script that verifies
+      development prerequisites, runs the grounding gate, and can wire the local
+      pre-commit grounding hook on request, reporting an actionable pass/fix status
+      per check and exiting non-zero on failure. It is developer tooling maintained
+      in the repository — not part of the shipped throughline package — and may therefore
+      be environment-specific.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

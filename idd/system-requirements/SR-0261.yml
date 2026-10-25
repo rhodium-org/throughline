@@ -32,9 +32,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:287f3ee9f865bf82f70d61b653705850b356a348d46b1d39a1aa5c55de2e8a70
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:287f3ee9f865bf82f70d61b653705850b356a348d46b1d39a1aa5c55de2e8a70
+  content:
     type: system_requirement
     text: Each signature shall carry its own stamp, recorded content and recorded
       links, and shall be stale when the item's normative content or signed links
@@ -46,3 +47,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

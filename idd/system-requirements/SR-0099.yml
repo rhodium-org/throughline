@@ -26,7 +26,25 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:2252f42a35a747f0f4279aaf309dde23c322069c9c57bd587ba99c25b58d6dc7
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:2252f42a35a747f0f4279aaf309dde23c322069c9c57bd587ba99c25b58d6dc7
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The tl:matrix document directive shall accept an optional <direction>:<link_type>
+      selector (direction one of incoming or outgoing, reusing the coverage-rule
+      grammar) preceding its filter. With a selector, each matching item is rendered
+      as a row whose relationship column lists the items linked to it in that direction
+      by that link type — so a document can render, for example, each user_requirement
+      and the items that implement it (incoming:implements). With no selector the
+      directive keeps its default behaviour (grounding trace plus verifying items).
+      A relationship cell shall list only live items — an item that is rejected or
+      deleted does not realize anything and shall be omitted (the terminal-status
+      set is the same one the invalidate cascade uses). A malformed selector or filter
+      fails injection rather than rendering silently wrong.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

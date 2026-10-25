@@ -37,6 +37,23 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e350049113c4435ebb931bf1311b56c9dc4cf3d7790ae488ab8b15c584f98d2e
-  ratified_revision: ffbf193e2ee5663ecb3c5091865df6f5c2620a97
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e350049113c4435ebb931bf1311b56c9dc4cf3d7790ae488ab8b15c584f98d2e
+  revision: ffbf193e2ee5663ecb3c5091865df6f5c2620a97
+  content:
+    type: system_requirement
+    text: The repair that binds an unstamped ratification record shall accept an
+      optional prebuilt grounding index and use it in place of the one it would build
+      from the project, so a tool that grounds an item over a wider graph than the
+      one it writes to can reuse the repair instead of reimplementing it. With no
+      index supplied the behaviour shall be exactly as now, the index being built
+      from the project handed to it. Every other decision the repair takes shall
+      remain its own — which records it may complete, reusing the recorded ratifier
+      verbatim, marking a stamp as backfilled, writing no status, and naming what
+      it bound — so a caller gains the completed record in full and has no way to
+      obtain a partial one.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

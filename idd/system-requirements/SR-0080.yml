@@ -14,7 +14,20 @@ links:
 attrs:
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1a41f10e6d85d469d42f36aef562cf8adaf9601cbb4dfba0e320e36fd3c725fa
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1a41f10e6d85d469d42f36aef562cf8adaf9601cbb4dfba0e320e36fd3c725fa
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool's default status set shall include a 'deferred' status for an
+      item that is acknowledged and grounded but deliberately not scheduled — a parked
+      backlog item, distinct from 'draft' (actively moving toward approval). Deferred
+      items remain live (they are not tombstoned like 'deleted') so they still ground
+      and appear in queries, letting authors separate the active work-front from
+      the wish-list.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -20,7 +20,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b5158a6e3ac7224387bacd4882d04ddc535f4c0c5535e470a1145c11cde08e57
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b5158a6e3ac7224387bacd4882d04ddc535f4c0c5535e470a1145c11cde08e57
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall let an author remove a link between two items and re-type
+      an existing link in place, so a mislabelled or obsolete edge is corrected without
+      hand-editing YAML. A remove or a retype shall name the single matching edge
+      unambiguously, and shall fail clearly when no such edge exists or when the
+      target is joined by several links of differing type and none is named.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -512,13 +512,12 @@ def plan(project_path: str | Path, *, keep: str | None = None,
         moved_data = _load(moved_text)
         new_text, _ = rewrite(moved_text, mapping, uid=mapping[uid],
                               where=f"{path} ({'theirs' if keep == OURS else 'ours'})")
-        attrs = moved_data.get("attrs") if isinstance(moved_data.get("attrs"), dict) else {}
         result.moves.append(Move(
             old=uid, new=mapping[uid], path=path, new_path=paths[uid],
             kept_text=kept_text, moved_text=new_text,
             kept_title=str(_load(kept_text).get("title") or ""),
             moved_title=str(moved_data.get("title") or ""),
-            moved_ratified=bool(attrs.get("ratified_fingerprint"))))
+            moved_ratified=_stamped(moved_data)))
 
     _what_cannot_move(top, result, mapping)
     return result
@@ -569,11 +568,29 @@ def _relinks(top: Path, result: Plan, scope: str, mapping: dict[str, str],
     return out
 
 
+def _signatures(data: dict) -> list[dict]:
+    """The signatures a raw item file holds: the format-4 list, and a format-3
+    flat record read as one entry (SR-0255), so a merge reads either shape."""
+    out = [e for e in (data.get("ratifications") or []) if isinstance(e, dict)] \
+        if isinstance(data.get("ratifications"), list) else []
+    attrs = data.get("attrs")
+    if isinstance(attrs, dict) and attrs.get("ratified_fingerprint"):
+        out.append({"fingerprint": attrs["ratified_fingerprint"],
+                    "links": attrs.get(LINKS_ATTR)})
+    return out
+
+
+def _stamped(data: dict) -> bool:
+    return any(e.get("fingerprint") for e in _signatures(data))
+
+
 def _signed(text: str) -> list[tuple[str, str]]:
-    attrs = _load(text).get("attrs")
-    raw = attrs.get(LINKS_ATTR) if isinstance(attrs, dict) else None
-    return [(e.get("type"), e.get("target")) for e in raw or []
-            if isinstance(e, dict)] if isinstance(raw, list) else []
+    out: list[tuple[str, str]] = []
+    for entry in _signatures(_load(text)):
+        raw = entry.get("links")
+        if isinstance(raw, list):
+            out += [(e.get("type"), e.get("target")) for e in raw if isinstance(e, dict)]
+    return out
 
 
 def _what_cannot_move(top: Path, result: Plan, mapping: dict[str, str]) -> None:

@@ -29,9 +29,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:bb78e4b99c40805657399d454a07469c5839541c806afb3d56ae6c2fc0d278bc
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:bb78e4b99c40805657399d454a07469c5839541c806afb3d56ae6c2fc0d278bc
+  content:
     type: system_requirement
     text: The names a program needs in order to compose — to read a project's declared
       sources, to resolve them through the resolver interface and its default, to
@@ -46,3 +47,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

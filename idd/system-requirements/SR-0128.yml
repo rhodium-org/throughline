@@ -14,7 +14,18 @@ attrs:
   priority: must
   verification: test
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:c8bc7f37fd5b0932af4edf300dcdbf324b32e222fa0702bb363526066ad969de
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:c8bc7f37fd5b0932af4edf300dcdbf324b32e222fa0702bb363526066ad969de
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: Once allocated, an item's UID-to-GUID binding shall be immutable. The validation
+      gate shall flag, against the git baseline, any changed UID-GUID binding or
+      any reissued retired UID, and shall require deletion to be a tombstone rather
+      than a file removal so that retired UIDs remain visible and are never reused.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

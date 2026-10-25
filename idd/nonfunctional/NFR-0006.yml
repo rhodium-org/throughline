@@ -12,7 +12,18 @@ links:
 attrs:
   priority: must
   verification: analysis
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:422b6e92fddd81709edd05b1c52983764d5149335a8b4d5cda129e2f02c0d67e
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:422b6e92fddd81709edd05b1c52983764d5149335a8b4d5cda129e2f02c0d67e
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: 'On the reference project (10,000 items, 25 registers, 30,000 links) and
+      reference hardware, the Tool shall complete: full check <=10 s, query <=1 s,
+      full Markdown render of all documents <=60 s, incremental render of one document
+      <=5 s.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

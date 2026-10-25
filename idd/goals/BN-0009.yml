@@ -8,8 +8,15 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1fb5f07ed2575d3676b5c41ad196b9b2566f4147605b42c2ac0b9eb9a780d059
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1fb5f07ed2575d3676b5c41ad196b9b2566f4147605b42c2ac0b9eb9a780d059
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: business_need
+    text: Boring, mainstream technology; deterministic, safe, well-tested, cross-platform.
+      The tool must be dependable and long-lived (doc 01 §6 principle 6, §8).
+    normative: false
+    derived: false
+    attrs: {}

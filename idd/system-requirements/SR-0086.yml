@@ -20,7 +20,26 @@ links:
 attrs:
   priority: could
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8462ce80df53046f13f99f41451a3f40dfc6ec9bfad6cfcbeb121f64dec5d5fd
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8462ce80df53046f13f99f41451a3f40dfc6ec9bfad6cfcbeb121f64dec5d5fd
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall emit a visual representation of a project's shape as Mermaid
+      diagram source — a type model (item types as nodes joined by labelled edges
+      for the links observed between them) and a status-transition state machine
+      (the declared [transitions], each move an edge between states) — so a maintainer
+      or newcomer can see how the graph is wired and how items move through their
+      lifecycle without reading the configuration by hand. Mermaid is chosen because
+      it is plain text (so a diagram lives in version control and diffs cleanly)
+      and renders directly in Markdown and on the forge. The CLI shall offer each
+      diagram and, by default, both, wrapped as fenced Markdown blocks ready to embed;
+      a raw Mermaid form shall be available for piping into a renderer. When a project
+      declares no transitions, the lifecycle diagram is reported as absent rather
+      than emitted empty.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

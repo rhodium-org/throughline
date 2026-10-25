@@ -27,5 +27,17 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:aa2c75047f26ab4ad4117164f69978195a691df30e45ec889f77c36721e08354
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:aa2c75047f26ab4ad4117164f69978195a691df30e45ec889f77c36721e08354
+  content:
+    type: system_requirement
+    text: Check shall accept, in place of a git revision, a directory holding the
+      project as it stood at the baseline, laid out as the working tree is, and shall
+      read each item's earlier status from it by the same rules it applies to a revision,
+      so a host without git runs every rule a git work tree would.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+  revision: cecde0362d3798ffd027ed9c2aa8ba64aab1fdd3

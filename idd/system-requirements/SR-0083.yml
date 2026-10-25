@@ -21,7 +21,26 @@ links:
 attrs:
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c6b9c98992e3737bdc3c7d56ec0d8571fa93cf684fa592b97c245858b8568b6e
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c6b9c98992e3737bdc3c7d56ec0d8571fa93cf684fa592b97c245858b8568b6e
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall let a project declare, in configuration, the status transitions
+      it permits (for each status, the set of statuses it may move to), and validation
+      shall report a clear, actionable finding when an item's status changes to one
+      the declared transitions do not allow. The baseline status is the item's status
+      in a git reference (the previous commit by default), so `check` gates the change
+      actually being introduced; creating a new item is not a transition. When no
+      transition table is declared, or the baseline cannot be read (the project is
+      not in a git work tree), transition checking is inert and every status is reachable,
+      matching the tool's other optional vocabularies. Declared transition endpoints
+      must be members of the declared status set, reported as a configuration error
+      at load time otherwise. This completes the transition half of SR-0024, whose
+      status vocabulary is already enforced.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

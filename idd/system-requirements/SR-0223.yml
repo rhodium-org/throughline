@@ -26,5 +26,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:290c6bbfa1d9067f869827f8129b4db11b95f47b92e8f255e67e73ee81e30308
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:290c6bbfa1d9067f869827f8129b4db11b95f47b92e8f255e67e73ee81e30308
+  content:
+    type: system_requirement
+    text: 'When an item is created with the ambiguity flag and its type does not
+      declare that attribute, the Tool shall read the value as it reads a declared
+      boolean attribute: a true or false value is stored as a boolean, and any other
+      value is refused. A false value shall leave the item unflagged.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 7a3ff1e759cc49d6bff2b11973d59a9d1dea57c6

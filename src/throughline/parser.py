@@ -40,6 +40,8 @@ def _add_schema_parser(sub, handlers) -> None:
         "linkrule": "endpoint constraints on a link type",
         "grounding": "the grounding configuration",
         "rule": "coverage rules the gate enforces",
+        "role": "who may sign, and in which role",
+        "requires": "what a kind of item needs before it counts as ratified",
     }
     made: dict[str, object] = {}
 
@@ -54,6 +56,32 @@ def _add_schema_parser(sub, handlers) -> None:
                             "beside it in throughline.toml")
         v.set_defaults(func=handlers.get("cmd_schema"), builder=builder)
         return v
+
+    v = _schema_verb("role", "add",
+                     lambda p, a: schema_ops.role_add(p, a.role, a.identifier),
+                     "declare a role, or add a person to one (SR-0257)")
+    v.add_argument("role")
+    v.add_argument("identifier", metavar="SCHEME:VALUE",
+                   help="the person's stable identifier, e.g. github:octocat")
+    v = _schema_verb("role", "remove",
+                     lambda p, a: schema_ops.role_remove(p, a.role, a.identifier),
+                     "take a person out of a role, or withdraw the role")
+    v.add_argument("role")
+    v.add_argument("identifier", nargs="?", default=None, metavar="SCHEME:VALUE")
+    v = _schema_verb("requires", "set",
+                     lambda p, a: schema_ops.requires_set(
+                         p, a.itype, roles=a.roles, signatures=a.signatures),
+                     "declare what items of a type need before they are ratified "
+                     "(SR-0258)")
+    v.add_argument("itype", metavar="TYPE")
+    v.add_argument("--roles", default=None, type=lambda s: s.split(","),
+                   help="comma-separated roles each of which a signature must hold")
+    v.add_argument("--signatures", default=None, type=int,
+                   help="the least number of signatures in declared roles")
+    v = _schema_verb("requires", "clear",
+                     lambda p, a: schema_ops.requires_clear(p, a.itype),
+                     "withdraw what a type requires")
+    v.add_argument("itype", metavar="TYPE")
 
     v = _schema_verb("status", "add",
                      lambda p, a: schema_ops.status_add(p, a.name),
@@ -439,6 +467,11 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("--replacing", action="store_true",
                    help="replace the ratifier recorded on an uncommitted "
                         "ratification, e.g. to correct a misspelled name")
+    # The role a signature is given in (SR-0259): required where the project
+    # declares roles under [ratify.roles], refused where it does not.
+    s.add_argument("--as", dest="role", default=None, metavar="ROLE",
+                   help="the role you sign in, where the project declares roles "
+                        "(omit on a terminal to choose one)")
     s.set_defaults(func=handlers.get("cmd_ratify"))
 
     s = sub.add_parser("invalidate", help="falsify an item; cascade suspect")
@@ -465,6 +498,10 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("--by-id", default=None, metavar="SCHEME:VALUE",
                    help="optional stable identifier for the withdrawer, e.g. "
                         "github:octocat or email:ada@example.com")
+    # Whose signature goes (SR-0262): needed where an item holds more than one.
+    s.add_argument("--of", default=None, metavar="WHO",
+                   help="whose signature to withdraw, by identifier or name "
+                        "(required where an item holds more than one)")
     s.set_defaults(func=handlers.get("cmd_withdraw"))
 
     # Its own verb, not a mode of amend (SR-0213): removing the ambiguity flag is a

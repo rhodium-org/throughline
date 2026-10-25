@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: inspection
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e86d704215478c423afd404a994efe988b41f608aa86bee7ae066e63add034be
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e86d704215478c423afd404a994efe988b41f608aa86bee7ae066e63add034be
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall expose its core as a documented library API, and the project
+      shall manage its own requirements with itself before 1.0.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -24,7 +24,22 @@ attrs:
   origin: human
   priority: could
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1638d8fe12d46fb24e9e829a0b7033f39d038cac709fc0832625d025142d22fe
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1638d8fe12d46fb24e9e829a0b7033f39d038cac709fc0832625d025142d22fe
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The filter grammar (SR-0104) shall expose an item's tags as a first-class
+      field so a filter can test tag membership directly — for example 'security'
+      in tags — delivering the "tags" dimension SR-0045 names without requiring the
+      author to know that tags are stored inside a particular attribute. Until this
+      is built, tags have no dedicated field and a filter must reach them through
+      attrs (for example 'security' in attrs.get('tags', [])); this requirement records
+      that gap as a deliberate, grounded backlog item rather than leaving the SR-0045
+      promise silently unmet.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

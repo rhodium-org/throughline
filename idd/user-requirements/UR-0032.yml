@@ -25,6 +25,18 @@ links:
   type: relates
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:9c34895f2a7a722c6c51fe50a6823d38181adccc3df25b4d07b3dee61e460482
-  ratified_revision: f31213fd522bf661e943d8a6f1f3670c10821853
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:9c34895f2a7a722c6c51fe50a6823d38181adccc3df25b4d07b3dee61e460482
+  revision: f31213fd522bf661e943d8a6f1f3670c10821853
+  content:
+    type: user_requirement
+    text: As the person working through a batch of proposed items, typically the
+      set a machine authored in one pass, I want to name several items in one ratify
+      command and be taken through them in turn, so that I am not retyping the command
+      and the ratifier for each one. Each item is still shown to me and still confirmed
+      by me on its own, because the signature is per item.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

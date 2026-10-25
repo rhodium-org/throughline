@@ -27,9 +27,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b641167b5cc591736f2424998555547b6a5a971d77151a135f44774b1c23388c
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b641167b5cc591736f2424998555547b6a5a971d77151a135f44774b1c23388c
+  content:
     type: system_requirement
     text: When the Tool writes a ratification or a withdrawal it shall record the
       moment as a UTC timestamp in ISO 8601 form to the second, taken from the clock
@@ -39,3 +40,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

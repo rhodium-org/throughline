@@ -20,6 +20,23 @@ rationale: Trying to filter natural language for "malicious instructions" is bot
 normative: false
 attrs:
   origin: human
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:11e1248c001bfbea4c5ef67f7b4f89401454f3a4296e880758b259474ad9d01a
-  ratified_backfilled: true
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:11e1248c001bfbea4c5ef67f7b4f89401454f3a4296e880758b259474ad9d01a
+  backfilled: true
+  content:
+    type: non_goal
+    text: throughline stores and renders human- and machine-authored natural-language
+      content — titles, text, rationale, and attribute values. It shall not attempt
+      to detect, strip, or neutralize adversarial instructions embedded in that content
+      that target a downstream AI agent reading the graph, the tl context brief,
+      an injected document, or the YAML files directly. Stored content is untrusted
+      data; the responsibility to sandbox, delimit, or otherwise defend against prompt
+      injection rests with the consuming agent or integration. throughline's guarantee
+      is structural and provenance-level (the graph is well-formed, links resolve,
+      and who authored/ratified what is honest), not semantic (that the words are
+      safe for an agent to act on).
+    normative: false
+    derived: false
+    attrs: {}
+  revision: 91baf29853480f5b45321c44878662983ee24849

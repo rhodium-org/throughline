@@ -33,6 +33,24 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:07c29ed5823c9ed66a75dcb0d69efc0e2e0cfe03c807b9cce8e96ad74d8c773e
-  ratified_revision: 3fd78077ed16ae4ee4a036510bbf3ac36879008c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:07c29ed5823c9ed66a75dcb0d69efc0e2e0cfe03c807b9cce8e96ad74d8c773e
+  revision: 3fd78077ed16ae4ee4a036510bbf3ac36879008c
+  content:
+    type: system_requirement
+    text: The brief command shall accept an optional UID. Given one, it shall emit
+      the whole project brief it emits today and append the neighbourhood of that
+      item as a further section, so an agent handed a single UID receives both the
+      rules it must work by and the part of the graph its change will touch from
+      one invocation. The appended section shall be rendered by the same neighbourhood
+      service the standalone command uses, not a second rendering of it. Given no
+      UID the command shall behave exactly as it does before this change — the same
+      brief, assembled from the same sources, with nothing added and nothing withheld;
+      the argument shall introduce a section and shall alter nothing else. A UID
+      that does not exist shall fail with the same diagnostic the other UID-taking
+      commands give, rather than emitting a brief with an empty section.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

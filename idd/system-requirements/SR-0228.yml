@@ -28,5 +28,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:ce50e8bd42d65f30cc002c435f5329b94fb840be57351647e0cab39db5136616
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:ce50e8bd42d65f30cc002c435f5329b94fb840be57351647e0cab39db5136616
+  content:
+    type: system_requirement
+    text: The names the package exports shall be listed in the Tool's published documentation,
+      and the Tool shall carry a test that fails when what the package exports differs
+      from that list. A name leaves the list only by a release that says so.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 2298db459d5d2abc270f28915dba9ee328bb078b

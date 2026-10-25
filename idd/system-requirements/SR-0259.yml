@@ -35,9 +35,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8577c1990a11ffcfc421077caacb998be77e436e063eb12a1bf5b66dd4678707
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8577c1990a11ffcfc421077caacb998be77e436e063eb12a1bf5b66dd4678707
+  content:
     type: system_requirement
     text: In a project that declares roles, ratify shall take the role the person
       is signing in, shall require a stable identifier for the signer, and shall
@@ -51,3 +52,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

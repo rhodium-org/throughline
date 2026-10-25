@@ -67,6 +67,9 @@ _GROUNDING_FIELDS = ("root_types", "delivery_roots", "ground_link_types",
                      "suspect_link_types", "ai_origins")
 
 
+from .identity import IdentityError, normalise_identifier
+
+
 class SchemaOpError(Exception):
     """The operation cannot be carried out as asked."""
 
@@ -566,6 +569,152 @@ _COVERAGE = ("rules", "coverage")
 
 def _coverage(project: Project) -> list[dict]:
     return list((project.config.get("rules") or {}).get("coverage") or [])
+
+
+# ------------------------------------------------- roles and requirements (SR-0264)
+
+_RATIFY_ROLES = ("ratify", "roles")
+
+
+def _roles(cfg: dict) -> dict[str, list[str]]:
+    return {r: list(m) for r, m in ((cfg.get("ratify") or {}).get("roles") or {}).items()}
+
+
+def _requires(cfg: dict) -> dict[str, dict]:
+    return {t: dict(b) for t, b in ((cfg.get("ratify") or {}).get("requires") or {}).items()}
+
+
+def _identifier(raw: str) -> str:
+    try:
+        ident = normalise_identifier(raw)
+    except IdentityError as e:
+        raise SchemaOpError(str(e)) from e
+    if ident is None:
+        raise SchemaOpError("an identifier is needed, e.g. github:octocat")
+    return ident
+
+
+def role_add(project: Project, role: str, identifier: str) -> Change:
+    """Declare ``role`` held by ``identifier``, or add the person to a declared
+    role (SR-0257, SR-0264)."""
+    role = role.strip()
+    if not role:
+        raise SchemaOpError("a role needs a name")
+    ident = _identifier(identifier)
+    cfg = _copy(project)
+    roles = _roles(cfg)
+    present = role in roles
+    members = roles.get(role, [])
+    if ident in members:
+        raise SchemaOpError(f"{ident} already holds the role '{role}'")
+    members = members + [ident]
+    roles[role] = members
+    cfg.setdefault("ratify", {})["roles"] = roles
+    if present:
+        return Change(f"adding {ident} to the role '{role}'", cfg,
+                      lambda doc, why: doc.add_to_array(_RATIFY_ROLES, role, [ident],
+                                                        because=why))
+    return Change(f"declaring the role '{role}', held by {ident}", cfg,
+                  lambda doc, why: doc.set_key(_RATIFY_ROLES, role, members, because=why))
+
+
+def role_remove(project: Project, role: str, identifier: str | None = None) -> Change:
+    """Take ``identifier`` out of ``role``, or with none given withdraw the role.
+    A role a requirement names is kept until the requirement no longer needs it,
+    and a role is never left with nobody holding it (SR-0257)."""
+    cfg = _copy(project)
+    roles = _roles(cfg)
+    if role not in roles:
+        raise SchemaOpError(f"no role '{role}' is declared"
+                            + (f" — the roles are {', '.join(roles)}" if roles else ""))
+    if identifier is None:
+        needing = [t for t, body in _requires(cfg).items() if role in (body.get("roles") or [])]
+        if needing:
+            raise SchemaOpError(
+                f"[ratify.requires.{needing[0]}] names '{role}' — change or clear that "
+                "requirement first (`tl schema requires`)")
+        del roles[role]
+        if roles:
+            cfg["ratify"]["roles"] = roles
+        else:
+            del cfg["ratify"]["roles"]
+            if _requires(cfg):
+                raise SchemaOpError("the last role cannot go while [ratify.requires] "
+                                    "stands — clear the requirements first")
+        return Change(f"withdrawing the role '{role}'", cfg,
+                      lambda doc, why: doc.remove_key(_RATIFY_ROLES, role))
+    ident = _identifier(identifier)
+    members = roles[role]
+    if ident not in members:
+        raise SchemaOpError(f"{ident} does not hold the role '{role}'")
+    if len(members) == 1:
+        raise SchemaOpError(
+            f"{ident} is the only holder of '{role}' — a role nobody holds cannot be "
+            f"declared; withdraw the role instead (`tl schema role remove {role}`)")
+    members = [m for m in members if m != ident]
+    roles[role] = members
+    cfg["ratify"]["roles"] = roles
+    return Change(f"removing {ident} from the role '{role}'", cfg,
+                  lambda doc, why: doc.set_key(_RATIFY_ROLES, role, members, because=why))
+
+
+def requires_set(project: Project, itype: str, *, roles: list[str] | None = None,
+                 signatures: int | None = None) -> Change:
+    """Declare what an item of ``itype`` requires before it counts as ratified
+    (SR-0258, SR-0264): the roles each of which a current signature must hold,
+    and/or the least number of current signatures. Replaces what the type
+    declared. Allowed even where ratified items fall short; the command reports
+    how many now await signatures and their status does not move."""
+    cfg = _copy(project)
+    if not _roles(cfg):
+        raise SchemaOpError("no roles are declared — declare who may sign first "
+                            "(`tl schema role add <role> <identifier>`)")
+    body: dict = {}
+    if roles:
+        body["roles"] = list(dict.fromkeys(r.strip() for r in roles if r.strip()))
+    if signatures is not None:
+        body["signatures"] = signatures
+    if not body:
+        raise SchemaOpError("say what the kind requires: --roles and/or --signatures")
+    requires = _requires(cfg)
+    before = requires.get(itype, {})
+    requires[itype] = body
+    cfg.setdefault("ratify", {})["requires"] = requires
+    table = ("ratify", "requires", itype)
+
+    def edit(doc, why):
+        for key in ("roles", "signatures"):
+            if key in body:
+                doc.set_key(table, key, body[key], because=why)
+            elif key in before:
+                doc.remove_key(table, key)
+
+    what = " and ".join(
+        ([f"a signature in {', '.join(body['roles'])}"] if "roles" in body else [])
+        + ([f"{body['signatures']} signature(s)"] if "signatures" in body else []))
+    return Change(f"requiring {what} for '{itype}'", cfg, edit)
+
+
+def requires_clear(project: Project, itype: str) -> Change:
+    """Withdraw what ``itype`` requires; it needs one signature in a declared role
+    again, as a kind with no declaration does."""
+    cfg = _copy(project)
+    requires = _requires(cfg)
+    if itype not in requires:
+        raise SchemaOpError(f"'{itype}' declares no requirement")
+    del requires[itype]
+    if requires:
+        cfg["ratify"]["requires"] = requires
+    else:
+        del cfg["ratify"]["requires"]
+    return Change(f"clearing what '{itype}' requires", cfg,
+                  lambda doc, why: doc.remove_table(("ratify", "requires", itype)))
+
+
+def awaiting(project: Project) -> set[str]:
+    """The items the gate reports as awaiting signatures (SR-0260), so a schema
+    change can say how many it left short (SR-0264)."""
+    return {f.uid for f in validate(project) if f.rule == "awaiting-signatures"}
 
 
 def rule_add(project: Project, *, filter: str, needs: str,

@@ -12,7 +12,17 @@ links:
 attrs:
   priority: should
   verification: demonstration
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: user_requirement
+    text: A new user shall be able to initialize a project, add three linked requirements,
+      validate, and render a Markdown document within 15 minutes using only the quick-start
+      guide.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

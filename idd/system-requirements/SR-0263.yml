@@ -31,9 +31,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:dd12e10d990d9d6b227512bf25fd44c74ceae84289174248c3db9fcd772a1621
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:dd12e10d990d9d6b227512bf25fd44c74ceae84289174248c3db9fcd772a1621
+  content:
     type: system_requirement
     text: The signature list shall be part of the ratification record; ratify and
       withdraw alone shall write it, migration shall write only what the lifting
@@ -45,3 +46,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

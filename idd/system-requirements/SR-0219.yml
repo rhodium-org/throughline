@@ -26,5 +26,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:53e47949b364d79bd8d0c004e5559ed0234e351dca7ccd58c19b49f80a2e2a4d
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:53e47949b364d79bd8d0c004e5559ed0234e351dca7ccd58c19b49f80a2e2a4d
+  content:
+    type: system_requirement
+    text: The recorded content shall be part of the ratification record. Only ratification
+      and migration shall write it, and any other operation that sets attributes
+      shall refuse it by name (SR-0170). Withdrawing a ratification (SR-0197) shall
+      remove it with the stamp.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: dfddcd57551da59835ebb5fa4aed6d19b50dcbcd

@@ -46,6 +46,22 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b854dcfd751da1c1323cfc51fe8e7f58acac8b10ec3ecb9ff06e808139f6e6b6
-  ratified_revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b854dcfd751da1c1323cfc51fe8e7f58acac8b10ec3ecb9ff06e808139f6e6b6
+  revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+  content:
+    type: system_requirement
+    text: The Tool shall provide an operation that withdraws the ratification of
+      each item it is given, accepting more than one item in a single run and requiring
+      a stated reason. For each item it shall record that reason, the identity of
+      the person withdrawing, and the identity the withdrawn record named; shall
+      move the item to the status the project binds to the suspect role, so that
+      validation and any worklist report it as awaiting a human again; and shall
+      leave the item's content untouched and its dependents unmoved. It shall refuse
+      an item that carries no ratification to withdraw. What it writes shall be part
+      of the ratification record, writable by no other command.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

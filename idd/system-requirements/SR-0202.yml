@@ -20,6 +20,16 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:cca79bbb54c5e0f3c44460d5210247d6ffce3f64dc87c9191bcdce5320938b8a
-  ratified_revision: 714872929a1c9f79d756395d949b982b220d2a5c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:cca79bbb54c5e0f3c44460d5210247d6ffce3f64dc87c9191bcdce5320938b8a
+  revision: 714872929a1c9f79d756395d949b982b220d2a5c
+  content:
+    type: system_requirement
+    text: The configuration `tl init` writes shall declare the `intent`, `non_goal`
+      and `test` types non-normative, and the demo items it seeds shall carry the
+      same value `tl new` would give them. A requirement or nfr stays normative.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

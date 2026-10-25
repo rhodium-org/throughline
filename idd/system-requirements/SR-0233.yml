@@ -37,9 +37,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:af130d7684bcd48e7bb4ee78fb79b3e015326197d530a3995d37a5d3759b0c75
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:af130d7684bcd48e7bb4ee78fb79b3e015326197d530a3995d37a5d3759b0c75
+  content:
     type: system_requirement
     text: The Tool shall open a network connection only to resolve a url source the
       project declares, at the ref it pins. A ref that names a commit already in
@@ -55,3 +56,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

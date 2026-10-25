@@ -30,9 +30,10 @@ links:
 attrs:
   priority: should
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:6bab2d71bf4c1fb28c6bb04490007a10679535bd229df4c38cf8d69c4f4ec71a
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:6bab2d71bf4c1fb28c6bb04490007a10679535bd229df4c38cf8d69c4f4ec71a
+  content:
     type: system_requirement
     text: 'The default resolver shall fetch a url source as a partial clone: a blobless
       clone at depth one, with a sparse checkout limited to the source''s subdir
@@ -48,3 +49,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: 30dbe3bd4a93dec45b4fdd92053683aca2c4fe61

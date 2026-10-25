@@ -33,9 +33,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:63bd65ff849e5130d85fc51948f5e556a6710b8a376901f6c49837608a45e8e7
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:63bd65ff849e5130d85fc51948f5e556a6710b8a376901f6c49837608a45e8e7
+  content:
     type: system_requirement
     text: A project may declare, under [ratify.requires.<type>], what the signatures
       of an item of that type must satisfy; roles, a list of role names each of which
@@ -48,3 +49,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

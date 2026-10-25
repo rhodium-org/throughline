@@ -41,9 +41,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:009b9977686f56963d1c6bc8cbf196d9824d21028f1511f67985da97c089ec9a
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:009b9977686f56963d1c6bc8cbf196d9824d21028f1511f67985da97c089ec9a
+  content:
     type: system_requirement
     text: An item's ratification record shall be a top-level field, ratifications,
       holding one entry per person who has signed, each entry carrying what the record
@@ -57,3 +58,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

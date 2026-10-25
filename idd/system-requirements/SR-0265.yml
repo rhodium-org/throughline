@@ -25,9 +25,10 @@ attrs:
   priority: could
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b13a5f1d9e5b29531b361d9e045c263730ec1a6bdb02e39e4e93ef3ec5dbaa5f
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b13a5f1d9e5b29531b361d9e045c263730ec1a6bdb02e39e4e93ef3ec5dbaa5f
+  content:
     type: system_requirement
     text: tl resolve shall settle a merge conflict in an item file when the conflict
       is confined to the signature list, by keeping every entry from both sides,
@@ -37,3 +38,4 @@ attrs:
     derived: false
     attrs:
       priority: could
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

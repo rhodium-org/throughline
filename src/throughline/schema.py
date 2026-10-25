@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass, field
 
 from .filters import FilterError, check_filter
+from .identity import IdentityError, normalise_identifier
 
 ERROR, WARNING, OFF = "error", "warning", "off"
 
@@ -119,6 +120,98 @@ class LinkRule:
     to: frozenset[str] | None = None
 
 
+@dataclass(frozen=True)
+class Requirement:
+    """What the signatures of a kind of item must satisfy before it counts as
+    ratified (SR-0258): each role in ``roles`` held by a current signature, and at
+    least ``signatures`` current signatures in declared roles. The default, one
+    signature from anyone, is what every project required before roles existed."""
+    roles: tuple[str, ...] = ()
+    signatures: int = 1
+
+
+ANY_SIGNATURE = Requirement()
+
+
+def _parse_roles(raw) -> dict[str, tuple[str, ...]]:
+    """``[ratify.roles]`` (SR-0257): role name -> the stable identifiers of the
+    people who hold it. Refused when a role's value is not a non-empty list of
+    well-formed identifiers. Identifiers, never names, because the record already
+    shows one person under several spellings (SR-0156)."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise SchemaError("[ratify.roles] must be a table of role = [identifiers], "
+                          'e.g. senior = ["github:octocat"]')
+    roles: dict[str, tuple[str, ...]] = {}
+    for name, members in raw.items():
+        if not isinstance(name, str) or not name.strip():
+            raise SchemaError(f"[ratify.roles] has a role with no name: {name!r}")
+        if not isinstance(members, list) or not members:
+            raise SchemaError(
+                f"[ratify.roles] {name} must be a non-empty list of identifiers such "
+                f'as ["github:octocat", "email:ada@example.com"], not {members!r} — '
+                "a role nobody holds cannot be signed in")
+        ids: list[str] = []
+        for member in members:
+            if not isinstance(member, str):
+                raise SchemaError(f"[ratify.roles] {name}: {member!r} is not an identifier")
+            try:
+                ident = normalise_identifier(member)
+            except IdentityError as e:
+                raise SchemaError(f"[ratify.roles] {name}: {e}") from e
+            if ident is None:
+                raise SchemaError(f"[ratify.roles] {name}: an identifier is empty")
+            if ident in ids:
+                raise SchemaError(f"[ratify.roles] {name} names {ident} twice")
+            ids.append(ident)
+        roles[name] = tuple(ids)
+    return roles
+
+
+def _parse_requirements(raw, roles: dict[str, tuple[str, ...]],
+                        declared_types: set[str]) -> dict[str, Requirement]:
+    """``[ratify.requires.<type>]`` (SR-0258): what an item of that type needs
+    before it is ratified — ``roles``, each of which a current signature must
+    hold, and ``signatures``, the least number of current signatures in declared
+    roles; either or both. Refused for a type the project does not declare, a
+    role it does not declare, fewer than one signature, or when no roles are
+    declared at all, since without roles a second person cannot sign."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise SchemaError("[ratify.requires] must hold a table per item type, e.g. "
+                          '[ratify.requires.requirement] roles = ["senior"]')
+    if raw and not roles:
+        raise SchemaError("[ratify.requires] needs [ratify.roles]: declare the roles "
+                          "people sign in before saying which a kind of item requires")
+    out: dict[str, Requirement] = {}
+    for tname, body in raw.items():
+        where = f"[ratify.requires.{tname}]"
+        if declared_types and tname not in declared_types:
+            raise SchemaError(f"{where} names an item type the project does not "
+                              f"declare — the types are {sorted(declared_types)}")
+        if not isinstance(body, dict):
+            raise SchemaError(f"{where} must be a table with roles and/or signatures")
+        unknown = set(body) - {"roles", "signatures"}
+        if unknown:
+            raise SchemaError(f"{where} declares unknown key(s) {sorted(unknown)} — "
+                              "the keys are 'roles' and 'signatures'")
+        want = body.get("roles", [])
+        if not isinstance(want, list) or not all(isinstance(r, str) for r in want):
+            raise SchemaError(f"{where} roles must be a list of role names, not {want!r}")
+        for r in want:
+            if r not in roles:
+                raise SchemaError(f"{where} names the role '{r}', which [ratify.roles] "
+                                  f"does not declare — the roles are {sorted(roles)}")
+        n = body.get("signatures", 1)
+        if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+            raise SchemaError(f"{where} signatures must be a whole number of at least 1, "
+                              f"not {n!r}")
+        out[tname] = Requirement(roles=tuple(dict.fromkeys(want)), signatures=n)
+    return out
+
+
 @dataclass
 class Schema:
     name: str
@@ -146,6 +239,14 @@ class Schema:
     # The link types a ratification covers (SR-0242). Empty — the default, and
     # every existing project's behaviour — means no signature covers a link.
     signed_link_types: frozenset[str] = frozenset()
+    # The roles people may sign in (SR-0257): role name -> the stable identifiers
+    # of the people who hold it. Empty — the default, and every existing project —
+    # and the project is signed as before: one signature from anyone ratifies, and
+    # no signature names a role.
+    roles: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # What each kind of item requires before it is ratified (SR-0258), by type. A
+    # type absent here requires one signature from anyone.
+    requirements: dict[str, Requirement] = field(default_factory=dict)
     # Whether items of a type are normative (SR-0201): the flag `tl new` writes
     # on an item is the kind's, not the command's. Only types that DECLARE the
     # key are here. An undeclared type births items normative, as before, and is
@@ -262,11 +363,11 @@ class Schema:
         ratify_cfg = config.get("ratify") or {}
         if not isinstance(ratify_cfg, dict):
             raise SchemaError("[ratify] must be a table")
-        unknown = set(ratify_cfg) - {"moves_status", "signed_links"}
+        unknown = set(ratify_cfg) - {"moves_status", "signed_links", "roles", "requires"}
         if unknown:
             raise SchemaError(
                 f"[ratify] declares unknown key(s) {sorted(unknown)} — the keys "
-                "are 'moves_status' and 'signed_links'")
+                "are 'moves_status', 'signed_links', 'roles' and 'requires'")
         ratify_moves_status = ratify_cfg.get("moves_status", True)
         if not isinstance(ratify_moves_status, bool):
             raise SchemaError(
@@ -280,6 +381,14 @@ class Schema:
                 "[ratify] signed_links must be a list of link type names, e.g. "
                 f'["produces", "uses"], not {signed_links!r}')
         signed_link_types = frozenset(signed_links)
+        # [ratify.roles] and [ratify.requires] — who may sign in what capacity, and
+        # what a kind of item needs before it counts (SR-0257, SR-0258). Under
+        # [ratify] for the reason signed_links is: an older Tool refuses an unknown
+        # key here, so a graph that declares roles cannot be signed by a Tool that
+        # would not honour them.
+        roles = _parse_roles(ratify_cfg.get("roles"))
+        requirements = _parse_requirements(ratify_cfg.get("requires"), roles,
+                                           set(types))
 
         schema = cls(
             name=name, types=types, link_types=link_types, statuses=statuses,
@@ -291,6 +400,7 @@ class Schema:
             coverage=coverage, rule_overrides=rule_overrides,
             docs_paths=docs_paths, ratify_moves_status=ratify_moves_status,
             signed_link_types=signed_link_types,
+            roles=roles, requirements=requirements,
             type_normative=type_normative,
         )
         schema._check_consistency()
@@ -487,3 +597,14 @@ class Schema:
         if strict and sev == WARNING:
             return ERROR
         return sev
+
+    def requirement(self, item_type: str) -> Requirement:
+        """What an item of ``item_type`` needs before it counts as ratified
+        (SR-0258): the declared requirement, else one signature from anyone."""
+        return self.requirements.get(item_type, ANY_SIGNATURE)
+
+    def roles_of(self, identifier: str | None) -> list[str]:
+        """The declared roles ``identifier`` holds, in declaration order."""
+        if not identifier:
+            return []
+        return [role for role, members in self.roles.items() if identifier in members]

@@ -21,6 +21,20 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:484ce2705df9f1f7fdb8223ef9c6c0c516a1c808abb8f0f24c2a22024eed3b52
-  ratified_revision: 426061478431a73a9b643032f658bb0c2903a2b0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:484ce2705df9f1f7fdb8223ef9c6c0c516a1c808abb8f0f24c2a22024eed3b52
+  revision: 426061478431a73a9b643032f658bb0c2903a2b0
+  content:
+    type: system_requirement
+    text: When the Tool declines to load a project because the on-disk format major
+      differs from the major it implements, the refusal shall name the version of
+      the Tool that refused and the path it was loaded from, alongside both majors
+      and the project it read. Where the remedy is to upgrade the Tool, the refusal
+      shall give an upgrade command matching how that copy was installed — a pipx
+      command where the Tool runs from a pipx environment, otherwise an install directed
+      at the running interpreter.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

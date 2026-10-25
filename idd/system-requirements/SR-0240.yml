@@ -31,9 +31,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f085e7877b5bacaeb8e65d41254f85b4343d811e260906c4e160dd975bac1aa4
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f085e7877b5bacaeb8e65d41254f85b4343d811e260906c4e160dd975bac1aa4
+  content:
     type: system_requirement
     text: 'When the Tool checks a project that declares sources, it shall report
       every problem found while loading the consumer and each source: a prefix declared
@@ -47,3 +48,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: af0c9b017957f9c8ad04373bceac8ada85644a1e

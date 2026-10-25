@@ -33,9 +33,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d4e7b8fd802187227dba49369fd1298f0185835dca6366590f9895d973a705dc
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d4e7b8fd802187227dba49369fd1298f0185835dca6366590f9895d973a705dc
+  content:
     type: system_requirement
     text: A project may declare, under [ratify.roles], each role by name with the
       stable identifiers (SR-0157) of the people who hold it. The Tool shall refuse
@@ -47,3 +48,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

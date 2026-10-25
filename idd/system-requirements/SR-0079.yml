@@ -16,7 +16,20 @@ attrs:
   origin: human
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:127a078b4a273033330bd2e437ec84b02c55b612f38c63537868ded6054fc7eb
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:127a078b4a273033330bd2e437ec84b02c55b612f38c63537868ded6054fc7eb
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The CLI shall provide a query command (alias ls) that lists the items matching
+      an SR-0045 filter expression over type, status, register, attributes, normative
+      flag, and text. It shall print each match as UID, type/status, and title, or
+      emit the full items as JSON with --format json, and report the match count
+      — so users can find requirements by attribute and status without external tools.
+      A malformed expression shall produce an actionable error and a usage exit code.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

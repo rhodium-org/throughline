@@ -410,7 +410,7 @@ def test_compose_ratify_resolves_cross_source_grounding(consumer_dir, capsys):
     assert "SR-0002 ratified by tester" in capsys.readouterr().out
     text = p.read_text(encoding="utf-8")
     assert "status: ratified" in text
-    assert "ratified_by: tester" in text
+    assert "by: tester" in text
 
 
 def test_compose_ratify_binds_the_signature_to_the_content(consumer_dir, capsys):
@@ -421,7 +421,7 @@ def test_compose_ratify_binds_the_signature_to_the_content(consumer_dir, capsys)
     p = _write_sr(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")])
     assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "tester"]) == 0
     capsys.readouterr()
-    assert "ratified_fingerprint:" in p.read_text(encoding="utf-8")
+    assert "fingerprint:" in p.read_text(encoding="utf-8")
     assert tlc_main(["-C", str(consumer_dir), "check", "--base", "", "--strict"]) == 0
     assert "ratified-stale" not in capsys.readouterr().out
 
@@ -454,7 +454,7 @@ def test_compose_ratify_refuses_to_resign_unchanged_item(consumer_dir, capsys):
     assert rc == 2
     assert "nothing to accept" in capsys.readouterr().err
     text = p.read_text(encoding="utf-8")
-    assert "ratified_by: alice" in text        # the real signatory survives
+    assert "by: alice" in text        # the real signatory survives
     assert "mallory" not in text
 
 
@@ -471,8 +471,8 @@ def test_compose_ratify_forwards_the_correction_flag(consumer_dir, capsys):
                    "--replacing"])
     assert rc == 0, capsys.readouterr().err
     text = p.read_text(encoding="utf-8")
-    assert "ratified_by: alice" in text
-    assert "ratified_supersedes: aalice" in text   # the correction names what it replaced
+    assert "by: alice" in text
+    assert "supersedes: aalice" in text   # the correction names what it replaced
 
 
 def test_compose_ratify_restamps_once_the_content_moves(consumer_dir, capsys):
@@ -481,14 +481,14 @@ def test_compose_ratify_restamps_once_the_content_moves(consumer_dir, capsys):
     p = _write_sr(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")])
     assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "alice"]) == 0
     first = [ln for ln in p.read_text(encoding="utf-8").splitlines()
-             if "ratified_fingerprint:" in ln][0]
+             if "fingerprint:" in ln][0]
     p.write_text(p.read_text(encoding="utf-8").replace(
         "A consumer clause used to exercise the ratify gate.",
         "The consumer shall do something materially different."), encoding="utf-8")
     capsys.readouterr()
     assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "bob"]) == 0
     text = p.read_text(encoding="utf-8")
-    assert "ratified_by: bob" in text
+    assert "by: bob" in text
     assert first not in text                   # bound to the new wording, not the old
 
 
@@ -546,9 +546,9 @@ def test_compose_migrate_binds_a_record_grounded_through_a_source(consumer_dir, 
     assert "grounded through a composed source" in out
     assert "SR-0002 = sha256:" in out
     text = p.read_text(encoding="utf-8")
-    assert "ratified_fingerprint: sha256:" in text
-    assert "ratified_backfilled: true" in text
-    assert "ratified_by: tester" in text          # reused verbatim, never reattributed
+    assert "fingerprint: sha256:" in text
+    assert "backfilled: true" in text
+    assert "by: tester" in text          # reused verbatim, never reattributed
 
 
 def test_compose_migrate_still_declines_what_core_would_refuse(consumer_dir, capsys):
@@ -557,7 +557,7 @@ def test_compose_migrate_still_declines_what_core_would_refuse(consumer_dir, cap
     p = _unbound_record(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")],
                         ambiguous="true")
     assert tlc_main(["-C", str(consumer_dir), "migrate"]) == 0
-    assert "ratified_fingerprint" not in p.read_text(encoding="utf-8")
+    assert "fingerprint" not in p.read_text(encoding="utf-8")
     assert "grounded through a composed source" not in capsys.readouterr().out
 
 
@@ -583,13 +583,13 @@ def test_compose_migrate_upgrades_before_it_can_consult_the_union(consumer_dir, 
     p = _unbound_record(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")])
     cfg = consumer_dir / "throughline.toml"
     cfg.write_text(cfg.read_text(encoding="utf-8").replace(
-        "format_version = 3", "format_version = 2"), encoding="utf-8")
+        "format_version = 4", "format_version = 2"), encoding="utf-8")
 
     assert tlc_main(["-C", str(consumer_dir), "migrate"]) == 0
     out = capsys.readouterr().out
-    assert "migrated project from format version 2 to 3" in out
+    assert "migrated project from format version 2 to 4" in out
     assert "grounded through a composed source" in out
-    assert "ratified_fingerprint: sha256:" in p.read_text(encoding="utf-8")
+    assert "fingerprint: sha256:" in p.read_text(encoding="utf-8")
 
 
 def test_compose_migrate_passthrough_without_sources(source_dir, capsys):
@@ -597,7 +597,7 @@ def test_compose_migrate_passthrough_without_sources(source_dir, capsys):
     # the local graph, and says nothing about composition (SR-0003).
     assert tlc_main(["-C", str(source_dir), "migrate"]) == 0
     out = capsys.readouterr().out
-    assert "already at format version 3" in out
+    assert "already at format version 4" in out
     assert "composed source" not in out
 
 
@@ -1046,8 +1046,8 @@ def test_compose_ratify_takes_several_items_over_one_union(consumer_dir, capsys)
     assert rc == 0
     assert capsys.readouterr().out.splitlines() == [
         "SR-0003 ratified by tester", "SR-0002 ratified by tester"]
-    assert "ratified_by: tester" in a.read_text(encoding="utf-8")
-    assert "ratified_by: tester" in b.read_text(encoding="utf-8")
+    assert "by: tester" in a.read_text(encoding="utf-8")
+    assert "by: tester" in b.read_text(encoding="utf-8")
 
 
 def test_compose_ratify_refuses_the_whole_run_before_writing_anything(consumer_dir, capsys):
@@ -1057,13 +1057,13 @@ def test_compose_ratify_refuses_the_whole_run_before_writing_anything(consumer_d
     rc = tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "SR-0099", "--by", "tester"])
     assert rc == 2
     assert "SR-0099 does not exist" in capsys.readouterr().err
-    assert "ratified_by" not in a.read_text(encoding="utf-8")
+    assert "ratifications" not in a.read_text(encoding="utf-8")
     b = _write_sr(consumer_dir, "SR-0003", [("SR-0999", "derives_from")])  # ungrounded
     rc = tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "SR-0003", "--by", "tester"])
     assert rc == 2
     assert "nothing in this run was ratified" in capsys.readouterr().err
-    assert "ratified_by" not in a.read_text(encoding="utf-8")
-    assert "ratified_by" not in b.read_text(encoding="utf-8")
+    assert "ratifications" not in a.read_text(encoding="utf-8")
+    assert "ratifications" not in b.read_text(encoding="utf-8")
 
 
 # --- birth through core (SR-0047, throughline SR-0205) ------------------------
@@ -1173,7 +1173,7 @@ def test_compose_ratify_stops_at_a_signed_link_that_moved(consumer_dir, capsys):
     p = _write_sr(consumer_dir, "SR-0002", [("toy:INT-0001", "derives_from")])
     assert tlc_main(["-C", str(consumer_dir), "ratify", "SR-0002", "--by", "alice"]) == 0
     assert "target: toy:INT-0001" in p.read_text(encoding="utf-8").split(
-        "ratified_links:")[1]
+        "ratifications:")[1]
     capsys.readouterr()
     assert tlc_main(["-C", str(consumer_dir), "check", "--base", ""]) == 0
     assert "ratified-stale" not in capsys.readouterr().out

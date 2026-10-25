@@ -32,9 +32,10 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:905b7047415469a4b81d8c300d15d9dc21c2afd10f42cb05899bf802ef4c9686
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:905b7047415469a4b81d8c300d15d9dc21c2afd10f42cb05899bf802ef4c9686
+  content:
     type: system_requirement
     text: tl schema shall gain the nouns role and requires, so that a role is added
       or removed, a person added to or removed from a role, and a type's requirement
@@ -46,3 +47,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

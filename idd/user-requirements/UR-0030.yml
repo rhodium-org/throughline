@@ -32,6 +32,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5002c027f54c4b5029ed9242903aded2293446ac9e391ee3aee3160c4bc75624
-  ratified_revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:5002c027f54c4b5029ed9242903aded2293446ac9e391ee3aee3160c4bc75624
+  revision: 11a1d3a786e70a2a561820891960691fb5ce3ae3
+  content:
+    type: user_requirement
+    text: Where a ratification record names someone other than the person who took
+      accountability for the item, and that record has not yet been published to
+      the project's history, a user shall be able to replace it with a correct one
+      through the Tool. A record that has been published shall not be replaceable
+      by any operation. A correction shall name the identity it replaced, rather
+      than presenting itself as the original record.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

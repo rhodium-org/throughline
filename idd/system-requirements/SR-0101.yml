@@ -26,7 +26,25 @@ attrs:
   origin: human
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:6b4384c61935dd3bac85ec3d269185ec15d85b7884a188ea9e497817140518f2
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:6b4384c61935dd3bac85ec3d269185ec15d85b7884a188ea9e497817140518f2
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: Each register's UID prefix shall be unique across the project. The register
+      new command shall refuse to create a register whose prefix another register
+      already declares, changing nothing and exiting with a usage error; and validation
+      shall report a prefix-collision error when two registers on disk declare the
+      same prefix. A prefix names the register that owns a UID namespace (SR-0002),
+      so if two registers share one their UID numbering overlaps and the loader would
+      silently drop one register's items — a data-loss trap — therefore the clash
+      shall fail fast rather than corrupt the graph. Registers remain orthogonal
+      to item types (a register owns a prefix and numbering, not a type), so this
+      rule constrains prefixes only and never restricts which item types a register
+      may contain.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -35,6 +35,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1b6058eadc4b27e03e3dda034de7c1700f038fae022884ef7f390ae0c710a11e
-  ratified_revision: 3a86fb76dec2937b536395d7f6aeda563577c195
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1b6058eadc4b27e03e3dda034de7c1700f038fae022884ef7f390ae0c710a11e
+  revision: 3a86fb76dec2937b536395d7f6aeda563577c195
+  content:
+    type: system_requirement
+    text: On an interactive terminal, ratify shall render the target item — its UID,
+      type, status, title, text, rationale, normative attributes, and each grounding
+      link with its target's title — and shall then require the ratifier to confirm
+      before the record is written, whether or not the ratifier was named on the
+      command line. It shall refuse an item it cannot ratify before it renders or
+      asks anything, rather than after. Where there is no interactive terminal it
+      shall neither render nor confirm, and the non-interactive rules already governing
+      ratify stand.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -37,6 +37,22 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:703311c0ca55f02d9a67f579e1aefc86ac015e69fe5c7347512ed2e5423e0714
-  ratified_revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:703311c0ca55f02d9a67f579e1aefc86ac015e69fe5c7347512ed2e5423e0714
+  revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+  content:
+    type: system_requirement
+    text: The agent-facing brief shall describe every mechanic of the Tool an agent
+      must be aware of to work correctly — each command it may need, including those
+      that repair, invalidate, review or remove; each configured vocabulary that
+      governs what it may write; and any behaviour that would surprise an agent that
+      had read only the rest of the brief. The brief shall derive that coverage from
+      the Tool's own command surface and the loaded configuration wherever it can,
+      rather than from a list maintained by hand, so that a capability the Tool gains
+      is described without anyone remembering to describe it. Where a mechanic cannot
+      be derived, the omission shall be made to fail a check rather than pass silently.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

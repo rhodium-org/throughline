@@ -12,7 +12,19 @@ links:
   type: implements
 attrs:
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:f3b982f6b569a3643aebd132b6b9038978cec47012b69caedd9c847f81e7cdae
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:f3b982f6b569a3643aebd132b6b9038978cec47012b69caedd9c847f81e7cdae
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: Every operation that changes an item's status shall validate the move against
+      the project's configured status transitions and refuse a move the transitions
+      do not permit, reporting a clear, actionable error. No operation shall write
+      a status the transition table forbids and rely on a later validation pass to
+      detect it.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

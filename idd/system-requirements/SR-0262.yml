@@ -25,9 +25,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:69c377c797036e0d58fc278aeee808c5a5ed270e231b11d96e0092f726074508
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:69c377c797036e0d58fc278aeee808c5a5ed270e231b11d96e0092f726074508
+  content:
     type: system_requirement
     text: Where an item holds more than one signature, withdraw shall require the
       signer whose signature is withdrawn to be named by identifier, and shall remove
@@ -40,3 +41,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

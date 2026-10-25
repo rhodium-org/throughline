@@ -11,7 +11,16 @@ links:
 attrs:
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:7e078d4537eefca69e5bd4eeb3d632a572f0a5ced72aeb77612b0d8cb1437275
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:7e078d4537eefca69e5bd4eeb3d632a572f0a5ced72aeb77612b0d8cb1437275
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: Given identical input state, publish/export outputs shall be byte-identical
+      (no embedded timestamps by default) to keep artifacts diffable and builds reproducible.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

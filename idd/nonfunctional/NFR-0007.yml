@@ -10,7 +10,15 @@ links:
 attrs:
   priority: should
   verification: analysis
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:def01898af4c778e71802a6da833f78b5daea917de7f73557b5926b259b97502
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:def01898af4c778e71802a6da833f78b5daea917de7f73557b5926b259b97502
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: Peak memory for the reference project shall not exceed 1 GB.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

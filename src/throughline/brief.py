@@ -215,7 +215,35 @@ def _ctx_grounding(schema) -> str:
             "ratification covers an item's links of these types, so adding, "
             "removing or retargeting one makes the signature stale until a human "
             "ratifies the item again.")
+    if schema.roles:
+        held = "; ".join(f"`{role}` held by {', '.join(members)}"
+                         for role, members in schema.roles.items())
+        out.append(
+            f"- **Roles** (`[ratify.roles]`): {held} — a signature names the role it "
+            "is given in (`tl ratify <UID> --by <who> --by-id <scheme:value> --as "
+            "<role>`), and the signer's identifier must hold that role. More than "
+            "one person may sign an item, one signature each.")
+        if schema.requirements:
+            needs = "; ".join(
+                f"`{t}` needs " + _describe_requirement(req)
+                for t, req in schema.requirements.items())
+            out.append(
+                f"- **What a kind of item requires before it counts as ratified** "
+                f"(`[ratify.requires]`): {needs}. A kind not listed needs one "
+                "signature in a declared role. Until the requirement is met the "
+                "signatures are recorded, the status does not move, and `tl check` "
+                "reports `awaiting-signatures`.")
     return "\n".join(out)
+
+
+def _describe_requirement(req) -> str:
+    parts = []
+    if req.roles:
+        parts.append("a signature in " + " and ".join(f"`{r}`" for r in req.roles))
+    if req.signatures > 1 or not req.roles:
+        parts.append(f"at least {req.signatures} signature"
+                     f"{'s' if req.signatures != 1 else ''} in declared roles")
+    return " and ".join(parts)
 
 
 def _ctx_coverage(schema) -> str:
@@ -275,7 +303,7 @@ _CTX_COMMAND_USAGE = {
     "apply": "tl apply <FILE> [--dry-run] [--format json] | tl apply --describe",
     "unlink": "tl unlink <SRC> <DST> [--type <kind>]",
     "check": "tl check [--strict] [--format json] [--base REF | --base-dir DIR]",
-    "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>]",
+    "ratify": "tl ratify <UID> --by <who> [--by-id <scheme:value>] [--as <role>]",
     "trace": "tl trace <UID> [--direction in|out]",
     "blast": "tl blast <UID>",
     "subgraph": "tl subgraph <UID> [--depth N] [--link-type KIND] [--format json]",

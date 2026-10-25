@@ -133,9 +133,9 @@ def test_ratify_records_the_signed_links_sorted_and_without_stamps(tmp_path):
     assert _ratify(root) == 0
     item = _req(root)
     # The grounding link is not of a signed type, so it is not held.
-    assert item.attrs[LINKS_ATTR] == [{"type": "produces", "target": "REQ-0002"},
+    assert item.ratifications[-1]["links"] == [{"type": "produces", "target": "REQ-0002"},
                                       {"type": "uses", "target": "REQ-0003"}]
-    assert item.attrs["ratified_fingerprint"] == before
+    assert item.ratifications[-1]["fingerprint"] == before
 
 
 def test_the_order_of_the_links_does_not_change_the_record_or_the_signature(tmp_path):
@@ -144,7 +144,7 @@ def test_the_order_of_the_links_does_not_change_the_record_or_the_signature(tmp_
     assert _link(root, "REQ-0003") == 0
     assert _ratify(root) == 0
     item = _req(root)
-    record = list(item.attrs[LINKS_ATTR])
+    record = list(item.ratifications[-1]["links"])
     item.links.reverse()
     write_item(item)
     assert _stale(root) == []
@@ -154,10 +154,10 @@ def test_the_order_of_the_links_does_not_change_the_record_or_the_signature(tmp_
 
 def test_an_item_with_no_signed_link_gets_no_record_and_an_old_one_is_removed(tmp_path):
     root = _signed(tmp_path)
-    assert LINKS_ATTR in _req(root).attrs
+    assert "links" in _req(root).ratifications[-1]
     assert _unlink(root, "REQ-0002") == 0
     assert _ratify(root, "--accept-change") == 0
-    assert LINKS_ATTR not in _req(root).attrs
+    assert "links" not in _req(root).ratifications[-1]
     assert _stale(root) == []
 
 
@@ -167,13 +167,13 @@ def test_only_ratify_writes_the_record(tmp_path):
                  f"{LINKS_ATTR}=[]"]) != 0
     assert _cli(["-C", root, "withdraw", "REQ-0001", "--reason", "signed in error",
                  "--by", "Ada Lovelace"]) == 0
-    assert LINKS_ATTR not in _req(root).attrs
+    assert not _req(root).ratifications
 
 
 def test_migrate_never_writes_a_link_record(tmp_path):
     root = _signed(tmp_path)
     item = _req(root)
-    del item.attrs[LINKS_ATTR]              # a signature made before the record
+    del item.ratifications[-1]["links"]     # a signature made before the record
     write_item(item)
     path = root / "requirements" / "REQ-0001.yml"
     before = path.read_text(encoding="utf-8")
@@ -254,7 +254,7 @@ def test_the_worklist_and_the_progress_count_agree_with_the_finding(tmp_path):
 def test_a_malformed_link_record_is_an_error(tmp_path):
     root = _signed(tmp_path)
     item = _req(root)
-    item.attrs[LINKS_ATTR] = ["produces REQ-0002"]
+    item.ratifications[-1]["links"] = ["produces REQ-0002"]
     write_item(item)
     findings = [f for f in validate(load_project(root)) if f.uid == "REQ-0001"]
     (finding,) = [f for f in findings if f.rule.startswith("ratified-")]
@@ -298,7 +298,7 @@ def test_ratify_refuses_a_link_change_nobody_was_shown_then_accepts_it(tmp_path,
     assert _ratify(root) != 0
     assert "--accept-change" in capsys.readouterr().err
     assert _ratify(root, "--accept-change") == 0
-    assert _req(root).attrs[LINKS_ATTR] == [
+    assert _req(root).ratifications[-1]["links"] == [
         {"type": "produces", "target": "REQ-0002"},
         {"type": "produces", "target": "REQ-0003"}]
     assert _stale(root) == []
@@ -323,7 +323,7 @@ def test_link_and_unlink_say_when_the_signature_is_stale(tmp_path, capsys):
 def _source(signed: list[str]) -> Project:
     """A source graph holding one item signed with ``uses -> Q-0001`` and
     ``cites -> law:SEC-0001`` into a source of its own."""
-    config = {"project": {"name": "src", "format_version": 3},
+    config = {"project": {"name": "src", "format_version": 4},
               "ratify": {"signed_links": signed}}
     project = Project(path=".", config=config)
     reg = Register(prefix="QTY", title="q")
@@ -331,11 +331,11 @@ def _source(signed: list[str]) -> Project:
     reg.items["QTY-0002"] = Item(uid="QTY-0002", type="thing", text="two")
     signed_item = Item(uid="QTY-0003", type="thing", text="three", links=[
         Link(target="QTY-0001", type="uses"), Link(target="law:SEC-0001", type="cites")])
-    signed_item.attrs.update({
-        "ratified_by": "Ada Lovelace",
-        "ratified_fingerprint": fingerprint(signed_item, project.schema),
-        LINKS_ATTR: [{"type": "cites", "target": "law:SEC-0001"},
-                     {"type": "uses", "target": "QTY-0001"}]})
+    signed_item.ratifications.append({
+        "by": "Ada Lovelace",
+        "fingerprint": fingerprint(signed_item, project.schema),
+        "links": [{"type": "cites", "target": "law:SEC-0001"},
+                  {"type": "uses", "target": "QTY-0001"}]})
     reg.items["QTY-0003"] = signed_item
     project.registers["QTY"] = reg
     return project
@@ -350,7 +350,7 @@ def _law() -> Project:
 
 
 def _consumer(signed: list[str]) -> Project:
-    return Project(path=".", config={"project": {"name": "c", "format_version": 3},
+    return Project(path=".", config={"project": {"name": "c", "format_version": 4},
                                      "ratify": {"signed_links": signed}})
 
 
@@ -366,7 +366,7 @@ def test_a_source_signature_reads_as_current_however_it_is_composed(
                         labels={namespace: {"law": law_ns}})
     borrowed = [it for it in union.project.items() if it.authored_uid == "QTY-0003"][0]
     assert borrowed.links[0].target != "QTY-0001"          # rewritten in the union
-    assert link_drift(borrowed, union.project.schema) == ([], [])
+    assert link_drift(borrowed, union.project.schema, borrowed.ratifications[-1]) == ([], [])
     assert not signature_is_stale(union.project.schema, borrowed)
 
 
@@ -376,7 +376,7 @@ def test_a_link_retargeted_in_the_source_is_stale_in_the_consumer():
     union = build_union(_consumer([]), {"src": source, "law": _law()},
                         labels={"src": {"law": "law"}})
     borrowed = [it for it in union.project.items() if it.authored_uid == "QTY-0003"][0]
-    assert link_drift(borrowed, union.project.schema) == (
+    assert link_drift(borrowed, union.project.schema, borrowed.ratifications[-1]) == (
         [("uses", "QTY-0002")], [("uses", "QTY-0001")])
 
 
@@ -385,12 +385,12 @@ def test_a_local_item_signed_with_a_qualified_target_is_current_in_the_union():
     reg = Register(prefix="RUL", title="r")
     item = Item(uid="RUL-0001", type="thing", text="local",
                 links=[Link(target="law:SEC-0001", type="cites")])
-    item.attrs.update({"ratified_by": "Ada Lovelace",
-                       "ratified_fingerprint": fingerprint(item, consumer.schema),
-                       LINKS_ATTR: [{"type": "cites", "target": "law:SEC-0001"}]})
+    item.ratifications.append({"by": "Ada Lovelace",
+                               "fingerprint": fingerprint(item, consumer.schema),
+                               "links": [{"type": "cites", "target": "law:SEC-0001"}]})
     reg.items["RUL-0001"] = item
     consumer.registers["RUL"] = reg
     union = build_union(consumer, {"law": _law()})
     local = union.project.get("RUL-0001")
     assert local.links[0].target == "LAWSEC-0001"
-    assert link_drift(local, union.project.schema) == ([], [])
+    assert link_drift(local, union.project.schema, local.ratifications[-1]) == ([], [])

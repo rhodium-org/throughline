@@ -21,9 +21,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:4aeca1e686672c3aa262d0f75652d44dfb28f8e675ddf4beafb2fba2eb7941d2
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:4aeca1e686672c3aa262d0f75652d44dfb28f8e675ddf4beafb2fba2eb7941d2
+  content:
     type: user_requirement
     text: Every ratification and every withdrawal the Tool writes shall record when
       it was made, so that the order and timing of signatures can be read from the
@@ -32,3 +33,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

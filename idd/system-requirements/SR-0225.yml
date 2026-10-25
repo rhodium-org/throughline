@@ -26,5 +26,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:ffd7da4b7ee642d5b6eda7d0ccee0f9f648ca839a7c292e14d0539d170ca0739
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:ffd7da4b7ee642d5b6eda7d0ccee0f9f648ca839a7c292e14d0539d170ca0739
+  content:
+    type: system_requirement
+    text: 'The command line shall obtain everything it does from the names the package
+      exports: it shall read its arguments, call those functions, and render what
+      they return. No other program shall need to import the command-line module
+      to reach an operation or its result.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 2298db459d5d2abc270f28915dba9ee328bb078b

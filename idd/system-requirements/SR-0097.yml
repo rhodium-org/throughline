@@ -18,7 +18,18 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:90e09a148ff3e230b4a6ab1266879c348e77baca08b3d825c42f921908d8643e
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:90e09a148ff3e230b4a6ab1266879c348e77baca08b3d825c42f921908d8643e
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool's default project scaffold shall include a non_goal root item
+      type, self-justifying like other roots, and non_goals shall appear in the agent-facing
+      context brief so deliberately-excluded scope is visible to humans and agents.
+      The Tool shall not attempt to automatically detect items that violate a non_goal.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

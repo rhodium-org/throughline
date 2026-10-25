@@ -30,9 +30,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:bb8b3de3c750975bfaad1ff9217d4029b9cddea5858c12ce5d7f6d9b5bf75aa5
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:bb8b3de3c750975bfaad1ff9217d4029b9cddea5858c12ce5d7f6d9b5bf75aa5
+  content:
     type: user_requirement
     text: Where a project says so, an item shall be able to carry a ratification
       from more than one person, each signing in a role the project declares, and
@@ -43,3 +44,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

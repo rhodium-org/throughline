@@ -36,5 +36,20 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0ebee851dea6a52ca7fbae34b2988cd86ce15883e8e50b36940022e423555056
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0ebee851dea6a52ca7fbae34b2988cd86ce15883e8e50b36940022e423555056
+  content:
+    type: system_requirement
+    text: The Tool shall give an item everything it receives at birth through one
+      function, and shall offer that function through the Python API to any tool
+      that creates items in a throughline project. The function shall apply the birth
+      status the origin selects (a machine origin enters the proposed status), the
+      attributes the author supplied, the defaults the schema declares, and the normative
+      flag the item's type declares. `tl new` shall create items through it and nothing
+      else.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: e178936ad3b6b98be27a755d9daa7024c75068a2

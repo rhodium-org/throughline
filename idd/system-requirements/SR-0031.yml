@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:4e8eda2bf38a2b9034d6b7afaae01b687b5caf2673036305805e945db82b5cbe
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:4e8eda2bf38a2b9034d6b7afaae01b687b5caf2673036305805e945db82b5cbe
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: 'The Tool shall support links to external targets: URLs and repository
+      file paths (optionally with line ranges).'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

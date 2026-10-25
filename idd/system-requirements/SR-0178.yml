@@ -34,6 +34,17 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:3d623268f1f939fd1839b3ef07f387a76c39ab3fef056a4789163e1a31d9ff10
-  ratified_revision: 0bbee7f1782838d5af31857dfba53672df31afc4
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:3d623268f1f939fd1839b3ef07f387a76c39ab3fef056a4789163e1a31d9ff10
+  revision: 0bbee7f1782838d5af31857dfba53672df31afc4
+  content:
+    type: system_requirement
+    text: When judging which statuses can reach the suspect status, the Tool shall
+      treat as occupied only the statuses held by items authored in the project itself,
+      and shall disregard the statuses of items a composing tool has merged in from
+      a source.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

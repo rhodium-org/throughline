@@ -12,12 +12,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .schema import Schema
+from .signatures import RATIFICATIONS, WITHDRAWALS, lift_legacy
 
 # Built-in core fields every item reserves (SR-0022). Anything else a project
-# defines lives under ``attrs`` (SR-0020).
+# defines lives under ``attrs`` (SR-0020). The ratification record is two of them
+# since format 4 (SR-0254): the signatures an item carries and the withdrawals.
 CORE_FIELDS = [
     "uid", "type", "status", "title", "text", "rationale",
-    "normative", "derived", "order", "links", "attrs", "reviewed",
+    "normative", "derived", "order", "links", "attrs",
+    RATIFICATIONS, WITHDRAWALS, "reviewed",
     "created", "modified", "deleted",
 ]
 
@@ -56,6 +59,11 @@ class Item:
     order: float | None = None
     links: list[Link] = field(default_factory=list)
     attrs: dict = field(default_factory=dict)
+    # The ratification record (SR-0254): one signature per person who has signed,
+    # oldest first, and one record per signature withdrawn (SR-0262). Written only
+    # by ratify, withdraw and migration (SR-0263); see :mod:`signatures`.
+    ratifications: list[dict] = field(default_factory=list)
+    withdrawals: list[dict] = field(default_factory=list)
     reviewed: str | None = None       # own fingerprint at last review (SR-0038)
     created: str | None = None
     modified: str | None = None
@@ -118,15 +126,44 @@ class Item:
                               stamp=l.get("stamp")))
         return links, errors
 
+    @staticmethod
+    def _parse_records(raw: object, name: str) -> tuple[list[dict], list[str]]:
+        """Parse ``ratifications`` or ``withdrawals`` defensively (SR-0134): a list
+        of mappings, each kept as written. Anything else is a named finding."""
+        if raw is None:
+            return [], []
+        if not isinstance(raw, list):
+            return [], [f"'{name}' must be a list, got {type(raw).__name__}"]
+        records: list[dict] = []
+        errors: list[str] = []
+        for i, entry in enumerate(raw, start=1):
+            if not isinstance(entry, dict):
+                errors.append(f"{name} entry #{i} is not a mapping")
+                continue
+            records.append(entry)
+        return records, errors
+
     @classmethod
     def from_dict(cls, d: dict, path: Path | None = None) -> "Item":
         links, load_errors = cls._parse_links(d.get("links", []) or [])
+        attrs = d.get("attrs", {}) or {}
+        # A format-3 flat record is lifted into the list as the item is read
+        # (SR-0255), so an older graph, a file re-read from history and a file an
+        # older Tool wrote all present one shape. The lifted entry is placed first:
+        # it is the oldest a file can hold. Nothing is invented by the lift.
+        lifted, withdrawn = lift_legacy(attrs) if isinstance(attrs, dict) else ([], [])
+        ratifications, errs = cls._parse_records(d.get(RATIFICATIONS), RATIFICATIONS)
+        load_errors += errs
+        withdrawals, errs = cls._parse_records(d.get(WITHDRAWALS), WITHDRAWALS)
+        load_errors += errs
         item = cls(
             uid=d["uid"], type=d["type"], status=d.get("status", "draft"),
             title=d.get("title", ""), text=d.get("text", ""),
             rationale=d.get("rationale", ""),
             normative=d.get("normative", True), derived=d.get("derived", False),
-            order=d.get("order"), links=links, attrs=d.get("attrs", {}) or {},
+            order=d.get("order"), links=links, attrs=attrs,
+            ratifications=lifted + ratifications,
+            withdrawals=withdrawn + withdrawals,
             reviewed=d.get("reviewed"), created=d.get("created"),
             modified=d.get("modified"), deleted=d.get("deleted"),
             extra={k: v for k, v in d.items() if k not in CORE_FIELDS},
@@ -153,6 +190,10 @@ class Item:
             d["links"] = [l.to_dict() for l in self.links]
         if self.attrs:
             d["attrs"] = self.attrs
+        if self.ratifications:
+            d[RATIFICATIONS] = self.ratifications
+        if self.withdrawals:
+            d[WITHDRAWALS] = self.withdrawals
         if self.reviewed is not None:
             d["reviewed"] = self.reviewed
         if self.created:

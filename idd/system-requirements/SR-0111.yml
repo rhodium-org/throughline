@@ -21,7 +21,23 @@ attrs:
   origin: hybrid
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d43a78f9c41c2ebb3b8337041b5c1350c5f7be9de4752311a9b3d0e3e697330b
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d43a78f9c41c2ebb3b8337041b5c1350c5f7be9de4752311a9b3d0e3e697330b
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: 'The tl:catalog document directive shall render every item matching an
+      SR-0045 filter as a full item block — the same block a tl:item marker produces,
+      with title, text, rationale and attributes — in UID order, the blocks separated
+      by a blank line. Pointed at a catch-all filter it produces a self-maintaining
+      master reference document: every item in the graph, in full, that other narrative
+      documents can cite by UID while showing only limited detail. A filter matching
+      nothing renders a clear placeholder; a malformed filter fails injection. Items
+      a catalogue renders count as published for the coverage rule (SR-0096), because
+      a catalogued item''s full content genuinely appears in a document.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

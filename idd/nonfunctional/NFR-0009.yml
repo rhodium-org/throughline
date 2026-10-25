@@ -12,7 +12,17 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:48188c704a7bc2f8418a8b36a4846890e360305b0e324e144a70f50fecafcca9
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:48188c704a7bc2f8418a8b36a4846890e360305b0e324e144a70f50fecafcca9
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: 'The Tool shall never discard or rewrite user content it does not understand:
+      unknown fields are preserved on read-modify-write, and destructive operations
+      require an explicit flag or run as status changes (SR-0012).'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

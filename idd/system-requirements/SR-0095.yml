@@ -19,7 +19,19 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0455527bd05536468184605bb738ec8933bd174d9d7bfa23351cf9a89ea09e4d
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0455527bd05536468184605bb738ec8933bd174d9d7bfa23351cf9a89ea09e4d
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: 'The Tool shall provide a dedicated command that reports a document as
+      stale when re-rendering its marker regions would change their content (write-then-diff),
+      exiting non-zero so a drifted document fails a CI gate. This staleness check
+      shall NOT run as part of tl check. The command shall be inert for files that
+      contain no tl: markers.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

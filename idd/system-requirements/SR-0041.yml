@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:9be79ddbaad4c85bd81c8efbceafff0bafe4ebea11d8bd356143c0636dfea457
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:9be79ddbaad4c85bd81c8efbceafff0bafe4ebea11d8bd356143c0636dfea457
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: Projects shall be able to set each validation rule to error, warning, or
+      off, and the Tool shall support promoting all warnings to errors for CI.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -34,7 +34,25 @@ attrs:
   origin: human
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:ca3c3910954dc8b7962d40d40ccd5835a4f2fda2a47fa142466f43d7ca48ca1a
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:ca3c3910954dc8b7962d40d40ccd5835a4f2fda2a47fa142466f43d7ca48ca1a
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The predicates by which the Tool recognises a free external reference (SR-0031)
+      and a namespace-qualified reference (SR-0107) shall be part of throughline's
+      public library surface, exported under stable, non-underscore names and covered
+      by the same compatibility promise as the rest of that surface. A library consumer
+      — in practice the composing tool, which must classify every link target the
+      same way the core does before it can prepare a union (NG-0001) — shall obtain
+      that classification by calling the core, not by reimplementing the grammar.
+      The Tool shall keep exactly one definition of each rule — the public predicates
+      are the same functions the internal validation pipeline uses, so a consumer
+      and the core can never disagree about whether a given target is external, namespace-qualified,
+      or an ordinary local UID.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

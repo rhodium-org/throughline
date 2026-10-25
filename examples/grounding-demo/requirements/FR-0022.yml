@@ -7,6 +7,14 @@ normative: true
 links:
 - target: BN-0003
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:052b1cbc96612e043a2f5633082a306266bcb2ee8043a320f7d69d8893ad4553
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:052b1cbc96612e043a2f5633082a306266bcb2ee8043a320f7d69d8893ad4553
+  content:
+    type: requirement
+    text: The system shall walk new users through a 3-step setup.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a

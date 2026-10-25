@@ -13,7 +13,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:43d9dcde41fa3c8195c08d59345913cf93b6964d6bb10ae9d0de718b9fbb7425 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0002 -->
@@ -23,7 +25,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:40008e0d3ca1ede7bfc51a125da71f22aadee887b2091796f11cce81802efc88 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0003 -->
@@ -36,7 +40,9 @@ with `tl docs --check` (SR-0094).
 *Implements:* UR-0015
 *Relates:* SR-0233, NG-0008
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a146e845f10c574b5cfc5496b72a7e86a66e24302599f13cfe46771a2e0a5e25 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 ## Portability and installation
@@ -48,7 +54,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:a966a60c09f4a50de7b6db01020f42923c31d9aac3849d3cec5df7752a89b2b8 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0005 -->
@@ -58,7 +66,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0020
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:c3c0cc49aee52701fb37aa8d3f3ffb1c2714aa0bf157b8ef262dd5d1dc89724e · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: demonstration
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 ## Performance and scale
@@ -70,7 +80,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: analysis · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:422b6e92fddd81709edd05b1c52983764d5149335a8b4d5cda129e2f02c0d67e · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: analysis
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0007 -->
@@ -80,7 +92,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: should · **verification**: analysis · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:def01898af4c778e71802a6da833f78b5daea917de7f73557b5926b259b97502 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: analysis
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0008 -->
@@ -90,7 +104,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: should · **verification**: analysis · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:ca061948113eb5f722c049433e3eb1bb5d4f4b84fb4f16cc4ed285df1808ffa5 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: analysis
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 ## Reliability and data safety
@@ -102,7 +118,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:48188c704a7bc2f8418a8b36a4846890e360305b0e324e144a70f50fecafcca9 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0010 -->
@@ -112,7 +130,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0015
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:53ebdfd93580423eb21d45f2e0d68d5e40f8dab879fd65678a7d3cbfa3d5d92b · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0011 -->
@@ -122,7 +142,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:b280b9f2c4b976bde6a1fafd028ecdaa487ea3ebbe2fc9a77cee027cdf3e888c · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0012 -->
@@ -132,7 +154,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0007
 
-**priority**: should · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:7e078d4537eefca69e5bd4eeb3d632a572f0a5ced72aeb77612b0d8cb1437275 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0022 -->
@@ -144,7 +168,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:2852de555e72c9fedcbf9d7f214d8b7359f4270980ca6f4cfdd76baabc2c5b3b · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 ## Usability and documentation
@@ -157,7 +183,9 @@ with `tl docs --check` (SR-0094).
 *Implements:* UR-0020
 *Relates:* SR-0074
 
-**priority**: must · **verification**: demonstration · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:864985dfb4c48befcf12cbcc02cb9c67e15d9f72d4ab9f4961b131b57f2c71e0 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: demonstration
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0014 -->
@@ -167,7 +195,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:fc502147ae663d3deb905018d03f16729256dfb533366198bdd99a3f1bc11417 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0015 -->
@@ -190,7 +220,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: test · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:49604d8c30b62c23a0a8e12c8ca560a2fd3293885871cf91f56a96c5fa2e95e1 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: test
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0021 -->
@@ -200,7 +232,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0020
 
-**priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:f8d16c7d2dc81636fee05fff258fda0060133a0bc883b75a3c155ccf08ca0e7e · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 ## Quality of implementation
@@ -212,7 +246,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: analysis · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:fa04b7bee603d68b89cd47cacb4932ecd49075cb2dfdcf3c0db89202c012f37d · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: analysis
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0018 -->
@@ -222,7 +258,9 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: must · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:3f1a798a291857143f2c1fc04bb9e8cd7cdeba9a3f314c49cf0f5c23e7b57af9 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: must · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0019 -->
@@ -232,7 +270,9 @@ with `tl docs --check` (SR-0094).
 
 *Implements:* UR-0015
 
-**priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:6e7e9b461e3ab465b7c4c35d6d0cd567e0e3eb908571da1551628432e6caa78f · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
 <!-- tl:item NFR-0020 -->
@@ -242,5 +282,7 @@ with `tl docs --check` (SR-0094).
 
 *Derives from:* BN-0009
 
-**priority**: should · **verification**: inspection · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:343f87023664f04b6d354ae7bd37ee78d455eb72b681948ce4d6f8d18d5c6c39 · **ratified_backfilled**: True · **ratified_revision**: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+**priority**: should · **verification**: inspection
+
+*Ratified by:* Henry Grech-Cini
 <!-- tl:end -->

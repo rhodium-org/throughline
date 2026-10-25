@@ -42,6 +42,26 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5be6278114b3a1d07e69876ce7cc8324420a482f09005fa5c69b8e8e2c79295a
-  ratified_revision: 714872929a1c9f79d756395d949b982b220d2a5c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:5be6278114b3a1d07e69876ce7cc8324420a482f09005fa5c69b8e8e2c79295a
+  revision: e178936ad3b6b98be27a755d9daa7024c75068a2
+  content:
+    type: system_requirement
+    text: '`tl check` shall report, at warning severity, an item whose normative
+      flag differs from what its type declares. A type that declares nothing is judged
+      by neither this rule nor the repair below, so a project that never declared
+      the key is unchanged by upgrading and opts in by declaring it. `tl migrate`
+      shall rewrite such items to the type''s value as an idempotent repair and shall
+      name every item it rewrote. It shall not touch a ratification record: a rewritten
+      item that is ratified becomes ratified-stale, and a person re-ratifies it through
+      `tl ratify`, which shows them that only the flag moved before it asks for their
+      signature. Where a link into a rewritten item carries a stamp equal to the
+      item''s fingerprint before the rewrite, the repair shall refresh that stamp
+      to the fingerprint after it, because the wording the link was confirmed against
+      has not changed; a stamp that already disagreed is left alone. The command
+      shall report how many ratified items now await re-ratification.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

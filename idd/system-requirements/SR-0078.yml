@@ -16,7 +16,20 @@ attrs:
   origin: human
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:9372a977ff049f98562f9b6c80c02915e5fe4f51d89349dc53a57bf1526b30fc
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:9372a977ff049f98562f9b6c80c02915e5fe4f51d89349dc53a57bf1526b30fc
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: By default in text output, the check command shall print a summary of the
+      validated graph — live item counts by type, link counts by type, and grounding
+      health (how many non-root items reach a root and how many delivery roots are
+      served) — so a run communicates what was actually validated, not only an error/warning
+      tally. A --quiet flag shall suppress the summary for CI and scripting. The
+      --format json output is the machine contract and shall be unaffected.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

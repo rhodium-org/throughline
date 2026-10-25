@@ -144,6 +144,18 @@ def default_ratifier(path: str | Path | None = None, *, identity=None) -> str:
         return _FALLBACK
 
 
+def default_identifier(path: str | Path | None = None, *, identity=None) -> str | None:
+    """The identifier to *offer* when none was named in a project that declares
+    roles (SR-0259): the email the repository signs commits with, as an ``email:``
+    identifier, or None when none is configured. As :func:`default_ratifier`, a
+    default a human confirms, never a value written without their assent.
+
+    ``identity`` is the work the host environment does, taken as a parameter
+    (SR-0226), with :func:`git_identity`'s shape."""
+    _, email = (identity or git_identity)(path)
+    return f"email:{email}" if email else None
+
+
 def normalise_identifier(raw: str | None) -> str | None:
     """Check a ratifier identifier and return it, or ``None`` when none was given.
 

@@ -25,6 +25,19 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e0dc508c797759cc05984867dd25254277a144a5861742b435ae4c397adcc6db
-  ratified_revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e0dc508c797759cc05984867dd25254277a144a5861742b435ae4c397adcc6db
+  revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+  content:
+    type: system_requirement
+    text: The Tool shall cache the revision it resolved for a ratification stamp
+      on that record, and shall re-verify a cached revision against the stamp before
+      reusing it, discarding and resolving again where it does not match. `tl migrate`
+      shall populate the cache for records that predate it, and shall report that
+      it has written to those records; a count is sufficient, since a cached revision
+      is re-verified before use and decides nothing on its own.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

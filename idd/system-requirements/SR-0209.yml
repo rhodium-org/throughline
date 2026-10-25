@@ -31,5 +31,22 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:bead03dd012dc68822f763a62cc6ddd8eeaef7c68414623b1b55b29ba39f133b
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:bead03dd012dc68822f763a62cc6ddd8eeaef7c68414623b1b55b29ba39f133b
+  content:
+    type: system_requirement
+    text: 'When check cannot read the status each item had at the baseline, it shall
+      say beside its result which rules were not checked and why: transition legality,
+      where the project declares transitions, and tombstone permanence. The reasons
+      it shall distinguish are that the project is not in a git work tree, that git
+      cannot be run, that the named revision cannot be resolved, and that the caller
+      disabled the baseline. The statement shall not be a finding, so the findings
+      and the exit status are unchanged. A repository with no commits yet shall be
+      read as a baseline in which every item is new, since there is nothing earlier
+      to compare.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: cecde0362d3798ffd027ed9c2aa8ba64aab1fdd3

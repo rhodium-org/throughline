@@ -134,9 +134,9 @@ def test_a_clarified_item_can_be_ratified(graph, capsys):
     assert _cli(["-C", graph, "clarify", "REQ-0001", "--reason", "r",
                  "--by", "Bob"]) == 0
     item = _item(graph, "REQ-0001")
-    assert item.status == "proposed" and "ratified_by" not in item.attrs
+    assert item.status == "proposed" and not item.ratifications
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada"]) == 0
-    assert _item(graph, "REQ-0001").attrs["ratified_by"] == "Ada"
+    assert _item(graph, "REQ-0001").ratifications[-1]["by"] == "Ada"
 
 
 def test_flagging_a_ratified_item_leaves_its_status_and_signature_alone(tmp_path):
@@ -150,17 +150,17 @@ def test_flagging_a_ratified_item_leaves_its_status_and_signature_alone(tmp_path
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.", "--origin",
                  "ai", "--ground", "INT-0001", "--no-interactive"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
-    stamp = _item(root, "REQ-0001").attrs["ratified_fingerprint"]
+    stamp = _item(root, "REQ-0001").ratifications[-1]["fingerprint"]
     _flag(root, "REQ-0001", "'T' is undefined")
     item = _item(root, "REQ-0001")
     assert item.status == "ratified"
-    assert item.attrs["ratified_by"] == "Ada" and item.attrs["ratified_fingerprint"] == stamp
+    assert item.ratifications[-1]["by"] == "Ada" and item.ratifications[-1]["fingerprint"] == stamp
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 2
     assert _cli(["-C", root, "clarify", "REQ-0001", "--reason", "defined in the "
                  "glossary", "--by", "Bob"]) == 0
     item = _item(root, "REQ-0001")
     assert item.status == "ratified"
-    assert item.attrs["ratified_fingerprint"] == stamp     # the signature still holds
+    assert item.ratifications[-1]["fingerprint"] == stamp     # the signature still holds
 
 
 def test_a_flag_raised_again_is_clarified_again_and_the_record_replaced(graph):

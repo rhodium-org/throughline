@@ -7,8 +7,17 @@ text: 'A requirement is a permanently identified, individually versioned object.
   requirements between versions is a non-event: no identifier ever changes and any
   two versions can be diffed meaningfully.'
 normative: false
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f075e0cfb318ffafbb89c2ae4ecf7925f8ac61f0cba9d99839f7c6871534d205
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f075e0cfb318ffafbb89c2ae4ecf7925f8ac61f0cba9d99839f7c6871534d205
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: intent
+    text: 'A requirement is a permanently identified, individually versioned object.
+      Documents are merely views over those objects. Adding, removing, and reordering
+      requirements between versions is a non-event: no identifier ever changes and
+      any two versions can be diffed meaningfully.'
+    normative: false
+    derived: false
+    attrs: {}

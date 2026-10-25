@@ -51,7 +51,7 @@ def _project(name: str, *, cites: list[str] = (), sources: str = "",
              clause: str | None = None, consumer: bool = False) -> dict[str, str]:
     """A minimal throughline project with one root intent and one SR that may cite
     other namespaces. ``sources`` is appended verbatim to throughline.toml."""
-    fmt = 3 if consumer else 2
+    fmt = 4 if consumer else 2
     toml = f'[project]\nname = "{name}"\nformat_version = {fmt}\n{sources}'
     if consumer:
         toml += "\n" + _CONSUMER_TAIL

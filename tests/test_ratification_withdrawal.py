@@ -30,6 +30,7 @@ from throughline.identity import (
     WITHDRAWN_RATIFIER_ATTR,
     WITHDRAWN_REASON_ATTR,
 )
+from throughline.signatures import W_BY, W_ID, W_OF, W_REASON
 from throughline.storage import load_project
 
 
@@ -90,11 +91,12 @@ def test_a_withdrawal_records_who_why_and_whose(graph):
     accountable as giving one."""
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--reason", "misspelled",
                  "--by", "Ada Lovelace", "--by-id", "github:ada"]) == 0
-    a = _item(graph, "REQ-0001").attrs
-    assert a[WITHDRAWN_BY_ATTR] == "Ada Lovelace"
-    assert a[WITHDRAWN_ID_ATTR] == "github:ada"
-    assert a[WITHDRAWN_REASON_ATTR] == "misspelled"
-    assert a[WITHDRAWN_RATIFIER_ATTR] == "AAda Lovelace"
+    w = _item(graph, "REQ-0001").withdrawals[-1]
+    assert w[W_BY] == "Ada Lovelace"
+    assert w[W_ID] == "github:ada"
+    assert w[W_REASON] == "misspelled"
+    assert w[W_OF] == "AAda Lovelace"
+    assert w["at"].endswith("Z")                 # when, in UTC (SR-0256)
 
 
 def test_a_withdrawal_clears_the_signature_it_withdrew(graph):
@@ -102,8 +104,9 @@ def test_a_withdrawal_clears_the_signature_it_withdrew(graph):
     gone — the withdrawn identity lives on in the withdrawal record, not there."""
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--reason", "misspelled",
                  "--by", "Ada Lovelace"]) == 0
-    a = _item(graph, "REQ-0001").attrs
-    assert not any(name in a for name in SIGNATURE), a
+    item = _item(graph, "REQ-0001")
+    assert not item.ratifications
+    assert not any(name in item.attrs for name in SIGNATURE), item.attrs
 
 
 def test_content_is_untouched(graph):
@@ -125,7 +128,7 @@ def test_dependents_are_unmoved(graph):
                  "--by", "Ada Lovelace"]) == 0
     dep = _item(graph, "REQ-0002")
     assert dep.status == "ratified"
-    assert dep.attrs["ratified_by"] == "AAda Lovelace"
+    assert dep.ratifications[-1]["by"] == "AAda Lovelace"
     assert "suspect_reasons" not in dep.attrs
 
 
@@ -148,10 +151,10 @@ def test_a_batch_withdraws_every_item_named(graph):
                  "--reason", "signed under a hand-typed name",
                  "--by", "Ada Lovelace"]) == 0
     for uid in ("REQ-0001", "REQ-0002"):
-        a = _item(graph, uid).attrs
-        assert a[WITHDRAWN_RATIFIER_ATTR] == "AAda Lovelace"
-        assert a[WITHDRAWN_REASON_ATTR] == "signed under a hand-typed name"
-        assert "ratified_by" not in a
+        item = _item(graph, uid)
+        assert item.withdrawals[-1][W_OF] == "AAda Lovelace"
+        assert item.withdrawals[-1][W_REASON] == "signed under a hand-typed name"
+        assert not item.ratifications
 
 
 def test_a_batch_is_all_or_nothing(graph):
@@ -159,7 +162,7 @@ def test_a_batch_is_all_or_nothing(graph):
     withdrew half of what it was asked to."""
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "REQ-9999",
                  "--reason", "r", "--by", "Ada Lovelace"]) == 2
-    assert _item(graph, "REQ-0001").attrs["ratified_by"] == "AAda Lovelace"
+    assert _item(graph, "REQ-0001").ratifications[-1]["by"] == "AAda Lovelace"
     assert _item(graph, "REQ-0001").status == "ratified"
 
 
@@ -176,14 +179,14 @@ def test_an_item_with_no_ratification_is_refused(graph, capsys):
 def test_a_reason_is_required(graph, capsys):
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--by", "Ada Lovelace"]) == 2
     assert "--reason" in capsys.readouterr().err
-    assert _item(graph, "REQ-0001").attrs["ratified_by"] == "AAda Lovelace"
+    assert _item(graph, "REQ-0001").ratifications[-1]["by"] == "AAda Lovelace"
 
 
 def test_an_empty_reason_is_refused_at_the_library(graph):
     project = load_project(graph)
     with pytest.raises(GroundingError, match="reason"):
         withdraw(project, ["REQ-0001"], by="Ada Lovelace", reason="   ")
-    assert project.get("REQ-0001").attrs["ratified_by"] == "AAda Lovelace"
+    assert project.get("REQ-0001").ratifications[-1]["by"] == "AAda Lovelace"
 
 
 def test_a_withdrawer_is_required_when_nobody_can_be_asked(graph, capsys):
@@ -195,7 +198,7 @@ def test_a_malformed_identifier_is_refused(graph, capsys):
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--reason", "r",
                  "--by", "Ada Lovelace", "--by-id", "ada"]) == 2
     assert "scheme" in capsys.readouterr().err
-    assert _item(graph, "REQ-0001").attrs["ratified_by"] == "AAda Lovelace"
+    assert _item(graph, "REQ-0001").ratifications[-1]["by"] == "AAda Lovelace"
 
 
 def test_a_uid_named_twice_is_refused(graph):
@@ -227,10 +230,10 @@ def test_the_item_can_be_ratified_again(graph, capsys):
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
     item = _item(graph, "REQ-0001")
     assert item.status == "ratified"
-    assert item.attrs["ratified_by"] == "Ada Lovelace"
-    assert item.attrs["ratified_fingerprint"]
+    assert item.ratifications[-1]["by"] == "Ada Lovelace"
+    assert item.ratifications[-1]["fingerprint"]
     # The withdrawal stays on record; a signature that follows one does not erase it.
-    assert item.attrs[WITHDRAWN_RATIFIER_ATTR] == "AAda Lovelace"
+    assert item.withdrawals[-1][W_OF] == "AAda Lovelace"
     # And it is no longer reported as awaiting anyone (the fixture leaves other
     # items unratified and every item uncovered, so only this finding is asserted).
     capsys.readouterr()
@@ -244,9 +247,9 @@ def test_a_withdrawal_cannot_ratify(graph):
     """The withdrawer is never credited with acceptance."""
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--reason", "misspelled",
                  "--by", "Bob Malory"]) == 0
-    a = _item(graph, "REQ-0001").attrs
-    assert "ratified_by" not in a
-    assert a[WITHDRAWN_BY_ATTR] == "Bob Malory"
+    item = _item(graph, "REQ-0001")
+    assert not item.ratifications
+    assert item.withdrawals[-1][W_BY] == "Bob Malory"
 
 
 # ------------------------------------------------------------- the record is guarded
@@ -265,5 +268,6 @@ def test_withdraw_cannot_write_the_signature(graph):
     """The verb clears the signature and never writes one."""
     assert _cli(["-C", graph, "withdraw", "REQ-0001", "--reason", "r",
                  "--by", "Ada Lovelace"]) == 0
-    a = _item(graph, "REQ-0001").attrs
-    assert "ratified_by" not in a and "ratified_fingerprint" not in a
+    item = _item(graph, "REQ-0001")
+    assert not item.ratifications
+    assert not any(name in item.attrs for name in SIGNATURE)

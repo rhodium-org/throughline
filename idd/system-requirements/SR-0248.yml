@@ -30,10 +30,11 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_id: github:rhodium289
-  ratified_fingerprint: sha256:5f13f3daa6f3bbf72eca77f5c6dbc7ba65048fdcaa565ab2e8eb223f10c8e3de
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  fingerprint: sha256:5f13f3daa6f3bbf72eca77f5c6dbc7ba65048fdcaa565ab2e8eb223f10c8e3de
+  content:
     type: system_requirement
     text: 'When a git merge stops on an add/add conflict for an item file — the same
       UID allocated on both sides — the Tool shall provide a command that, run inside
@@ -50,3 +51,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: a65e3bd6b2ce152a39d50749ff0321c6a237a689

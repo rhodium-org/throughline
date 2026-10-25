@@ -13,7 +13,18 @@ attrs:
   priority: must
   verification: demonstration
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:d1ad7a7bd3aa2f4408fe08e766ae39e01db3d0e1ce0166fbc8665439447bf25b
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:d1ad7a7bd3aa2f4408fe08e766ae39e01db3d0e1ce0166fbc8665439447bf25b
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: user_requirement
+    text: Users working independently on divergent branches shall be able to create
+      requirements in parallel and merge them without any UID collision and without
+      silently losing an item, and without a human ever hand-resolving a numbering
+      clash.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

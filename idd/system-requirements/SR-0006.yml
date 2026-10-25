@@ -14,7 +14,17 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d9a77df47ae94d2b3697b07294254d5f8247f720f04d134a9c84a5a44666edee
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d9a77df47ae94d2b3697b07294254d5f8247f720f04d134a9c84a5a44666edee
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall detect UID collisions arising from parallel branches at
+      validation time and provide a conflict-resolution command that reassigns the
+      younger item to a fresh UID and rewrites references to it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

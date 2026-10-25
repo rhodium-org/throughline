@@ -43,7 +43,8 @@ def graph(tmp_path) -> Path:
 
 def _ratifiers(root: Path) -> dict[str, str | None]:
     p = load_project(root)
-    return {u: p.get(u).attrs.get("ratified_by") for u in ("REQ-0001", "REQ-0002", "REQ-0003")}
+    return {u: (p.get(u).ratifications[-1]["by"] if p.get(u).ratifications else None)
+            for u in ("REQ-0001", "REQ-0002", "REQ-0003")}
 
 
 def test_several_items_are_ratified_in_one_run_in_the_order_given(graph, capsys):

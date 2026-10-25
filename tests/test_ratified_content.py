@@ -78,12 +78,13 @@ def _req(root: Path):
 
 
 def _set_attr(root: Path, name: str, value) -> None:
-    """Stand in for a record written by an older tool, or edited by hand."""
+    """Stand in for a signature written by an older tool, or edited by hand."""
     item = _req(root)
+    entry = item.ratifications[0]
     if value is None:
-        item.attrs.pop(name, None)
+        entry.pop(name, None)
     else:
-        item.attrs[name] = value
+        entry[name] = value
     write_item(item)
 
 
@@ -97,15 +98,15 @@ def _rules(root: Path) -> list[str]:
 def test_a_ratification_records_the_content_its_stamp_was_taken_over(tmp_path):
     root = _project(tmp_path, git=False)
     item = _req(root)
-    content = item.attrs[CONTENT_ATTR]
+    content = item.ratifications[-1][CONTENT_ATTR]
 
     assert content["text"] == ORIGINAL
     assert content["type"] == item.type
     assert content["normative"] is True and content["derived"] is False
     assert content["attrs"] == {"priority": "should"}
     # With the UID it reproduces the stamp beside it, and the stamp is the item's.
-    assert content_fingerprint(item.authored_uid, content) == item.attrs[STAMP_ATTR]
-    assert item.attrs[STAMP_ATTR] == fingerprint(item, load_project(root).schema)
+    assert content_fingerprint(item.authored_uid, content) == item.ratifications[-1][STAMP_ATTR]
+    assert item.ratifications[-1][STAMP_ATTR] == fingerprint(item, load_project(root).schema)
 
 
 def test_a_re_ratification_records_the_new_content(tmp_path):
@@ -115,10 +116,10 @@ def test_a_re_ratification_records_the_new_content(tmp_path):
                  "--accept-change"]) == 0
     item = _req(root)
 
-    assert item.attrs[CONTENT_ATTR]["text"] == REWORDED
-    assert item.attrs[CONTENT_ATTR]["attrs"] == {"priority": "must"}
-    assert content_fingerprint(item.authored_uid, item.attrs[CONTENT_ATTR]) \
-        == item.attrs[STAMP_ATTR]
+    assert item.ratifications[-1][CONTENT_ATTR]["text"] == REWORDED
+    assert item.ratifications[-1][CONTENT_ATTR]["attrs"] == {"priority": "must"}
+    assert content_fingerprint(item.authored_uid, item.ratifications[-1][CONTENT_ATTR]) \
+        == item.ratifications[-1][STAMP_ATTR]
 
 
 def test_a_corrected_ratifier_keeps_content_that_reproduces_the_stamp(tmp_path):
@@ -132,25 +133,25 @@ def test_a_corrected_ratifier_keeps_content_that_reproduces_the_stamp(tmp_path):
                  "--replacing"]) == 0
     item = load_project(root).get("REQ-0002")
 
-    assert item.attrs["ratified_by"] == "Ada Lovelace"
-    assert content_fingerprint(item.authored_uid, item.attrs[CONTENT_ATTR]) \
-        == item.attrs[STAMP_ATTR]
+    assert item.ratifications[-1]["by"] == "Ada Lovelace"
+    assert content_fingerprint(item.authored_uid, item.ratifications[-1][CONTENT_ATTR]) \
+        == item.ratifications[-1][STAMP_ATTR]
 
 
 def test_migration_binding_an_unstamped_record_records_its_content(tmp_path):
     root = _project(tmp_path, git=False)
     item = _req(root)
     for name in (STAMP_ATTR, CONTENT_ATTR):
-        item.attrs.pop(name)
+        item.ratifications[0].pop(name)
     write_item(item)
 
     result = migrate_project(root)
     item = _req(root)
 
     assert list(result.bound) == ["REQ-0001"]
-    assert item.attrs["ratified_backfilled"] is True
-    assert content_fingerprint(item.authored_uid, item.attrs[CONTENT_ATTR]) \
-        == item.attrs[STAMP_ATTR]
+    assert item.ratifications[-1]["backfilled"] is True
+    assert content_fingerprint(item.authored_uid, item.ratifications[-1][CONTENT_ATTR]) \
+        == item.ratifications[-1][STAMP_ATTR]
 
 
 # ---------------------------------------- what changed, read from the record (SR-0216)
@@ -189,7 +190,7 @@ def test_a_record_without_content_resolves_from_history_as_before(tmp_path):
 
 def test_content_that_does_not_reproduce_its_stamp_is_never_shown(tmp_path):
     root = _project(tmp_path, git=True)
-    forged = dict(_req(root).attrs[CONTENT_ATTR], text="Words nobody signed.")
+    forged = dict(_req(root).ratifications[-1][CONTENT_ATTR], text="Words nobody signed.")
     _set_attr(root, CONTENT_ATTR, forged)
     _commit(root, "a hand edit to the record")
     _drift(root)
@@ -206,7 +207,7 @@ def test_content_that_does_not_reproduce_its_stamp_is_never_shown(tmp_path):
 
 def test_recorded_content_that_does_not_reproduce_the_stamp_is_an_error(tmp_path, capsys):
     root = _project(tmp_path, git=False)
-    forged = dict(_req(root).attrs[CONTENT_ATTR], text="Words nobody signed.")
+    forged = dict(_req(root).ratifications[-1][CONTENT_ATTR], text="Words nobody signed.")
     _set_attr(root, CONTENT_ATTR, forged)
 
     findings = [f for f in validate(load_project(root)) if f.uid == "REQ-0001"]
@@ -243,16 +244,16 @@ def test_a_sound_record_gains_no_finding_even_when_the_item_is_stale(tmp_path):
 def test_migration_records_content_from_the_item_when_it_still_reproduces_the_stamp(tmp_path):
     root = _project(tmp_path, git=False)
     _set_attr(root, CONTENT_ATTR, None)
-    before = _req(root).attrs.copy()
+    before = dict(_req(root).ratifications[-1])
 
     result = migrate_project(root)
     item = _req(root)
 
     assert result.contents == {"REQ-0001": "current"}
     assert dict(result.unprovable) == {}
-    assert item.attrs[CONTENT_ATTR]["text"] == ORIGINAL
-    for name in ("ratified_by", STAMP_ATTR):
-        assert item.attrs[name] == before[name]
+    assert item.ratifications[-1][CONTENT_ATTR]["text"] == ORIGINAL
+    for name in ("by", STAMP_ATTR):
+        assert item.ratifications[-1][name] == before[name]
     assert item.status == load_project(root).schema.status_role("ratified")
 
 
@@ -267,11 +268,11 @@ def test_migration_records_content_from_the_revision_the_stamp_reproduces(tmp_pa
     item = _req(root)
 
     assert len(result.contents["REQ-0001"]) == 40     # the revision it came from
-    assert item.attrs[CONTENT_ATTR]["text"] == ORIGINAL
-    assert item.attrs[CONTENT_ATTR]["attrs"] == {"priority": "should"}
+    assert item.ratifications[-1][CONTENT_ATTR]["text"] == ORIGINAL
+    assert item.ratifications[-1][CONTENT_ATTR]["attrs"] == {"priority": "should"}
     assert item.text == REWORDED                      # the item itself is untouched
-    assert content_fingerprint(item.authored_uid, item.attrs[CONTENT_ATTR]) \
-        == item.attrs[STAMP_ATTR]
+    assert content_fingerprint(item.authored_uid, item.ratifications[-1][CONTENT_ATTR]) \
+        == item.ratifications[-1][STAMP_ATTR]
 
 
 def test_migration_leaves_a_record_whose_content_cannot_be_proved(tmp_path, capsys):
@@ -286,7 +287,7 @@ def test_migration_leaves_a_record_whose_content_cannot_be_proved(tmp_path, caps
     # The reason is kept, so a project with no repository is not told that no
     # revision reproduced the stamp when none was ever examined.
     assert "no history" in result.unprovable["REQ-0001"]
-    assert CONTENT_ATTR not in _req(root).attrs
+    assert CONTENT_ATTR not in _req(root).ratifications[-1]
 
     assert _cli(["-C", root, "migrate"]) == 0
     out = capsys.readouterr().out
@@ -298,11 +299,11 @@ def test_migration_leaves_a_record_whose_content_cannot_be_proved(tmp_path, caps
 def test_migration_keeps_the_backfilled_marking_and_is_idempotent(tmp_path, capsys):
     root = _project(tmp_path, git=False)
     _set_attr(root, CONTENT_ATTR, None)
-    _set_attr(root, "ratified_backfilled", True)
+    _set_attr(root, "backfilled", True)
 
     assert _cli(["-C", root, "migrate"]) == 0
     assert "recorded the signed content on 1 ratification record(s)" in capsys.readouterr().out
-    assert _req(root).attrs["ratified_backfilled"] is True
+    assert _req(root).ratifications[-1]["backfilled"] is True
 
     second = migrate_project(root)
     assert dict(second.contents) == {} and dict(second.unprovable) == {}
@@ -310,13 +311,13 @@ def test_migration_keeps_the_backfilled_marking_and_is_idempotent(tmp_path, caps
 
 def test_migration_never_overwrites_recorded_content(tmp_path):
     root = _project(tmp_path, git=False)
-    forged = dict(_req(root).attrs[CONTENT_ATTR], text="Words nobody signed.")
+    forged = dict(_req(root).ratifications[-1][CONTENT_ATTR], text="Words nobody signed.")
     _set_attr(root, CONTENT_ATTR, forged)
 
     result = migrate_project(root)
 
     assert dict(result.contents) == {}
-    assert _req(root).attrs[CONTENT_ATTR]["text"] == "Words nobody signed."
+    assert _req(root).ratifications[-1][CONTENT_ATTR]["text"] == "Words nobody signed."
 
 
 # ---------------------------------------- part of the ratification record (SR-0219)
@@ -328,7 +329,7 @@ def test_no_other_operation_may_write_the_recorded_content(tmp_path, capsys):
                  "ratified_content=forged"]) != 0
     assert "tl ratify" in capsys.readouterr().err
     assert _cli(["-C", root, "amend", "REQ-0001", "--unset", "ratified_content"]) != 0
-    assert _req(root).attrs[CONTENT_ATTR]["text"] == ORIGINAL
+    assert _req(root).ratifications[-1][CONTENT_ATTR]["text"] == ORIGINAL
 
 
 def test_withdrawing_a_ratification_removes_the_recorded_content(tmp_path):
@@ -337,8 +338,8 @@ def test_withdrawing_a_ratification_removes_the_recorded_content(tmp_path):
                  "signed in error", "--by", "Grace Hopper"]) == 0
     item = _req(root)
 
-    assert STAMP_ATTR not in item.attrs
-    assert CONTENT_ATTR not in item.attrs
+    assert not item.ratifications          # the signature is gone with its content
+    assert item.withdrawals[-1]["of"] == "Ada Lovelace"
 
 
 # ------------------------------------------------ regressions found in review
@@ -351,9 +352,7 @@ def test_a_shared_value_is_copied_so_an_edit_to_the_item_leaves_the_record_intac
                  "--normative", "--because", "a list-valued normative attribute"]) == 0
     item = _req(root)
     item.attrs["tags"] = ["a", "b"]
-    item.attrs.pop(STAMP_ATTR)
-    item.attrs.pop(CONTENT_ATTR)
-    item.attrs.pop("ratified_by")
+    item.ratifications.clear()
     write_item(item)
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
     path = next((root / "requirements").glob("REQ-0001.yml"))
@@ -375,8 +374,7 @@ def test_the_tool_never_records_content_its_own_check_rejects(tmp_path, field, v
     """Whatever the fingerprint accepts, the record reproduces (SR-0215, SR-0217)."""
     root = _project(tmp_path, git=False)
     item = _req(root)
-    for name in (STAMP_ATTR, CONTENT_ATTR, "ratified_by"):
-        item.attrs.pop(name)
+    item.ratifications.clear()
     setattr(item, field, value)
     write_item(item)
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
@@ -453,7 +451,7 @@ def test_recorded_content_from_a_later_version_still_reproduces_its_stamp(tmp_pa
     newer record, not a damaged one (SR-0217)."""
     root = _project(tmp_path, git=False)
     item = _req(root)
-    item.attrs[CONTENT_ATTR] = dict(item.attrs[CONTENT_ATTR], links=["INT-0001"])
+    item.ratifications[-1][CONTENT_ATTR] = dict(item.ratifications[-1][CONTENT_ATTR], links=["INT-0001"])
     write_item(item)
 
     assert "ratified-content-mismatch" not in _rules(root)
@@ -467,8 +465,8 @@ def test_ratifying_again_repairs_a_record_the_tool_cannot_otherwise_clear(tmp_pa
     ratifier, and --unset refuses the attribute (SR-0217, SR-0219)."""
     root = _project(tmp_path, git=False)
     item = _req(root)
-    for name in (STAMP_ATTR, "ratified_by", "ratified_id"):
-        item.attrs.pop(name, None)
+    for name in (STAMP_ATTR, "by", "id"):
+        item.ratifications[-1].pop(name, None)
     write_item(item)
     [finding] = [f for f in validate(load_project(root))
                  if f.rule == "ratified-content-mismatch"]
@@ -499,7 +497,7 @@ def test_a_record_attribute_cannot_be_declared_or_defaulted(tmp_path, capsys):
     assert _cli(["-C", root, "new", "REQ", "--title", "X", "--text", "X.",
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--no-interactive"]) == 0
-    assert CONTENT_ATTR not in load_project(root).get("REQ-0002").attrs
+    assert "ratified_content" not in load_project(root).get("REQ-0002").attrs
     # Said, not silently dropped: the author learns the declaration does nothing.
     assert "ignored the declared default for 'ratified_content'" in capsys.readouterr().out
 
@@ -512,8 +510,8 @@ def test_recorded_content_with_no_stamp_is_reported(tmp_path, content):
     malformed content is no exception (SR-0217)."""
     root = _project(tmp_path, git=False)
     item = _req(root)
-    item.attrs.pop(STAMP_ATTR)
-    item.attrs[CONTENT_ATTR] = content
+    item.ratifications[-1].pop(STAMP_ATTR)
+    item.ratifications[-1][CONTENT_ATTR] = content
     write_item(item)
     findings = [f for f in validate(load_project(root))
                 if f.uid == "REQ-0001" and f.rule == "ratified-content-mismatch"]
@@ -523,7 +521,7 @@ def test_recorded_content_with_no_stamp_is_reported(tmp_path, content):
 
 def test_the_mismatch_advice_names_a_route_the_tool_allows(tmp_path):
     root = _project(tmp_path, git=False)
-    forged = dict(_req(root).attrs[CONTENT_ATTR], text="Words nobody signed.")
+    forged = dict(_req(root).ratifications[-1][CONTENT_ATTR], text="Words nobody signed.")
     _set_attr(root, CONTENT_ATTR, forged)
     [finding] = [f for f in validate(load_project(root))
                  if f.rule == "ratified-content-mismatch"]
@@ -532,7 +530,7 @@ def test_the_mismatch_advice_names_a_route_the_tool_allows(tmp_path):
                  "--by", "Ada Lovelace"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
     assert "ratified-content-mismatch" not in _rules(root)
-    assert _req(root).attrs[CONTENT_ATTR]["text"] == ORIGINAL
+    assert _req(root).ratifications[-1][CONTENT_ATTR]["text"] == ORIGINAL
 
 
 # ---------------------------------------- documents leave the copy out (SR-0220)
@@ -555,9 +553,9 @@ def test_an_item_block_leaves_the_recorded_content_out(tmp_path, marker):
     root = _project(tmp_path, git=False)
     doc = _publish(root, marker)
 
-    assert "ratified_content" not in doc
-    assert "**ratified_by**: Ada Lovelace" in doc
-    assert "**ratified_fingerprint**: sha256:" in doc
+    assert "sha256:" not in doc                  # no stamp, no recorded content
+    assert ORIGINAL in doc and doc.count(ORIGINAL) == 1
+    assert "*Ratified by:* Ada Lovelace" in doc
     assert "**priority**: should" in doc
     assert ORIGINAL in doc
 
@@ -568,4 +566,4 @@ def test_the_recorded_content_stays_in_the_structured_export(tmp_path, capsys):
     assert _cli(["-C", root, "dump"]) == 0
     import json
     items = {i["uid"]: i for i in json.loads(capsys.readouterr().out)["items"]}
-    assert items["REQ-0001"]["attrs"]["ratified_content"]["text"] == ORIGINAL
+    assert items["REQ-0001"]["ratifications"][0]["content"]["text"] == ORIGINAL

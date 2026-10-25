@@ -86,6 +86,19 @@ links:
 attrs:                       # project-defined custom attributes
   priority: must
   verification: test
+ratifications:               # the ratification record: one signature per person
+  - by: Ada Lovelace         #   who (SR-0098), as `tl ratify --by` was given
+    id: github:ada           #   their stable identifier, where given (SR-0157)
+    role: senior             #   the role signed in, where the project declares roles
+    at: "2026-10-25T09:12:03Z"   # when, UTC to the second (SR-0256)
+    fingerprint: "sha256:…"  #   the §5 fingerprint the signature covers (SR-0148)
+    content: {…}             #   the content it was taken over (SR-0215)
+    links: [{type, target}]  #   the signed links, where the project declares any
+withdrawals:                 # one record per signature withdrawn (SR-0197, SR-0262)
+  - by: Grace Hopper
+    reason: signed under a misspelled name
+    of: AAda Lovelace        #   whose signature it was
+    at: "2026-10-25T10:01:44Z"
 reviewed: "sha256:77ab…04"   # own fingerprint at last review (SR-0038)
 created: 2026-07-08
 modified: 2026-07-08
@@ -93,6 +106,17 @@ modified: 2026-07-08
 
 Rules:
 - Unknown keys are preserved verbatim on rewrite (NFR-0009).
+- `ratifications` and `withdrawals` are written only by `tl ratify`, `tl withdraw`
+  and `tl migrate` (SR-0170, SR-0263). A signature may also carry `supersedes`
+  (the identity a correction replaced, SR-0196), `backfilled` (a stamp bound by
+  migration over content nobody is known to have read, SR-0152) and `revision`
+  (the commit whose content reproduces the stamp, cached by migration, SR-0166).
+  An item is ratified when its current signatures meet what `[ratify.requires]`
+  asks of its type (SR-0260); a project that declares no roles needs one.
+- Before format 4 the record was flat under `attrs` (`ratified_by`,
+  `ratified_fingerprint`, …, `withdrawn_by`, …). `tl migrate` lifts it into a list
+  of one, verbatim, with no role and no time (SR-0255); a file read at the older
+  major is lifted the same way in memory.
 - Files are written with stable key order as above, LF endings, UTF-8,
   final newline (SR-0072).
 - A tombstone is the same file with `status: deleted`, plus
@@ -139,7 +163,7 @@ sections:                    # optional named sections for publishing
 ```toml
 [project]
 name = "Example"
-format_version = 3
+format_version = 4
 
 [types.requirement]
 attrs.priority     = {type = "enum", values = ["must","should","could"], required = true, normative = true}
@@ -165,6 +189,19 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+
+# Who may sign in what capacity, and what a kind of item needs before it counts
+# as ratified (SR-0257, SR-0258). Both optional: a project that declares neither
+# is signed as before — one signature from anyone ratifies, and no role is named.
+# Identifiers, never names (SR-0157). `tl schema role …` and `tl schema requires …`
+# edit these (SR-0264).
+[ratify.roles]
+senior = ["github:ada"]
+junior = ["github:bob", "email:carol@example.com"]
+
+[ratify.requires.requirement]
+roles = ["senior"]            # a current signature in each listed role …
+signatures = 2                # … and at least this many in declared roles
 
 [rules]                       # coverage + lint severities (SR-0041/42/43)
 uncovered = [{filter = "type=='requirement' and register=='SR' and status!='deleted'", needs = "incoming:verifies from TST", severity = "error"}]
@@ -192,8 +229,10 @@ as set/fingerprint comparison between two manifests or working state.
 
 Single object: `{format_version, project, registers:[{prefix, manifest,
 items:[…full item objects…]}], links_index, baselines}` — field names
-identical to the YAML keys (SR-0055). This is the interchange surface for
-third-party tools and the web viewer.
+identical to the YAML keys (SR-0055), so an item carries its `ratifications`
+and `withdrawals` as the file does; `dump_schema_version` is 2 from format 4,
+where it was 1 while the record lived under `attrs`. This is the interchange
+surface for third-party tools and the web viewer.
 
 ## 11. Invariants (validated by `check`)
 

@@ -34,6 +34,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:76c69e9aeb0c7e09b5f956e960ef2d7249938fbbcbfca07046632ce4fd426d5c
-  ratified_revision: 2ab1af4a39f0de58d8209c3a67895176b377f25d
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:76c69e9aeb0c7e09b5f956e960ef2d7249938fbbcbfca07046632ce4fd426d5c
+  revision: 2ab1af4a39f0de58d8209c3a67895176b377f25d
+  content:
+    type: system_requirement
+    text: The status lifecycle the Tool ships with a new project shall permit every
+      live status to move to the suspect status, so that no item can rest in a state
+      where the withdrawal of its footing cannot be recorded. In particular the statuses
+      an item is authored and parked in shall permit the move, since those hold the
+      items whose grounding is least settled.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

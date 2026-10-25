@@ -57,7 +57,7 @@ def _as_older_record(root: Path, uid: str) -> None:
     which SR-0216 keeps for exactly that case. The record route is tested in
     ``test_ratified_content.py``."""
     item = load_project(root).get(uid)
-    item.attrs.pop("ratified_content", None)
+    item.ratifications[-1].pop("content", None)
     write_item(item)
 
 
@@ -158,7 +158,7 @@ def test_refuses_rather_than_taking_the_nearest_revision(graph):
     # history in place. Taking the nearest revision would answer confidently.
     path = graph / "requirements" / "REQ-0001.yml"
     path.write_text(path.read_text(encoding="utf-8").replace(
-        load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"],
+        load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"],
         "sha256:" + "f" * 64), encoding="utf-8")
     project = load_project(graph)
     change = change_since_ratification(project, project.get("REQ-0001"))
@@ -416,9 +416,9 @@ def test_a_unit_wraps_without_losing_a_word_or_its_mark():
 
 def test_migrate_caches_the_resolved_revision(graph):
     """`tl migrate` populates the cache for records that predate it (SR-0166)."""
-    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").attrs
+    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").ratifications[-1]
     assert _cli(["-C", graph, "migrate"]) == 0
-    sha = load_project(graph).get("REQ-0001").attrs[REVISION_ATTR]
+    sha = load_project(graph).get("REQ-0001").ratifications[-1][REVISION_ATTR]
     assert sha == _git(graph, "rev-parse", "HEAD").strip()
 
 
@@ -435,9 +435,9 @@ def test_migrate_reports_that_it_wrote_to_those_records(graph, capsys):
 def test_the_revision_cache_is_idempotent(graph):
     """It runs on every migrate, so it must settle (SR-0166)."""
     assert _cli(["-C", graph, "migrate"]) == 0
-    first = load_project(graph).get("REQ-0001").attrs[REVISION_ATTR]
+    first = load_project(graph).get("REQ-0001").ratifications[-1][REVISION_ATTR]
     assert _cli(["-C", graph, "migrate"]) == 0
-    assert load_project(graph).get("REQ-0001").attrs[REVISION_ATTR] == first
+    assert load_project(graph).get("REQ-0001").ratifications[-1][REVISION_ATTR] == first
 
 
 def test_a_cached_revision_is_reused_without_a_walk(graph):
@@ -448,7 +448,7 @@ def test_a_cached_revision_is_reused_without_a_walk(graph):
     sha, reason, cached = resolve_revision(project, project.get("REQ-0001"))
     assert cached is True
     assert reason == ""
-    assert sha == project.get("REQ-0001").attrs[REVISION_ATTR]
+    assert sha == project.get("REQ-0001").ratifications[-1][REVISION_ATTR]
 
 
 def test_a_cached_revision_the_stamp_disagrees_with_is_discarded(graph):
@@ -456,7 +456,7 @@ def test_a_cached_revision_the_stamp_disagrees_with_is_discarded(graph):
     backup or a hand edit must not produce a confident difference against the
     wrong content (SR-0166)."""
     assert _cli(["-C", graph, "migrate"]) == 0
-    correct = load_project(graph).get("REQ-0001").attrs[REVISION_ATTR]
+    correct = load_project(graph).get("REQ-0001").ratifications[-1][REVISION_ATTR]
     _drift(graph)                                   # a later commit exists now
     wrong = _git(graph, "rev-parse", "HEAD").strip()
     assert wrong != correct
@@ -468,7 +468,7 @@ def test_a_cached_revision_the_stamp_disagrees_with_is_discarded(graph):
 
     project = load_project(graph)
     item = project.get("REQ-0001")
-    assert item.attrs[REVISION_ATTR] == wrong       # the bad hint is on the record
+    assert item.ratifications[-1][REVISION_ATTR] == wrong       # the bad hint is on the record
     sha, _reason, cached = resolve_revision(project, item)
     assert cached is False                          # not taken on trust
     assert sha == correct                           # resolved again, correctly
@@ -482,7 +482,7 @@ def test_migrate_leaves_a_drifted_record_uncached(graph):
     drifted one the revision is resolved on demand (SR-0166)."""
     _drift(graph)
     assert _cli(["-C", graph, "migrate"]) == 0
-    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").attrs
+    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").ratifications[-1]
 
 
 # ------------------------------------- the change gates a re-ratification (SR-0167)
@@ -516,19 +516,19 @@ def test_re_ratifying_a_stale_item_shows_the_change_before_the_stop(
 def test_declining_after_seeing_the_change_records_nothing(graph, monkeypatch):
     """A refusal rather than a warning: no record is written at all (SR-0167)."""
     _drift(graph)
-    before = load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"]
+    before = load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"]
     _tty(monkeypatch, ["n"])
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada Lovelace"]) == 0
-    assert load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"] == before
+    assert load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"] == before
 
 
 def test_non_interactive_refuses_a_stale_item_without_acknowledgement(graph):
     """Where the change cannot be shown to anyone, the signature is refused rather
     than written with a doubt noted beside it (SR-0167)."""
     _drift(graph)
-    before = load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"]
+    before = load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"]
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada"]) == 2
-    assert load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"] == before
+    assert load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"] == before
 
 
 def test_accept_change_is_its_own_flag_and_lets_it_through(graph):
@@ -536,12 +536,12 @@ def test_accept_change_is_its_own_flag_and_lets_it_through(graph):
     accepted unseen rather than inheriting permission granted for something else
     (SR-0167)."""
     _drift(graph)
-    before = load_project(graph).get("REQ-0001").attrs["ratified_fingerprint"]
+    before = load_project(graph).get("REQ-0001").ratifications[-1]["fingerprint"]
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada",
                  "--accept-change"]) == 0
     after = load_project(graph).get("REQ-0001")
-    assert after.attrs["ratified_fingerprint"] != before
-    assert after.attrs["ratified_by"] == "Ada"
+    assert after.ratifications[-1]["fingerprint"] != before
+    assert after.ratifications[-1]["by"] == "Ada"
 
 
 def test_an_unshowable_change_stops_at_least_as_hard(graph, monkeypatch, capsys):
@@ -572,7 +572,7 @@ def test_a_fresh_ratification_is_not_gated(graph):
                  "--ground", "INT-0001", "--ground-type", "implements",
                  "--origin", "ai", "--no-interactive"]) == 0
     assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 0
-    assert load_project(graph).get("REQ-0002").attrs["ratified_by"] == "Ada"
+    assert load_project(graph).get("REQ-0002").ratifications[-1]["by"] == "Ada"
 
 
 def test_the_cache_attribute_is_part_of_the_guarded_record(graph):
@@ -580,10 +580,10 @@ def test_the_cache_attribute_is_part_of_the_guarded_record(graph):
     (SR-0170). Verification would catch a planted value, but a hand-written one is
     still a claim about an accountability record made by the wrong verb."""
     from throughline.identity import RATIFICATION_ATTRS
-    assert RATIFICATION_ATTRS[REVISION_ATTR] == "migrate"
+    assert RATIFICATION_ATTRS["ratified_revision"] == "migrate"
     assert _cli(["-C", graph, "amend", "REQ-0001",
-                 "--attr", f"{REVISION_ATTR}=deadbeef"]) == 2
-    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").attrs
+                 "--attr", "ratified_revision=deadbeef"]) == 2
+    assert REVISION_ATTR not in load_project(graph).get("REQ-0001").ratifications[-1]
 
 
 def test_outside_a_git_work_tree_the_change_cannot_be_shown(tmp_path):

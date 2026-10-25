@@ -21,7 +21,24 @@ attrs:
   origin: hybrid
   priority: could
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8546e087f73ff33e81c892aab100b18fdc037c40e85457b7c18b8b6d49f93df1
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8546e087f73ff33e81c892aab100b18fdc037c40e85457b7c18b8b6d49f93df1
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The tl:unused document directive shall render a table of the items that
+      match its SR-0045 filter but are not referenced by any narrative directive
+      anywhere in the project's configured documents — that is, items no other document
+      cites by UID, table, matrix or count. A catalogue (tl:catalog) reference does
+      not count as narrative use, so a full-catalogue mirror does not make every
+      item appear used; the report keeps meaning even when a master reference lists
+      everything. The directive's own listing likewise does not count as a reference.
+      When no docs paths are configured the report cannot be computed and renders
+      a clear note rather than treating all items as unused. A malformed filter fails
+      injection.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

@@ -28,6 +28,18 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:324a97e42f92206a714a9ef3239525d1c5d2e14419763e24d50ad67228c62427
-  ratified_revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:324a97e42f92206a714a9ef3239525d1c5d2e14419763e24d50ad67228c62427
+  revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+  content:
+    type: system_requirement
+    text: When a ratifier is not named explicitly, the Tool shall offer the identity
+      the repository is already configured to sign commits with, and shall fall back
+      to the operating-system account name only where no such identity is configured.
+      The offered value shall remain a default a human may overrule, never a value
+      written without their assent.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -41,6 +41,22 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:286d24f3c28a9c17e46a7f1377da84a6c137203f6e11d4059946a19551c17733
-  ratified_revision: d409e5d07c10b3bf6b2cbb02cc500db6fe2d389d
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:286d24f3c28a9c17e46a7f1377da84a6c137203f6e11d4059946a19551c17733
+  revision: d409e5d07c10b3bf6b2cbb02cc500db6fe2d389d
+  content:
+    type: system_requirement
+    text: A coverage rule declared in project configuration shall be validated when
+      that configuration is loaded, before any item is checked. The Tool shall reject
+      a rule whose filter expression names a value the filter language does not define,
+      calls a method the language does not permit, or uses an expression form the
+      language does not allow. The Tool shall reject a rule whose needs clause it
+      cannot parse, and a rule that declares no needs clause. Each refusal shall
+      name the rule and the text that was rejected. A filter that raises while it
+      is being evaluated shall be reported as an error finding that names the rule
+      and the expression, and shall never be treated as matching no items.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

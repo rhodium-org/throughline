@@ -7,6 +7,13 @@ normative: true
 links:
 - target: CON-0002
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0f839f890b0f875e7fd0f137fdbfeaacca562999aa6b59c6097b728eca1ba035
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0f839f890b0f875e7fd0f137fdbfeaacca562999aa6b59c6097b728eca1ba035
+  content:
+    type: nfr
+    text: All personal data shall be stored in eu-west.
+    normative: true
+    derived: false
+    attrs: {}
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a

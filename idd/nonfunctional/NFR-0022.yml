@@ -21,7 +21,21 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:2852de555e72c9fedcbf9d7f214d8b7359f4270980ca6f4cfdd76baabc2c5b3b
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:2852de555e72c9fedcbf9d7f214d8b7359f4270980ca6f4cfdd76baabc2c5b3b
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: Project files are untrusted input. The Tool shall parse all YAML with a
+      safe loader that cannot construct arbitrary Python objects or execute code
+      (no yaml.load without SafeLoader; no !!python/... tags honoured), and shall
+      write every field value through a YAML emitter so that no field value — for
+      example a crafted ratified_by, title, or text — can alter document structure
+      or inject sibling keys. Malformed input shall fail fast with an error rather
+      than be silently coerced or partially applied.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

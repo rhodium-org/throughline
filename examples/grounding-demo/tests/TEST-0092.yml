@@ -7,6 +7,13 @@ normative: true
 links:
 - target: FR-0040
   type: verifies
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:30e38c42dc32180d9de67941fd05ad198d1667aae94aa7e1031196f43d8d59f7
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:30e38c42dc32180d9de67941fd05ad198d1667aae94aa7e1031196f43d8d59f7
+  content:
+    type: test
+    text: 6th failed login is rejected.
+    normative: true
+    derived: false
+    attrs: {}
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a
