@@ -81,6 +81,23 @@ class ProjectError(Exception):
     pass
 
 
+class FormatError(ProjectError):
+    """A project whose format major is not the one this Tool implements (SR-0266).
+
+    ``declared`` is the major the project's configuration states, ``implemented``
+    the one this copy of the Tool reads, and ``path`` the configuration file read.
+    The message stays the terminal's account, naming the copy that refused and the
+    remedy (SR-0168); a host that is not a terminal — a page carrying the Tool in
+    a browser — words the refusal from these three and shows the message to nobody.
+    """
+
+    def __init__(self, message: str, *, declared: int, implemented: int, path: Path):
+        super().__init__(message)
+        self.declared = declared
+        self.implemented = implemented
+        self.path = path
+
+
 # ------------------------------------------------------------ the project's tree
 
 # A project is the directory holding its throughline.toml and everything below it,
@@ -236,15 +253,17 @@ def _gate_format_version(config: dict, root: Path) -> None:
     """
     disk = _read_format_version(config, root)
     if disk > FORMAT_VERSION:
-        raise ProjectError(
+        raise FormatError(
             f"{root / CONFIG_NAME} declares format version {disk}, but this tl "
             f"({_running_tool()}) implements format {FORMAT_VERSION} — upgrade "
-            f"that installation to open this project: {_upgrade_command()}")
+            f"that installation to open this project: {_upgrade_command()}",
+            declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
     if disk < FORMAT_VERSION:
-        raise ProjectError(
+        raise FormatError(
             f"{root / CONFIG_NAME} is at format version {disk}; this tl "
             f"({_running_tool()}) uses {FORMAT_VERSION} — run `tl migrate` to "
-            f"upgrade the project (a lossless, in-place rewrite)")
+            f"upgrade the project (a lossless, in-place rewrite)",
+            declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
 
 
 def _migrate_1_to_2(root: Path) -> None:
@@ -938,9 +957,10 @@ def migrate_project(path: str | Path, *,
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
     start = _read_format_version(config, root)
     if start > FORMAT_VERSION:
-        raise ProjectError(
+        raise FormatError(
             f"{cfg_file} declares format version {start}, newer than this tl "
-            f"({FORMAT_VERSION}) — upgrade tl rather than migrate down")
+            f"({FORMAT_VERSION}) — upgrade tl rather than migrate down",
+            declared=start, implemented=FORMAT_VERSION, path=cfg_file)
     current = start
     while current < FORMAT_VERSION:
         step = _MIGRATIONS.get(current)
@@ -1088,9 +1108,10 @@ def read_project(path: str | Path) -> Project:
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
     disk = _read_format_version(config, root)
     if disk > FORMAT_VERSION:
-        raise ProjectError(
+        raise FormatError(
             f"{cfg_file} declares format version {disk}, but this tl understands up "
-            f"to {FORMAT_VERSION} — upgrade tl to read this source")
+            f"to {FORMAT_VERSION} — upgrade tl to read this source",
+            declared=disk, implemented=FORMAT_VERSION, path=cfg_file)
     major = disk
     while major < FORMAT_VERSION:
         upgrade = _CONFIG_UPGRADES.get(major)

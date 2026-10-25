@@ -1028,6 +1028,24 @@ def test_context_includes_live_snapshot():
     assert "-[derives_from]->" in doc      # observed link shape line
 
 
+def test_context_snapshot_orders_an_external_target_among_known_ones():
+    """A link whose target is not an item of the graph — borrowed from a source, or
+    dangling — has no target type, and the snapshot lists it as external rather
+    than failing to order it against the triples that have one (SR-0085). Seen on
+    a graph that borrowed items from another: `tl context` stopped with a TypeError
+    instead of a brief."""
+    from throughline.cli import _context_markdown
+    intent = Item(uid="INT-1", type="intent")
+    local = Item(uid="FR-1", type="requirement", attrs={"priority": "must"},
+                 links=[Link(target="INT-1", type="derives_from")])
+    borrowed = Item(uid="FR-2", type="requirement", attrs={"priority": "must"},
+                    links=[Link(target="INT-1", type="derives_from"),
+                           Link(target="lib:CAP-0001", type="derives_from")])
+    doc = _context_markdown(_project(_doc("INT", intent), _doc("FR", local, borrowed)))
+    assert "-[derives_from]-> `intent` × 2" in doc
+    assert "-[derives_from]-> `<external>` × 1" in doc
+
+
 def test_context_states_the_working_discipline():
     """SR-0129: the brief states the working discipline, not just the model —
     do only justified work, mutate the graph only through the CLI, and leave a
@@ -3109,6 +3127,35 @@ def test_load_refuses_newer_format_version(tmp_path):
     with pytest.raises(ProjectError, match="upgrade that installation"):
         load_project(root)
     assert _cli(["-C", str(root), "check"]) == 2  # USAGE — refuses to run
+
+
+def test_format_refusal_is_typed_with_both_majors(tmp_path):
+    """Every refusal over the format major is a FormatError, a ProjectError that
+    carries the major the project declares, the major this tl implements and the
+    configuration file read, so a host that is not a terminal can word the
+    refusal itself instead of showing the message (SR-0266)."""
+    from throughline import FormatError
+
+    newer = tmp_path / "newer"
+    assert _cli(["-C", str(newer), "init", "--bare"]) == 0
+    _set_format_version(newer, FORMAT_VERSION + 1)
+    for read in (load_project, read_project, migrate_project):
+        with pytest.raises(FormatError) as caught:
+            read(newer)
+        assert isinstance(caught.value, ProjectError)
+        assert (caught.value.declared, caught.value.implemented, caught.value.path) == \
+            (FORMAT_VERSION + 1, FORMAT_VERSION, newer / CONFIG_NAME)
+        # the terminal's account is unchanged: it still names both majors
+        assert str(FORMAT_VERSION + 1) in str(caught.value)
+
+    older = tmp_path / "older"
+    _make_legacy_v1_project(older)
+    with pytest.raises(FormatError) as caught:
+        load_project(older)
+    assert (caught.value.declared, caught.value.implemented) == (1, FORMAT_VERSION)
+    assert caught.value.path == older / CONFIG_NAME
+    # read_project and migrate_project take an older project: neither refuses it
+    assert read_project(older) is not None
 
 
 def test_version_refusal_names_the_tl_that_refused(tmp_path):

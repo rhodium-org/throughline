@@ -141,6 +141,7 @@ from .worklist import (
 from .storage import (
     CONFIG_NAME,
     MANIFEST_NAME,
+    FormatError,
     ProjectError,
     create_register,
     init_project,
@@ -179,7 +180,7 @@ __all__ = [
     "Register", "Item", "Link", "Project",
     "load_project", "read_project", "load_project_at_ref", "init_project",
     "migrate_project", "write_item", "write_manifest", "create_register",
-    "ProjectError", "CONFIG_NAME", "MANIFEST_NAME",
+    "ProjectError", "FormatError", "CONFIG_NAME", "MANIFEST_NAME",
     # identity of an item
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
     "Index", "fingerprint", "revision",

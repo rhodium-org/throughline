@@ -1,0 +1,47 @@
+uid: SR-0266
+type: system_requirement
+status: ratified
+title: A format refusal is typed, carrying both majors and the file read
+text: When the Tool declines a project because its format major differs from the
+  major the Tool implements — on loading it, reading it as a source or migrating
+  it — the refusal shall be a FormatError, a ProjectError the package exports, carrying
+  the major the project declares, the major the Tool implements and the configuration
+  file read. The message shall stay the terminal's account that SR-0168 requires.
+rationale: 'A host that carries the Tool somewhere other than a terminal — a page
+  running it in a browser — cannot show the message: it names a path inside the browser''s
+  file system and a pip command for an interpreter the reader does not have, and
+  the reader does not care how the page is built (seen on table.iddn.uk, 2026-10-25).
+  Matching the message''s words instead would be a second copy of the rule, unwatched,
+  that breaks when the words change. A typed error with the three facts lets the
+  host say which side is behind and what to do, in its own words. Rejected — changing
+  the message itself: the terminal''s account is right for a terminal and SR-0168
+  requires it. Rejected — a code attribute on ProjectError: one subclass is the plainer
+  contract, and it stays a ProjectError so every existing handler still catches it.
+  Who pays — a host that wants its own words adds one isinstance check; one that
+  does not notices nothing.'
+normative: true
+links:
+- target: UR-0036
+  type: implements
+- target: SR-0168
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-25T17:12:35Z'
+  fingerprint: sha256:1986c870958b25bf2be5fe100d2073c61d0253e0b5ef21356f722873a23d55c2
+  content:
+    type: system_requirement
+    text: When the Tool declines a project because its format major differs from
+      the major the Tool implements — on loading it, reading it as a source or migrating
+      it — the refusal shall be a FormatError, a ProjectError the package exports,
+      carrying the major the project declares, the major the Tool implements and
+      the configuration file read. The message shall stay the terminal's account
+      that SR-0168 requires.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
