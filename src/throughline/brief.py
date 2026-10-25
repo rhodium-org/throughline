@@ -423,7 +423,9 @@ def _ctx_snapshot(project) -> str:
     shape = Index.build(project).link_shape()
     if shape:
         out.append("- **Link shape** (source → link → target · count):")
-        for (s, lt, t), n in sorted(shape.items(), key=lambda kv: (-kv[1], kv[0])):
+        # an external target is None, which no str orders against: it sorts as ''
+        for (s, lt, t), n in sorted(shape.items(),
+                                    key=lambda kv: (-kv[1], kv[0][0], kv[0][1], kv[0][2] or "")):
             out.append(f"  - `{s}` -[{lt}]-> `{t or '<external>'}` × {n}")
     else:
         out.append("- **Link shape:** no links yet.")

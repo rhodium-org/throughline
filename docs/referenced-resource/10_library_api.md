@@ -15,7 +15,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### The model and its storage
 
-`Project` · `Register` · `Item` · `Link` · `create_register` · `load_project` · `read_project` · `load_project_at_ref` · `init_project` · `migrate_project` · `write_item` · `write_manifest` · `ProjectError` · `CONFIG_NAME` · `MANIFEST_NAME`
+`Project` · `Register` · `Item` · `Link` · `create_register` · `load_project` · `read_project` · `load_project_at_ref` · `init_project` · `migrate_project` · `write_item` · `write_manifest` · `ProjectError` · `FormatError` · `CONFIG_NAME` · `MANIFEST_NAME`
 
 ### Identity of an item
 
