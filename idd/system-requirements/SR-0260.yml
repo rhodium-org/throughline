@@ -1,0 +1,50 @@
+uid: SR-0260
+type: system_requirement
+status: ratified
+title: An item is ratified when its signatures meet what its kind requires
+text: The Tool shall treat an item as ratified only when its current signatures satisfy
+  the requirement declared for its type. Until they do, each signature shall be recorded,
+  the status shall not move, and check shall report a named finding, awaiting-signatures,
+  saying which roles have signed and what is still required; the worklist shall list
+  the item as awaiting a human. When the requirement is met, what happens to the
+  status shall follow SR-0172. The finding shall be suppressible as any rule is.
+rationale: A visible intermediate state without a new status. Rejected, a status
+  such as part-signed, which every project would have to add to its vocabulary and
+  transitions before the first second signature, and which SR-0172 shows is the wrong
+  axis; a status describes agreement or progress, and a count of signatures describes
+  neither. The finding and the worklist already exist to say an item awaits a human,
+  and the brief already teaches them. Who pays, nobody new; a project that declares
+  no requirement never sees the finding.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0258
+  type: relates
+- target: SR-0149
+  type: relates
+- target: SR-0092
+  type: relates
+- target: SR-0172
+  type: relates
+- target: SR-0131
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:241d0bc6276f721f2255daf97245be8dd1d2b499cb465b602dbe4320dbf2f65c
+  ratified_content:
+    type: system_requirement
+    text: The Tool shall treat an item as ratified only when its current signatures
+      satisfy the requirement declared for its type. Until they do, each signature
+      shall be recorded, the status shall not move, and check shall report a named
+      finding, awaiting-signatures, saying which roles have signed and what is still
+      required; the worklist shall list the item as awaiting a human. When the requirement
+      is met, what happens to the status shall follow SR-0172. The finding shall
+      be suppressible as any rule is.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

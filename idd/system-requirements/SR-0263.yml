@@ -1,0 +1,47 @@
+uid: SR-0263
+type: system_requirement
+status: ratified
+title: Only ratification and withdrawal write the signature list
+text: The signature list shall be part of the ratification record; ratify and withdraw
+  alone shall write it, migration shall write only what the lifting migration allows,
+  and any other operation that sets fields or attributes, tl apply included, shall
+  refuse it by name, saying which command owns it. tl dump shall carry the list as
+  the item holds it, and generated documents shall leave recorded content out of
+  item blocks as SR-0220 provides.
+rationale: The record moving from attributes to a top-level field moves the guard
+  with it; without this the refusal SR-0170 built would guard a field nothing writes.
+  Who pays, nobody.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0170
+  type: refines
+- target: SR-0255
+  type: relates
+- target: SR-0219
+  type: relates
+- target: SR-0252
+  type: relates
+- target: SR-0251
+  type: relates
+- target: SR-0220
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:dd12e10d990d9d6b227512bf25fd44c74ceae84289174248c3db9fcd772a1621
+  ratified_content:
+    type: system_requirement
+    text: The signature list shall be part of the ratification record; ratify and
+      withdraw alone shall write it, migration shall write only what the lifting
+      migration allows, and any other operation that sets fields or attributes, tl
+      apply included, shall refuse it by name, saying which command owns it. tl dump
+      shall carry the list as the item holds it, and generated documents shall leave
+      recorded content out of item blocks as SR-0220 provides.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

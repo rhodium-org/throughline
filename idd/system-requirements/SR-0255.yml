@@ -1,0 +1,47 @@
+uid: SR-0255
+type: system_requirement
+status: ratified
+title: Migration lifts the flat ratification record into the list
+text: The migration to the major that introduces the list shall turn each item's
+  flat ratification record into a list of one entry, carrying the ratifier, identifier,
+  stamp, recorded content, recorded links, superseded identity and backfill marking
+  verbatim, with no role and no time, since neither was recorded. It shall be idempotent,
+  shall change no stamp and no status, shall report how many records it lifted, and
+  shall leave a project that declares no roles behaving exactly as before.
+rationale: Backward compatibility is the condition on the whole change. A project
+  moves only when its owner runs tl migrate, as for every earlier major, and until
+  then the Tool reads it as SR-0133 provides. Nothing is invented; a time the record
+  never held stays absent, so a history read later tells a signature made before
+  the clock from one made after. Who pays, the owner of each graph runs one command
+  once; the estate's public graphs are migrated by their maintainers.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0137
+  type: refines
+- target: SR-0152
+  type: relates
+- target: SR-0218
+  type: relates
+- target: NFR-0010
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:94efc2f69ec6f4a9d604b745ec6b0ddc718cadd74f9be3a7fb819abeaa226132
+  ratified_content:
+    type: system_requirement
+    text: The migration to the major that introduces the list shall turn each item's
+      flat ratification record into a list of one entry, carrying the ratifier, identifier,
+      stamp, recorded content, recorded links, superseded identity and backfill marking
+      verbatim, with no role and no time, since neither was recorded. It shall be
+      idempotent, shall change no stamp and no status, shall report how many records
+      it lifted, and shall leave a project that declares no roles behaving exactly
+      as before.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

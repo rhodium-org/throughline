@@ -1,0 +1,45 @@
+uid: UR-0039
+type: user_requirement
+status: ratified
+title: More than one person can take accountability for an item, each in a role the
+  project declares
+text: Where a project says so, an item shall be able to carry a ratification from
+  more than one person, each signing in a role the project declares, and shall count
+  as ratified only when the signatures it holds meet what the project requires of
+  items of its kind. A project that declares no roles shall behave exactly as it
+  does today, with one signature making an item ratified.
+rationale: Two needs. A team wants a junior and a senior to review the same proposed
+  items independently and to compare what each accepted, which is the material that
+  trains the junior; and a regulated project wants a requirement to count only once
+  the people responsible for it have each signed. GitHub knows who may push and merge,
+  not who is senior to whom, so the roles belong in the graph's own configuration,
+  where they are the project's statement. Rejected, a roster of ratifiers (SR-0155),
+  refused as friction; this is opt-in per project and per type, so a graph that wants
+  no strictness pays none. Rejected, declaring the people as a register (SR-0158),
+  for the reason given there. Who pays, a project that declares roles must give each
+  signer a stable identifier and must name a role when signing.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0023
+  type: relates
+- target: UR-0014
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:bb8b3de3c750975bfaad1ff9217d4029b9cddea5858c12ce5d7f6d9b5bf75aa5
+  ratified_content:
+    type: user_requirement
+    text: Where a project says so, an item shall be able to carry a ratification
+      from more than one person, each signing in a role the project declares, and
+      shall count as ratified only when the signatures it holds meet what the project
+      requires of items of its kind. A project that declares no roles shall behave
+      exactly as it does today, with one signature making an item ratified.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

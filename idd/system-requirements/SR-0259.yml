@@ -1,0 +1,53 @@
+uid: SR-0259
+type: system_requirement
+status: ratified
+title: Signing in a role is checked against the declared roles
+text: In a project that declares roles, ratify shall take the role the person is
+  signing in, shall require a stable identifier for the signer, and shall refuse
+  a signature whose identifier the named role does not hold, saying which roles it
+  does hold. When no identifier is given it shall offer the email the repository
+  signs commits with, as an email identifier, as SR-0156 offers the name. In a project
+  that declares no roles, naming a role shall be refused. A person signs an item
+  once; a second signature by the same identifier replaces their own entry, never
+  another person's.
+rationale: The check is by identifier because a name proves nothing (SR-0157). The
+  identifier defaults from the repository's own signing email so that signing in
+  a project with roles costs the same keystrokes as today; it is offered, never written
+  without assent, as SR-0156 provides. Replacing one's own entry keeps SR-0148's
+  rule that a second signature over unchanged content accepts nothing, and SR-0196's
+  rule that nobody lifts another's signature. Who pays, the signer, who confirms
+  an identifier once per machine.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0257
+  type: relates
+- target: SR-0156
+  type: relates
+- target: SR-0157
+  type: relates
+- target: SR-0196
+  type: relates
+- target: SR-0148
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:8577c1990a11ffcfc421077caacb998be77e436e063eb12a1bf5b66dd4678707
+  ratified_content:
+    type: system_requirement
+    text: In a project that declares roles, ratify shall take the role the person
+      is signing in, shall require a stable identifier for the signer, and shall
+      refuse a signature whose identifier the named role does not hold, saying which
+      roles it does hold. When no identifier is given it shall offer the email the
+      repository signs commits with, as an email identifier, as SR-0156 offers the
+      name. In a project that declares no roles, naming a role shall be refused.
+      A person signs an item once; a second signature by the same identifier replaces
+      their own entry, never another person's.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

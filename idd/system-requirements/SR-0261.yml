@@ -1,0 +1,48 @@
+uid: SR-0261
+type: system_requirement
+status: ratified
+title: Each signature is judged stale on its own
+text: Each signature shall carry its own stamp, recorded content and recorded links,
+  and shall be stale when the item's normative content or signed links have moved
+  since it was taken. A stale signature shall not count toward the requirement, and
+  ratified-stale shall name the people whose signatures are stale. Re-signing shall
+  refresh only the signer's own entry, and what it does to the status shall follow
+  SR-0237.
+rationale: Two people may sign at different times, so one signature may be over earlier
+  words than another; one stamp for the whole record would make the later signature
+  vouch for content the earlier person never saw, or the earlier signature look current
+  when it is not. Who pays, the file holds the recorded content once per signer,
+  twice for a two-signer graph; one copy is wrong whenever the two signed different
+  words.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0254
+  type: relates
+- target: SR-0148
+  type: relates
+- target: SR-0237
+  type: relates
+- target: SR-0244
+  type: relates
+- target: SR-0215
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:287f3ee9f865bf82f70d61b653705850b356a348d46b1d39a1aa5c55de2e8a70
+  ratified_content:
+    type: system_requirement
+    text: Each signature shall carry its own stamp, recorded content and recorded
+      links, and shall be stale when the item's normative content or signed links
+      have moved since it was taken. A stale signature shall not count toward the
+      requirement, and ratified-stale shall name the people whose signatures are
+      stale. Re-signing shall refresh only the signer's own entry, and what it does
+      to the status shall follow SR-0237.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

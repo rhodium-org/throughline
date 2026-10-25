@@ -25,7 +25,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0011 | Project-specific data model | SR-0011, SR-0020, SR-0021, SR-0022, SR-0024, SR-0070, SR-0080, SR-0081, SR-0082, SR-0083, SR-0084, SR-0130, SR-0131, SR-0132, SR-0138, SR-0142, SR-0144, SR-0147, SR-0172, SR-0181, SR-0182, SR-0183, SR-0184, SR-0192, SR-0206, SR-0207, SR-0237 |
 | UR-0012 | Coverage and impact analysis | SR-0035, SR-0042, SR-0051, SR-0052, SR-0078, SR-0085, SR-0086, SR-0096, SR-0189, SR-0191 |
 | UR-0013 | Baselines | SR-0036, SR-0090 |
-| UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093, SR-0248, SR-0250 |
+| UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093, SR-0248, SR-0250, SR-0265 |
 | UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137 |
 | UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210 |
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
@@ -50,6 +50,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234 |
 | UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238, SR-0240, SR-0247 |
 | UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253 |
+| UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265 |
+| UR-0040 | A ratification record says when it was given | SR-0256 |
 <!-- tl:end -->
 
 ## Coverage check

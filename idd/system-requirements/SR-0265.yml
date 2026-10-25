@@ -1,0 +1,39 @@
+uid: SR-0265
+type: system_requirement
+status: ratified
+title: A merge conflict confined to the signature list is settled by keeping every
+  signature
+text: tl resolve shall settle a merge conflict in an item file when the conflict
+  is confined to the signature list, by keeping every entry from both sides, one
+  per signer identifier, and shall refuse to settle one that reaches any other field.
+  It shall say which signatures it kept.
+rationale: Two branches signing the same item is the one case the list makes worse
+  than one file per signature, and the conflict is two additions to one list. Keeping
+  both, by identifier, is the only honest outcome; both people signed. Rejected,
+  a git merge driver, which GitHub's own merges never run. The web merge will still
+  show the conflict; this settles it locally in one command. Who pays, the person
+  merging, one command.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: UR-0014
+  type: implements
+- target: SR-0248
+  type: relates
+attrs:
+  priority: could
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:b13a5f1d9e5b29531b361d9e045c263730ec1a6bdb02e39e4e93ef3ec5dbaa5f
+  ratified_content:
+    type: system_requirement
+    text: tl resolve shall settle a merge conflict in an item file when the conflict
+      is confined to the signature list, by keeping every entry from both sides,
+      one per signer identifier, and shall refuse to settle one that reaches any
+      other field. It shall say which signatures it kept.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

@@ -1,0 +1,34 @@
+uid: UR-0040
+type: user_requirement
+status: ratified
+title: A ratification record says when it was given
+text: Every ratification and every withdrawal the Tool writes shall record when it
+  was made, so that the order and timing of signatures can be read from the record
+  itself and not only from version control.
+rationale: The commit is the only clock today, and one commit usually carries a whole
+  wave of signatures, so the time at which each item was signed is lost. A history
+  of a graph, and any comparison of how two people reviewed the same set, needs the
+  time per item. Rejected, committing after every signature, which asks every front
+  end to change how it commits and still loses the time when a person works offline
+  and commits once. Who pays, nobody; the record grows by one field.
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0003
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+  ratified_by: Henry Grech-Cini
+  ratified_fingerprint: sha256:4aeca1e686672c3aa262d0f75652d44dfb28f8e675ddf4beafb2fba2eb7941d2
+  ratified_content:
+    type: user_requirement
+    text: Every ratification and every withdrawal the Tool writes shall record when
+      it was made, so that the order and timing of signatures can be read from the
+      record itself and not only from version control.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
