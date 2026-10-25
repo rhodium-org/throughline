@@ -8,8 +8,15 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:02dd6b97c4a0647b97d3c9184ee184dbb5c56fc7e410a148fb03dadbcda9dd9d
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:02dd6b97c4a0647b97d3c9184ee184dbb5c56fc7e410a148fb03dadbcda9dd9d
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: business_need
+    text: All data in human-readable text files that merge, branch, diff, and review
+      like source code.
+    normative: false
+    derived: false
+    attrs: {}

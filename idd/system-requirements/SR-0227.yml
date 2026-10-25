@@ -27,5 +27,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f7b3d3112ebdf3e72a29260f7031c51f7ee57d7ec475fad2f7db080034acad60
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f7b3d3112ebdf3e72a29260f7031c51f7ee57d7ec475fad2f7db080034acad60
+  content:
+    type: system_requirement
+    text: Every function the package exports shall complete its work where the caller
+      has no subprocess, no network socket and no terminal, given the parameters
+      of SR-0226. The Tool shall carry a test that proves it by making all three
+      unavailable.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 2298db459d5d2abc270f28915dba9ee328bb078b

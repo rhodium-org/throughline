@@ -51,7 +51,29 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:53f1d47d513a4ea2cc61acf4247243a31c72933ded4ac3bcca882fa45e534c01
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:53f1d47d513a4ea2cc61acf4247243a31c72933ded4ac3bcca882fa45e534c01
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall reclassify an item — into another register, another type,
+      or both — by superseding it, never by relocating or renumbering it. The operation
+      shall allocate a new item in the target register, carrying forward the superseded
+      item's content, so the new item's UID bears the target register's prefix from
+      birth and is allocated by that register's own manifest. The superseded item
+      shall keep its UID and its file, move to the status bound to the superseded
+      role, and carry a superseded_by link to its replacement. Every link that pointed
+      at the superseded item shall be repointed to the replacement; repointing shall
+      not count as a normative change to the item that holds the link, so the holder's
+      fingerprint, review state and suspect flags are preserved — the referent has
+      been renamed, not altered. The superseded UID shall remain resolvable for the
+      life of the project — trace, blast and any lookup shall find it and report
+      the supersession rather than reporting it missing — and shall never be reused.
+      A superseded item shall not be counted as live for grounding, coverage or ratification
+      purposes.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

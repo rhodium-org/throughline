@@ -134,7 +134,7 @@ def test_the_operations_are_reachable_without_the_command_line(tmp_path, monkeyp
     project = load_project(root)
     ratify(project, "REQ-0001", by="Ada", index=Index.build(project))
     write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
-    assert load_project(root).get("REQ-0001").attrs["ratified_by"] == "Ada"
+    assert load_project(root).get("REQ-0001").ratifications[-1]["by"] == "Ada"
     assert "throughline.cli" not in sys.modules
 
 
@@ -185,7 +185,7 @@ def test_the_surface_works_with_no_subprocess_socket_or_terminal(tmp_path, no_ho
     project = load_project(root)
     withdraw(project, ["REQ-0001"], by="Ada", reason="signed in error")
     write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
-    assert load_project(root).get("REQ-0001").attrs["withdrawn_by"] == "Ada"
+    assert load_project(root).get("REQ-0001").withdrawals[-1]["by"] == "Ada"
 
 
 def test_the_default_identity_survives_a_host_with_no_subprocess(tmp_path, no_host):

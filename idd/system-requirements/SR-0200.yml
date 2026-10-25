@@ -31,6 +31,19 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:cc0e536bbb1fc7b2af1176255028318d7fa77b83190de6e82dd463707af888e6
-  ratified_revision: 41147a37398194ff8faeaa8aa28bcf8e1efc0604
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:cc0e536bbb1fc7b2af1176255028318d7fa77b83190de6e82dd463707af888e6
+  revision: 41147a37398194ff8faeaa8aa28bcf8e1efc0604
+  content:
+    type: system_requirement
+    text: 'Where the change since ratification holds a prose field, the Tool shall
+      offer that field''s diff as structured data: the kept, removed and added units
+      in order, each with its words and, within a replaced sentence, which words
+      moved. The Tool''s own terminal rendering shall be built from that same data.
+      A consumer with a screen of its own shall need neither to parse the Tool''s
+      painted output nor to compare the content itself.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

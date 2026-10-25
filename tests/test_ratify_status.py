@@ -82,7 +82,7 @@ def test_the_default_still_advances_the_item():
     p = _graph(_WORKFLOW)
     item = ratify(p, "X-0002", by="j.doe")
     assert item.status == "backlog"
-    assert item.attrs["ratified_by"] == "j.doe"
+    assert item.ratifications[-1]["by"] == "j.doe"
 
 
 def test_declaring_the_default_explicitly_is_the_same_thing():
@@ -107,8 +107,8 @@ def test_in_place_records_accountability_without_moving_the_item():
     p = _graph(_in_place())
     item = ratify(p, "X-0002", by="j.doe")
     assert item.status == "proposed"          # exactly where it was
-    assert item.attrs["ratified_by"] == "j.doe"
-    assert item.attrs["ratified_fingerprint"].startswith("sha256:")
+    assert item.ratifications[-1]["by"] == "j.doe"
+    assert item.ratifications[-1]["fingerprint"].startswith("sha256:")
 
 
 def test_in_place_can_ratify_an_item_that_has_overshot():
@@ -118,7 +118,7 @@ def test_in_place_can_ratify_an_item_that_has_overshot():
     p = _graph(_in_place(), status="done")
     item = ratify(p, "X-0002", by="j.doe")
     assert item.status == "done"
-    assert item.attrs["ratified_by"] == "j.doe"
+    assert item.ratifications[-1]["by"] == "j.doe"
 
 
 def test_in_place_still_refuses_an_ungrounded_item():
@@ -151,7 +151,7 @@ def test_in_place_refuses_a_second_ratify_of_unchanged_content():
     ratify(p, "X-0002", by="alice")
     with pytest.raises(GroundingError, match="already ratified by alice"):
         ratify(p, "X-0002", by="bob")
-    assert p.get("X-0002").attrs["ratified_by"] == "alice"
+    assert p.get("X-0002").ratifications[-1]["by"] == "alice"
 
 
 def test_in_place_allows_re_ratification_after_the_content_moves():
@@ -159,7 +159,7 @@ def test_in_place_allows_re_ratification_after_the_content_moves():
     ratify(p, "X-0002", by="alice")
     p.get("X-0002").text = "reworded, so nobody has accepted these words"
     item = ratify(p, "X-0002", by="bob")
-    assert item.attrs["ratified_by"] == "bob"
+    assert item.ratifications[-1]["by"] == "bob"
     assert item.status == "proposed"
 
 
@@ -208,8 +208,8 @@ def test_a_re_signature_over_amended_content_is_recorded_where_the_item_stands()
     assert entry_for(p, item).ratifiable
     again = ratify(p, "X-0002", by="Bob")
     assert again.status == "done"
-    assert again.attrs["ratified_by"] == "Bob"
-    assert again.attrs["ratified_fingerprint"] == fingerprint(again, p.schema)
+    assert again.ratifications[-1]["by"] == "Bob"
+    assert again.ratifications[-1]["fingerprint"] == fingerprint(again, p.schema)
     assert entry_for(p, again).concern == "ratified"
 
 

@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0df5bd702b78df1b61b0a316ab3c1ded895e033ee3918ad2e035def890d9290a
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0df5bd702b78df1b61b0a316ab3c1ded895e033ee3918ad2e035def890d9290a
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall support CommonMark Markdown (subset in doc 06 §6) in item
+      text fields, including tables, lists, code blocks, and images by relative path.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

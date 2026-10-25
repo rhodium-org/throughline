@@ -31,9 +31,10 @@ attrs:
   priority: must
   verification: demonstration
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5bd0dc78688345da1c65384cb115af45ec36cd09274bbf4a68d8adf0cab53994
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:5bd0dc78688345da1c65384cb115af45ec36cd09274bbf4a68d8adf0cab53994
+  content:
     type: system_requirement
     text: For every project that declares sources, the Tool's check findings, plain
       and strict, the counts its check summary reports, its rendered documents and
@@ -48,3 +49,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

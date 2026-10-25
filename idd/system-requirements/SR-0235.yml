@@ -29,9 +29,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:11aee1dcdd863ba4c1ffd398e7181359183e4fa6593d2a36fb0098d8c70b767f
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:11aee1dcdd863ba4c1ffd398e7181359183e4fa6593d2a36fb0098d8c70b767f
+  content:
     type: system_requirement
     text: The Tool shall provide the tl:sourced document directive. It shall render
       in full the distinct external clauses that the items matching the directive's
@@ -44,3 +45,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

@@ -36,9 +36,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:183bc01d30d0c8204ad2cee7a90e651378bd26a388f43bc3507ed877c9b9b035
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:183bc01d30d0c8204ad2cee7a90e651378bd26a388f43bc3507ed877c9b9b035
+  content:
     type: system_requirement
     text: 'When the Tool writes a ratification stamp in a project that declares signed
       link types (SR-0242), it shall record beside the stamp each outgoing link of
@@ -52,3 +53,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 2adf9a09966e1788e81cef64dbf719c61897775b

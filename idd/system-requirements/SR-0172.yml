@@ -28,6 +28,21 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:72a9cbb64a7e18821e3ad8ab9571a60e97b546c40f7f0cabf9d2c8fe422146e4
-  ratified_revision: 4761098b39444f046d6e525a3b77958d726414de
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:72a9cbb64a7e18821e3ad8ab9571a60e97b546c40f7f0cabf9d2c8fe422146e4
+  revision: 4761098b39444f046d6e525a3b77958d726414de
+  content:
+    type: system_requirement
+    text: The project shall declare, in configuration, whether taking accountability
+      for an item also moves its status. The default shall be to move the item to
+      the status bound to the ratified role, so a project that declares nothing behaves
+      exactly as it did before. A project may instead declare that ratification records
+      the sign-off and leaves the status untouched, so a graph whose statuses track
+      progress rather than agreement can be signed off without a fabricated status
+      change. The accountability record written shall be identical under both settings,
+      and neither setting shall ever be inferred from the shape of the graph.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

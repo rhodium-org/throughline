@@ -46,5 +46,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:aa690d51c8f2ba66ca28f73af4ab198861fb220cc8936a55eb1c56b3a7eddd1c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:aa690d51c8f2ba66ca28f73af4ab198861fb220cc8936a55eb1c56b3a7eddd1c
+  content:
+    type: system_requirement
+    text: 'The Tool shall provide an operation that flags one item as ambiguous and
+      requires a stated reason and the name of whoever flags it. It shall set the
+      item''s ambiguity flag and add that name and reason to the reasons recorded
+      against the item. It shall change nothing else on the item: its title, text,
+      rationale, other attributes, status and links stay as they were. It shall refuse
+      an item that does not exist or is a tombstone. An item that is already flagged
+      shall keep its flag and gain the new reason. The operation shall be exported
+      from the package alongside the other grounding operations (SR-0061).'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 7a3ff1e759cc49d6bff2b11973d59a9d1dea57c6

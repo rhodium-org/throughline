@@ -13,7 +13,18 @@ links:
 attrs:
   priority: should
   verification: inspection
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f8d16c7d2dc81636fee05fff258fda0060133a0bc883b75a3c155ccf08ca0e7e
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f8d16c7d2dc81636fee05fff258fda0060133a0bc883b75a3c155ccf08ca0e7e
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: Documentation shall explain throughline's Intent-Driven Development (IDD)
+      model and how it differs from adjacent practices (notably BDD and TDD), so
+      newcomers understand why grounding-at-birth exists and adopt it deliberately
+      rather than treating check as an after-the-fact linter.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

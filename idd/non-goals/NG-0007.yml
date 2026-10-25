@@ -22,5 +22,20 @@ rationale: 'tl:sourced was carried in core while the only thing that could satis
 normative: false
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:4d8f75810f57dd50a3e5be699842adfbd9b5bdc2b90796699512d09b01e927de
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:4d8f75810f57dd50a3e5be699842adfbd9b5bdc2b90796699512d09b01e927de
+  content:
+    type: non_goal
+    text: throughline core shall not provide a document directive whose output depends
+      on state core does not hold — above all, on requirement content owned by another
+      graph. A directive core cannot satisfy unaided shall not be carried in core
+      as a renderer that degrades to a placeholder or to an advisory note naming
+      another program; it shall be provided by the layer that holds the state, registered
+      through the directive seam. Core remains responsible for recognising such a
+      marker and reporting, by name, that the running tool does not provide it —
+      never for rendering a partial or empty substitute in its place.
+    normative: false
+    derived: false
+    attrs: {}
+  revision: 91baf29853480f5b45321c44878662983ee24849

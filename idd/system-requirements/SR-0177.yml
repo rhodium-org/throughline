@@ -31,6 +31,18 @@ attrs:
   origin: ai
   verification: test
   priority: must
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:15bc967d5eeac9045125337939a18788565e7b239e277ac4a6e6ed926c2da932
-  ratified_revision: 0aefa106a812f04158cc64c0bd8ef454fbdfce74
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:15bc967d5eeac9045125337939a18788565e7b239e277ac4a6e6ed926c2da932
+  revision: 0aefa106a812f04158cc64c0bd8ef454fbdfce74
+  content:
+    type: system_requirement
+    text: 'When reporting the statuses from which the suspect status cannot be reached,
+      the Tool shall judge only statuses an item in the project can actually hold:
+      those reachable from a status items are created in by following the declared
+      transitions, together with those a live item currently occupies. A status that
+      is declared but is neither reachable nor occupied shall not be reported.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -224,7 +224,7 @@ def test_amend_reports_that_a_ratification_no_longer_matches(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "Ada Lovelace" in out and "no longer matches" in out
     it = _item(root, "FR-0001")
-    assert it.attrs["ratified_by"] == "Ada Lovelace", "the record was not touched"
+    assert it.ratifications[-1]["by"] == "Ada Lovelace", "the record was not touched"
     assert _cli(["-C", str(root), "check", "--strict"]) == 1
     assert "ratified-stale" in capsys.readouterr().out
 
@@ -274,8 +274,8 @@ def test_a_genuine_ratification_still_writes_the_record(tmp_path):
     assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
     assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "Ada Lovelace"]) == 0
     it = _item(root, "FR-0001")
-    assert it.attrs["ratified_by"] == "Ada Lovelace"
-    assert it.attrs["ratified_fingerprint"].startswith("sha256:")
+    assert it.ratifications[-1]["by"] == "Ada Lovelace"
+    assert it.ratifications[-1]["fingerprint"].startswith("sha256:")
 
 
 # --------------------------------------------------------------------------- #

@@ -13,7 +13,17 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8fd1cb950252f998f404ea09fb19a97c6299e05c9fc53749590007adaa84c5f4
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8fd1cb950252f998f404ea09fb19a97c6299e05c9fc53749590007adaa84c5f4
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall never assign a UID that has ever existed in the project,
+      including UIDs of deleted items; retired numbers shall be recorded so allocation
+      skips them.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

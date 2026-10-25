@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8f4f0a1b4a22eab51d7c29cb95de5d5f8611307ad0ea771460a0e4515df634c8
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8f4f0a1b4a22eab51d7c29cb95de5d5f8611307ad0ea771460a0e4515df634c8
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall generate a coverage report per coverage rule (SR-0042) with
+      counts, percentages, and the list of uncovered UIDs.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

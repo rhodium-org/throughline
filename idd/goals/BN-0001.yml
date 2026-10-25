@@ -7,8 +7,15 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5fdb97a6e79334571330fa59f34d860faa6ee800a67639dbdcc903609b933215
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:5fdb97a6e79334571330fa59f34d860faa6ee800a67639dbdcc903609b933215
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: business_need
+    text: Immutable, never-reused requirement UIDs fully decoupled from register
+      position.
+    normative: false
+    derived: false
+    attrs: {}

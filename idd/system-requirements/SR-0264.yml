@@ -1,0 +1,50 @@
+uid: SR-0264
+type: system_requirement
+status: ratified
+title: Roles and requirements are changed through the schema operation
+text: tl schema shall gain the nouns role and requires, so that a role is added or
+  removed, a person added to or removed from a role, and a type's requirement set
+  or cleared, through the Tool with a stated reason (SR-0181, SR-0184). A change
+  that leaves a ratified item short of its kind's requirement shall be allowed and
+  shall report how many items it leaves awaiting signatures; their status shall not
+  move.
+rationale: Hand-editing the table is what SR-0181 closed for every other part of
+  the schema. Allowed rather than refused, against SR-0182's rule, because tightening
+  what a kind requires on a mature graph is the ordinary way a project adopts this;
+  refusing it would make roles usable only on an empty graph. The items are reported,
+  and the awaiting-signatures finding follows them until the signatures are gathered.
+  Who pays, the project owner gathers signatures for the items the tightening uncovered.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0257
+  type: relates
+- target: SR-0258
+  type: relates
+- target: SR-0181
+  type: relates
+- target: SR-0182
+  type: relates
+- target: SR-0184
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:905b7047415469a4b81d8c300d15d9dc21c2afd10f42cb05899bf802ef4c9686
+  content:
+    type: system_requirement
+    text: tl schema shall gain the nouns role and requires, so that a role is added
+      or removed, a person added to or removed from a role, and a type's requirement
+      set or cleared, through the Tool with a stated reason (SR-0181, SR-0184). A
+      change that leaves a ratified item short of its kind's requirement shall be
+      allowed and shall report how many items it leaves awaiting signatures; their
+      status shall not move.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

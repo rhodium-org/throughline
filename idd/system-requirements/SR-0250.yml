@@ -26,9 +26,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8f2191c95bb4253b7651c1d7801d32271a0fb2aff01f4fdfb74d26442a1cd0a4
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8f2191c95bb4253b7651c1d7801d32271a0fb2aff01f4fdfb74d26442a1cd0a4
+  content:
     type: system_requirement
     text: 'When the Tool renumbers an item while resolving a UID collision in one
       graph, it shall also rewrite the links to that item''s old UID in every graph
@@ -44,3 +45,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: e9c14fc762c7216ecb11a3dcb9f2b961394cf028

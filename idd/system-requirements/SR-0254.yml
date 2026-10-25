@@ -1,0 +1,61 @@
+uid: SR-0254
+type: system_requirement
+status: ratified
+title: The ratification record is a list of signatures at the item's top level
+text: An item's ratification record shall be a top-level field, ratifications, holding
+  one entry per person who has signed, each entry carrying what the record carries
+  today, the signer's name, their identifier, the stamp, the recorded content, the
+  recorded links, the identity a correction replaced and the backfill marking, together
+  with the role signed in and the time. This shall be the only shape of the record
+  at the format major that introduces it; the flat attributes shall not be written
+  at that major. A project at the earlier major shall still be readable as SR-0133
+  provides, its flat record presented as a list of one.
+rationale: Decision, a list inside the item file, at the top level beside links.
+  One file per item is what lets a person or an agent read everything about an item
+  in one place, and the record is core data, not a project-declared attribute. Rejected,
+  one file per signature beside the item, which merges cleanly across branches but
+  doubles a graph's file count (Microsoft 365 Copilot reads at most fifty files,
+  which is why sync's Copilot mode exists) and makes every reader join files to answer
+  who signed. Rejected, keeping the flat attributes beside the list for one-signer
+  graphs, two spellings of one record that every reader must understand forever.
+  Who pays, every reader of the record, the Tool, tl-ratify, browser-core and the
+  sites on it, moves at the same major; browser-core pins the wheel, so they move
+  together.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0022
+  type: relates
+- target: SR-0147
+  type: relates
+- target: SR-0170
+  type: relates
+- target: SR-0133
+  type: relates
+- target: SR-0219
+  type: relates
+- target: SR-0243
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:009b9977686f56963d1c6bc8cbf196d9824d21028f1511f67985da97c089ec9a
+  content:
+    type: system_requirement
+    text: An item's ratification record shall be a top-level field, ratifications,
+      holding one entry per person who has signed, each entry carrying what the record
+      carries today, the signer's name, their identifier, the stamp, the recorded
+      content, the recorded links, the identity a correction replaced and the backfill
+      marking, together with the role signed in and the time. This shall be the only
+      shape of the record at the format major that introduces it; the flat attributes
+      shall not be written at that major. A project at the earlier major shall still
+      be readable as SR-0133 provides, its flat record presented as a list of one.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

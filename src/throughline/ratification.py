@@ -40,27 +40,24 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .fingerprint import content_fingerprint, fingerprint, normative_attr_names, signed_content
-from .identity import RATIFIED_BY_ATTR
 from .model import Item
+from .signatures import BY, CONTENT, REVISION, STAMP, SUPERSEDES, latest
 from .schema import Schema
 from .signed_links import link_drift
 
-# The attribute holding the revision resolved for a stamp (SR-0166). Written by
-# `tl migrate`, never by ratify: the content being ratified is still uncommitted
-# when ratify runs, so the revision that holds it does not exist yet, and
-# recording HEAD then would anchor to the state before the change.
-REVISION_ATTR = "ratified_revision"
-
-STAMP_ATTR = "ratified_fingerprint"
-
-# The content the stamp was taken over, recorded beside it (SR-0215). Read before
-# any history is touched, and only when it reproduces the stamp (SR-0216).
-CONTENT_ATTR = "ratified_content"
-
-# The identity a corrected record replaced (SR-0196). Written only by ratify, and
-# only for a record that had not been published, so it never names a signature
-# anyone else could have seen.
-SUPERSEDED_ATTR = "ratified_supersedes"
+# The keys of one signature this module reads (SR-0254), named here as the
+# attributes they were before format 4 so a reader of the record finds them.
+# ``revision`` (SR-0166) is written by `tl migrate`, never by ratify: the content
+# being ratified is still uncommitted when ratify runs, so the revision that holds
+# it does not exist yet. ``content`` (SR-0215) is read before any history is
+# touched, and only when it reproduces the stamp (SR-0216). ``supersedes``
+# (SR-0196) names the identity a correction replaced, on a record that had not
+# been published. Every function here judges ONE signature: the one passed as
+# ``entry``, or the latest the item carries when none is.
+REVISION_ATTR = REVISION
+STAMP_ATTR = STAMP
+CONTENT_ATTR = CONTENT
+SUPERSEDED_ATTR = SUPERSEDES
 
 #: Outcomes. Kept as four distinct values because collapsing any pair of them
 #: loses a claim a reader acts on differently (SR-0165).
@@ -221,8 +218,10 @@ def _reproduces(top: Path, sha: str, rel: str, cfg_rel: str, stamp: str,
     return fingerprint(past, _schema_at(top, sha, cfg_rel, fallback)) == stamp
 
 
-def resolve_revision(project, item) -> tuple[str | None, str, bool]:
-    """Find the revision whose content reproduces ``item``'s ratification stamp.
+def resolve_revision(project, item, entry: dict | None = None
+                     ) -> tuple[str | None, str, bool]:
+    """Find the revision whose content reproduces the stamp of one signature on
+    ``item`` — ``entry``, or the latest when none is given.
 
     Returns ``(sha, reason, cached)``. ``sha`` is None when no revision reproduces
     the stamp, and ``reason`` then says why in words an operator can act on.
@@ -235,7 +234,8 @@ def resolve_revision(project, item) -> tuple[str | None, str, bool]:
     stamp stays the authority; the revision is only ever an answer it has already
     agreed with.
     """
-    stamp = item.attrs.get(STAMP_ATTR)
+    entry = entry if entry is not None else latest(item)
+    stamp = entry.get(STAMP_ATTR) if entry else None
     if not stamp:
         return None, "the record carries no fingerprint to resolve against", False
     if item._path is None:
@@ -249,7 +249,7 @@ def resolve_revision(project, item) -> tuple[str | None, str, bool]:
     cfg_rel = _relative(top, Path(project.path) / "throughline.toml") or ""
     schema = project.schema
 
-    cached = item.attrs.get(REVISION_ATTR)
+    cached = entry.get(REVISION_ATTR)
     if isinstance(cached, str) and cached:
         if _reproduces(top, cached, rel, cfg_rel, stamp, schema):
             return cached, "", True
@@ -277,8 +277,15 @@ def resolve_revision(project, item) -> tuple[str | None, str, bool]:
 
 
 def ratification_is_committed(project, item) -> bool | None:
-    """Whether ``item``'s current ratification record appears in the project's
-    committed history (SR-0196). ``None`` when that cannot be established.
+    """Whether the latest signature on ``item`` appears in the project's committed
+    history (SR-0196). ``None`` when that cannot be established. The one-signature
+    form of :func:`signature_is_committed`."""
+    return signature_is_committed(project, item, latest(item))
+
+
+def signature_is_committed(project, item, entry: dict | None) -> bool | None:
+    """Whether one signature on ``item`` appears in the project's committed
+    history (SR-0196). ``None`` when that cannot be established.
 
     The question is asked of version control and never inferred. A record is
     published once the committed file carries this same ratifier over this same
@@ -290,8 +297,8 @@ def ratification_is_committed(project, item) -> bool | None:
     evidence is not that evidence. A work tree holding no commits at all is not
     such a case; it is an answer, and the answer is that nothing is published.
     """
-    by = item.attrs.get(RATIFIED_BY_ATTR)
-    stamp = item.attrs.get(STAMP_ATTR)
+    by = entry.get(BY) if entry else None
+    stamp = entry.get(STAMP_ATTR) if entry else None
     if not by or not stamp:
         return False            # nothing recorded is nothing published
     if item._path is None:
@@ -311,8 +318,8 @@ def ratification_is_committed(project, item) -> bool | None:
         # The file is absent at HEAD, so this record has never been committed.
         # Distinguished from an unreadable tree above, which returns None.
         return False
-    return (past.attrs.get(RATIFIED_BY_ATTR) == by
-            and past.attrs.get(STAMP_ATTR) == stamp)
+    return any(e.get(BY) == by and e.get(STAMP_ATTR) == stamp
+               for e in past.ratifications)
 
 
 def _normative_names(project, item, past_schema: Schema | None) -> list[str]:
@@ -329,13 +336,15 @@ def _normative_names(project, item, past_schema: Schema | None) -> list[str]:
     return names
 
 
-def recorded_content(item) -> dict | None:
-    """The content recorded on ``item``'s ratification record, only where it
-    reproduces the record's stamp (SR-0216). A record holding none, or holding
-    content that does not reproduce the stamp, answers None: such content is not
-    evidence of what was signed, so nothing may show it as the earlier wording."""
-    stamp = item.attrs.get(STAMP_ATTR)
-    content = item.attrs.get(CONTENT_ATTR)
+def recorded_content(item, entry: dict | None = None) -> dict | None:
+    """The content recorded on one signature of ``item`` — ``entry``, or the
+    latest — only where it reproduces that signature's stamp (SR-0216). A record
+    holding none, or holding content that does not reproduce the stamp, answers
+    None: such content is not evidence of what was signed, so nothing may show it
+    as the earlier wording."""
+    entry = entry if entry is not None else latest(item)
+    stamp = entry.get(STAMP_ATTR) if entry else None
+    content = entry.get(CONTENT_ATTR) if entry else None
     if not stamp or content is None:
         return None
     if content_fingerprint(item.authored_uid, content) != stamp:
@@ -343,7 +352,8 @@ def recorded_content(item) -> dict | None:
     return content
 
 
-def content_at_stamp(project, item, *, history: bool = True) -> tuple[dict | None, str]:
+def content_at_stamp(project, item, *, history: bool = True,
+                     entry: dict | None = None) -> tuple[dict | None, str]:
     """The content ``item``'s stamp was taken over, where it can be proved, for a
     record that holds none (SR-0218). Returns ``(content, where)``: from the item
     as it stands when its content still reproduces the stamp (``where`` is
@@ -352,14 +362,15 @@ def content_at_stamp(project, item, *, history: bool = True) -> tuple[dict | Non
 
     Proof is the stamp and nothing else, the same test SR-0165 applies to a
     revision, so what this returns is always content the stamp reproduces."""
-    stamp = item.attrs.get(STAMP_ATTR)
+    entry = entry if entry is not None else latest(item)
+    stamp = entry.get(STAMP_ATTR) if entry else None
     if not stamp:
         return None, "the record carries no fingerprint"
     if fingerprint(item, project.schema) == stamp:
         return signed_content(item, project.schema), "current"
     if not history:
         return None, "the content has moved and there is no history to resolve it in"
-    sha, reason, _cached = resolve_revision(project, item)
+    sha, reason, _cached = resolve_revision(project, item, entry)
     if sha is None:
         return None, reason
     top = repo_top(Path(item._path).parent)
@@ -431,24 +442,28 @@ def _change_from_record(project, item, stamp: str, recorded: dict) -> Ratificati
 LINK_FIELD = "links."
 
 
-def _link_changes(project, item) -> tuple[FieldChange, ...]:
-    """The signed links that moved since the signature (SR-0246), in the shape a
+def _link_changes(project, item, entry: dict | None) -> tuple[FieldChange, ...]:
+    """The signed links that moved since one signature (SR-0246), in the shape a
     changed field has, so a caller that lists the changes shows them too. A
     retargeted link is one of each: pairing them would be a guess."""
-    unheld, dropped = link_drift(item, project.schema)
+    unheld, dropped = link_drift(item, project.schema, entry)
     return (tuple(FieldChange(field=f"{LINK_FIELD}{t}", was=target, now=None)
                   for t, target in dropped)
             + tuple(FieldChange(field=f"{LINK_FIELD}{t}", was=None, now=target)
                     for t, target in unheld))
 
 
-def change_since_ratification(project, item) -> RatificationChange:
-    """The difference between ``item`` as it stands and what its ratification was
-    taken over (SR-0165): its normative content, and the links the signature
-    covers (SR-0246). The links are read from the record alone, so they are
-    reported even where the content that moved cannot be shown."""
-    content = _content_change(project, item)
-    links = _link_changes(project, item)
+def change_since_ratification(project, item, entry: dict | None = None
+                              ) -> RatificationChange:
+    """The difference between ``item`` as it stands and what one signature on it
+    was taken over (SR-0165): its normative content, and the links the signature
+    covers (SR-0246). ``entry`` is the signature judged, the latest when none is
+    given (SR-0261 — each signature is judged on its own). The links are read from
+    the record alone, so they are reported even where the content that moved
+    cannot be shown."""
+    entry = entry if entry is not None else latest(item)
+    content = _content_change(project, item, entry)
+    links = _link_changes(project, item, entry)
     if not links:
         return content
     if content.outcome == UNCHANGED:
@@ -459,14 +474,14 @@ def change_since_ratification(project, item) -> RatificationChange:
     return replace(content, changes=links)
 
 
-def _content_change(project, item) -> RatificationChange:
+def _content_change(project, item, entry: dict | None) -> RatificationChange:
     """The difference between ``item``'s current normative content and the content
-    its ratification stamp was taken over (SR-0165).
+    one signature's stamp was taken over (SR-0165).
 
     Never approximated: where no revision reproduces the stamp the result says the
     change cannot be shown, which is kept distinct from having found no change.
     """
-    stamp = item.attrs.get(STAMP_ATTR)
+    stamp = entry.get(STAMP_ATTR) if entry else None
     if not stamp:
         return RatificationChange(uid=item.uid, outcome=UNRATIFIED)
     if fingerprint(item, project.schema) == stamp:
@@ -479,11 +494,11 @@ def _content_change(project, item) -> RatificationChange:
     # answer needs no version control. Content that does not reproduce the stamp
     # is passed over, never shown, and history is asked instead — a revision is
     # itself accepted only when it reproduces the stamp.
-    recorded = recorded_content(item)
+    recorded = recorded_content(item, entry)
     if recorded is not None:
         return _change_from_record(project, item, stamp, recorded)
 
-    sha, reason, cached = resolve_revision(project, item)
+    sha, reason, cached = resolve_revision(project, item, entry)
     if sha is None:
         return RatificationChange(uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
                                   reason=reason, source=HISTORY)

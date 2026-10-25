@@ -36,6 +36,17 @@ attrs:
   priority: should
   verification: inspection
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8619ff5bb81651a5a54e5d4face6eb46cc1c703c8895ded32f1ebe79f11a8848
-  ratified_revision: 95d58c1cec7ab265a94305fe8118db982413e17f
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8619ff5bb81651a5a54e5d4face6eb46cc1c703c8895ded32f1ebe79f11a8848
+  revision: 95d58c1cec7ab265a94305fe8118db982413e17f
+  content:
+    type: system_requirement
+    text: The repository shall configure an automated dependency-update mechanism
+      that watches the GitHub Actions pinned by the release workflow and raises a
+      pull request proposing the updated commit SHA, together with the version comment
+      that SHA resolves to, when a pinned action has a newer release.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

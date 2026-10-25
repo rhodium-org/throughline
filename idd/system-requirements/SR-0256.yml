@@ -1,0 +1,43 @@
+uid: SR-0256
+type: system_requirement
+status: ratified
+title: A signature records when it was given
+text: When the Tool writes a ratification or a withdrawal it shall record the moment
+  as a UTC timestamp in ISO 8601 form to the second, taken from the clock of the
+  machine writing it. The time shall be part of the ratification record, written
+  by no other operation. Migration shall never invent one.
+rationale: UTC because the record crosses machines, and this estate's own graphs
+  have already been misread by an hour between local time and UTC. To the second,
+  because a signature is a human act. The machine clock is the only clock the Tool
+  has without a network (SR-0157's condition that a ratification must be writable
+  on a train); a wrong clock gives a wrong time, which is the machine's defect and
+  is left visible rather than corrected. Rejected, the commit date, a different clock
+  that is lost when commits are squashed. Who pays, nobody.
+normative: true
+links:
+- target: UR-0040
+  type: implements
+- target: SR-0170
+  type: relates
+- target: SR-0197
+  type: relates
+- target: SR-0215
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b641167b5cc591736f2424998555547b6a5a971d77151a135f44774b1c23388c
+  content:
+    type: system_requirement
+    text: When the Tool writes a ratification or a withdrawal it shall record the
+      moment as a UTC timestamp in ISO 8601 form to the second, taken from the clock
+      of the machine writing it. The time shall be part of the ratification record,
+      written by no other operation. Migration shall never invent one.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

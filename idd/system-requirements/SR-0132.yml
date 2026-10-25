@@ -11,7 +11,17 @@ links:
   type: implements
 attrs:
   origin: hybrid
-  ratified_by: henry
-  ratified_fingerprint: sha256:4ef9c9671faedc86cf3f75486e1b36e464f2eedbee025256b34fde4463d41b63
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:4ef9c9671faedc86cf3f75486e1b36e464f2eedbee025256b34fde4463d41b63
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The tool shall provide a command to move an item to any status the configured
+      transitions permit, so that every reachable item state is reachable through
+      a tool operation and no state change ever requires hand-editing an item file.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

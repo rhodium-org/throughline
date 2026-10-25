@@ -38,6 +38,20 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1257b6664cb882b18e936f82cd3b3ced38ca051f2296474c99326e0b130db211
-  ratified_revision: 410bbc5d738ad9b3ee8b506b6657d79b499c0d28
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1257b6664cb882b18e936f82cd3b3ced38ca051f2296474c99326e0b130db211
+  revision: 410bbc5d738ad9b3ee8b506b6657d79b499c0d28
+  content:
+    type: system_requirement
+    text: The version the package exports shall be read from the installed distribution's
+      metadata rather than restated in source, so the version a caller imports cannot
+      disagree with the version that was released. Where the running code is not
+      that release — a source tree with no distribution installed, or an installation
+      that resolves back to a working tree — it shall report a value that cannot
+      be mistaken for a published edition, rather than silently naming the one it
+      has departed from.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

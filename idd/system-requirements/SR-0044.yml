@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c56ce4c3ec404534f5c35742e74c33a5d68279dbf93c0e029ab0c49e6de6a6f2
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c56ce4c3ec404534f5c35742e74c33a5d68279dbf93c0e029ab0c49e6de6a6f2
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: check shall optionally emit findings as JSON (rule id, severity, uid, file,
+      message) for tooling and CI annotations.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

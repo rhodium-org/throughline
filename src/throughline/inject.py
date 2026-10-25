@@ -68,6 +68,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .graph import Index
+from .signatures import describe
 from .validate import FilterError, eval_filter, is_namespace_qualified
 
 # A directive name: an identifier, so the pattern that *finds* a marked region
@@ -374,13 +375,15 @@ def render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> 
     if link_lines:
         lines += link_lines
         lines.append("")
-    # The recorded ratified content is a copy of the text and normative attributes
-    # the block already shows, so it stays in the item file and the structured
-    # exports and out of a document (SR-0220).
-    shown = {k: v for k, v in item.attrs.items()
-             if k not in ("ratified_content", "ratified_links")}
-    if shown:
-        lines.append(" · ".join(f"**{k}**: {v}" for k, v in shown.items()))
+    if item.attrs:
+        lines.append(" · ".join(f"**{k}**: {v}" for k, v in item.attrs.items()))
+        lines.append("")
+    # Who signed, in a role where one was given (SR-0254). The rest of each
+    # signature — its stamp, recorded content and recorded links — is a copy of
+    # what the block already shows, so it stays in the item file and the
+    # structured exports and out of a document (SR-0220).
+    if item.ratifications:
+        lines.append("*Ratified by:* " + ", ".join(describe(e) for e in item.ratifications))
         lines.append("")
     return "\n".join(lines).rstrip()
 

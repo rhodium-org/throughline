@@ -11,7 +11,16 @@ links:
 attrs:
   priority: must
   verification: inspection
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b280b9f2c4b976bde6a1fafd028ecdaa487ea3ebbe2fc9a77cee027cdf3e888c
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b280b9f2c4b976bde6a1fafd028ecdaa487ea3ebbe2fc9a77cee027cdf3e888c
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: nfr
+    text: Tool releases shall follow SemVer; CLI flags, exit codes, the library API,
+      and the JSON export shape are the compatibility surface.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -33,9 +33,10 @@ attrs:
   origin: ai
   verification: test
   priority: must
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d6d001aa68e8812dc37169bb1950614ac1b1ee10269420a662c5108ec42da42d
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d6d001aa68e8812dc37169bb1950614ac1b1ee10269420a662c5108ec42da42d
+  content:
     type: system_requirement
     text: 'When an item that already carries a ratification record is amended, the
       record goes stale until a human signs it again. Where the project moves an
@@ -53,3 +54,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 7c6442156f2733d461d2f11a4651c573a2ff8bd1

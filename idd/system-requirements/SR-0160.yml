@@ -32,6 +32,19 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8537189ad7c204e2fefdfdd350a3b62e1b25b9b19ee130cca8c5786066ca8d3c
-  ratified_revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8537189ad7c204e2fefdfdd350a3b62e1b25b9b19ee130cca8c5786066ca8d3c
+  revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+  content:
+    type: system_requirement
+    text: A project shall be able to declare, in its own configuration alongside
+      the grounding link types, the further link types whose target being invalidated
+      withdraws the source's footing without those links conferring grounding. The
+      set that carries suspicion shall be the grounding link types together with
+      the types so declared, and the Tool shall hold no link type in that set by
+      name. A project that declares none shall cascade over its grounding links alone.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

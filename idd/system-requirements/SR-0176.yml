@@ -28,6 +28,17 @@ attrs:
   priority: should
   verification: inspection
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:1d0e73edd24b0ef4fb0c375d9e55a0bbc8d5e77008332b398f600a3a043f617f
-  ratified_revision: 7b6d1c49aed294e7de0a59744e78387be6903da0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:1d0e73edd24b0ef4fb0c375d9e55a0bbc8d5e77008332b398f600a3a043f617f
+  revision: 7b6d1c49aed294e7de0a59744e78387be6903da0
+  content:
+    type: system_requirement
+    text: Every GitHub Action referenced by the release workflow — each step on the
+      path from checked-out source to the artefact uploaded to PyPI — shall be pinned
+      to a full 40-character commit SHA carrying a trailing comment naming the version
+      tag that SHA resolves to, rather than to a mutable tag or branch.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

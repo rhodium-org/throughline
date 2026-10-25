@@ -41,6 +41,29 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:545abacd108891f7a300eb86b233626eeba6c8671fbff30c04789f5d4d7d3641
-  ratified_revision: 20e7230d567f578aa494f01eaa9fe7182e9f1626
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:545abacd108891f7a300eb86b233626eeba6c8671fbff30c04789f5d4d7d3641
+  revision: 20e7230d567f578aa494f01eaa9fe7182e9f1626
+  content:
+    type: system_requirement
+    text: 'Document injection shall recognise a marked region by its general form
+      — a tl: marker naming a kind, with an optional modifier — rather than by an
+      enumeration of kind names built into the pattern that finds it, and shall resolve
+      each kind through a single registry carrying, for that kind, how it renders
+      and whether it publishes the items its filter selects for the coverage rule
+      (SR-0096). One registry entry shall be the only place a directive is declared,
+      so a directive cannot be recognised for rendering while being omitted from
+      the coverage question, or the reverse. A front end built on throughline may
+      register a directive of its own, so a capability depending on state core does
+      not hold is provided by the layer that holds it rather than stubbed inside
+      core (NG-0007). A marked region naming a kind no registered directive provides
+      shall fail injection, naming the kind and the document it appears in, and stating
+      that directives beyond core''s own are registered by front ends built on throughline,
+      so an author who has run the wrong command is told what is missing rather than
+      that the document has unbalanced markers; no file shall be written. Core shall
+      hold no mapping from a directive to the front end that provides it.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

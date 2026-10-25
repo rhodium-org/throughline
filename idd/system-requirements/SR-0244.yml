@@ -38,9 +38,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c8be7fa617b568d28448b3e755d99ed520a9241e0a7395b059ed825187def531
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c8be7fa617b568d28448b3e755d99ed520a9241e0a7395b059ed825187def531
+  content:
     type: system_requirement
     text: Validation shall report an item as `ratified-stale` when it carries a ratification
       stamp and, among its links of the signed types (SR-0242), it carries a link
@@ -57,3 +58,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 2adf9a09966e1788e81cef64dbf719c61897775b

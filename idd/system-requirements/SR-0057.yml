@@ -11,7 +11,16 @@ links:
 attrs:
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:3d18f193b32c34d3cc62813d06538949dd2dc5d89b31bc297b7236feaaad5163
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:3d18f193b32c34d3cc62813d06538949dd2dc5d89b31bc297b7236feaaad5163
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall export each register as standalone Markdown (for wikis and
+      code review).
+    normative: true
+    derived: false
+    attrs:
+      priority: should

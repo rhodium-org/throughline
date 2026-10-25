@@ -42,6 +42,23 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a935c534197502a14b71900a7251334284807d772328cd6858513bd16d1e7406
-  ratified_revision: 2186b00ac61e6e99c9732ae37f3c0490850462b2
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a935c534197502a14b71900a7251334284807d772328cd6858513bd16d1e7406
+  revision: 2186b00ac61e6e99c9732ae37f3c0490850462b2
+  content:
+    type: system_requirement
+    text: Where the change since ratification is rendered and a differing field holds
+      prose, the Tool shall show that field as a diff in the manner of a version-control
+      diff — sentence by sentence, or line by line where the value has lines, each
+      marked as kept, removed or added, removed before added within a hunk, and wrapped
+      to the terminal's width. On a terminal, removed lines shall be coloured red
+      and added lines green, and within a removed sentence and the added sentence
+      it plainly became, the words that differ shall be visibly marked; no colour
+      or marking shall be emitted where output is not a terminal or the reader has
+      asked for none through NO_COLOR. A value holding no whitespace is shown as
+      before and after on one line.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

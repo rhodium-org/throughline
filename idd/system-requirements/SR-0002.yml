@@ -14,7 +14,17 @@ links:
 attrs:
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a4fe2abd2b9bf418db648eee3966fb61512749da3b311797fb569b8dd2b9aaf0
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a4fe2abd2b9bf418db648eee3966fb61512749da3b311797fb569b8dd2b9aaf0
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall form UIDs as <PREFIX>-<NUMBER> where PREFIX is the owning
+      register's configured prefix and NUMBER is a zero-padded positive integer of
+      configured width (default 4).
+    normative: true
+    derived: false
+    attrs:
+      priority: must

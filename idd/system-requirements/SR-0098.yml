@@ -20,7 +20,20 @@ attrs:
   origin: ai
   priority: must
   verification: inspection
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:76d4678387b7f4a443f80970c16db903b65648d5292457ba6244c5d4d062ad3d
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:76d4678387b7f4a443f80970c16db903b65648d5292457ba6244c5d4d062ad3d
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The identity recorded by ratify (the ratified_by value) shall be a genuine
+      human identity supplied by the ratifying person. Project guidance for AI agents
+      shall direct them, when the ratifier is unknown, to ask the user rather than
+      invent, guess, or reuse a value seen elsewhere — a fabricated ratified_by is
+      a false accountability record, the exact failure the grounding layer exists
+      to prevent.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

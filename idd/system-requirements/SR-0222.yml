@@ -36,5 +36,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:9a2f47ed266bd10de0f42b9797beef2c316572a0e29fa8285e4665c62459df57
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:9a2f47ed266bd10de0f42b9797beef2c316572a0e29fa8285e4665c62459df57
+  content:
+    type: system_requirement
+    text: While an item carries the ambiguity flag, check shall report a finding
+      named ambiguous for it at warning severity, giving the reasons recorded against
+      the item. Where no reason is recorded it shall say so and name the operation
+      that records one. A project shall be able to change that severity like any
+      other rule's (SR-0041). Ratify shall refuse to sign a flagged item, saying
+      that it cannot be ratified until it is clarified (SR-0213).
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 7a3ff1e759cc49d6bff2b11973d59a9d1dea57c6

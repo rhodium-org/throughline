@@ -31,5 +31,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8a6ddae51bf42448a2c61fd107b57fdd1d6cc99b1c6bcab731d2395f72d99211
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8a6ddae51bf42448a2c61fd107b57fdd1d6cc99b1c6bcab731d2395f72d99211
+  content:
+    type: user_requirement
+    text: Where someone reviewing an item, a person or an automated reviewer, judges
+      its wording ambiguous, they shall be able to flag the item through the Tool,
+      saying why and naming themselves. While the flag stands, check shall report
+      the item and the Tool shall refuse to ratify it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 7a3ff1e759cc49d6bff2b11973d59a9d1dea57c6

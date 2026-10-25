@@ -27,6 +27,7 @@ from .grounding import (
     origin_change_refusal,
 )
 from .model import Item, Link
+from .signatures import STAMP, latest, names
 from .uid import UidError, next_uid, parse_uid
 
 def coerce_attr(schema, item_type: str, key: str, raw: str):
@@ -261,13 +262,17 @@ def amend_item(project, uid: str, *, title: str | None = None,
     review_cleared = bool(was_reviewed and now != before and changed)
     if review_cleared:
         item.reviewed = None
-    stamp = item.attrs.get("ratified_fingerprint")
+    # Judged on the latest signature (SR-0261): an amendment that moves the
+    # fingerprint makes every stamped signature stale, and the latest is stale
+    # exactly when any is.
+    signed = latest(item)
+    stamp = signed.get(STAMP) if signed else None
     return Amendment(
         uid=uid, changed=changed,
         suspects=newly_suspect(project, uid, before, now) if changed else [],
         review_cleared=review_cleared,
         fingerprint_before=before, fingerprint_after=now,
-        ratifier=item.attrs.get("ratified_by"),
+        ratifier=names(item) or None,
         ratification_stale=bool(stamp and stamp != now),
     )
 

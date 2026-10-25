@@ -33,9 +33,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a7f322c01329dd8ae1d0c5ce84455df7f79cc96ca836ac06d7ea7e46b6dee516
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a7f322c01329dd8ae1d0c5ce84455df7f79cc96ca836ac06d7ea7e46b6dee516
+  content:
     type: system_requirement
     text: The Tool shall resolve sources through one resolver interface, taken as
       a parameter with a default (SR-0226). The default reads a path source from
@@ -50,3 +51,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

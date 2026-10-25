@@ -7,8 +7,15 @@ normative: false
 links:
 - target: INT-0001
   type: derives_from
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8d1c9addba93b75e68e86b24209c6204685c353c978b9292c9860be38bb05831
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8d1c9addba93b75e68e86b24209c6204685c353c978b9292c9860be38bb05831
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: business_need
+    text: Documented, versioned, open file format; OSI-approved license; offline
+      operation.
+    normative: false
+    derived: false
+    attrs: {}

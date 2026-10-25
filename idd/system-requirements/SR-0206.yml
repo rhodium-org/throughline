@@ -33,5 +33,20 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:5c489010f25dc95c3ee5965d6ffbc30de98a1c0defb79bbae78715ff5c42d01d
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:5c489010f25dc95c3ee5965d6ffbc30de98a1c0defb79bbae78715ff5c42d01d
+  content:
+    type: system_requirement
+    text: The Tool shall let an author remove named attributes from an existing item
+      through amend, whether or not the item's type still declares them, so a value
+      the schema no longer governs can be cleared without hand-editing the item.
+      It shall refuse, saying why, to remove an attribute the item does not carry,
+      one its type declares as required, the ratification record (SR-0170), and the
+      ambiguity flag that blocks ratification. A removal is a content change and
+      shall be reported like any other amendment.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: c7f7d69dc377593d57f11e98fbb20c5c35ed0d00

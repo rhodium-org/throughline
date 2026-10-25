@@ -1,0 +1,44 @@
+uid: SR-0262
+type: system_requirement
+status: ratified
+title: A withdrawal names whose signature it withdraws
+text: Where an item holds more than one signature, withdraw shall require the signer
+  whose signature is withdrawn to be named by identifier, and shall remove that entry
+  alone, recording who withdrew it, why, whose it was and when. Where it holds one,
+  naming is optional. When the signatures left no longer meet the requirement the
+  item shall move to the status bound to the suspect role, as SR-0197 provides; when
+  they still meet it the status shall not move. One withdrawal record shall be kept
+  per withdrawn signature.
+rationale: A withdrawal takes one person's accountability off an item; with several
+  signatures, which one must be said, not guessed. The suspect move follows the requirement,
+  not the count, because an item still signed by the people its kind requires has
+  lost nothing. Who pays, a withdrawer in a multi-signer graph types one identifier.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0197
+  type: refines
+- target: SR-0260
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:69c377c797036e0d58fc278aeee808c5a5ed270e231b11d96e0092f726074508
+  content:
+    type: system_requirement
+    text: Where an item holds more than one signature, withdraw shall require the
+      signer whose signature is withdrawn to be named by identifier, and shall remove
+      that entry alone, recording who withdrew it, why, whose it was and when. Where
+      it holds one, naming is optional. When the signatures left no longer meet the
+      requirement the item shall move to the status bound to the suspect role, as
+      SR-0197 provides; when they still meet it the status shall not move. One withdrawal
+      record shall be kept per withdrawn signature.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

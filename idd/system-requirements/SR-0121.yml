@@ -32,7 +32,26 @@ attrs:
   origin: hybrid
   priority: should
   verification: test
-  ratified_by: henry
-  ratified_fingerprint: sha256:7b88beadd19ffb6678a6a7743857591d566a3ec33f22b4e01119808debe6f125
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:7b88beadd19ffb6678a6a7743857591d566a3ec33f22b4e01119808debe6f125
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: A command that takes an existing item by UID — ratify, link, delete, trace,
+      blast, invalidate, review, and any later command of the same shape — shall,
+      when that UID is omitted on an interactive terminal, help the user find it
+      rather than reject the command. It shall first let the user choose an item
+      type, then choose a specific item within that type, listing each candidate
+      by UID and title so the choice is made from meaning, not from memorised identifiers;
+      where a command takes two endpoints (a link source and destination) each is
+      selected the same way in turn. The picker shall reuse the non-blocking convention
+      already established for grounding — an empty answer or end-of-input cancels
+      cleanly and never hangs — and on a non-interactive session the omitted UID
+      shall fail fast per SR-0120. Supplying the UID as an argument bypasses the
+      picker entirely, so scripts are unaffected.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

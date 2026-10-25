@@ -31,6 +31,19 @@ links:
   type: relates
 attrs:
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d4b3b7ddd8cfba0acc08961e7998202e0753ac7af5fb73568d65a39a59492a7f
-  ratified_revision: 30a55fff6be70432fc879c6798e40fe414216f0a
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d4b3b7ddd8cfba0acc08961e7998202e0753ac7af5fb73568d65a39a59492a7f
+  revision: 30a55fff6be70432fc879c6798e40fe414216f0a
+  content:
+    type: system_requirement
+    text: The agent-facing brief shall tell an agent how to write an item, alongside
+      how to work (SR-0129). It shall say that an item states its obligation in the
+      fewest words that still bind, that a rationale records the decision taken and
+      the alternatives rejected rather than the history of its own drafting, and
+      that a revision rewrites the item rather than appending to it. This shall be
+      part of the brief's fixed contract text, so it holds for every project.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''

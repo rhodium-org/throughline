@@ -30,9 +30,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e0f8d104325a950c3ac9b96d33840991fd5f9163a36e84f9c11a0abef6c2ca22
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e0f8d104325a950c3ac9b96d33840991fd5f9163a36e84f9c11a0abef6c2ca22
+  content:
     type: user_requirement
     text: As someone working a project that declares sources, I want the Tool itself
       to resolve those sources and work the composed graph, so that I run one command
@@ -42,3 +43,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

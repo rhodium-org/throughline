@@ -1,3 +1,4 @@
 prefix: UR
 digits: 4
 title: User requirements
+type: user_requirement

@@ -29,6 +29,20 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d5b8fd221beb3cb0555d133338e6662456c06349a133c3b36f19fc3a28656971
-  ratified_revision: 714872929a1c9f79d756395d949b982b220d2a5c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d5b8fd221beb3cb0555d133338e6662456c06349a133c3b36f19fc3a28656971
+  revision: 714872929a1c9f79d756395d949b982b220d2a5c
+  content:
+    type: system_requirement
+    text: The project shall be able to declare, on an item type in configuration,
+      whether items of that type are normative. The declaration shall default to
+      true where absent, so an existing project is unchanged. A value that is not
+      a boolean shall be a configuration error at load time. When `tl new` creates
+      an item it shall take the flag from the item's type. The declaration shall
+      be settable through the schema commands, on a new type and on an existing one,
+      so a project never edits its configuration by hand to reach it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

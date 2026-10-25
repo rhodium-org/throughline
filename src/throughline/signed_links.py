@@ -20,7 +20,9 @@ from __future__ import annotations
 
 from .schema import Schema
 
-# The signed links, recorded beside the stamp. Written only by ratify.
+# The flat attribute of format 3 that held the signed links. Still named so the
+# lift of an older record (SR-0255) and a merge reading an older file know it;
+# a signature now holds its links under its own ``links`` key (SR-0254).
 LINKS_ATTR = "ratified_links"
 
 #: A signed link: ``(type, target)``.
@@ -51,11 +53,11 @@ def links_record(item, schema: Schema | None = None) -> list[dict]:
     return [{"type": t, "target": target} for t, target in signed_links(item, schema)]
 
 
-def recorded_links(item) -> list[SignedLink] | None:
-    """The links ``item``'s ratification record holds. A record with no link
-    record holds none (SR-0244). None when the record is not one the Tool could
-    have written, which validation reports and nothing reads as agreement."""
-    raw = item.attrs.get(LINKS_ATTR)
+def recorded_links(entry: dict | None) -> list[SignedLink] | None:
+    """The links one signature holds (its ``links`` key, SR-0254). A signature with
+    no link record holds none (SR-0244). None when the record is not one the Tool
+    could have written, which validation reports and nothing reads as agreement."""
+    raw = entry.get("links") if entry else None
     if raw is None:
         return []
     if not isinstance(raw, list):
@@ -70,16 +72,16 @@ def recorded_links(item) -> list[SignedLink] | None:
     return out
 
 
-def link_drift(item, schema: Schema | None = None
+def link_drift(item, schema: Schema | None = None, entry: dict | None = None
                ) -> tuple[list[SignedLink], list[SignedLink]]:
-    """``(unheld, dropped)`` for a ratified item (SR-0244): the signed links it
-    carries that its record does not hold, and the links its record holds that it
-    no longer carries. Links of types not signed are ignored on both sides. Both
-    empty for an item with no ratification stamp, and for a malformed record,
-    which is reported as its own error."""
-    if not item.attrs.get("ratified_fingerprint"):
+    """``(unheld, dropped)`` for one signature on ``item`` (SR-0244, SR-0261): the
+    signed links the item carries that the signature does not hold, and the links
+    the signature holds that the item no longer carries. Links of types not signed
+    are ignored on both sides. Both empty for a signature with no stamp, and for a
+    malformed record, which is reported as its own error."""
+    if not entry or not entry.get("fingerprint"):
         return [], []
-    recorded = recorded_links(item)
+    recorded = recorded_links(entry)
     if recorded is None:
         return [], []
     types = signed_link_types(item, schema)
@@ -88,8 +90,8 @@ def link_drift(item, schema: Schema | None = None
     return sorted(carried - held), sorted(held - carried)
 
 
-def links_moved(item, schema: Schema | None = None) -> bool:
-    unheld, dropped = link_drift(item, schema)
+def links_moved(item, schema: Schema | None = None, entry: dict | None = None) -> bool:
+    unheld, dropped = link_drift(item, schema, entry)
     return bool(unheld or dropped)
 
 

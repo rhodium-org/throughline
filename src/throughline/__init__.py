@@ -52,6 +52,7 @@ from .grounding import (
     withdraw,
 )
 from .identity import (
+    default_identifier,
     IdentityError,
     default_ratifier,
     git_identity,
@@ -114,9 +115,11 @@ from .ratification import (
     diff_prose,
     is_prose,
     ratification_is_committed,
+    signature_is_committed,
     wrap_words,
 )
-from .schema import AttrSpec, LinkRule, Schema, SchemaError
+from .schema import AttrSpec, LinkRule, Requirement, Schema, SchemaError
+from .signatures import Standing, requirement_met, signatures, standing
 from .views import (
     check_summary,
     ground_line,
@@ -181,7 +184,7 @@ __all__ = [
     "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
     "Index", "fingerprint", "revision",
     # the schema a project declares
-    "Schema", "AttrSpec", "LinkRule", "SchemaError",
+    "Schema", "AttrSpec", "LinkRule", "Requirement", "SchemaError",
     # creating and changing an item
     "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
     "newly_suspect", "new_item", "delete_item", "review_items",
@@ -200,14 +203,16 @@ __all__ = [
     "attribute_owner",
     # what a signature covered, and what has moved since
     "change_since_ratification", "ratification_is_committed",
-    "RatificationChange", "FieldChange",
+    "signature_is_committed", "RatificationChange", "FieldChange",
     "CHANGED", "UNCHANGED", "UNRESOLVABLE", "UNRATIFIED", "RECORD", "HISTORY",
     "is_prose", "diff_prose", "DiffUnit", "KEPT", "REMOVED", "ADDED", "wrap_words",
     # what awaits a signature, for an interface to draw
     "worklist", "WorklistEntry", "entry_for", "CONCERNS", "depths_from_roots",
     "is_ratified", "signature_is_stale", "ratification_progress",
+    "signatures", "standing", "Standing", "requirement_met",
     # who signs
-    "default_ratifier", "git_identity", "normalise_identifier", "IdentityError",
+    "default_ratifier", "default_identifier", "git_identity", "normalise_identifier",
+    "IdentityError",
     # publishing
     "inject_text", "inject_documents", "document_paths", "DocumentRender",
     "referenced_uids", "has_markers", "render_item", "register_directive",

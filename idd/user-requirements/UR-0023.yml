@@ -13,7 +13,17 @@ attrs:
   origin: human
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b7702ba187402b838e970a22cdf45dbdc81a52d62e48a15871ce30c73cc111be
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b7702ba187402b838e970a22cdf45dbdc81a52d62e48a15871ce30c73cc111be
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: user_requirement
+    text: Items whose origin is machine-generated rather than human-authored shall
+      enter the graph as proposed and shall not count as accepted until a human explicitly
+      ratifies them, so accountability for every requirement rests with a person.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

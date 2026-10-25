@@ -31,5 +31,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f349cc2f878398db79dac596ac7d941d844e70c4f714373806aea23591fdc36a
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f349cc2f878398db79dac596ac7d941d844e70c4f714373806aea23591fdc36a
+  content:
+    type: system_requirement
+    text: The Tool shall offer every operation its command line performs through
+      the names the package exports. Those functions shall return values and raise
+      the Tool's own kinds of error. They shall print nothing and shall not end the
+      program. Everything the command line reports shall be obtainable as data through
+      them.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 2298db459d5d2abc270f28915dba9ee328bb078b

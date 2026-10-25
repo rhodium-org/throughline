@@ -30,6 +30,19 @@ attrs:
   origin: ai
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a4294b1d3aa2f9e4975d28c5609e44163ad0a433ff6eb5fb0b321aeb0923dd43
-  ratified_revision: 4644a0ac6d6acd0f64e01810fb40708956ba8316
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a4294b1d3aa2f9e4975d28c5609e44163ad0a433ff6eb5fb0b321aeb0923dd43
+  revision: 4644a0ac6d6acd0f64e01810fb40708956ba8316
+  content:
+    type: system_requirement
+    text: 'Every YAML the Tool reads — a register manifest, an item file, an item
+      as it stood at a git ref — is parsed through one loader chosen once at import:
+      PyYAML''s CSafeLoader where the installed PyYAML carries libyaml, and SafeLoader
+      otherwise. Both are safe loaders that construct no Python objects, so NFR-0022
+      holds either way. The parsed result is the same whichever runs; only the time
+      differs. No other module reads YAML by another route.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

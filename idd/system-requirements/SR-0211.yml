@@ -30,5 +30,18 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:6e269cff44d9623b5920c7c7c456f32e090598ee4c0cbb8042f7eb35041154ce
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:6e269cff44d9623b5920c7c7c456f32e090598ee4c0cbb8042f7eb35041154ce
+  content:
+    type: system_requirement
+    text: The Tool shall refuse to remove a link, or to retype one to a type that
+      confers no grounding, when the change would leave an item of the project that
+      reaches a root now reaching none, or a delivery root of the project that is
+      served now unserved. It shall name every such item, change nothing, and judge
+      this by the same reachability the gate applies.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: cecde0362d3798ffd027ed9c2aa8ba64aab1fdd3

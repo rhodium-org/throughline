@@ -1,0 +1,51 @@
+uid: SR-0257
+type: system_requirement
+status: ratified
+title: A project declares the roles people may sign in
+text: A project may declare, under [ratify.roles], each role by name with the stable
+  identifiers (SR-0157) of the people who hold it. The Tool shall refuse the configuration
+  when a role's value is not a list of well-formed identifiers or when a role is
+  declared empty. A person may hold more than one role. A project that declares none
+  shall be checked and signed exactly as before. The agent brief shall name the declared
+  roles and who holds them.
+rationale: Under [ratify], because an older Tool refuses an unknown key there (SR-0242's
+  reasoning), so a graph that declares roles cannot be signed by a Tool that would
+  not honour them. Identifiers, not names, because the record already shows one person
+  under several spellings (SR-0156). Rejected, roles read from the forge; GitHub
+  knows who may push and merge and nothing about seniority, so any role taken from
+  it would be invented. Rejected, a register of people (SR-0158). As the rejection
+  of SR-0155 asks, nothing here binds a project that declares nothing. Who pays,
+  a project that declares roles keeps the list current as people join and leave,
+  through the schema operation, and each signer gives an identifier.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0155
+  type: relates
+- target: SR-0157
+  type: relates
+- target: SR-0158
+  type: relates
+- target: SR-0242
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d4e7b8fd802187227dba49369fd1298f0185835dca6366590f9895d973a705dc
+  content:
+    type: system_requirement
+    text: A project may declare, under [ratify.roles], each role by name with the
+      stable identifiers (SR-0157) of the people who hold it. The Tool shall refuse
+      the configuration when a role's value is not a list of well-formed identifiers
+      or when a role is declared empty. A person may hold more than one role. A project
+      that declares none shall be checked and signed exactly as before. The agent
+      brief shall name the declared roles and who holds them.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

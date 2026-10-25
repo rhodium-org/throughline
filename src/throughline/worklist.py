@@ -15,8 +15,6 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 
-from .fingerprint import fingerprint
-from .signed_links import links_moved
 from .graph import Index
 from .grounding import (
     is_flagged_ambiguous,
@@ -24,13 +22,15 @@ from .grounding import (
     reaches_root,
     transition_refusal,
 )
-from .identity import RATIFIED_BY_ATTR
+from .signatures import requirement_met, signatures, stale_entries, standing
 
 #: The states a reviewer sorts by, most actionable first. `proposed` and `ready`
-#: can be signed now; `ambiguous`, `ungrounded` and `blocked` must be fixed first;
-#: `stale` was signed and then rewritten; the rest are settled or dead.
-CONCERNS = ("proposed", "ready", "stale", "blocked", "ungrounded", "ambiguous",
-            "ratified", "rejected", "deleted")
+#: can be signed now; `awaiting` holds signatures that do not yet meet what its
+#: kind requires (SR-0260) and can take the rest; `ambiguous`, `ungrounded` and
+#: `blocked` must be fixed first; `stale` was signed and then rewritten; the rest
+#: are settled or dead.
+CONCERNS = ("proposed", "ready", "awaiting", "stale", "blocked", "ungrounded",
+            "ambiguous", "ratified", "rejected", "deleted")
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,9 @@ class WorklistEntry:
     stale: bool
     dead: bool
     depth: int | None
+    #: Where the item stands against what its kind requires, in words (SR-0260):
+    #: who has signed and what is still required. Empty for an unsigned item.
+    standing: str = ""
 
 
 def is_ratified(schema, item) -> bool:
@@ -62,7 +65,7 @@ def is_ratified(schema, item) -> bool:
     gate about the one question both answer (SR-0195, SR-0229)."""
     if _is_suspect(schema, item):
         return False
-    if item.attrs.get(RATIFIED_BY_ATTR):
+    if requirement_met(item, schema):
         return True
     if not schema.ratify_moves_status:
         return False
@@ -78,12 +81,10 @@ def _is_suspect(schema, item) -> bool:
 
 
 def signature_is_stale(schema, item) -> bool:
-    """Whether the signature an item carries no longer covers its content or its
-    signed links (SR-0244). Read
-    from the stamp rather than from history, so no subprocess is needed."""
-    stamp = item.attrs.get("ratified_fingerprint")
-    return bool(stamp) and (stamp != fingerprint(item, schema)
-                            or links_moved(item, schema))
+    """Whether any signature an item carries no longer covers its content or its
+    signed links (SR-0244, SR-0261). Read from the stamps rather than from
+    history, so no subprocess is needed."""
+    return bool(stale_entries(item, schema))
 
 
 def depths_from_roots(project, index: Index | None = None) -> dict[str, int]:
@@ -141,6 +142,9 @@ def entry_for(project, item, *, index: Index | None = None,
         concern = "stale"
     elif settled:
         concern = "ratified"
+    elif signatures(item) and not requirement_met(item, schema):
+        # Signed by some of the people its kind requires, not yet by all (SR-0260).
+        concern = "awaiting"
     elif ambiguous:
         concern = "ambiguous"
     elif not grounded:
@@ -157,6 +161,7 @@ def entry_for(project, item, *, index: Index | None = None,
         concern=concern, ratifiable=ratifiable, obstacle=obstacle,
         grounded=grounded, ambiguous=ambiguous, ratified=ratified, stale=stale,
         dead=dead, depth=depths.get(item.uid),
+        standing=standing(item, schema).describe() if signatures(item) else "",
     )
 
 

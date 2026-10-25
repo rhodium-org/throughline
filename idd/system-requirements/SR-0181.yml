@@ -28,6 +28,22 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:13c7c9a33bb14a19c108810cfb095a17cd156043f082011e4992818acb0969de
-  ratified_revision: 35128d4a466644edc6e5546aced325e9f67dfb0a
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:13c7c9a33bb14a19c108810cfb095a17cd156043f082011e4992818acb0969de
+  revision: 35128d4a466644edc6e5546aced325e9f67dfb0a
+  content:
+    type: system_requirement
+    text: The Tool shall provide operations that change the project's declared schema
+      — its item types and their attributes, its link vocabulary and endpoint rules,
+      its status vocabulary and permitted transitions, and its grounding configuration
+      — so that altering what the validator enforces never requires hand-editing
+      the configuration file. Each operation shall name the change it makes rather
+      than accept an arbitrary edit to a table, and shall validate the resulting
+      schema before writing it. An operation shall change only the project it is
+      run against, and shall refuse a change expressed against another graph's namespace
+      before writing anything.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

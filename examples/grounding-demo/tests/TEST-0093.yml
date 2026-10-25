@@ -7,6 +7,13 @@ normative: true
 links:
 - target: FR-0055
   type: verifies
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:4779653b551ff28c0730117d59c54ef578d3ca603ff8b6364b91cfe7bc610acd
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:4779653b551ff28c0730117d59c54ef578d3ca603ff8b6364b91cfe7bc610acd
+  content:
+    type: test
+    text: Emailed link authenticates the user.
+    normative: true
+    derived: false
+    attrs: {}
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a

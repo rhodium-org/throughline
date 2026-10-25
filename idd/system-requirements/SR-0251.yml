@@ -28,9 +28,10 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:0f2a31a6fd3626a48c9cd94ff1adb6662f10ca9d7bcd595339a4a82a58a21c8a
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:0f2a31a6fd3626a48c9cd94ff1adb6662f10ca9d7bcd595339a4a82a58a21c8a
+  content:
     type: system_requirement
     text: 'Each item in the canonical dump shall carry, under documented keys, the
       fingerprint the Tool computes for its current normative content and a revision:
@@ -40,3 +41,4 @@ attrs:
     derived: false
     attrs:
       priority: should
+  revision: 67876b148d1d6656244eb7881aa0c6be547dcada

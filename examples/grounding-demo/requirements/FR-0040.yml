@@ -7,6 +7,14 @@ normative: true
 links:
 - target: RISK-0007
   type: mitigates
-attrs:
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:192efda9546edd5934fcfcbcbfe1a51ad9cf036c700a0c5b8f88be1dee762e2c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:192efda9546edd5934fcfcbcbfe1a51ad9cf036c700a0c5b8f88be1dee762e2c
+  content:
+    type: requirement
+    text: The system shall lock login after 5 failed attempts.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''
+  revision: fef5d9e0467c0cceaca0329165a222c7b309f53a

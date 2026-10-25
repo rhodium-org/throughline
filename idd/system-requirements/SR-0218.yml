@@ -33,5 +33,20 @@ attrs:
   priority: should
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8ebd98271bebcce27ca2bf7a538c1d81acb7037e15caa278efd39f48209d0e57
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8ebd98271bebcce27ca2bf7a538c1d81acb7037e15caa278efd39f48209d0e57
+  content:
+    type: system_requirement
+    text: '`tl migrate` shall add recorded content to each ratification record that
+      has a stamp and no recorded content, wherever the content can be proved: from
+      the item as it stands when its current content reproduces the stamp, and otherwise
+      from the revision that history resolves for the stamp (SR-0165). It shall leave
+      a record whose content cannot be proved without recorded content. It shall
+      change no stamp, ratifier, identifier, backfill marking or status. It shall
+      report how many records it completed and how many it could not.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+  revision: dfddcd57551da59835ebb5fa4aed6d19b50dcbcd

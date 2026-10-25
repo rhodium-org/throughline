@@ -31,5 +31,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8358b174843cf1caf38f8301677ca67ddf0106cc18030fea6a86ee0f02c3417f
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8358b174843cf1caf38f8301677ca67ddf0106cc18030fea6a86ee0f02c3417f
+  content:
+    type: user_requirement
+    text: A program embedding the Tool shall be able to perform every operation the
+      Tool performs, and read everything it reports, through an interface that returns
+      data rather than printed text. The interface shall name what a caller may rely
+      on. It shall work where the caller has no terminal, no subprocess and no network
+      of its own. A caller shall not need anything the interface does not name.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: be0b2e9dda0cd1033c9b5051346d3d201a293680

@@ -28,6 +28,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:33f1cbe2775b00f0dc717f1691c2714b810df1827b7b55ecd9ff5465f5e241f2
-  ratified_revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:33f1cbe2775b00f0dc717f1691c2714b810df1827b7b55ecd9ff5465f5e241f2
+  revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+  content:
+    type: system_requirement
+    text: The Tool shall refuse to set or change an item's ratification attributes
+      — the ratifier's name, any identifier recorded beside it, the stamp binding
+      the record to the content ratified, the marking that a record was backfilled,
+      and the revision cached as holding the content the stamp was taken over — through
+      any operation other than the one that owns each. An operation that sets attributes
+      generally shall reject them by name, saying which command owns them.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

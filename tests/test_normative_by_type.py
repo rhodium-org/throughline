@@ -227,7 +227,7 @@ def test_migrate_rewrites_the_flag_and_names_every_item(drifted, capsys):
     assert result.stale == ["REQ-0001"]
     assert ("REQ-0001", "ratified-stale") in rules
     item = load_project(drifted).get("REQ-0001")
-    assert item.attrs["ratified_by"] == "Ada"
+    assert item.ratifications[-1]["by"] == "Ada"
     assert "ratified_backfilled" not in item.attrs
     # And the command says all of it.
     assert _cli(["-C", drifted, "migrate"]) == 0

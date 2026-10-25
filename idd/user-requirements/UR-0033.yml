@@ -27,6 +27,19 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:6151ced0eb3aefc2945b80c311e7f3c8b25451e39031bcf8f63e51651969a9c0
-  ratified_revision: 714872929a1c9f79d756395d949b982b220d2a5c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:6151ced0eb3aefc2945b80c311e7f3c8b25451e39031bcf8f63e51651969a9c0
+  revision: 714872929a1c9f79d756395d949b982b220d2a5c
+  content:
+    type: user_requirement
+    text: 'As the person who keeps a graph, I want the normative flag on an item
+      to follow from what kind of item it is, so that an intent or a non-goal is
+      not treated as a binding statement just because `tl new` wrote it. Today the
+      tool writes `normative: true` for every item of every type, and no command
+      can change it, so the only value a graph can hold is the one the tool happened
+      to write.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

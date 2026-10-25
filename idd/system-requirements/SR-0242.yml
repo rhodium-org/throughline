@@ -30,9 +30,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:a00ab1985ace44bebab54adc5585cb378c339f1410064e72480ec3b7db2ef9f6
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:a00ab1985ace44bebab54adc5585cb378c339f1410064e72480ec3b7db2ef9f6
+  content:
     type: system_requirement
     text: 'A project may declare, under `[ratify] signed_links`, the link types a
       ratification covers. The Tool shall refuse the configuration when the value
@@ -44,3 +45,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 2adf9a09966e1788e81cef64dbf719c61897775b

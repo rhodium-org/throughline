@@ -21,6 +21,16 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:473504fc4ef1a634f903b822a43228db1e2648b014a79e424c8ddf3e6967f030
-  ratified_revision: 52cce63f49d488e2a468f13c497a8267b5fae97a
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:473504fc4ef1a634f903b822a43228db1e2648b014a79e424c8ddf3e6967f030
+  revision: 52cce63f49d488e2a468f13c497a8267b5fae97a
+  content:
+    type: user_requirement
+    text: Where an item is reported stale against its ratification, a user shall
+      be able to see which normative content changed since it was last ratified,
+      from the same tool that is asking them to accept it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

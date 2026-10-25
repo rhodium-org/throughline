@@ -43,5 +43,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e08d79ebfb624089a064631dceb929dbff61940b26066783afea3bac47940142
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e08d79ebfb624089a064631dceb929dbff61940b26066783afea3bac47940142
+  content:
+    type: system_requirement
+    text: 'The Tool shall provide an operation that removes the ambiguity flag from
+      one item and requires a stated reason. It shall record on the item that reason,
+      the identity of the person removing the flag, and what check reported for the
+      flag. It shall change nothing else on the item: its title, text, rationale,
+      other attributes, status and links stay as they were. It shall refuse an item
+      that carries no ambiguity flag. No other operation shall remove the flag or
+      set it to a value that no longer flags the item, and no other operation shall
+      write or remove that record.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1315f4bdd3caa7513d5803849ab47679278384d5

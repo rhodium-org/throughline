@@ -28,7 +28,26 @@ attrs:
   origin: hybrid
   priority: must
   verification: test
-  ratified_by: henry
-  ratified_fingerprint: sha256:41c647e9d9d775f0d74a41ca92e1b15b7d81a27f3fce6a7b064178148b34b428
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:41c647e9d9d775f0d74a41ca92e1b15b7d81a27f3fce6a7b064178148b34b428
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The migration command shall apply the current format major's configuration
+      backfill even when the project's declared major already equals the Tool's,
+      so that a project hand-authored at the current major — one that never passed
+      through the upgrade introducing a required configuration table — is repaired
+      by the same single command rather than by hand. The backfill shall remain idempotent
+      and conservative. It shall bind a semantic role only when the status that role
+      would take is among the project's declared status values, never inventing a
+      status nor guessing a binding, and it shall leave an already-declared table
+      untouched, testing for the table's presence rather than for its contents so
+      that a deliberately empty or partial table is preserved and never rewritten
+      or duplicated. The command shall report what the repair wrote rather than reporting
+      that nothing changed.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

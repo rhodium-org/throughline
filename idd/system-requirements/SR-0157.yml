@@ -32,6 +32,20 @@ attrs:
   origin: ai
   priority: could
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c70b2072d3e14f058811bcdd28d23437b2be6deac8f40ca46881958fb70ee2a4
-  ratified_revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c70b2072d3e14f058811bcdd28d23437b2be6deac8f40ca46881958fb70ee2a4
+  revision: a024efaacbf8e65d8635da2a89fbab60e0168ee0
+  content:
+    type: system_requirement
+    text: A ratification record shall be able to carry, alongside the ratifier's
+      name, a stable identifier for that human, recorded in its own field and never
+      conflated with the name. The identifier shall state the scheme it belongs to
+      — a forge account such as GitHub, or an email address — and shall be optional.
+      Writing a ratification shall never require a network call or a platform credential
+      to succeed. The Tool shall never invent an identifier for a record that lacks
+      one.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

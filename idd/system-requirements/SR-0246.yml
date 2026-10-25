@@ -35,9 +35,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:8d622aaf5fbe0306f90de1cc97b5b3456030453cf586bf59cfef893e2d9aa20c
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:8d622aaf5fbe0306f90de1cc97b5b3456030453cf586bf59cfef893e2d9aa20c
+  content:
     type: system_requirement
     text: The change since ratification (SR-0165) shall include each signed link
       the item carries that its link record does not hold, and each link the record
@@ -51,3 +52,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 2adf9a09966e1788e81cef64dbf719c61897775b

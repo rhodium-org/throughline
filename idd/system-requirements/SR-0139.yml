@@ -21,7 +21,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:e4533a89e1e38814029ba94a54efcf66e101d911a09c659d5b51c9a45ec48f85
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:e4533a89e1e38814029ba94a54efcf66e101d911a09c659d5b51c9a45ec48f85
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The Tool shall force UTF-8 encoding on its standard output and standard
+      error streams before it emits any text, so that a non-ASCII character the Tool
+      prints — the arrow glyph in a grounding summary, an em dash in a finding —
+      renders on every platform instead of aborting the command. On a console whose
+      stream cannot be reconfigured the Tool shall leave it unchanged and carry on.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

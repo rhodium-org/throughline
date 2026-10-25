@@ -16,18 +16,15 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from .fingerprint import fingerprint, signed_content
-from .signed_links import LINKS_ATTR, links_moved, links_record, signed_link_types
-from .graph import Index
-from .identity import (
-    RATIFICATION_ATTRS,
-    RATIFIED_BY_ATTR,
-    RATIFIED_ID_ATTR,
-    WITHDRAWN_BY_ATTR,
-    WITHDRAWN_ID_ATTR,
-    WITHDRAWN_RATIFIER_ATTR,
-    WITHDRAWN_REASON_ATTR,
-    normalise_identifier,
+from .signatures import (
+    AT, BY, CONTENT, ID, LINKS, ROLE, STAMP, SUPERSEDES,
+    W_AT, W_BY, W_ID, W_OF, W_OF_ID, W_REASON,
+    describe, entry_of, is_stale, latest, names, now_iso, requirement_met,
+    signatures, stale_entries, standing,
 )
+from .signed_links import links_moved, links_record, signed_link_types
+from .graph import Index
+from .identity import RATIFICATION_ATTRS, normalise_identifier
 from .model import Item, Link
 
 
@@ -218,13 +215,16 @@ def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
     attributes a gate reads: the ratification record keeps the owners SR-0170
     gives it, an origin stays under SR-0208, and the ambiguity flag and the record
     of its removal belong to `tl clarify` (SR-0213)."""
-    if name not in item.attrs:
-        return f"{item.uid} carries no attribute '{name}'"
+    # Ownership first (SR-0170): a guarded name is refused by its owner whether or
+    # not the item carries it, so the record's names are never reported as a mere
+    # absence — since format 4 the record is not under attrs at all (SR-0254).
     owned = attribute_owner(name)
     if owned is not None:
         record, owner = owned
         return (f"'{name}' on {item.uid} is part of the {record} and "
                 f"cannot be removed — `tl {owner}` owns it")
+    if name not in item.attrs:
+        return f"{item.uid} carries no attribute '{name}'"
     # Only a value that flags the item is the flag; a false one blocks nothing.
     if name == AMBIGUOUS_ATTR and is_flagged_ambiguous(item):
         return (f"'ambiguous' marks {item.uid} as unable to be ratified until it is "
@@ -242,7 +242,8 @@ def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
 
 
 def ratification_obstacle(schema, idx: Index, item: Item, *,
-                          replacing: bool = False) -> str | None:
+                          replacing: bool = False, by: str | None = None,
+                          by_id: str | None = None) -> str | None:
     """Why :func:`ratify` would refuse ``item`` as the graph now stands, or ``None``
     when it would proceed — the whole precondition set, asked without writing
     anything (SR-0195).
@@ -266,25 +267,44 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     # human confirms it again.
     ratified_status = schema.status_role("ratified")
     past = (schema.ratify_moves_status
-            and item.attrs.get(RATIFIED_BY_ATTR) is not None
+            and bool(signatures(item))
             and item.status not in schema.dead_statuses()
             and transition_refusal(schema, item, ratified_status) is not None)
-    already = (item.status == ratified_status or past
-               if schema.ratify_moves_status
-               else item.attrs.get(RATIFIED_BY_ATTR) is not None)
-    if (already and item.attrs.get("ratified_fingerprint") == fingerprint(item, schema)
-            and not links_moved(item, schema)):
-        # A correction is the one signature over unchanged content that accepts
-        # something — the identity on the record (SR-0196). Whether it is allowed
-        # rests on the record being unpublished, which only :func:`ratify` can
-        # establish, so the refusal is lifted here and reimposed there.
-        if not replacing:
-            return (f"{item.uid} is already ratified by "
-                    f"{item.attrs.get('ratified_by', 'a human')} and its content"
-                    + (" and signed links have " if signed_link_types(item, schema)
-                       else " has ") +
-                    "not changed since — there is nothing to accept; pass "
-                    "--replacing to correct the recorded ratifier instead")
+    unchanged = (" and signed links have " if signed_link_types(item, schema)
+                 else " has ") + "not changed since — there is nothing to accept"
+    # A suspect item is never "already ratified": something it rested on was
+    # withdrawn, and re-signing it is how a human confirms it again (SR-0175).
+    try:
+        suspect = item.status == schema.status_role("suspect")
+    except Exception:                       # the role is optional vocabulary
+        suspect = False
+    # A signature over content nobody has changed accepts nothing (SR-0148). Which
+    # signature that is depends on who is asking: a named person renews their own
+    # (SR-0259), so theirs is the one judged; in a project that declares no roles
+    # one signature is all an item takes, so a second person adding theirs over
+    # unchanged content accepts nothing either, as before. A caller naming nobody
+    # — the worklist — asks whether anything is left for anyone to sign. The one
+    # exception is a correction, which accepts the identity on the record
+    # (SR-0196); whether it is allowed rests on the record being unpublished,
+    # which only :func:`ratify` can establish, so the refusal is lifted here and
+    # reimposed there.
+    if not replacing and not suspect:
+        if by or by_id:
+            own = entry_of(item, by=by, by_id=by_id)
+            if own is not None:
+                if (own.get(STAMP) == fingerprint(item, schema)
+                        and not links_moved(item, schema, own)):
+                    return (f"{item.uid} is already signed by {describe(own)} and its "
+                            f"content{unchanged}; pass --replacing to correct the "
+                            "recorded ratifier instead")
+            elif not schema.roles and standing(item, schema).met:
+                return (f"{item.uid} is already ratified by {names(item)} and its "
+                        f"content{unchanged}; pass --replacing to correct the "
+                        "recorded ratifier instead")
+        elif standing(item, schema).met and not stale_entries(item, schema):
+            return (f"{item.uid} is already ratified by {names(item)} and its "
+                    f"content{unchanged}; pass --replacing to correct the recorded "
+                    "ratifier instead")
     # The move :func:`ratify` makes is asked about here too, so a status the
     # transitions do not let reach the ratified role is refused before anything is
     # rendered or asked (SR-0195) and before any item in a run is written
@@ -301,7 +321,8 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
 
 
 def ratify(project, uid: str, by: str, *, index: Index | None = None,
-           by_id: str | None = None, replacing: bool = False) -> Item:
+           by_id: str | None = None, replacing: bool = False,
+           role: str | None = None, at: str | None = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
 
@@ -313,31 +334,72 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     ratified through throughline-ratify came to carry a signature with no
     fingerprint. The grounding view is the only thing a composing caller may vary:
     every other decision here — what may be signed off, and what gets recorded —
-    stays inside this function, so a caller cannot obtain a partial record."""
+    stays inside this function, so a caller cannot obtain a partial record.
+
+    ``role`` is the role the person signs in (SR-0259): required, and checked
+    against the declared holders by identifier, in a project that declares roles;
+    refused in one that does not. ``at`` is the moment recorded (SR-0256), taken
+    from the clock when not given — a parameter so a host without a clock of its
+    own, or a test, can supply it."""
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
     idx = index if index is not None else Index.build(project)
-    # Every reason this may be refused, including that an already-ratified item
-    # whose content has not moved accepts nothing and would replace the record of
-    # who accepted it leaving no trace that it changed (SR-0148). An item ratified
+    # A stable identifier for the same human, in its own field and never conflated
+    # with the name (SR-0157). Optional where the project declares no roles, and
+    # never invented. Where it does, the identifier is what a role is checked
+    # against (SR-0259): a name proves nothing.
+    identifier = normalise_identifier(by_id)
+    role = (role or "").strip() or None
+    if schema.roles:
+        declared = ", ".join(schema.roles)
+        if role is None:
+            raise GroundingError(
+                f"{uid}: this project declares roles ({declared}), so a signature "
+                "names the role it is given in — pass --as <role>")
+        if role not in schema.roles:
+            raise GroundingError(
+                f"{uid}: '{role}' is not a role this project declares — the roles "
+                f"are {declared}")
+        if identifier is None:
+            raise GroundingError(
+                f"{uid}: a signature in a role needs the signer's stable identifier "
+                "— pass --by-id, e.g. email:ada@example.com (on a terminal, ratify "
+                "offers the email this repository signs commits with)")
+        if identifier not in schema.roles[role]:
+            held = schema.roles_of(identifier)
+            raise GroundingError(
+                f"{uid}: {identifier} does not hold the role '{role}'"
+                + (f" — it holds {', '.join(held)}" if held
+                   else " — it holds no role in this project"))
+    elif role is not None:
+        raise GroundingError(
+            f"{uid}: this project declares no roles, so a signature cannot name one "
+            "— leave out --as, or declare roles under [ratify.roles]")
+    # Every reason this may be refused, including that a signature over content
+    # nobody has changed accepts nothing and would replace the record of who
+    # accepted it leaving no trace that it changed (SR-0148). An item ratified
     # before the stamp existed has none to compare against, so that first call is
     # allowed through and stamps it.
-    obstacle = ratification_obstacle(schema, idx, item, replacing=replacing)
+    obstacle = ratification_obstacle(schema, idx, item, replacing=replacing,
+                                     by=by, by_id=identifier)
     if obstacle is not None:
         raise GroundingError(obstacle)
-    # A correction replaces the identity on a record that was never published
-    # (SR-0196). The test is made here rather than left to the caller, for the
-    # reason every other decision in this function is: a front end that could
-    # assert its way past it would be able to obtain a record this function would
-    # refuse to write. Unestablished is refused, not assumed — a correction is
-    # permitted on evidence the record was never shared, and absence of evidence
-    # is not that evidence.
+    # A correction replaces the identity on the latest signature, where that
+    # signature was never published (SR-0196). The test is made here rather than
+    # left to the caller, for the reason every other decision in this function is:
+    # a front end that could assert its way past it would be able to obtain a
+    # record this function would refuse to write. Unestablished is refused, not
+    # assumed — a correction is permitted on evidence the record was never shared,
+    # and absence of evidence is not that evidence.
     superseded = None
     if replacing:
-        from .ratification import SUPERSEDED_ATTR, ratification_is_committed
-        published = ratification_is_committed(project, item)
+        from .ratification import signature_is_committed
+        corrected = latest(item)
+        if corrected is None:
+            raise GroundingError(f"{uid} carries no signature to correct")
+        published = signature_is_committed(project, item, corrected)
         if published is None:
             raise GroundingError(
                 f"{uid}: cannot establish whether this ratification has been "
@@ -345,48 +407,68 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
                 "allowed for a record that was never published")
         if published:
             raise GroundingError(
-                f"{uid} was ratified by {item.attrs.get(RATIFIED_BY_ATTR)} in a "
+                f"{uid} was ratified by {corrected.get(BY)} in a "
                 "commit, so that record may not be replaced: a published "
                 "signature is not something one caller may take from another")
-        superseded = item.attrs.get(RATIFIED_BY_ATTR)
+        superseded = corrected.get(BY)
+        item.ratifications.remove(corrected)
     current = fingerprint(item, schema)
-    # Advancing is the default, and is transition-validated — an item that cannot
-    # legally reach the ratified status is refused rather than moved illegally. A
-    # project that binds the ratified role to a workflow state turns this off, and
-    # the sign-off is then recorded where the item already stands (SR-0172).
-    # A re-signature over amended content on an item the workflow has carried past
-    # the ratified status is recorded where the item stands (SR-0237); the obstacle
-    # check above has already refused every first signature that cannot get there.
-    if schema.ratify_moves_status:
-        target = schema.status_role("ratified")
-        if transition_refusal(schema, item, target) is None:
-            set_status(schema, item, target)
-    item.attrs[RATIFIED_BY_ATTR] = by
-    # A stable identifier for the same human, in its own field and never conflated
-    # with the name (SR-0157). Optional, and never invented: a record given none
-    # keeps none, and one that had an identifier does not silently lose it when a
-    # later ratification is taken without one.
-    identifier = normalise_identifier(by_id)
+    entry: dict = {BY: by}
     if identifier is not None:
-        item.attrs[RATIFIED_ID_ATTR] = identifier
-    item.attrs["ratified_fingerprint"] = current
+        entry[ID] = identifier
+    if role is not None:
+        entry[ROLE] = role
+    # When (SR-0256): UTC, to the second, from the clock of the machine writing it.
+    entry[AT] = at or now_iso()
+    entry[STAMP] = current
     # The words the stamp was taken over, beside it (SR-0215). A digest proves only
     # that content moved; this is what lets anyone show what the person agreed to,
     # with no version control at all — which a browser holding one commit, a
     # shallow clone and rewritten history all lack.
-    item.attrs["ratified_content"] = signed_content(item, schema)
+    entry[CONTENT] = signed_content(item, schema)
     # The links the signature covers, beside it (SR-0243). An item that carries
-    # none gets no record, and one left by an earlier signature is removed.
+    # none gets no link record.
     links = links_record(item, schema)
     if links:
-        item.attrs[LINKS_ATTR] = links
-    else:
-        item.attrs.pop(LINKS_ATTR, None)
+        entry[LINKS] = links
     # Kept so a correction never reads as the original record (SR-0148's condition
     # that an accountability record never changes without the graph showing it).
     if superseded is not None and superseded != by:
-        from .ratification import SUPERSEDED_ATTR
-        item.attrs[SUPERSEDED_ATTR] = superseded
+        entry[SUPERSEDES] = superseded
+    # A person signs an item once (SR-0259): an earlier signature of theirs goes
+    # and this one stands in its place, never another person's. An identifier the
+    # earlier one held is not silently lost when the new one was given none.
+    own = entry_of(item, by=by, by_id=identifier)
+    if own is not None:
+        if ID not in entry and own.get(ID):
+            entry[ID] = own[ID]
+        item.ratifications.remove(own)
+    # A project that declares no roles has one signature slot, as it always had:
+    # a signature over content that has moved stands in place of the stale ones,
+    # whoever gave them, exactly as the flat record was replaced before format 4.
+    # Where roles are declared each person's accountability is their own, so a
+    # stale signature stays, named by the gate, until its signer renews or
+    # withdraws it (SR-0261).
+    if not schema.roles:
+        item.ratifications = [e for e in item.ratifications
+                              if not is_stale(item, schema, e)]
+    # An entry naming nobody is not a signature (SR-0217): ratifying again is the
+    # route the gate names for clearing one, so this is where it goes.
+    item.ratifications = [e for e in item.ratifications if e.get(BY)]
+    item.ratifications.append(entry)
+    # Advancing is the default, and is transition-validated — an item that cannot
+    # legally reach the ratified status is refused rather than moved illegally. A
+    # project that binds the ratified role to a workflow state turns this off, and
+    # the sign-off is then recorded where the item already stands (SR-0172). The
+    # status moves only once the signatures meet what the item's kind requires
+    # (SR-0260); until then they are recorded and the item stays where it is. A
+    # re-signature over amended content on an item the workflow has carried past
+    # the ratified status is recorded where the item stands (SR-0237); the obstacle
+    # check above has already refused every first signature that cannot get there.
+    if schema.ratify_moves_status and requirement_met(item, schema):
+        target = schema.status_role("ratified")
+        if transition_refusal(schema, item, target) is None:
+            set_status(schema, item, target)
     return item
 
 
@@ -459,7 +541,8 @@ def invalidate(project, uid: str, reason: str = "") -> Invalidation:
 
 
 def withdraw(project, uids, *, by: str, reason: str,
-             by_id: str | None = None) -> list[Item]:
+             by_id: str | None = None, of: str | None = None,
+             at: str | None = None) -> list[Item]:
     """Withdraw the ratification of each item in ``uids`` (SR-0197): the signature
     no longer stands, the item returns to those awaiting a human, and the record
     says who withdrew it, why, and whose signature it was.
@@ -477,19 +560,27 @@ def withdraw(project, uids, *, by: str, reason: str,
     silent: stripping a colleague's sign-off and leaving an item that merely looks
     unratified would be the quieter attack on an accountability record.
 
+    ``of`` names whose signature is withdrawn, by identifier or by name (SR-0262):
+    required where an item holds more than one, optional where it holds one. One
+    entry goes and one withdrawal record is kept for it. The item moves to the
+    suspect status only when the signatures left no longer meet what its kind
+    requires; signatures that still do leave the status untouched.
+
     All or nothing: every item is checked before any is written, so a mistyped UID
     in a batch is a failure the caller sees, never a half-applied run. Refused for
-    an item that carries no ratification, for an empty reason, and for a status the
-    project's lifecycle will not let move to suspect.
+    an item that carries no ratification, for an empty reason, for an ambiguous
+    ``of``, and for a status the project's lifecycle will not let move to suspect
+    where the move would be made.
     """
     if not by or not by.strip():
         raise GroundingError("a withdrawal must name who is withdrawing it")
     if not reason or not reason.strip():
         raise GroundingError("a withdrawal must state its reason — pass --reason")
     identifier = normalise_identifier(by_id)          # IdentityError if malformed
+    of = (of or "").strip() or None
     schema = project.schema
     suspect = schema.status_role("suspect")
-    items: list[Item] = []
+    plan: list[tuple[Item, dict, bool]] = []
     seen: set[str] = set()
     for uid in uids:
         if uid in seen:
@@ -498,32 +589,61 @@ def withdraw(project, uids, *, by: str, reason: str,
         item = project.get(uid)
         if item is None:
             raise GroundingError(f"{uid} does not exist")
-        if not item.attrs.get(RATIFIED_BY_ATTR):
+        held = [e for e in signatures(item) if e.get(BY)]
+        if not held:
             raise GroundingError(f"{uid} carries no ratification to withdraw")
-        if not schema.allows_transition(item.status, suspect):
+        if of is not None:
+            matches = [e for e in held if e.get(ID) == of or e.get(BY) == of]
+            if not matches:
+                raise GroundingError(
+                    f"{uid} carries no signature by {of} — it is signed by {names(item)}")
+            if len(matches) > 1:
+                raise GroundingError(
+                    f"{uid}: '{of}' names {len(matches)} signatures — give the "
+                    "signer's identifier instead")
+            entry = matches[0]
+        elif len(held) == 1:
+            entry = held[0]
+        else:
+            raise GroundingError(
+                f"{uid} carries {len(held)} signatures ({names(item)}) — say whose "
+                "to withdraw with --of <name or identifier>")
+        # Whether the item still counts as ratified without this signature. The
+        # move to suspect follows the requirement, not the count: an item still
+        # signed by the people its kind requires has lost nothing (SR-0262), and an
+        # item that never met the requirement is not made suspect by losing a
+        # signature it was still gathering.
+        was = requirement_met(item, schema)
+        everything = item.ratifications
+        item.ratifications = [e for e in everything if e is not entry]
+        still = requirement_met(item, schema)
+        item.ratifications = everything
+        moves = was and not still
+        if moves and not schema.allows_transition(item.status, suspect):
             raise GroundingError(
                 f"{uid}: status change '{item.status}' -> '{suspect}' is not an "
                 "allowed transition, so its ratification cannot be withdrawn")
-        items.append(item)
-    # The record the ratifying verbs own is cleared, and only that record: the
-    # withdrawn identity moves into the withdrawal record rather than vanishing,
-    # so the graph still shows that a signature was taken and then set aside.
-    cleared = [name for name, owner in RATIFICATION_ATTRS.items()
-               if owner != "withdraw"]
-    for item in items:
-        ratifier = item.attrs[RATIFIED_BY_ATTR]
-        for name in cleared:
-            item.attrs.pop(name, None)
-        item.attrs[WITHDRAWN_RATIFIER_ATTR] = ratifier
-        item.attrs[WITHDRAWN_BY_ATTR] = by
+        plan.append((item, entry, moves))
+    items: list[Item] = []
+    for item, entry, moves in plan:
+        item.ratifications.remove(entry)
+        # The withdrawn identity moves into the withdrawal record rather than
+        # vanishing, so the graph still shows that a signature was taken and then
+        # set aside — who withdrew it, why, whose it was and when (SR-0197, SR-0262).
+        record: dict = {W_BY: by}
         if identifier is not None:
-            item.attrs[WITHDRAWN_ID_ATTR] = identifier
-        else:
-            item.attrs.pop(WITHDRAWN_ID_ATTR, None)
-        item.attrs[WITHDRAWN_REASON_ATTR] = reason
-        set_status(schema, item, suspect)
-        item.attrs.setdefault("suspect_reasons", []).append(
-            f"ratification by {ratifier} withdrawn by {by}: {reason}")
+            record[W_ID] = identifier
+        record[W_REASON] = reason
+        record[W_OF] = entry.get(BY)
+        if entry.get(ID):
+            record[W_OF_ID] = entry[ID]
+        record[W_AT] = at or now_iso()
+        item.withdrawals.append(record)
+        if moves:
+            set_status(schema, item, suspect)
+            item.attrs.setdefault("suspect_reasons", []).append(
+                f"ratification by {entry.get(BY)} withdrawn by {by}: {reason}")
+        items.append(item)
     return items
 
 

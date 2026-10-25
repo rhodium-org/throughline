@@ -108,7 +108,7 @@ def test_a_run_holding_one_such_item_renders_and_asks_nothing(graph, monkeypatch
 def test_the_ratifiable_item_is_still_ratified_on_its_own(graph):
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada"]) == 0
     item = load_project(graph).get("REQ-0001")
-    assert item.status == "ratified" and item.attrs["ratified_by"] == "Ada"
+    assert item.status == "ratified" and item.ratifications[-1]["by"] == "Ada"
 
 
 def test_nothing_is_refused_where_ratification_leaves_the_status_alone(graph):
@@ -120,7 +120,7 @@ def test_nothing_is_refused_where_ratification_leaves_the_status_alone(graph):
     config.write_text(text + "\n[ratify]\nmoves_status = false\n", encoding="utf-8")
     assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 0
     item = load_project(graph).get("REQ-0002")
-    assert item.status == "draft" and item.attrs["ratified_by"] == "Ada"
+    assert item.status == "draft" and item.ratifications[-1]["by"] == "Ada"
 
 
 def test_the_refusal_is_the_one_the_write_would_raise(graph):

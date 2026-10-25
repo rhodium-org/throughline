@@ -21,7 +21,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:c2f6c55d3a409179eb3ddea61549ae175fbf0fb953d1e26dcb7ead64161ef248
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:c2f6c55d3a409179eb3ddea61549ae175fbf0fb953d1e26dcb7ead64161ef248
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: When the Tool creates an item whose origin is in the configured machine-origin
+      set, and the schema binds a proposed status role, the item shall be born in
+      that proposed status rather than the initial draft status, so a machine-authored
+      item enters the graph already awaiting human ratification. An explicit status
+      argument overrides this, and an item with a human origin is unaffected.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

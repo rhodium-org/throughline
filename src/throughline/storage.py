@@ -41,6 +41,9 @@ from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
+from .signatures import (
+    BACKFILLED, BY, CONTENT, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION, STAMP,
+)
 from .tomledit import TomlDocument, TomlEditError
 from .version import distribution_version
 
@@ -57,8 +60,10 @@ MANIFEST_NAME = ".register.yml"
 # the same major so older projects of that major stay readable without migration.
 # History: v1 named a register manifest `.document.yml`; v2 (the register rename,
 # SR-0102) renamed it to `.register.yml`; v3 (SR-0131) requires a [status.roles]
-# table so operations resolve statuses by semantic role, never by a fixed literal.
-FORMAT_VERSION = 3
+# table so operations resolve statuses by semantic role, never by a fixed literal;
+# v4 (SR-0254) holds an item's ratification record as a top-level `ratifications`
+# list, one signature per person, in place of the flat `ratified_*` attributes.
+FORMAT_VERSION = 4
 
 # The major from which a project must declare [status.roles] — the one whose
 # operations resolve a written status through a semantic role (SR-0131). Named
@@ -311,6 +316,47 @@ def _migrate_2_to_3(root: Path) -> None:
     _backfill_status_roles(root)
 
 
+def _migrate_3_to_4(root: Path) -> None:
+    """Upgrade a v3 project to v4 (SR-0254). The one change of shape — the flat
+    ratification record lifted into the `ratifications` list — is the repair's
+    (:func:`_lift_ratification_records`), which runs on every `tl migrate` at the
+    destination major (SR-0137): a project hand-authored at v4 that still carries
+    the flat attributes is lifted the same way, and the count is reported once."""
+
+
+def _lift_ratification_records(root: Path) -> int:
+    """Rewrite every item file still holding a format-3 flat ratification record
+    so it holds the `ratifications` list instead (SR-0255). Returns how many.
+
+    The lift is the one :class:`Item` performs on read, so nothing is decided
+    here: the ratifier, identifier, stamp, recorded content, recorded links,
+    superseded identity and backfill marking are carried verbatim, as one entry;
+    a withdrawal record becomes one entry of `withdrawals`. No role and no time
+    is written, since neither was recorded. No stamp and no status moves.
+
+    Idempotent: a lifted file carries none of the flat attributes and is never
+    matched again. Only files that carry one are rewritten, so a project already
+    at the new shape is untouched."""
+    legacy = set(LEGACY_SIGNATURE) | set(LEGACY_WITHDRAWAL)
+    count = 0
+    for here, names in _walk_project(root):
+        if not any(n in _ALL_MANIFEST_NAMES for n in names):
+            continue                              # not a register folder
+        for name in sorted(names):
+            if not name.endswith(".yml") or name in _ALL_MANIFEST_NAMES:
+                continue
+            path = here / name
+            data = _load_yaml(path.read_text(encoding="utf-8")) or {}
+            attrs = data.get("attrs") if isinstance(data, dict) else None
+            if not isinstance(attrs, dict) or not (set(attrs) & legacy):
+                continue
+            if "uid" not in data or "type" not in data:
+                continue                          # not an item; leave it alone
+            write_item(Item.from_dict(data, path=path))
+            count += 1
+    return count
+
+
 def _append_status_roles(cfg_file: Path, roles: dict[str, str]) -> None:
     """Append a [status.roles] table to the config, preserving existing content,
     comments and key order (NFR-0009) — a targeted append, not a reserialize."""
@@ -381,17 +427,19 @@ def _backfill_ratification_stamps(root: Path, *,
     idx = index if index is not None else Index.build(project)
     bound: dict[str, str] = {}
     for item in project.items():
-        if not item.attrs.get("ratified_by") or item.attrs.get("ratified_fingerprint"):
+        unbound = [e for e in item.ratifications if e.get(BY) and not e.get(STAMP)]
+        if not unbound:
             continue
         if ratification_refusal(schema, idx, item) is not None:
             continue
         stamp = fingerprint(item, schema)
-        item.attrs["ratified_fingerprint"] = stamp
-        item.attrs["ratified_backfilled"] = True
-        # Every stamp the Tool writes carries the content it was taken over
-        # (SR-0215); the backfilled marking beside it still says nobody is known
-        # to have read that content.
-        item.attrs["ratified_content"] = signed_content(item, schema)
+        for entry in unbound:
+            entry[STAMP] = stamp
+            entry[BACKFILLED] = True
+            # Every stamp the Tool writes carries the content it was taken over
+            # (SR-0215); the backfilled marking beside it still says nobody is
+            # known to have read that content.
+            entry[CONTENT] = signed_content(item, schema)
         write_item(item)
         bound[item.uid] = stamp
     return bound
@@ -420,23 +468,26 @@ def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
     stamp disagrees with is re-resolved, so a hint left by rewritten history heals
     rather than persisting.
     """
-    from .ratification import REVISION_ATTR, resolve_revision
+    from .ratification import resolve_revision
 
     project = load_project(root)
     schema = project.schema
     cached: dict[str, str] = {}
     for item in project.items():
-        if not item.attrs.get("ratified_fingerprint"):
-            continue
-        if fingerprint(item, schema) != item.attrs["ratified_fingerprint"]:
-            continue                      # drifted: resolved on demand, not here
-        before = item.attrs.get(REVISION_ATTR)
-        sha, _reason, was_cached = resolve_revision(project, item)
-        if sha is None or (was_cached and sha == before):
-            continue
-        item.attrs[REVISION_ATTR] = sha
-        write_item(item)
-        cached[item.uid] = sha
+        current = fingerprint(item, schema)
+        touched = False
+        for entry in item.ratifications:
+            if not entry.get(STAMP) or entry[STAMP] != current:
+                continue                  # unstamped, or drifted: resolved on demand
+            before = entry.get(REVISION)
+            sha, _reason, was_cached = resolve_revision(project, item, entry)
+            if sha is None or (was_cached and sha == before):
+                continue
+            entry[REVISION] = sha
+            touched = True
+            cached[item.uid] = sha
+        if touched:
+            write_item(item)
     return cached
 
 
@@ -470,16 +521,20 @@ def _backfill_ratification_contents(root: Path) -> tuple[dict[str, str], dict[st
     completed: dict[str, str] = {}
     unprovable: dict[str, str] = {}
     for item in project.items():
-        if not item.attrs.get(STAMP_ATTR) or CONTENT_ATTR in item.attrs:
-            continue
-        content, why = content_at_stamp(project, item, history=history)
-        if content is None:
-            unprovable[item.uid] = why
-            continue
-        where = why
-        item.attrs[CONTENT_ATTR] = content
-        write_item(item)
-        completed[item.uid] = where
+        touched = False
+        for entry in item.ratifications:
+            if not entry.get(STAMP_ATTR) or CONTENT_ATTR in entry:
+                continue
+            content, why = content_at_stamp(project, item, history=history,
+                                            entry=entry)
+            if content is None:
+                unprovable[item.uid] = why
+                continue
+            entry[CONTENT_ATTR] = content
+            touched = True
+            completed[item.uid] = why
+        if touched:
+            write_item(item)
     return completed, unprovable
 
 
@@ -623,6 +678,8 @@ class RepairResult(NamedTuple):
     unprovable: Mapping[str, str] = _NO_STRINGS
     # The item type declared on each register that declared none (SR-0241).
     registers: Mapping[str, str] = _NO_STRINGS
+    # Flat ratification records lifted into the `ratifications` list (SR-0255).
+    lifted: int = 0
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -666,7 +723,7 @@ def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
         after[item.uid] = fingerprint(item, schema)
         write_item(item)
         rewritten[item.uid] = want
-        if item.attrs.get("ratified_fingerprint"):
+        if any(e.get(STAMP) for e in item.ratifications):
             stale.append(item.uid)
     restamped: list[tuple[str, str]] = []
     if rewritten:
@@ -743,6 +800,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     nothing to say about which declared status plays which role, which moves a
     lifecycle should permit, or which values a vocabulary should hold, so passing
     it to any configuration half would imply an influence it does not have."""
+    # The flat record first (SR-0255): everything after it reads a signature
+    # through the list, so a file still holding the format-3 attributes has to be
+    # lifted before its record can be bound, completed or cached.
+    lifted = _lift_ratification_records(root)
     roles = _backfill_status_roles(root)
     routes = _backfill_suspect_routes(root)
     vocabularies = _backfill_vocabularies(root)
@@ -763,14 +824,14 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers)
+                        registers, lifted)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
 # the project tree in place to the next major. `tl migrate` walks this chain from
 # the on-disk major to the current one (NFR-0010).
 _MIGRATIONS: dict[int, Callable[[Path], None]] = {
-    1: _migrate_1_to_2, 2: _migrate_2_to_3}
+    1: _migrate_1_to_2, 2: _migrate_2_to_3, 3: _migrate_3_to_4}
 
 # Repairs keyed by the major they BELONG to, run against a project already at that
 # major (SR-0137). A project hand-authored at the current major never passed
@@ -778,7 +839,8 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 # chain above cannot reach it; the repair brings it to what the major requires.
 # Each must be idempotent — it runs on every `tl migrate`, sound project or not.
 _REPAIRS: dict[int, Callable[[Path, "Index | None"], RepairResult]] = {
-    STATUS_ROLES_MAJOR: _repair_status_roles_major}
+    STATUS_ROLES_MAJOR: _repair_status_roles_major,
+    FORMAT_VERSION: _repair_status_roles_major}
 
 
 def _rewrite_format_version(cfg_file: Path, version: int) -> None:
@@ -843,6 +905,8 @@ class MigrationResult(NamedTuple):
     unprovable: Mapping[str, str] = _NO_STRINGS
     # The item type declared on each register that declared none (SR-0241).
     registers: Mapping[str, str] = _NO_STRINGS
+    # Flat ratification records lifted into the `ratifications` list (SR-0255).
+    lifted: int = 0
 
 
 def migrate_project(path: str | Path, *,
@@ -893,7 +957,8 @@ def migrate_project(path: str | Path, *,
     return MigrationResult(start, current, result.config, result.routes,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
-                           result.contents, result.unprovable, result.registers)
+                           result.contents, result.unprovable, result.registers,
+                           result.lifted)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -1386,7 +1451,7 @@ def init_project(
         # Seeded demo items have no register to live in, so the demo goes with the
         # registers (SR-0100).
         demo = False
-    cfg_text = _DEFAULT_CONFIG.format(name=name)
+    cfg_text = _DEFAULT_CONFIG.format(name=name, format_version=FORMAT_VERSION)
     # Only the seeded demo publishes through a document, so [docs] is wired only when
     # the demo is written; a registers-only or bare project ships no document.
     if demo:
@@ -1486,7 +1551,7 @@ def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
 _DEFAULT_CONFIG = '''\
 [project]
 name = "{name}"
-format_version = 3
+format_version = {format_version}
 
 # Root item types may exist ungrounded; everything else must reach a root
 # through a grounding link (the scope-avalanche grounding layer). A non_goal is

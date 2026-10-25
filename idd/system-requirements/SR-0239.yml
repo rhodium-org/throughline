@@ -30,9 +30,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b03c39ed3e351af7974f1b3dcc8b0fa2d600aabd35a8015bba06f25361377143
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b03c39ed3e351af7974f1b3dcc8b0fa2d600aabd35a8015bba06f25361377143
+  content:
     type: system_requirement
     text: 'The Tool shall read a project only from its own directory tree. It shall
       not descend into a subdirectory whose name begins with a dot, nor into one
@@ -47,3 +48,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: af0c9b017957f9c8ad04373bceac8ada85644a1e

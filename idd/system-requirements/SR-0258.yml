@@ -1,0 +1,52 @@
+uid: SR-0258
+type: system_requirement
+status: ratified
+title: A project declares what a kind of item requires before it is ratified
+text: A project may declare, under [ratify.requires.<type>], what the signatures
+  of an item of that type must satisfy; roles, a list of role names each of which
+  must be held by a current signature, and signatures, the least number of current
+  signatures in declared roles; either or both. The Tool shall refuse a declaration
+  for a type the project does not declare, one naming a role it does not declare,
+  and one asking for fewer than one signature. A type with no declaration requires
+  one signature from anyone, as today.
+rationale: Two clauses express what was asked for, a requirement needs a senior,
+  any two of the declared roles, or a senior and one more, without a rule language.
+  Rejected, countersigning as a mechanism of its own, where a junior's signature
+  is provisional until a senior's covers it; it is one policy these clauses express,
+  and a second mechanism would be a second way to say it. Rejected, a requirement
+  per item; what ratification needs is a property of a kind, as normativity is (SR-0201).
+  Who pays, the project, which must gather the signatures it asks for before its
+  items count.
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0257
+  type: relates
+- target: SR-0172
+  type: relates
+- target: SR-0092
+  type: relates
+- target: SR-0201
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:63bd65ff849e5130d85fc51948f5e556a6710b8a376901f6c49837608a45e8e7
+  content:
+    type: system_requirement
+    text: A project may declare, under [ratify.requires.<type>], what the signatures
+      of an item of that type must satisfy; roles, a list of role names each of which
+      must be held by a current signature, and signatures, the least number of current
+      signatures in declared roles; either or both. The Tool shall refuse a declaration
+      for a type the project does not declare, one naming a role it does not declare,
+      and one asking for fewer than one signature. A type with no declaration requires
+      one signature from anyone, as today.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1f9d2ce14172570ecf909b0d8f9cd3f817ffebe7

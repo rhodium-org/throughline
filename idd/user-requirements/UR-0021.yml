@@ -31,7 +31,23 @@ attrs:
   origin: human
   priority: should
   verification: demonstration
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:12056ed51a3cb6fc056a582dd5d4cd8fa9baabc9242362f69132a3b237620623
-  ratified_backfilled: true
-  ratified_revision: 947ef4167ae08ffafa57a043ece2aaa0b577ffe6
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:12056ed51a3cb6fc056a582dd5d4cd8fa9baabc9242362f69132a3b237620623
+  backfilled: true
+  revision: 947ef4167ae08ffafa57a043ece2aaa0b577ffe6
+  content:
+    type: user_requirement
+    text: A contributor shall be able to run a single command that diagnoses their
+      development environment — Python version, an importable/installed throughline,
+      the test runner, whether the local grounding gate is wired, and, for each toolchain
+      package they have checked out, which build each installed command actually
+      runs. A package may be installed twice under different command names, one running
+      the working tree and one a published release. The report shall name which command
+      runs which, and shall fail only when no command runs the working tree. Each
+      check reports either pass or a specific remediation, and the command exits
+      non-zero if the environment is not ready.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

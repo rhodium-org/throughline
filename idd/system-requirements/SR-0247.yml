@@ -31,9 +31,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:200960b55b35a1c035782a1aff4247d71b6d0e89bac2820f1cfa97beabeadfe0
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:200960b55b35a1c035782a1aff4247d71b6d0e89bac2820f1cfa97beabeadfe0
+  content:
     type: system_requirement
     text: When the Tool is run as tl-compose or throughline-compose, it shall print
       one line on standard error. The line shall say that the name is deprecated,
@@ -45,3 +46,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 4ae5b46df3eea34fcaf4680ce86c510c8009f1a4

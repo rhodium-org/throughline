@@ -31,5 +31,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d55bc0c91b8396efb0bfebab88e8ae0da695188022fdba2200cc7baf854a55e8
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d55bc0c91b8396efb0bfebab88e8ae0da695188022fdba2200cc7baf854a55e8
+  content:
+    type: system_requirement
+    text: Where an item carries the record of a clarification (SR-0213), ratify shall
+      show who removed the ambiguity flag, why, and what check reported for it, together
+      with the rest of the item and before it asks for the signature. It shall do
+      so wherever it shows the item (SR-0195). An item with no such record shall
+      be shown as before.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1315f4bdd3caa7513d5803849ab47679278384d5

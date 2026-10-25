@@ -1,3 +1,4 @@
 prefix: NFR
 digits: 4
 title: Non-functional requirements
+type: nfr

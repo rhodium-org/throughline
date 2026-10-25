@@ -21,5 +21,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:f435c0843a85e342019844d86335c9bdfd2d877ade1cc6488746dea811d6066e
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:f435c0843a85e342019844d86335c9bdfd2d877ade1cc6488746dea811d6066e
+  content:
+    type: system_requirement
+    text: Validation shall report as an error each item whose ratification record
+      holds recorded content that does not reproduce the record's stamp, naming the
+      item. It shall report nothing about a record that holds no recorded content.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: dfddcd57551da59835ebb5fa4aed6d19b50dcbcd

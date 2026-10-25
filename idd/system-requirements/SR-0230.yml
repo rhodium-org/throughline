@@ -32,9 +32,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:234566ea442fb618389c8f1b9164ede2416f5f58cd0cf943dddb695bb1fbe251
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:234566ea442fb618389c8f1b9164ede2416f5f58cd0cf943dddb695bb1fbe251
+  content:
     type: system_requirement
     text: Where a project's throughline.toml declares [[sources]], the Tool shall
       resolve each declared source, and every source those sources declare, to any
@@ -48,3 +49,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: c8b98444498592691c04c831e9611b58d2c619b5

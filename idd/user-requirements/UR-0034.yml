@@ -35,5 +35,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:bcbc529aca09443ba545fbeef14580e02d157573be13eba144427a752fa868b3
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:bcbc529aca09443ba545fbeef14580e02d157573be13eba144427a752fa868b3
+  content:
+    type: user_requirement
+    text: Where an item is flagged ambiguous, a user who judges the ambiguity resolved,
+      because the item was reworded or because the flag was wrong, shall be able
+      to remove the flag through the Tool. Removing the flag shall not change what
+      the item says. The item shall keep a record of who removed the flag, why, and
+      what check reported for it, and where the Tool later asks a person to ratify
+      the item it shall show them that record.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
+  revision: 1315f4bdd3caa7513d5803849ab47679278384d5

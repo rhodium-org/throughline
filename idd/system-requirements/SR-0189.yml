@@ -32,6 +32,24 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:d9374549abad42c279e71723bfa69c0710a486fe9c48a3e43dd4bdab2be95f93
-  ratified_revision: 3fd78077ed16ae4ee4a036510bbf3ac36879008c
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:d9374549abad42c279e71723bfa69c0710a486fe9c48a3e43dd4bdab2be95f93
+  revision: 3fd78077ed16ae4ee4a036510bbf3ac36879008c
+  content:
+    type: system_requirement
+    text: 'Given a UID, the Tool shall report that item''s neighbourhood as a single
+      induced subgraph: the transitive set reachable by outgoing links, the transitive
+      set reachable by incoming links, and every link whose source and target both
+      fall inside that set. Each node shall be reported with its type, status and
+      title, and each edge with its link type and its direction. The report shall
+      be available as text and as JSON, shall accept a depth bound and an optional
+      restriction to named link types, and shall render a link target that is not
+      a local item as a leaf rather than failing the walk. The two directed closures
+      shall be computed by the same link index that impact analysis already uses,
+      so a neighbourhood and a blast radius can never disagree about what points
+      at an item.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

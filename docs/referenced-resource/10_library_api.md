@@ -23,7 +23,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### The schema a project declares
 
-`Schema` · `AttrSpec` · `LinkRule` · `SchemaError`
+`Schema` · `AttrSpec` · `LinkRule` · `Requirement` · `SchemaError`
 
 ### Creating and changing an item
 
@@ -45,15 +45,15 @@ An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [r
 
 ### What a signature covered, and what has moved since
 
-`change_since_ratification` · `ratification_is_committed` · `RatificationChange` · `FieldChange` · `CHANGED` · `UNCHANGED` · `UNRESOLVABLE` · `UNRATIFIED` · `RECORD` · `HISTORY` · `is_prose` · `diff_prose` · `DiffUnit` · `KEPT` · `REMOVED` · `ADDED` · `wrap_words`
+`change_since_ratification` · `ratification_is_committed` · `signature_is_committed` · `RatificationChange` · `FieldChange` · `CHANGED` · `UNCHANGED` · `UNRESOLVABLE` · `UNRATIFIED` · `RECORD` · `HISTORY` · `is_prose` · `diff_prose` · `DiffUnit` · `KEPT` · `REMOVED` · `ADDED` · `wrap_words`
 
 ### What awaits a signature
 
-`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress`
+`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress` · `signatures` · `standing` · `Standing` · `requirement_met`
 
 ### Who signs
 
-`default_ratifier` · `git_identity` · `normalise_identifier` · `IdentityError`
+`default_ratifier` · `default_identifier` · `git_identity` · `normalise_identifier` · `IdentityError`
 
 ### Publishing
 

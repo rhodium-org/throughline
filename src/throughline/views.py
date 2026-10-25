@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 from .graph import Index
+from .signatures import describe, is_stale, signatures, standing
 from .grounding import reaches_root
 from .grounding import (
     CLARIFICATION_ATTRS,
@@ -178,6 +179,19 @@ def render_for_ratification(project, item, *, emit) -> None:
         emit("")
         emit("normative attributes (a change here breaks this signature): "
              + " · ".join(f"{n}={item.attrs[n]}" for n in normative))
+    # Who has signed already, and what the item's kind still requires (SR-0260,
+    # SR-0261): a second signer is taking accountability beside the first.
+    held = signatures(item)
+    if held:
+        emit("")
+        emit("signed so far:")
+        for entry in held:
+            when = f" at {entry['at']}" if entry.get("at") else ""
+            stale = "  (stale — the item has changed since)" if is_stale(item, schema, entry) else ""
+            emit(f"  {describe(entry)}{when}{stale}")
+        where = standing(item, schema)
+        if not where.met:
+            emit(f"  still requires {', '.join(where.missing)}")
     # A removed ambiguity flag goes in front of the signer with the item (SR-0214).
     # The ambiguity was about these words, and a flag removed by the item's own
     # author would otherwise never reach the person who signs.

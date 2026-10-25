@@ -40,7 +40,30 @@ attrs:
   origin: hybrid
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:dec309fa56b28bc724ff79d1b3c153cbab84f515eb7088bae8e84d5ffc567aaf
-  ratified_backfilled: true
-  ratified_revision: 3a86fb76dec2937b536395d7f6aeda563577c195
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:dec309fa56b28bc724ff79d1b3c153cbab84f515eb7088bae8e84d5ffc567aaf
+  backfilled: true
+  revision: 3a86fb76dec2937b536395d7f6aeda563577c195
+  content:
+    type: system_requirement
+    text: 'When a command is run without a detail it requires, the CLI shall behave
+      by the session it is in. On an interactive terminal (stdin and stderr are a
+      TTY) it shall prompt for the missing detail rather than fail, stating in plain
+      language what it needs and why it needs it, offering a sensible default or
+      a skip where one is safe, so an unsure user is guided to a correct command
+      instead of having to already know the flag grammar. When the session is not
+      interactive — a pipe, a redirect, or CI — it shall not prompt; it shall fail
+      fast with a usage error that names the missing detail and the flag that supplies
+      it, so automation never hangs waiting on input and never silently guesses.
+      Prompting for a value is an aid to discovery, not a second way to configure
+      the tool: every value obtainable through a prompt shall remain settable by
+      a flag, and a fully specified command shall never be prompted for a value.
+      Asking a user to confirm an act is not prompting for a value and is not governed
+      by that rule — where a command records an accountability that cannot be withdrawn,
+      it may require confirmation on an interactive terminal however fully it was
+      specified, and shall require none where the session is not interactive.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

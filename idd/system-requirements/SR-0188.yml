@@ -45,6 +45,22 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry J Grech-Cini
-  ratified_fingerprint: sha256:d435b949fc63bf33efecd577b2c15c7a08256121b0c9c01e8a81720f00f61e98
-  ratified_revision: b6aebf2f3746cea7960b9e2c534de41937dab209
+ratifications:
+- by: Henry J Grech-Cini
+  fingerprint: sha256:d435b949fc63bf33efecd577b2c15c7a08256121b0c9c01e8a81720f00f61e98
+  revision: b6aebf2f3746cea7960b9e2c534de41937dab209
+  content:
+    type: system_requirement
+    text: The current format major's configuration repair shall add a route to the
+      suspect status from every live status the project's transitions table leaves
+      unable to reach it, so a project scaffolded before that route was shipped is
+      corrected by the same single migration command rather than status by status
+      by hand. The repair shall decide which statuses are at issue by the same predicate
+      the gate applies, so the two can never disagree; shall record beside each row
+      it widens that migration made the change and why; and shall remain idempotent,
+      leaving a lifecycle that already permits the move untouched. The command shall
+      report the routes it added apart from its other repairs.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

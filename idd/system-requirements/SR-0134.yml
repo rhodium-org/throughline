@@ -24,7 +24,22 @@ attrs:
   origin: hybrid
   priority: must
   verification: test
-  ratified_by: henry
-  ratified_fingerprint: sha256:7bb14d6c073a81bb3d992977b55cd5b77cb5e4ca67c4bd6ac3a803cbaf8293e0
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:7bb14d6c073a81bb3d992977b55cd5b77cb5e4ca67c4bd6ac3a803cbaf8293e0
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: When the Tool loads an item whose structure is malformed — for example
+      a link entry that is not a mapping, or one missing its required target key
+      — it shall report a named check finding that identifies the file and the reason,
+      and exit with the standard nonzero code, rather than raising an unhandled traceback.
+      Structural load errors shall be collected and surfaced through check in the
+      same diagnostic format as other structural problems (uid collisions, orphans,
+      unresolved namespaces), so that a hand-edited or externally generated file
+      never crashes the loader before schema validation can run.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -17,7 +17,22 @@ attrs:
   origin: human
   priority: should
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:47dbb7c71293204deda80d520711e92762ffe9511403177e5e9e8463c1c6de85
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:47dbb7c71293204deda80d520711e92762ffe9511403177e5e9e8463c1c6de85
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: The init command shall report the created project's absolute path, and
+      shall refuse to create a project that would nest with an existing one — whether
+      an ancestor directory or a descendant directory already contains a throughline.toml
+      — unless --force is given. On refusal it shall change nothing and exit with
+      a usage error. While scanning descendants for existing projects, if the scan
+      takes noticeable time it shall show live progress on an interactive terminal
+      rather than appear to hang (actionable output, NFR-0014; no accidental broken
+      layouts).
+    normative: true
+    derived: false
+    attrs:
+      priority: should

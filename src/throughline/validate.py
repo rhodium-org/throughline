@@ -17,7 +17,9 @@ from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
-from .identity import WITHDRAWN_BY_ATTR, WITHDRAWN_RATIFIER_ATTR, WITHDRAWN_REASON_ATTR
+from .signatures import (
+    CONTENT, STAMP, W_BY, W_OF, W_REASON, describe, signatures, stale_entries, standing,
+)
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
 from .uid import UID_RE, collisions
@@ -56,6 +58,7 @@ _DEFAULT_SEVERITY = {
     "no-status-roles": WARNING, "suspect-unreachable": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ratified-stale": WARNING, "ratified-content-mismatch": ERROR,
+    "awaiting-signatures": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING, "normative-mismatch": WARNING,
     "register-type-mismatch": WARNING,
@@ -305,17 +308,18 @@ def validate(project, strict: bool = False,
         # ratified status directly names nobody — only the record `tl ratify` writes
         # is evidence. A terminal-status item is dead scope and needs no ratifier.
         origin = item.attrs.get("origin")
-        if (origin in schema.ai_origins and not item.attrs.get("ratified_by")
+        if (origin in schema.ai_origins and not signatures(item)
                 and item.status not in schema.dead_statuses()):
             roles = schema.status_roles or {}
-            if item.attrs.get(WITHDRAWN_BY_ATTR):
+            if item.withdrawals:
                 # A withdrawn signature (SR-0197) is the one route out of the
                 # ratified record that names its own cause, so the finding says
                 # so rather than reading as an item that dodged the gate.
+                last = item.withdrawals[-1]
                 why = (f"had its ratification by "
-                       f"{item.attrs.get(WITHDRAWN_RATIFIER_ATTR, 'a human')} "
-                       f"withdrawn by {item.attrs[WITHDRAWN_BY_ATTR]} "
-                       f"({item.attrs.get(WITHDRAWN_REASON_ATTR, 'no reason recorded')})"
+                       f"{last.get(W_OF, 'a human')} "
+                       f"withdrawn by {last.get(W_BY, 'someone')} "
+                       f"({last.get(W_REASON, 'no reason recorded')})"
                        " — awaiting human ratification again")
             elif item.status == roles.get("proposed"):
                 why = "awaiting human ratification"
@@ -329,6 +333,19 @@ def validate(project, strict: bool = False,
                 why = (f"is '{item.status}', yet no human ever ratified it — it left "
                        "the proposed status without passing the gate")
             add("unratified", item.uid, f, f"{origin}-origin item {why}")
+
+        # Signatures that do not yet meet what the item's kind requires (SR-0260):
+        # each is recorded, the status has not moved, and the item is reported
+        # until the rest arrive. The same finding follows an item whose kind's
+        # requirement was tightened after it was signed (SR-0264). Silent where
+        # every signature is stale — that is the stale finding's to report — and
+        # for a dead item.
+        if signatures(item) and item.status not in schema.dead_statuses():
+            where = standing(item, schema)
+            if not where.met and (where.held or not stale_entries(item, schema)):
+                add("awaiting-signatures", item.uid, f,
+                    f"{where.describe()} — the signatures are recorded, but the "
+                    "item does not yet count as ratified")
 
         # The flag is the type's (SR-0201), so an item disagreeing with what its
         # type declares was written before the type declared it, or by hand.
@@ -385,50 +402,59 @@ def validate(project, strict: bool = False,
         if item.reviewed is not None and fingerprint(item, schema) != item.reviewed:
             add("unreviewed", item.uid, f, "content changed since last review")
 
-        # Ratification drift (SR-0148): the words a human accepted have been
-        # rewritten since they accepted them, so `ratified_by` now vouches for
-        # content nobody agreed to. An item ratified before the stamp existed
-        # carries none and cannot be judged, so the rule stays silent for it
-        # rather than accusing the whole back catalogue.
-        stamp = item.attrs.get("ratified_fingerprint")
-        who = item.attrs.get("ratified_by") or "a human"
-        content_moved = bool(stamp) and fingerprint(item, schema) != stamp
-        # Signed links (SR-0244): the links a human accepted with the item have
-        # moved since. Silent where the project signs no link type, so no graph
-        # gains this finding until it declares one (SR-0242).
-        unheld, dropped = link_drift(item, schema)
-        if unheld or dropped:
-            what = "normative content and signed links" if content_moved else "signed links"
-            add("ratified-stale", item.uid, f,
-                f"{what} changed since {who} ratified it: it "
-                f"{describe_drift(unheld, dropped)} — re-ratify to accept the "
-                "item as it stands, or put it back")
-        elif content_moved:
-            add("ratified-stale", item.uid, f,
-                f"normative content changed since {who} ratified it — re-ratify "
-                "to accept the new wording, or revert it")
-        if stamp and recorded_links(item) is None:
-            add("ratified-content-mismatch", item.uid, f,
-                "the recorded ratified links are not a list of type and target "
-                "pairs, so they no longer show what was signed — restore the "
-                "record from version control, or ratify the item again")
+        # Ratification drift (SR-0148), judged one signature at a time (SR-0261):
+        # the words a human accepted have been rewritten since they accepted them,
+        # so their signature now vouches for content nobody agreed to. A signature
+        # taken before the stamp existed carries none and cannot be judged, so the
+        # rule stays silent for it rather than accusing the whole back catalogue.
+        # Every entry, not only the ones that name a signer: an entry naming
+        # nobody is exactly the record something other than ratify left behind.
+        for entry in item.ratifications:
+            stamp = entry.get(STAMP)
+            who = describe(entry)
+            content_moved = bool(stamp) and fingerprint(item, schema) != stamp
+            # Signed links (SR-0244): the links a human accepted with the item
+            # have moved since. Silent where the project signs no link type, so
+            # no graph gains this finding until it declares one (SR-0242).
+            unheld, dropped = link_drift(item, schema, entry)
+            if unheld or dropped:
+                what = ("normative content and signed links" if content_moved
+                        else "signed links")
+                add("ratified-stale", item.uid, f,
+                    f"{what} changed since {who} ratified it: it "
+                    f"{describe_drift(unheld, dropped)} — re-ratify to accept the "
+                    "item as it stands, or put it back")
+            elif content_moved:
+                add("ratified-stale", item.uid, f,
+                    f"normative content changed since {who} ratified it — re-ratify "
+                    "to accept the new wording, or revert it")
+            if stamp and recorded_links(entry) is None:
+                add("ratified-content-mismatch", item.uid, f,
+                    f"the links recorded on the signature by {who} are not a list "
+                    "of type and target pairs, so they no longer show what was "
+                    "signed — restore the record from version control, or ratify "
+                    "the item again")
 
-        # The recorded signed content (SR-0217): the Tool writes it so that it
-        # reproduces the stamp beside it (SR-0215), so a record that does not was
-        # edited by something else, or the Tool is at fault. Silent where no content
-        # is recorded, so a graph gains this finding only once its records carry it.
-        content = item.attrs.get("ratified_content")
-        if content is not None and not stamp:
-            add("ratified-content-mismatch", item.uid, f,
-                "ratified content is recorded but no ratification stamp stands beside "
-                "it, so it shows a signature that is not there — restore the record "
-                "from version control, or ratify the item again, which rewrites both")
-        elif content is not None and content_fingerprint(item.authored_uid, content) != stamp:
-            add("ratified-content-mismatch", item.uid, f,
-                "the recorded ratified content does not reproduce the ratification "
-                "stamp, so it no longer shows what was signed — restore the record "
-                "from version control, or ratify the item again (`tl ratify`, or "
-                "`tl withdraw` first where its content has not moved)")
+            # The recorded signed content (SR-0217): the Tool writes it so that it
+            # reproduces the stamp beside it (SR-0215), so a record that does not
+            # was edited by something else, or the Tool is at fault. Silent where
+            # no content is recorded, so a graph gains this finding only once its
+            # records carry it.
+            content = entry.get(CONTENT)
+            if content is not None and not stamp:
+                add("ratified-content-mismatch", item.uid, f,
+                    f"content is recorded on the signature by {who} but no ratification "
+                    "stamp stands beside it, so it shows a signature that is not there — "
+                    "restore the record from version control, or ratify the item "
+                    "again, which rewrites both")
+            elif (content is not None
+                  and content_fingerprint(item.authored_uid, content) != stamp):
+                add("ratified-content-mismatch", item.uid, f,
+                    f"the content recorded on the signature by {who} does not "
+                    "reproduce its stamp, so it no longer shows what was signed — "
+                    "restore the record from version control, or ratify the item "
+                    "again (`tl ratify`, or `tl withdraw` first where its content "
+                    "has not moved)")
 
     out.extend(_coverage_rules(project, idx, strict))
     return out

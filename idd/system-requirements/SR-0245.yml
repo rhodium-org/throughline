@@ -32,9 +32,10 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:3efe5e6ee23e94706c23adb7c2267a729b890e4ca9ca43c8fda9b60f938184e4
-  ratified_content:
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:3efe5e6ee23e94706c23adb7c2267a729b890e4ca9ca43c8fda9b60f938184e4
+  content:
     type: system_requirement
     text: For an item borrowed from a composed source, the Tool shall judge the signed
       links (SR-0244) by the link types that item's own graph declares as signed,
@@ -46,3 +47,4 @@ attrs:
     derived: false
     attrs:
       priority: must
+  revision: 2adf9a09966e1788e81cef64dbf719c61897775b

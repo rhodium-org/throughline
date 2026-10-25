@@ -20,6 +20,18 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:2939895cf2deb0184a0d28d158b0d5bb63f7df9d7b9daf14964d6cc3f1b7c541
-  ratified_revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:2939895cf2deb0184a0d28d158b0d5bb63f7df9d7b9daf14964d6cc3f1b7c541
+  revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+  content:
+    type: system_requirement
+    text: Where ratify is asked to accept an item reported stale, the Tool shall
+      show what changed since its stamp and require the ratifier to confirm before
+      the signature is recorded. Where the change cannot be shown it shall say so
+      and require the confirmation still. Where there is no interactive terminal
+      it shall refuse unless the caller explicitly acknowledges the change.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

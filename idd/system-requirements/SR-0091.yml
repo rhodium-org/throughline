@@ -24,7 +24,26 @@ attrs:
   priority: must
   verification: test
   origin: ai
-  ratified_by: henry
-  ratified_fingerprint: sha256:50662fb750e06c10eecac66cf9a1b691f0dc19773eed95f94deeb6155b9d8e89
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: henry
+  fingerprint: sha256:50662fb750e06c10eecac66cf9a1b691f0dc19773eed95f94deeb6155b9d8e89
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: system_requirement
+    text: 'When ''tl new'' is invoked with a --ground flag, the Tool shall either
+      attach the requested grounding link or, if it declines to add it, reject the
+      command with a clear, actionable error. It shall never create the item while
+      silently discarding the requested link — including for root-type sources, which
+      may legitimately carry an explicit grounding link (e.g. a business_need that
+      derives_from the vision). Rationale: a silently dropped grounding link yields
+      an item the author believes is grounded but which surfaces only later as an
+      orphan or unserved-root check failure — a fail-fast violation and a silent
+      loss of authoring intent. Observed in throughline 0.1.0 (2026-07-10): ''tl
+      new BN --ground INT-0001 --ground-type derives_from'' created the business_need
+      with no links block because the grounding block was skipped for root types,
+      and the delivery-root intent then reported unserved-root under ''tl check''.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

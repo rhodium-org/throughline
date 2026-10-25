@@ -22,6 +22,21 @@ attrs:
   origin: ai
   priority: must
   verification: test
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:165a80dede2c5f84a0e6c40414532d88d011720732dac6abb3881f96653a4c17
-  ratified_revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:165a80dede2c5f84a0e6c40414532d88d011720732dac6abb3881f96653a4c17
+  revision: eb601ce6b8d256ecf9d9bb830771b0459bbe6536
+  content:
+    type: system_requirement
+    text: The Tool shall report, field by field, the difference between an item's
+      current normative content and the content its ratification stamp was taken
+      over. It shall identify the earlier content only by reproducing that stamp,
+      never by when a revision was made, and shall offer the result as structured
+      data through the Python API as well as rendered text. Where no revision reproduces
+      the stamp, the Tool shall report that the change cannot be shown — an outcome
+      it shall keep distinct from having found no change — and shall never approximate
+      it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

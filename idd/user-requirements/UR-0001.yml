@@ -12,7 +12,16 @@ links:
 attrs:
   priority: must
   verification: demonstration
-  ratified_by: Henry Grech-Cini
-  ratified_fingerprint: sha256:b3eeba01ea0e28e2b95daf75f0f343dc81a4177aae4a6ca0207ae9ff8f19befc
-  ratified_backfilled: true
-  ratified_revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+ratifications:
+- by: Henry Grech-Cini
+  fingerprint: sha256:b3eeba01ea0e28e2b95daf75f0f343dc81a4177aae4a6ca0207ae9ff8f19befc
+  backfilled: true
+  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  content:
+    type: user_requirement
+    text: Users shall be able to refer to any requirement by an identifier that never
+      changes for the life of the project, regardless of edits to any register.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

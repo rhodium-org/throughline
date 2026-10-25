@@ -44,10 +44,8 @@ from .grounding import (
     withdraw,
 )
 from .identity import (
-    RATIFIED_BY_ATTR,
-    RATIFIED_ID_ATTR,
-    WITHDRAWN_RATIFIER_ATTR,
     IdentityError,
+    default_identifier,
     default_ratifier,
 )
 from .diagrams import diagram_transitions, diagram_types
@@ -73,6 +71,7 @@ from .brief import (
     context_markdown,
 )
 from .parser import build_parser as _command_tree
+from .signatures import W_OF, describe, latest, names, standing
 from .apply import (
     CHANGE_SET_FORMAT,
     ChangeSetError,
@@ -283,7 +282,7 @@ def cmd_migrate(args) -> int:
         print(f"already at format version {result.end}"
               + ("" if result.bound or result.declared or result.routed
                  or result.cached or result.normative or result.contents
-                 or result.unprovable or result.registers
+                 or result.unprovable or result.registers or result.lifted
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -295,6 +294,12 @@ def cmd_migrate(args) -> int:
         if not result.repaired:
             print("  (no declared status matched a role — bind them yourself, and "
                   "leave out any role your statuses have no honest counterpart for)")
+    # Flat ratification records lifted into the list (SR-0255): a count, because
+    # nothing in a record changes but its shape — no stamp, ratifier or status.
+    if result.lifted:
+        print(f"lifted the ratification record on {result.lifted} item(s) into the "
+              "`ratifications` list, as format 4 holds it — the ratifier, stamp and "
+              "content are carried verbatim; no role or time is invented")
     # Vocabularies the repair declared (SR-0185). Named in full rather than
     # counted, because this is what the project's items will be validated against
     # from now on: it is the project's own current reliance, so it changes nothing
@@ -322,7 +327,7 @@ def cmd_migrate(args) -> int:
     if result.bound:
         print(f"bound {len(result.bound)} ratification record(s) that named a "
               "ratifier but carried no fingerprint — each marked "
-              "`ratified_backfilled` because it attests to the content as it "
+              "`backfilled` because it attests to the content as it "
               "stands now, not to what the ratifier read:")
         for uid, stamp in result.bound.items():
             print(f"  {uid} = {stamp}")
@@ -399,6 +404,7 @@ def cmd_schema(args) -> int:
     try:
         project = schema_ops.load(root)
         change = args.builder(project, args)
+        before = schema_ops.awaiting(project)
         result = schema_ops.apply_change(root, change, args.because)
     except (schema_ops.SchemaOpError, ProjectError) as e:
         return _err(str(e))
@@ -406,6 +412,17 @@ def cmd_schema(args) -> int:
         print(result.render(schema_ops.is_composed(project)))
         return FINDINGS
     print(f"{result} — {root / CONFIG_NAME} updated")
+    # A requirement tightened on a mature graph is allowed, and the items it
+    # leaves short are named rather than left for the next check to find
+    # (SR-0264). Their status does not move; the gate follows them until the
+    # signatures are gathered.
+    try:
+        short = sorted(schema_ops.awaiting(schema_ops.load(root)) - before)
+    except (schema_ops.SchemaOpError, ProjectError):
+        short = []
+    if short:
+        print(f"{len(short)} item(s) now await signatures their kind requires: "
+              + " ".join(short))
     return OK
 
 
@@ -717,8 +734,9 @@ def _say_signature_stale(project_path, src_uid: str) -> None:
     it reports what the gate will."""
     project = load_project(project_path)
     item = project.get(src_uid)
-    if item is not None and links_moved(item, project.schema):
-        who = item.attrs.get(RATIFIED_BY_ATTR) or "a human"
+    if item is not None and any(links_moved(item, project.schema, entry)
+                                for entry in item.ratifications):
+        who = names(item) or "a human"
         print(f"  ratification by {who} no longer covers this item's links — "
               f"`tl ratify {src_uid}` shows what moved and asks again")
 
@@ -1322,32 +1340,41 @@ def cmd_ratify(args) -> int:
     # taught that the prompt was a formality. The index is built once and handed to
     # ratify, so the question asked here and the writes below read the same graph.
     idx = Index.build(project)
+    schema = project.schema
+    role = getattr(args, "role", None)
+    by_id = getattr(args, "by_id", None)
     items = []
     for uid in uids:
         item = project.get(uid)
         if item is None:
             return _err(f"{uid} does not exist")
-        obstacle = ratification_obstacle(project.schema, idx, item,
-                                         replacing=args.replacing)
+        obstacle = ratification_obstacle(schema, idx, item, replacing=args.replacing,
+                                         by=args.by, by_id=by_id)
         if obstacle is not None:
             return _err(obstacle if len(uids) == 1
                         else f"{obstacle} — nothing in this run was ratified")
         items.append(item)
     # Resolved once, before anything is shown, so the difference put in front of
-    # the ratifier and the gate below are the same answer (SR-0165).
+    # the ratifier and the gate below are the same answer (SR-0165). Judged on the
+    # latest signature; a person renewing their own is shown what moved since it.
     changes = {item.uid: change_since_ratification(project, item) for item in items}
     interactive = _interactive()
     if not interactive:
         for item in items:
             if changes[item.uid].stale and not args.accept_change:
                 return _err(_UNSEEN_CHANGE.format(
-                    uid=item.uid, who=item.attrs.get(RATIFIED_BY_ATTR, "a human")))
+                    uid=item.uid, who=names(item) or "a human"))
     # Offer the identity this repository already signs commits with (SR-0156). It
     # is only ever a default: _resolve_value shows it and takes it on assent, and a
     # non-interactive session that names no ratifier is refused, not signed for.
     # Asked once for the run — the person does not change between items — and on a
     # terminal not until the first item has been shown, so the reader knows what
     # they are being asked about while they are being asked (UR-0029, SR-0195).
+    # In a project that declares roles the signer's identifier and role are asked
+    # for the same way (SR-0259): the identifier offered is the email this
+    # repository signs commits with, the role chosen from those declared.
+    # Non-interactively the identifier and role are not resolved here: there is
+    # nothing to offer, and ratify's own refusals say exactly which is missing.
     by = None
     if not interactive:
         by = _resolve_value(args.by, "ratifier", "--by",
@@ -1371,7 +1398,7 @@ def cmd_ratify(args) -> int:
             # when the reader has asked for none (NO_COLOR, https://no-color.org).
             if change.stale:
                 for line in render_change(
-                        change, ratifier=item.attrs.get(RATIFIED_BY_ATTR),
+                        change, ratifier=names(item) or None,
                         columns=shutil.get_terminal_size((80, 24)).columns,
                         colour=not os.environ.get("NO_COLOR")):
                     print(line, file=sys.stderr)
@@ -1388,22 +1415,38 @@ def cmd_ratify(args) -> int:
                                     default=default_ratifier(args.path))
                 if by is None:
                     return USAGE
+                if schema.roles:
+                    by_id = _resolve_value(by_id, "signer identifier", "--by-id",
+                                           default=default_identifier(args.path))
+                    if by_id is None:
+                        return USAGE
+                    role = _resolve_value(role, "role", "--as",
+                                          options=list(schema.roles))
+                    if role is None:
+                        return USAGE
+            signing = f"{by}" + (f" as {role}" if role else "")
             question = (f"replace the ratifier recorded on {uid} with {by}?"
-                        if args.replacing else f"ratify {uid} as {by}?")
+                        if args.replacing else f"ratify {uid} as {signing}?")
             if not _confirm(question):
                 print(f"{uid} not ratified", file=sys.stderr)
                 continue
         try:
-            item = ratify(project, uid, by=by, index=idx,
-                          by_id=getattr(args, "by_id", None),
-                          replacing=args.replacing)
+            item = ratify(project, uid, by=by, index=idx, by_id=by_id,
+                          replacing=args.replacing, role=role)
         except IdentityError as e:
             return _err(str(e))
         except (ProjectError, GroundingError, SchemaError) as e:
             return _err(str(e))
         write_item(item, project.register_of(item.uid))
-        identifier = item.attrs.get(RATIFIED_ID_ATTR)
-        print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
+        signed = latest(item)
+        where = standing(item, schema)
+        # "ratified" only when the item now counts as such (SR-0260); a signature
+        # that leaves the item short of what its kind requires says so.
+        if where.met:
+            print(f"{uid} ratified by {describe(signed)}")
+        else:
+            print(f"{uid} signed by {describe(signed)} — {where.describe()}; "
+                  "not yet ratified")
     return rc
 
 
@@ -1477,15 +1520,19 @@ def cmd_withdraw(args) -> int:
         return OK
     try:
         items = withdraw(project, uids, by=by, reason=reason,
-                         by_id=getattr(args, "by_id", None))
+                         by_id=getattr(args, "by_id", None),
+                         of=getattr(args, "of", None))
     except IdentityError as e:
         return _err(str(e))
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
     for item in items:
         write_item(item, project.register_of(item.uid))
-        print(f"{item.uid}: ratification by {item.attrs[WITHDRAWN_RATIFIER_ATTR]} "
-              f"withdrawn by {by}; now '{item.status}', awaiting ratification")
+        whose = item.withdrawals[-1].get(W_OF)
+        where = standing(item, project.schema)
+        after = (f"still ratified, {where.describe()}" if where.met
+                 else f"now '{item.status}', awaiting ratification")
+        print(f"{item.uid}: ratification by {whose} withdrawn by {by}; {after}")
     return OK
 
 
@@ -1922,27 +1969,32 @@ def _composed_ratify(args) -> int:
     # graph. The gate is asked for all of them before any is written, so a run that
     # cannot complete writes nothing.
     index = Index.build(union.project)
+    by_id = getattr(args, "by_id", None)
+    role = getattr(args, "role", None)
     for uid in uids:
         obstacle = ratification_obstacle(consumer.schema, index, consumer.get(uid),
-                                         replacing=getattr(args, "replacing", False))
+                                         replacing=getattr(args, "replacing", False),
+                                         by=by, by_id=by_id)
         if obstacle is not None:
             return _err(obstacle + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
     # Signed links that moved go in the path of the new signature (SR-0246). Only
     # those: this command has always re-signed moved content unshown, tools built
     # on it rely on that, and a project that declares no signed links must behave
-    # as it did (SR-0242).
+    # as it did (SR-0242). Judged on the latest signature (SR-0261).
     changes = {uid: change_since_ratification(consumer, consumer.get(uid))
-               for uid in uids if links_moved(consumer.get(uid), consumer.schema)}
+               for uid in uids
+               if links_moved(consumer.get(uid), consumer.schema,
+                              latest(consumer.get(uid)))}
     interactive = _interactive()
     if not interactive:
         for uid in uids:
             if uid in changes and not getattr(args, "accept_change", False):
                 return _err(_UNSEEN_CHANGE.format(
-                    uid=uid, who=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR, "a human")))
+                    uid=uid, who=names(consumer.get(uid)) or "a human"))
     for uid in uids:
         if interactive and uid in changes:
             for line in render_change(
-                    changes[uid], ratifier=consumer.get(uid).attrs.get(RATIFIED_BY_ATTR),
+                    changes[uid], ratifier=names(consumer.get(uid)) or None,
                     columns=shutil.get_terminal_size((80, 24)).columns,
                     colour=not os.environ.get("NO_COLOR")):
                 print(line, file=sys.stderr)
@@ -1951,16 +2003,20 @@ def _composed_ratify(args) -> int:
                 print(f"{uid} not ratified", file=sys.stderr)
                 continue
         try:
-            item = ratify(consumer, uid, by, index=index,
-                          by_id=getattr(args, "by_id", None),
-                          replacing=getattr(args, "replacing", False))
+            item = ratify(consumer, uid, by, index=index, by_id=by_id,
+                          replacing=getattr(args, "replacing", False), role=role)
         except IdentityError as e:
             return _err(str(e))
         except GroundingError as e:
             return _err(str(e))
         write_item(item, consumer.register_of(uid))
-        identifier = item.attrs.get(RATIFIED_ID_ATTR)
-        print(f"{uid} ratified by {by}" + (f" ({identifier})" if identifier else ""))
+        signed = latest(item)
+        where = standing(item, consumer.schema)
+        if where.met:
+            print(f"{uid} ratified by {describe(signed)}")
+        else:
+            print(f"{uid} signed by {describe(signed)} — {where.describe()}; "
+                  "not yet ratified")
     return OK
 
 

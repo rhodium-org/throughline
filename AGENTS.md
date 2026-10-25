@@ -95,12 +95,14 @@ create or edit any item, and trust it over any static list (including this file)
 ## Ratification is a human act — never sign on someone's behalf
 
 `tl ratify <UID> --by <who>` records that a **named human** took accountability
-for an item. The `--by` / `ratified_by` value is that person's identity — it is
-evidence, not a formality.
+for an item. The `--by` value, recorded as the signature's `by` in the item's
+`ratifications` list, is that person's identity — it is evidence, not a
+formality. Where the project declares roles, `--as <role>` and `--by-id` name the
+capacity they sign in and who they are.
 
 If you do not already know who is ratifying, **ask the user and use exactly what
 they give you. Do not guess, do not invent a name or email, and do not reuse a
-value you saw elsewhere in the repo.** A fabricated `ratified_by` is a false
+value you saw elsewhere in the repo.** A fabricated signature is a false
 accountability record — the one thing this tool exists to prevent. When in doubt,
 stop and ask.
 
