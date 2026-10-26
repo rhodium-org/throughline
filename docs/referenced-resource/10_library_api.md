@@ -27,7 +27,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### Creating and changing an item
 
-`new_item` · `birth_item` · `parse_attrs` · `coerce_attr` · `amend_item` · `Amendment` · `newly_suspect` · `delete_item` · `review_items` · `add_link` · `remove_link` · `retype_link` · `LinkError`
+`new_item` · `birth_item` · `parse_attrs` · `coerce_attr` · `amend_item` · `Amendment` · `newly_suspect` · `delete_item` · `Deletion` · `restore_item` · `signed_dependents` · `review_items` · `add_link` · `remove_link` · `retype_link` · `LinkError`
 
 ### Carrying out a change set drafted elsewhere
 
@@ -41,7 +41,7 @@ An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [r
 
 ### The grounding layer
 
-`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `Refusal` · `Invalidation`
+`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `Refusal` · `Invalidation` · `Cascade` · `cascade_suspicion`
 
 ### What a signature covered, and what has moved since
 
@@ -49,7 +49,7 @@ An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [r
 
 ### What awaits a signature
 
-`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress` · `signatures` · `standing` · `Standing` · `requirement_met`
+`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress` · `signatures` · `relevant` · `signs_deletion` · `retired` · `standing` · `Standing` · `requirement_met`
 
 ### Who signs
 

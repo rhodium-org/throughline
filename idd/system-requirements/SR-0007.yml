@@ -6,5 +6,15 @@ text: 'Was: ''The Tool shall provide a renumber command to compact UID sequences
   Withdrawn during drafting because it contradicts SR-0001/SR-0003/SR-0004. The ID
   is retired and will never be reused.'
 normative: false
+ratifications:
+- by: Henry Grech-Cini
+  id: email:henry.grechcini@gmail.com
+  at: '2026-07-26T16:51:01Z'
+  fingerprint: sha256:b9afb64f72d8a93ade123611640a73e9b3df1704f92c9b7802c2012bb86d6c90
+  content:
+    deleted:
+      reason: Contradicts SR-0001/SR-0003/SR-0004; kept as tombstone example.
+  backfilled: true
+  revision: c4d34b3e8cc94acad5ed184977b88067053024e5
 deleted:
   reason: Contradicts SR-0001/SR-0003/SR-0004; kept as tombstone example.

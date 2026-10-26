@@ -536,9 +536,11 @@ def test_initial_status_item_is_not_accused_of_leaving_proposed():
     assert "never proposed" in msg and "left the proposed status" not in msg
 
 def test_terminal_status_ai_item_needs_no_ratifier():
-    """Dead scope never reaches a reader, so it needs no accountability record."""
-    for status in ("rejected", "deleted"):
-        assert ("FR-1", "unratified") not in _ai_item(status), status
+    """Dead scope never reaches a reader, so it needs no accountability record. A
+    tombstone is dead scope only once its deletion is ratified (SR-0267): one
+    nobody has signed is a proposed deletion, and the gate says so."""
+    assert ("FR-1", "unratified") not in _ai_item("rejected")
+    assert ("FR-1", "unratified") in _ai_item("deleted")
 
 def test_human_origin_item_is_never_chased_for_ratification():
     intent = Item(uid="INT-1", type="intent", status="ratified")

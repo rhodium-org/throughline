@@ -299,11 +299,22 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                         "several types link the same pair)")
     s.set_defaults(func=handlers.get("cmd_unlink"))
 
-    s = sub.add_parser("delete", help="tombstone an item (never erased)")
+    s = sub.add_parser("delete",
+                       help="propose an item's deletion — a tombstone a human "
+                            "ratifies (never erased)")
     s.add_argument("uid", nargs="?", default=None,
                    help="UID to tombstone (omit on a terminal to pick one)")
     s.add_argument("--reason", default="")
     s.set_defaults(func=handlers.get("cmd_delete"))
+
+    # Declining a proposed deletion is its own verb (SR-0268): `status` cannot
+    # make the move, since no lifecycle declares a route out of the tombstone.
+    s = sub.add_parser("restore",
+                       help="decline a proposed deletion — the unsigned tombstone "
+                            "returns to the status it held")
+    s.add_argument("uid", nargs="?", default=None,
+                   help="UID to restore (omit on a terminal to pick one)")
+    s.set_defaults(func=handlers.get("cmd_restore"))
 
     s = sub.add_parser(
         "resolve",

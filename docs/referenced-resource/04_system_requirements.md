@@ -116,6 +116,7 @@ kept as a live example of the tombstone convention.)*
 *Rationale:* A tombstone is the only record that a UID was retired; if it is erased by a bad merge or a stray git rm, the never-reused guarantee (SR-0001) silently breaks. The gate already reads each item's status at the previous commit (SR-0083), so a vanished tombstone is detectable there without a redundant second ledger.
 
 *Implements:* UR-0014
+*Relates:* SR-0267
 
 **priority**: must · **verification**: test
 
@@ -151,7 +152,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0012 -->
 **SR-0012 — Soft delete with tombstone** — `system_requirement`, status `ratified`
 
-> The Tool shall implement deletion as a status change to 'deleted', retaining the item file with UID, deletion date, reason, and last content hash; deleted items are excluded from publishing/exports by default but included in history, diffs, and UID-reuse prevention.
+> The Tool shall implement deletion as a move to the tombstone status, retaining the item file with its UID, the status it held, the deletion date, the reason and the fingerprint of the content retired. A tombstone stands — the item is retired — only once a human has ratified the deletion or it was retired outright; a retired item is excluded from publishing and exports by default but included in history, diffs and UID-reuse prevention.
 
 *Implements:* UR-0002, UR-0003
 

@@ -496,10 +496,12 @@ def apply_change_set(project, operations: list[dict], *,
                     i, kind, uid, "unlinked",
                     ", ".join(f"{uid} --{k}--> {target}" for k in kinds)))
             elif kind == "delete":
-                retired = delete_item(project, uid, reason=op.get("reason", "unspecified"))
+                done = delete_item(project, uid, reason=op.get("reason", "unspecified"))
                 mark_changed(project.get(uid))
                 result.operations.append(OperationResult(
-                    i, kind, uid, "tombstoned" if retired else "already deleted",
+                    i, kind, uid,
+                    ("already deleted" if done is None
+                     else "retired" if done.outright else "deletion proposed"),
                     op.get("reason", "")))
     except (GroundingError, LinkError, UidError, SchemaError, ProjectError,
             ValueError) as e:

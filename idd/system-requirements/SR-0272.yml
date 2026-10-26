@@ -1,0 +1,26 @@
+uid: SR-0272
+type: system_requirement
+status: proposed
+title: A never-ratified item with no signed dependent is retired outright
+text: tl delete shall retire an item outright — the tombstone stands at once, marked
+  outright in its record and needing no signature — when the item carries no signature
+  and no live dependent linking to it carries one, since no accountability is undone;
+  otherwise the deletion is proposed (SR-0267).
+rationale: 'A proposed item a machine authored and nobody accepted can be withdrawn
+  by the machine that proposed it: no human''s acceptance is undone and no signed
+  item loses its ground. Requiring a signature there would make every discarded draft
+  cost a human an act. The decision is recorded in the tombstone rather than computed
+  later, because a dependent could be signed afterwards and a tombstone must not
+  change its standing without an act.'
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: UR-0002
+  type: implements
+- target: SR-0267
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

@@ -1,0 +1,29 @@
+uid: SR-0270
+type: system_requirement
+status: proposed
+title: Ratifying a tombstone marks its dependents suspect along the withdrawing link
+  types
+text: 'When a deletion signature brings a tombstone to the standing its kind requires,
+  the Tool shall mark every transitive dependent along the withdrawing link types
+  (SR-0159) suspect, by the same walk tl invalidate makes, recording each dependent
+  whose lifecycle refuses the move as tl invalidate records its refusals (SR-0173).
+  The word is suspect: the dependent''s own signature still covers its words; what
+  it rested on has gone. A caller that does not receive the dependents to write shall
+  be refused before anything is signed.'
+rationale: A retired item withdraws the footing of everything grounded on it, exactly
+  as a falsified one does, so the one walk serves both; a second walk would drift.
+  The refusal of a caller that does not receive the cascade exists so a front end
+  built before this rule fails loudly instead of signing a deletion whose consequences
+  it never writes.
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0159
+  type: refines
+- target: SR-0173
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

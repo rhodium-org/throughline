@@ -39,7 +39,10 @@ import tomllib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from .fingerprint import content_fingerprint, fingerprint, normative_attr_names, signed_content
+from .fingerprint import (
+    content_fingerprint, deletion_content, deletion_fingerprint, fingerprint,
+    normative_attr_names, signed_content,
+)
 from .model import Item
 from .signatures import BY, CONTENT, REVISION, STAMP, SUPERSEDES, latest
 from .schema import Schema
@@ -215,6 +218,10 @@ def _reproduces(top: Path, sha: str, rel: str, cfg_rel: str, stamp: str,
     past = _item_at(top, sha, rel)
     if past is None:
         return False
+    # A deletion signature's stamp is the deletion record's (SR-0269), so the
+    # revision that reproduces it is one that held that record.
+    if past.is_deleted and deletion_fingerprint(past) == stamp:
+        return True
     return fingerprint(past, _schema_at(top, sha, cfg_rel, fallback)) == stamp
 
 
@@ -462,6 +469,18 @@ def change_since_ratification(project, item, entry: dict | None = None
     the record alone, so they are reported even where the content that moved
     cannot be shown."""
     entry = entry if entry is not None else latest(item)
+    # A deletion signature covers the deletion record, not content (SR-0269): it
+    # is stale exactly when the record was rewritten since, and a record is not
+    # prose to diff — what moved is read from the file.
+    if item.is_deleted:
+        stamp = entry.get(STAMP_ATTR) if entry else None
+        if not stamp:
+            return RatificationChange(uid=item.uid, outcome=UNRATIFIED)
+        if content_fingerprint(item.authored_uid, deletion_content(item)) == stamp:
+            return RatificationChange(uid=item.uid, outcome=UNCHANGED, stamp=stamp)
+        return RatificationChange(
+            uid=item.uid, outcome=UNRESOLVABLE, stamp=stamp,
+            reason="the deletion record was rewritten since it was signed")
     content = _content_change(project, item, entry)
     links = _link_changes(project, item, entry)
     if not links:

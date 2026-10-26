@@ -1,0 +1,33 @@
+uid: SR-0269
+type: system_requirement
+status: proposed
+title: Ratifying a tombstone signs the deletion record
+text: Where tl ratify signs a tombstone, the signed content shall be the deletion
+  record — date, reason, fingerprint of the content retired and the status the item
+  held — and the stamp the fingerprint of that record, so the signature is stale
+  exactly when the record moves. Signatures over the item's content shall be kept
+  beside it as the history of what was undone and shall count toward nothing. The
+  standing a tombstone needs is the one its kind declares (SR-0260). tl withdraw
+  shall remove a deletion signature and leave the tombstone proposed again, moving
+  no status. Where the Tool shows an item to its signer it shall show the deletion
+  record in place of the content.
+rationale: 'Status is not part of the fingerprint (SR-0033), so a signature over
+  content says nothing about whether the item should go: the item''s own ratifier
+  would otherwise count as having accepted its deletion. Signing the record keeps
+  the content fingerprint untouched, so link stamps and reviews on the retired content
+  stay honest. The content signatures are kept rather than replaced because they
+  are the evidence for what the deletion undid.'
+normative: true
+links:
+- target: UR-0029
+  type: implements
+- target: UR-0023
+  type: implements
+- target: SR-0254
+  type: refines
+- target: SR-0197
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

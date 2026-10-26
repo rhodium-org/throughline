@@ -1,0 +1,31 @@
+uid: SR-0267
+type: system_requirement
+status: proposed
+title: A deletion is proposed until a human ratifies it
+text: 'tl delete <UID> --reason <why> shall move the item to the tombstone status
+  and write the deletion record — the date, the reason, the fingerprint of the content
+  retired and the status the item held — without retiring it: the tombstone is proposed,
+  and tl check shall report it unratified until a human ratifies the deletion. Until
+  then the item counts as live scope for grounding, coverage and link integrity,
+  so an unsigned deletion changes nothing downstream.'
+rationale: 'Before this a tombstone took effect the moment the command ran, unsigned:
+  a ratified item could leave scope by a machine''s act, and the only downstream
+  signal was the error on every dependent still linking to it. Amendment and invalidation
+  both leave a trace a human must accept; deletion now does too. Status is outside
+  the fingerprint, so the ratification model could not see a tombstone — the deletion
+  record is what the signature is taken over (SR-0269). The lifecycle gains no status:
+  the tombstone status is written at once and the record keeps the status it left,
+  so no project''s transitions table changes on upgrade. Rejected: a separate retiring
+  status, which every graph would have had to declare and route.'
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: UR-0002
+  type: implements
+- target: SR-0012
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

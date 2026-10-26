@@ -76,6 +76,40 @@ def fingerprint(item, schema: Schema | None = None) -> str:
                    item.derived, [(name, item.attrs.get(name, "")) for name in names])
 
 
+# The key under which a signature's recorded content holds a deletion record
+# rather than the item's content (SR-0269). A signature over a tombstone is taken
+# over this record, never over the content the tombstone retired.
+DELETED_KEY = "deleted"
+
+
+def _deletion_digest(uid: str, record: dict) -> str:
+    """SHA-256 over a deletion record (SR-0269): the UID and the record's keys and
+    values in sorted order, each as text, so the digest moves exactly when the
+    record does and never with the item's content, title, links or status."""
+    parts = [("uid", uid), ("deleted", "")]
+    for key in sorted(record):
+        parts.append((f"deleted:{key}", _norm(record[key])))
+    canonical = _REC.join(f"{k}{_UNIT}{v}" for k, v in parts)
+    return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def deletion_fingerprint(item) -> str:
+    """The fingerprint a signature over a tombstone is taken over (SR-0269): a
+    digest of the deletion record — the day, the reason, the fingerprint of the
+    content retired and the status the item held. Status is outside the content
+    fingerprint, so a signature over the content says nothing about whether the
+    item should go; this is what says it."""
+    return _deletion_digest(item.authored_uid, dict(item.deleted or {}))
+
+
+def deletion_content(item) -> dict:
+    """What ratify records beside a deletion signature (SR-0269): the deletion
+    record as it stands, under :data:`DELETED_KEY`, copied so an edit to the item
+    cannot rewrite what was signed. With the UID it reproduces
+    :func:`deletion_fingerprint` exactly."""
+    return copy.deepcopy({DELETED_KEY: dict(item.deleted or {})})
+
+
 # The keys of a recorded content map (SR-0215): every input the fingerprint reads
 # except the UID, which an item never changes. Held as values, not a digest, so the
 # words a person agreed to can be shown without version control.
@@ -111,9 +145,18 @@ def content_fingerprint(uid: str, content: object) -> str | None:
     Its values are read exactly as :func:`fingerprint` reads an item's, which hashes
     each as text: whatever the fingerprint accepted when the stamp was written, the
     record reproduces, so the Tool never writes a record its own check rejects."""
+    if not isinstance(content, dict):
+        return None
+    # A deletion signature records the deletion record, not content (SR-0269), and
+    # reproduces the deletion fingerprint instead.
+    if DELETED_KEY in content:
+        record = content[DELETED_KEY]
+        if not isinstance(record, dict) or not all(isinstance(k, str) for k in record):
+            return None
+        return _deletion_digest(uid, record)
     # Every key this version reads must be there; a later version may record more
     # beside them, and those do not change what this one hashes.
-    if not isinstance(content, dict) or not set(CONTENT_KEYS) <= set(content):
+    if not set(CONTENT_KEYS) <= set(content):
         return None
     attrs = content["attrs"]
     if not isinstance(attrs, dict) or not all(isinstance(k, str) for k in attrs):

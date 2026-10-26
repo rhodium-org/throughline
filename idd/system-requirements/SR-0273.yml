@@ -1,0 +1,27 @@
+uid: SR-0273
+type: system_requirement
+status: proposed
+title: Migration backfills an existing tombstone as ratified by history
+text: 'tl migrate shall backfill every tombstone that stands unsigned as ratified
+  by history: one signature naming the author of the commit that wrote the tombstone,
+  at that commit''s date, over the deletion record as it stands, marked backfilled
+  as SR-0152 marks a bound record. A tombstone no commit holds is left proposed and
+  named in the report; no identity is invented.'
+rationale: 'Every tombstone in the estate was written when deletion took effect unsigned;
+  without this, upgrading would report each as unratified and a strict gate would
+  go red on every graph. History is the evidence of who deleted it and when, and
+  the marking keeps a backfilled signature forever distinguishable from one a person
+  gave at the time. Rejected: exempting old tombstones by date, which would make
+  the rule depend on when a file was written rather than on what it records.'
+normative: true
+links:
+- target: UR-0015
+  type: implements
+- target: SR-0137
+  type: refines
+- target: SR-0152
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

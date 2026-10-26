@@ -2,10 +2,12 @@ uid: SR-0012
 type: system_requirement
 status: ratified
 title: Soft delete with tombstone
-text: The Tool shall implement deletion as a status change to 'deleted', retaining
-  the item file with UID, deletion date, reason, and last content hash; deleted items
-  are excluded from publishing/exports by default but included in history, diffs,
-  and UID-reuse prevention.
+text: The Tool shall implement deletion as a move to the tombstone status, retaining
+  the item file with its UID, the status it held, the deletion date, the reason and
+  the fingerprint of the content retired. A tombstone stands — the item is retired
+  — only once a human has ratified the deletion or it was retired outright; a retired
+  item is excluded from publishing and exports by default but included in history,
+  diffs and UID-reuse prevention.
 normative: true
 links:
 - target: UR-0002

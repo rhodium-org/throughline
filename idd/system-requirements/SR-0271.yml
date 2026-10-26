@@ -1,0 +1,24 @@
+uid: SR-0271
+type: system_requirement
+status: proposed
+title: A link into a retired tombstone stays on the dependent and is reported there
+text: A link into a retired tombstone shall stay in the dependent's file and be reported
+  as deleted-link-target on the dependent until whoever clears its suspect flag unlinks
+  it or grounds the dependent elsewhere; the Tool shall never remove such a link
+  itself. A link into a proposed tombstone is not reported.
+rationale: 'Rejected: the Tool unlinks the dependents when the tombstone is ratified.
+  A dependent''s links are outside its fingerprint, so an automatic unlink would
+  silently rewrite a ratified item''s file, and the link is the evidence for the
+  suspicion — remove it and the suspect flag explains nothing. Who pays: the person
+  clearing the flag, one unlink or re-ground per dependent, which is the work the
+  suspicion exists to put in front of them.'
+normative: true
+links:
+- target: UR-0004
+  type: implements
+- target: SR-0032
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

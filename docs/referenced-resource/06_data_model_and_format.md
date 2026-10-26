@@ -120,11 +120,20 @@ Rules:
 - Files are written with stable key order as above, LF endings, UTF-8,
   final newline (SR-0072).
 - A tombstone is the same file with `status: deleted`, plus
-  `deleted: {date, reason, fingerprint}`: the UTC day the UID was retired
-  (`YYYY-MM-DD`), why, and the §5 fingerprint of the content it last held, so
-  `text` may be truncated to that hash reference. A tombstone is never rewritten
-  (SR-0093), so one written before `date` and `fingerprint` were recorded keeps
-  only its `reason`.
+  `deleted: {date, reason, fingerprint, from}`: the UTC day the UID was retired
+  (`YYYY-MM-DD`), why, the §5 fingerprint of the content it last held, so
+  `text` may be truncated to that hash reference, and the status the item held.
+  A deletion is proposed until a human ratifies it (SR-0267): the signature is
+  taken over the record, not the content, so its `fingerprint` is a digest of the
+  record and its `content` holds `{deleted: {…}}` (SR-0269); signatures over the
+  content stay beside it as the history of what the deletion undid. A tombstone
+  nobody signed is live scope and `check` reports it `unratified`; `tl restore`
+  returns it to the status in `from` (SR-0268). An item nobody signed, with no
+  signed dependent, is retired outright and its record carries `outright: true`
+  (SR-0272). A tombstone that stands is never rewritten (SR-0093), so one written
+  before `date` and `fingerprint` were recorded keeps only its `reason`; `tl
+  migrate` signs such a tombstone from the commit that wrote it, marked
+  `backfilled` (SR-0273).
 
 ## 5. Fingerprint (normative content hash)
 
