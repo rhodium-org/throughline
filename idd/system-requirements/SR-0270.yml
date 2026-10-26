@@ -1,6 +1,6 @@
 uid: SR-0270
 type: system_requirement
-status: proposed
+status: ratified
 title: Ratifying a tombstone marks its dependents suspect along the withdrawing link
   types
 text: 'When a deletion signature brings a tombstone to the standing its kind requires,
@@ -27,3 +27,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-26T19:21:04Z'
+  fingerprint: sha256:c89c94cd6f7428340eb66ff82039cf176b6bd8bfa394cb96c45b40577ecefe73
+  content:
+    type: system_requirement
+    text: 'When a deletion signature brings a tombstone to the standing its kind
+      requires, the Tool shall mark every transitive dependent along the withdrawing
+      link types (SR-0159) suspect, by the same walk tl invalidate makes, recording
+      each dependent whose lifecycle refuses the move as tl invalidate records its
+      refusals (SR-0173). The word is suspect: the dependent''s own signature still
+      covers its words; what it rested on has gone. A caller that does not receive
+      the dependents to write shall be refused before anything is signed.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,6 +1,6 @@
 uid: SR-0273
 type: system_requirement
-status: proposed
+status: ratified
 title: Migration backfills an existing tombstone as ratified by history
 text: 'tl migrate shall backfill every tombstone that stands unsigned as ratified
   by history: one signature naming the author of the commit that wrote the tombstone,
@@ -25,3 +25,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-26T19:21:23Z'
+  fingerprint: sha256:4ee4eecaf0c15470592ce181a27cd026297cfe81994817b24409367093f0c221
+  content:
+    type: system_requirement
+    text: 'tl migrate shall backfill every tombstone that stands unsigned as ratified
+      by history: one signature naming the author of the commit that wrote the tombstone,
+      at that commit''s date, over the deletion record as it stands, marked backfilled
+      as SR-0152 marks a bound record. A tombstone no commit holds is left proposed
+      and named in the report; no identity is invented.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

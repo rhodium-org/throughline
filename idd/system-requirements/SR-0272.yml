@@ -1,6 +1,6 @@
 uid: SR-0272
 type: system_requirement
-status: proposed
+status: ratified
 title: A never-ratified item with no signed dependent is retired outright
 text: tl delete shall retire an item outright — the tombstone stands at once, marked
   outright in its record and needing no signature — when the item carries no signature
@@ -24,3 +24,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-26T19:21:18Z'
+  fingerprint: sha256:aadc6bdbb8b349f54764257078090081128644386013d9a8e3d0d66478d4ffc5
+  content:
+    type: system_requirement
+    text: tl delete shall retire an item outright — the tombstone stands at once,
+      marked outright in its record and needing no signature — when the item carries
+      no signature and no live dependent linking to it carries one, since no accountability
+      is undone; otherwise the deletion is proposed (SR-0267).
+    normative: true
+    derived: false
+    attrs:
+      priority: must

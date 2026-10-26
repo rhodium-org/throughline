@@ -19,15 +19,16 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:1183069c7bcd45f72aef059bb38644aae215e2aabefe3104ad1738737611abc6
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  at: '2026-10-26T19:21:26Z'
+  fingerprint: sha256:8bfec272473ba3fafb07eee14c84b14d973937e079f16c055ecaec264aeeab56
   content:
     type: system_requirement
-    text: The Tool shall implement deletion as a status change to 'deleted', retaining
-      the item file with UID, deletion date, reason, and last content hash; deleted
-      items are excluded from publishing/exports by default but included in history,
-      diffs, and UID-reuse prevention.
+    text: The Tool shall implement deletion as a move to the tombstone status, retaining
+      the item file with its UID, the status it held, the deletion date, the reason
+      and the fingerprint of the content retired. A tombstone stands — the item is
+      retired — only once a human has ratified the deletion or it was retired outright;
+      a retired item is excluded from publishing and exports by default but included
+      in history, diffs and UID-reuse prevention.
     normative: true
     derived: false
     attrs:
