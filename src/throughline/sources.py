@@ -128,7 +128,8 @@ def _refuse_withdrawn(ns: str) -> SourceError:
     return SourceError(
         f"source '{ns}' uses '{WITHDRAWN_KEY}', which is withdrawn (SR-0045): every "
         "source a source composes is now composed with it. To rename a transitive "
-        "label use alias = { asvs = \"owasp\" } on the declared source that carries it.")
+        "label use alias = { asvs = \"owasp\" } on the declared source that carries it. "
+        "`tl migrate` removes the key (SR-0274).")
 
 
 def withdrawn_declarations(project) -> list[str]:

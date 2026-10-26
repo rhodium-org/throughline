@@ -285,7 +285,7 @@ def cmd_migrate(args) -> int:
               + ("" if result.bound or result.declared or result.routed
                  or result.cached or result.normative or result.contents
                  or result.unprovable or result.registers or result.lifted
-                 or result.tombstones or result.unattributed
+                 or result.tombstones or result.unattributed or result.withdrawn
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -378,6 +378,16 @@ def cmd_migrate(args) -> int:
               "names nobody, so a person signs each with `tl ratify`:")
         for uid, why in result.unattributed.items():
             print(f"  {uid} — {why}")
+    # The withdrawn `reexport` key removed from the project's own sources
+    # (SR-0274). Named per source: this one key is what stopped the project
+    # composing at all, so the lever that replaced it is said beside it.
+    if result.withdrawn:
+        print(f"removed the withdrawn 'reexport' key from {len(result.withdrawn)} "
+              "source(s) — every source a source composes is composed with it now; "
+              "rename a transitive label with alias = { label = \"name\" } on the "
+              "declared source that carries it:")
+        for ns in result.withdrawn:
+            print(f"  {ns}")
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")

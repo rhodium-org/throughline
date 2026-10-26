@@ -283,6 +283,7 @@ def test_reexport_keyword_is_refused_and_points_at_alias(tmp_path, capsys):
     assert "reexport" in out
     assert "alias" in out
     assert "SR-0045" in out
+    assert "tl migrate" in out   # the remedy the tool itself performs (SR-0274)
 
 
 # ----------------------------------------------------------------- termination

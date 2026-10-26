@@ -1,0 +1,53 @@
+uid: SR-0274
+type: system_requirement
+status: ratified
+title: Migration removes the withdrawn reexport key from the project's own sources
+text: When a project's own [[sources]] entry carries the withdrawn reexport key,
+  migration shall remove that key, and only that key, from the entry, leaving its
+  other keys and comments as they were, and shall name each source it removed it
+  from. The refusal the Tool gives a project still carrying the key shall say that
+  migration removes it. Migration shall remove it before anything reads the project's
+  sources, so that a composed project is brought up to date in one run. A key already
+  absent is nothing to remove, and a second run reports nothing.
+rationale: 'Composing a source composes what it composes (throughline-compose SR-0045),
+  so the key has had no meaning since that rule, and a consumer''s own configuration
+  is refused while it carries it. Found 26 October 2026: table.iddn.uk, asked by
+  a keeper to bring a format-3 graph up to date, ran the Tool''s migrate, which rewrote
+  every signed item and then failed to read the sources on exactly this key; the
+  terminal command does the same and leaves the project half-migrated and uncheckable.
+  A key the current major refuses, in the one file the project owns, with one correct
+  rewrite, is a repair of the kind SR-0137 describes, and a published source carrying
+  the same key is already forgiven. Rejected: refusing and naming the fix, which
+  was the state found and which costs every keeper the same hand edit; removing the
+  key when reading, which would hide from the project that its configuration changed.
+  Who pays: a project that relied on the key to withhold a transitive source cannot,
+  since that is not a choice the rule leaves; it renames with alias or pins the source
+  itself.'
+normative: true
+links:
+- target: UR-0015
+  type: implements
+- target: SR-0137
+  type: relates
+- target: NFR-0010
+  type: refines
+attrs:
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-26T21:57:11Z'
+  fingerprint: sha256:85c6db58ecce6bb932351d523b33489e7cf66f33681b669c9691b4bdb62115ab
+  content:
+    type: system_requirement
+    text: When a project's own [[sources]] entry carries the withdrawn reexport key,
+      migration shall remove that key, and only that key, from the entry, leaving
+      its other keys and comments as they were, and shall name each source it removed
+      it from. The refusal the Tool gives a project still carrying the key shall
+      say that migration removes it. Migration shall remove it before anything reads
+      the project's sources, so that a composed project is brought up to date in
+      one run. A key already absent is nothing to remove, and a second run reports
+      nothing.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''
