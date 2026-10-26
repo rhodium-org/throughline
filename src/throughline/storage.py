@@ -36,13 +36,16 @@ def _load_yaml(text: str):
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from .fingerprint import content_fingerprint, fingerprint, signed_content
+from .fingerprint import (
+    content_fingerprint, deletion_content, deletion_fingerprint, fingerprint, signed_content,
+)
 from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
 from .schema import SchemaError
 from .signatures import (
-    BACKFILLED, BY, CONTENT, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION, STAMP,
+    AT, BACKFILLED, BY, CONTENT, ID, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION,
+    STAMP, retired, signs_deletion,
 )
 from .tomledit import TomlDocument, TomlEditError
 from .version import distribution_version
@@ -464,6 +467,91 @@ def _backfill_ratification_stamps(root: Path, *,
     return bound
 
 
+def _backfill_tombstone_signatures(root: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """Backfill every tombstone that stands unsigned as ratified by history
+    (SR-0273). Returns ``(attributed, unattributed)``: ``uid -> who`` for each
+    tombstone given a signature, ``uid -> why`` for each left proposed.
+
+    Every tombstone in the estate was written when deletion took effect unsigned,
+    so without this, upgrading would report each as `unratified`. History is the
+    evidence of who deleted it and when: the signature names the author of the
+    commit that wrote the tombstone, at that commit's date, over the deletion
+    record as it stands, and is marked ``backfilled`` as SR-0152 marks a bound
+    record — so it stays forever distinguishable from a signature a person gave
+    at the time. A tombstone no commit holds — never committed, or outside a git
+    work tree — is left proposed and reported: no identity is ever invented.
+
+    Idempotent: a tombstone that stands never matches again.
+    """
+    from .ratification import _git, _item_at, _relative, repo_top
+
+    project = load_project(root)
+    schema = project.schema
+    attributed: dict[str, str] = {}
+    unattributed: dict[str, str] = {}
+    for item in project.items():
+        if not item.is_deleted or retired(item, schema):
+            continue
+        if item._path is None:
+            unattributed[item.uid] = "the item has no file on disk"
+            continue
+        top = repo_top(Path(item._path).parent)
+        if top is None:
+            unattributed[item.uid] = "the project is not inside a git work tree"
+            continue
+        rel = _relative(top, Path(item._path))
+        if rel is None:
+            unattributed[item.uid] = "the item's file is outside the git work tree"
+            continue
+        # Oldest first, so the first revision holding the tombstone is the commit
+        # that wrote it; --follow so a register move does not truncate history.
+        log = _git(top, "log", "--follow", "--reverse",
+                   "--format=%H%x1f%an%x1f%ae%x1f%aI", "--", rel)
+        if log is None:
+            unattributed[item.uid] = "git could not read this item's history"
+            continue
+        found = None
+        for line in log.splitlines():
+            parts = line.strip().split("\x1f")
+            if len(parts) != 4:
+                continue
+            past = _item_at(top, parts[0], rel)
+            if past is not None and past.is_deleted:
+                found = parts
+                break
+        if found is None:
+            unattributed[item.uid] = ("no commit holds this tombstone — it has not "
+                                      "been committed, so history names nobody")
+            continue
+        sha, name, email, when = found
+        entry: dict = {BY: name}
+        if email:
+            entry[ID] = f"email:{email}"
+        entry[AT] = _utc_second(when)
+        entry[STAMP] = deletion_fingerprint(item)
+        entry[CONTENT] = deletion_content(item)
+        entry[BACKFILLED] = True
+        entry[REVISION] = sha
+        item.ratifications.append(entry)
+        write_item(item)
+        attributed[item.uid] = name
+    return attributed, unattributed
+
+
+def _utc_second(when: str) -> str:
+    """A git author date (ISO 8601 with offset) as a signature records it
+    (SR-0256): UTC, to the second."""
+    from datetime import datetime, timezone
+
+    try:
+        parsed = datetime.fromisoformat(when.strip())
+    except ValueError:
+        return when.strip()
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
     """Cache, on each ratification record, the revision whose content reproduces
     its stamp (SR-0166). Returns ``uid -> sha`` for every record populated.
@@ -496,6 +584,8 @@ def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
         current = fingerprint(item, schema)
         touched = False
         for entry in item.ratifications:
+            current = (deletion_fingerprint(item) if signs_deletion(entry)
+                       else fingerprint(item, schema))
             if not entry.get(STAMP) or entry[STAMP] != current:
                 continue                  # unstamped, or drifted: resolved on demand
             before = entry.get(REVISION)
@@ -699,6 +789,10 @@ class RepairResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
+    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
+    # that could not be was left proposed.
+    tombstones: Mapping[str, str] = _NO_STRINGS
+    unattributed: Mapping[str, str] = _NO_STRINGS
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -835,6 +929,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # flag has been put right, not a stamp that goes stale a line later.
     normative, restamped, stale = _repair_normative_flags(root)
     stamps = _backfill_ratification_stamps(root, index=index)
+    # Tombstones written when deletion took effect unsigned are signed from
+    # history (SR-0273), after the stamps so a content record a tombstone keeps
+    # is complete before its deletion signature is written beside it.
+    tombstones, unattributed = _backfill_tombstone_signatures(root)
     # Last, and after the stamps: a record bound a moment ago has a stamp to
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
@@ -843,7 +941,7 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers, lifted)
+                        registers, lifted, tombstones, unattributed)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -926,6 +1024,10 @@ class MigrationResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
+    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
+    # that could not be was left proposed.
+    tombstones: Mapping[str, str] = _NO_STRINGS
+    unattributed: Mapping[str, str] = _NO_STRINGS
 
 
 def migrate_project(path: str | Path, *,
@@ -978,7 +1080,7 @@ def migrate_project(path: str | Path, *,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
                            result.contents, result.unprovable, result.registers,
-                           result.lifted)
+                           result.lifted, result.tombstones, result.unattributed)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -1132,6 +1234,10 @@ class Baseline(NamedTuple):
     repository with no commits yet, is an empty map: every item is new."""
     statuses: dict[str, str] | None
     unavailable: str | None = None
+    #: The items that were proposed deletions at the baseline (SR-0268): a
+    #: tombstone there that nobody had signed and that was not retired outright.
+    #: One of them live now was restored, which the transition gate accepts.
+    restorable: frozenset[str] = frozenset()
 
 
 class _GitTree:
@@ -1195,7 +1301,14 @@ class _DirectoryTree:
         return found
 
 
-def _statuses_in(project: Project, tree) -> dict[str, str]:
+def _baseline_in(project: Project, tree) -> Baseline:
+    """The baseline from the project's files as ``tree`` holds them: each item's
+    status, and which tombstones were proposed deletions (SR-0268)."""
+    statuses, restorable = _statuses_in(project, tree, with_restorable=True)
+    return Baseline(statuses, restorable=restorable)
+
+
+def _statuses_in(project: Project, tree, *, with_restorable: bool = False):
     """Map ``uid -> status`` from the project's files as ``tree`` holds them.
 
     The one reading of a baseline, whichever source supplies the files. Two rules
@@ -1217,6 +1330,8 @@ def _statuses_in(project: Project, tree) -> dict[str, str]:
     rels = [r for r in tree.files() if Path(r).name not in _ALL_MANIFEST_NAMES]
     out: dict[str, str] = {}
     absent: list[tuple[str, str]] = []
+    restorable: set[str] = set()
+    schema = project.schema
     for rel, text in tree.read(rels).items():
         try:
             data = _load_yaml(text) or {}
@@ -1228,11 +1343,26 @@ def _statuses_in(project: Project, tree) -> dict[str, str]:
         if not isinstance(status, str):
             continue
         if rel in present:
-            out[present[rel]] = status
+            uid = present[rel]
+            out[uid] = status
         elif isinstance(data.get("uid"), str):
-            absent.append((data["uid"], status))
+            uid = data["uid"]
+            absent.append((uid, status))
+        else:
+            continue
+        # A tombstone nobody had signed, judged by the gate's own predicate over
+        # the item as the baseline held it (SR-0268).
+        if with_restorable and status == "deleted":
+            try:
+                past = Item.from_dict(dict(data, uid=uid))
+            except Exception:
+                continue
+            if not retired(past, schema):
+                restorable.add(uid)
     for uid, status in absent:
         out.setdefault(uid, status)
+    if with_restorable:
+        return out, frozenset(restorable)
     return out
 
 
@@ -1249,7 +1379,7 @@ def read_baseline(project: Project, *, ref: str | None = "HEAD",
         root = Path(base_dir)
         if not root.is_dir():
             raise ProjectError(f"baseline directory {root} does not exist")
-        return Baseline(_statuses_in(project, _DirectoryTree(root.resolve())))
+        return _baseline_in(project, _DirectoryTree(root.resolve()))
     if not ref:
         return Baseline(None, "the baseline was disabled")
     root = Path(project.path).resolve()
@@ -1278,7 +1408,7 @@ def read_baseline(project: Project, *, ref: str | None = "HEAD",
             prefix = "" if proj_rel == Path(".") else proj_rel.as_posix() + "/"
         except ValueError:
             prefix = ""
-        return Baseline(_statuses_in(project, _GitTree(top, ref, prefix)))
+        return _baseline_in(project, _GitTree(top, ref, prefix))
     except (FileNotFoundError, OSError):
         return Baseline(None, "git cannot be run")
     except subprocess.CalledProcessError:

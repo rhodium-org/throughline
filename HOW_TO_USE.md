@@ -270,7 +270,8 @@ tl migrate                                     # upgrade an older project's on-d
 tl register new <PREFIX> <dir> [--parent P]    # add a register (prefix-owning collection)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID [--ground-type K]]  # allocate + create (ground at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]    # add a typed link
-throughline delete <UID> --reason "…"                   # tombstone (never erased)
+throughline delete <UID> --reason "…"                   # propose a deletion: a tombstone a human ratifies (never erased)
+throughline restore <UID>                               # decline a proposed deletion
 throughline review [<UID> | --all-clean]                # mark reviewed at current content
 tl check [--strict] [--format json]            # validate the graph — the CI gate
 tl trace <UID> [--direction in|out] [--depth N]
@@ -319,7 +320,7 @@ replaced by anyone — withdraw it and sign again.
 | `orphan` | a non-root item with no grounding chain to a root |
 | `unserved-root` | a delivery root nobody derives from / mitigates |
 | `grounding-cycle` | circular justification |
-| `dangling-link` / `deleted-link-target` | link to a missing / tombstoned item |
+| `dangling-link` / `deleted-link-target` | link to a missing item, or into a tombstone whose deletion is ratified |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (a merge clash) |
 | `uid-filename` | an item's file is not named `<UID>.yml`, so git cannot see it collide |
 | `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |

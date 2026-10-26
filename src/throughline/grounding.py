@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-from .fingerprint import fingerprint, signed_content
+from dataclasses import dataclass, field
+
+from .fingerprint import fingerprint
 from .signatures import (
     AT, BY, CONTENT, ID, LINKS, ROLE, STAMP, SUPERSEDES,
     W_AT, W_BY, W_ID, W_OF, W_OF_ID, W_REASON,
-    describe, entry_of, is_stale, latest, names, now_iso, requirement_met,
-    signatures, stale_entries, standing,
+    describe, entry_of, is_stale, latest, names, now_iso, relevant,
+    requirement_met, retired, signatures, signed_record, stale_entries, stamp_of,
+    standing,
 )
 from .signed_links import links_moved, links_record, signed_link_types
 from .graph import Index
@@ -180,6 +183,14 @@ def ratification_refusal(schema, idx: Index, item: Item) -> str | None:
     accepted" is the same drift the ratification record exists to prevent, and
     a repair that ran ahead of these rules would complete records the Tool would
     refuse to write in the first place."""
+    # A tombstone is signed for its deletion, not its words (SR-0269): that the
+    # item was ambiguous or ungrounded is no reason to keep it, and may be the
+    # reason it goes.
+    if item.is_deleted:
+        if (item.deleted or {}).get("outright"):
+            return (f"{item.uid} was retired outright — nothing signed was undone, "
+                    "so there is no deletion to ratify (SR-0272)")
+        return None
     if is_flagged_ambiguous(item):
         return f"{item.uid} is flagged ambiguous and cannot be ratified until clarified"
     if not schema.is_root(item) and not reaches_root(idx, schema, item.uid):
@@ -292,8 +303,7 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
         if by or by_id:
             own = entry_of(item, by=by, by_id=by_id)
             if own is not None:
-                if (own.get(STAMP) == fingerprint(item, schema)
-                        and not links_moved(item, schema, own)):
+                if not is_stale(item, schema, own):
                     return (f"{item.uid} is already signed by {describe(own)} and its "
                             f"content{unchanged}; pass --replacing to correct the "
                             "recorded ratifier instead")
@@ -313,7 +323,9 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     # anything in the way of a second signature: an item that already holds a
     # record and has been carried past the ratified status is signed where it
     # stands, because it is the record that went stale, not the status (SR-0237).
-    if schema.ratify_moves_status and not past:
+    # A tombstone is signed where it stands (SR-0269): ratifying a deletion
+    # retires the item, it does not move it to the ratified status.
+    if schema.ratify_moves_status and not past and not item.is_deleted:
         refusal = transition_refusal(schema, item, ratified_status)
         if refusal is not None:
             return refusal
@@ -322,7 +334,8 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
 
 def ratify(project, uid: str, by: str, *, index: Index | None = None,
            by_id: str | None = None, replacing: bool = False,
-           role: str | None = None, at: str | None = None) -> Item:
+           role: str | None = None, at: str | None = None,
+           cascade: "Cascade | None" = None) -> Item:
     """A human takes accountability. Refused for ambiguous or ungrounded items —
     the two states that must not be signed off (scope-avalanche briefing §5).
 
@@ -340,7 +353,15 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     against the declared holders by identifier, in a project that declares roles;
     refused in one that does not. ``at`` is the moment recorded (SR-0256), taken
     from the clock when not given — a parameter so a host without a clock of its
-    own, or a test, can supply it."""
+    own, or a test, can supply it.
+
+    ``cascade`` receives what ratifying a tombstone does to its dependents
+    (SR-0270): the signature that retires an item marks every transitive dependent
+    along the withdrawing link types suspect, by the walk `invalidate` makes, and
+    the caller writes those items as it writes this one. A caller that supplies
+    none is refused a deletion that has live dependents, before anything is
+    signed: a front end built before this rule must fail loudly rather than sign a
+    deletion whose consequences it never writes."""
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
@@ -386,6 +407,16 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
                                      by=by, by_id=identifier)
     if obstacle is not None:
         raise GroundingError(obstacle)
+    # Refused before the signature, not after it (SR-0270): the dependents a
+    # retirement marks must reach a writer.
+    affected: list[str] = []
+    if item.is_deleted:
+        affected = live_dependents(project, idx, uid)
+        if affected and cascade is None:
+            raise GroundingError(
+                f"{uid}: ratifying its deletion marks {len(affected)} dependent(s) "
+                f"suspect ({', '.join(affected)}), which this caller does not "
+                "receive to write — pass `cascade=` to ratify (SR-0270)")
     # A correction replaces the identity on the latest signature, where that
     # signature was never published (SR-0196). The test is made here rather than
     # left to the caller, for the reason every other decision in this function is:
@@ -412,7 +443,10 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
                 "signature is not something one caller may take from another")
         superseded = corrected.get(BY)
         item.ratifications.remove(corrected)
-    current = fingerprint(item, schema)
+    # The fingerprint of the content, or of the deletion record for a tombstone
+    # (SR-0269): status is outside the content fingerprint, so a signature over
+    # the words would say nothing about whether the item should go.
+    current = stamp_of(item, schema)
     entry: dict = {BY: by}
     if identifier is not None:
         entry[ID] = identifier
@@ -425,10 +459,10 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # that content moved; this is what lets anyone show what the person agreed to,
     # with no version control at all — which a browser holding one commit, a
     # shallow clone and rewritten history all lack.
-    entry[CONTENT] = signed_content(item, schema)
+    entry[CONTENT] = signed_record(item, schema)
     # The links the signature covers, beside it (SR-0243). An item that carries
-    # none gets no link record.
-    links = links_record(item, schema)
+    # none gets no link record, and a deletion signature covers no links.
+    links = [] if item.is_deleted else links_record(item, schema)
     if links:
         entry[LINKS] = links
     # Kept so a correction never reads as the original record (SR-0148's condition
@@ -465,6 +499,15 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # re-signature over amended content on an item the workflow has carried past
     # the ratified status is recorded where the item stands (SR-0237); the obstacle
     # check above has already refused every first signature that cannot get there.
+    if item.is_deleted:
+        # The signature that brings the deletion to the standing its kind requires
+        # retires the item, and a retired item withdraws the footing of everything
+        # grounded on it exactly as a falsified one does (SR-0270): the one walk
+        # serves both. The status does not move — the tombstone stands.
+        if requirement_met(item, schema) and affected:
+            cascade_suspicion(project, idx, uid, f"upstream {uid} deleted",
+                              into=cascade)
+        return item
     if schema.ratify_moves_status and requirement_met(item, schema):
         target = schema.status_role("ratified")
         if transition_refusal(schema, item, target) is None:
@@ -477,6 +520,70 @@ class Refusal(NamedTuple):
     uid: str
     frm: str
     to: str
+
+
+@dataclass
+class Cascade:
+    """What one walk of suspicion did (SR-0173, SR-0270): the dependents reached
+    along the withdrawing link types, the ones whose status this run moved to
+    suspect, and the ones whose configured lifecycle would not permit the move.
+    Shared by `invalidate` and by the ratification of a deletion, which fills the
+    one its caller passes so the caller can write what moved."""
+    affected: list[str] = field(default_factory=list)
+    marked: list[str] = field(default_factory=list)
+    refused: list[Refusal] = field(default_factory=list)
+
+
+def live_dependents(project, idx: Index, uid: str) -> list[str]:
+    """The transitive dependents of ``uid`` along the withdrawing link types that
+    are still live (SR-0159): the ones a withdrawal of ``uid``'s footing reaches."""
+    schema = project.schema
+    dead = schema.dead_statuses()
+    out = []
+    for aid in idx.impact(uid, schema.withdrawing_link_types()):
+        dep = project.get(aid)
+        if dep is None or dep.status in dead:
+            continue
+        out.append(aid)
+    return out
+
+
+def cascade_suspicion(project, idx: Index, uid: str, note: str, *,
+                      into: Cascade | None = None) -> Cascade:
+    """Mark every transitive dependent of ``uid`` along the withdrawing link types
+    suspect (SR-0035, SR-0159), recording the ones the lifecycle refuses (SR-0173).
+    ``note`` is what each dependent's ``suspect_reasons`` records. Fills ``into``
+    when given, so a caller that accumulates can read what moved.
+
+    Only along links that carry justification: the project's grounding links,
+    plus any it declared under [grounding] suspect_link_types (SR-0160). The
+    unfiltered impact set is the blast-radius *report* (SR-0035); it answers the
+    wider question of what touches this item, which is not the tool's warrant to
+    restatus. No link type is named here — the set comes from configuration."""
+    schema = project.schema
+    result = into if into is not None else Cascade()
+    affected = idx.impact(uid, schema.withdrawing_link_types())
+    result.affected.extend(affected)
+    suspect = schema.status_role("suspect")
+    dead = schema.dead_statuses()
+    for aid in affected:
+        dep = project.get(aid)
+        # A dependent that is already gone is left untouched and is not a refusal:
+        # nothing was withheld from an item that has already been retired.
+        if dep is None or dep.status in dead:
+            continue
+        # A move the project's lifecycle does not declare is refused here rather
+        # than written (SR-0130). The refusal is recorded, not swallowed: an item
+        # whose footing was withdrawn but which carries no flag is exactly the
+        # drift suspicion exists to surface (SR-0173).
+        if not schema.allows_transition(dep.status, suspect):
+            result.refused.append(Refusal(aid, dep.status, suspect))
+            continue
+        dep.status = suspect
+        reasons = dep.attrs.setdefault("suspect_reasons", [])
+        reasons.append(note)
+        result.marked.append(aid)
+    return result
 
 
 class Invalidation(list):
@@ -507,37 +614,15 @@ def invalidate(project, uid: str, reason: str = "") -> Invalidation:
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
+    if item.is_deleted:
+        raise GroundingError(
+            f"{uid} is deleted — ratify the deletion to retire it, or `tl restore "
+            f"{uid}` to bring it back (SR-0267)")
     idx = Index.build(project)
-    # Only along links that carry justification (SR-0159): the project's grounding
-    # links, plus any it declared under [grounding] suspect_link_types (SR-0160).
-    # The unfiltered impact set is the blast-radius *report* (SR-0035); it answers
-    # the wider question of what touches this item, which is not the tool's warrant
-    # to restatus. No link type is named here — the set comes from configuration.
-    affected = idx.impact(uid, schema.withdrawing_link_types())
     set_status(schema, item, schema.status_role("invalidated"))
     item.attrs["invalidated_reason"] = reason or True
-    suspect = schema.status_role("suspect")
-    dead = schema.dead_statuses()
-    marked: list[str] = []
-    refused: list[Refusal] = []
-    for aid in affected:
-        dep = project.get(aid)
-        # A dependent that is already gone is left untouched and is not a refusal:
-        # nothing was withheld from an item that has already been retired.
-        if dep is None or dep.status in dead:
-            continue
-        # A move the project's lifecycle does not declare is refused here rather
-        # than written (SR-0130). The refusal is recorded, not swallowed: an item
-        # whose footing was withdrawn but which carries no flag is exactly the
-        # drift suspicion exists to surface (SR-0173).
-        if not schema.allows_transition(dep.status, suspect):
-            refused.append(Refusal(aid, dep.status, suspect))
-            continue
-        dep.status = suspect
-        reasons = dep.attrs.setdefault("suspect_reasons", [])
-        reasons.append(f"upstream {uid} invalidated")
-        marked.append(aid)
-    return Invalidation(affected, marked, refused)
+    done = cascade_suspicion(project, idx, uid, f"upstream {uid} invalidated")
+    return Invalidation(done.affected, done.marked, done.refused)
 
 
 def withdraw(project, uids, *, by: str, reason: str,
@@ -589,7 +674,9 @@ def withdraw(project, uids, *, by: str, reason: str,
         item = project.get(uid)
         if item is None:
             raise GroundingError(f"{uid} does not exist")
-        held = [e for e in signatures(item) if e.get(BY)]
+        # Of a tombstone, the signatures over its deletion (SR-0269): the ones
+        # over its content are the history of what the deletion undid.
+        held = relevant(item)
         if not held:
             raise GroundingError(f"{uid} carries no ratification to withdraw")
         if of is not None:
@@ -618,7 +705,9 @@ def withdraw(project, uids, *, by: str, reason: str,
         item.ratifications = [e for e in everything if e is not entry]
         still = requirement_met(item, schema)
         item.ratifications = everything
-        moves = was and not still
+        # A tombstone moves nowhere (SR-0269): without the signature the deletion
+        # is proposed again, and the status it holds already says so.
+        moves = was and not still and not item.is_deleted
         if moves and not schema.allows_transition(item.status, suspect):
             raise GroundingError(
                 f"{uid}: status change '{item.status}' -> '{suspect}' is not an "

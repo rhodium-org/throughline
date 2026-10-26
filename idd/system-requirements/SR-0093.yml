@@ -13,6 +13,8 @@ normative: true
 links:
 - target: UR-0014
   type: implements
+- target: SR-0267
+  type: relates
 attrs:
   priority: must
   verification: test

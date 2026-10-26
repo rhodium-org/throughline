@@ -22,6 +22,7 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .links import LinkError, add_link, remove_link, retype_link
 from .grounding import (
+    Cascade,
     AMBIGUOUS_ATTR,
     CLARIFICATION_ATTRS,
     CLARIFIED_AMBIGUITY_ATTR,
@@ -71,7 +72,7 @@ from .brief import (
     context_markdown,
 )
 from .parser import build_parser as _command_tree
-from .signatures import W_OF, describe, latest, names, standing
+from .signatures import W_OF, describe, latest, names, retired, standing
 from .apply import (
     CHANGE_SET_FORMAT,
     ChangeSetError,
@@ -84,6 +85,7 @@ from .items import (
     birth_item,
     coerce_attr,
     delete_item,
+    restore_item,
     item_type_for,
     new_item,
     newly_suspect,
@@ -283,6 +285,7 @@ def cmd_migrate(args) -> int:
               + ("" if result.bound or result.declared or result.routed
                  or result.cached or result.normative or result.contents
                  or result.unprovable or result.registers or result.lifted
+                 or result.tombstones or result.unattributed
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -361,6 +364,20 @@ def cmd_migrate(args) -> int:
     # the graph will hold someone to. The ratification records are left alone —
     # only ratification writes them (SR-0170) — so the stale ones are counted here
     # and each is re-ratified by a person who sees that only the flag moved.
+    # Tombstones signed from history (SR-0273). Named in full: each writes an
+    # accountability record naming a person, so an operator who disagrees with an
+    # attribution must be able to see which item carries it.
+    if result.tombstones:
+        print(f"signed {len(result.tombstones)} tombstone(s) as ratified by history "
+              "— each names the author of the commit that wrote it, at that "
+              "commit's date, marked `backfilled`:")
+        for uid, who in result.tombstones.items():
+            print(f"  {uid} = {who}")
+    if result.unattributed:
+        print(f"left {len(result.unattributed)} tombstone(s) proposed — history "
+              "names nobody, so a person signs each with `tl ratify`:")
+        for uid, why in result.unattributed.items():
+            print(f"  {uid} — {why}")
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")
@@ -768,7 +785,9 @@ def cmd_unlink(args) -> int:
 
 
 def cmd_delete(args) -> int:
-    """Parse, call :func:`throughline.items.delete_item`, render (SR-0225)."""
+    """Parse, call :func:`throughline.items.delete_item`, render (SR-0225). A
+    deletion is proposed until a human ratifies it (SR-0267), unless nothing signed
+    is undone, when the item is retired outright (SR-0272)."""
     try:
         project = load_project(args.path)
     except ProjectError as e:
@@ -777,15 +796,50 @@ def cmd_delete(args) -> int:
     if uid is None:
         return USAGE
     try:
-        retired = delete_item(project, uid, reason=args.reason)
+        done = delete_item(project, uid, reason=args.reason)
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
-    if not retired:
-        print(f"{uid} is already deleted — its tombstone is permanent and was left "
-              "unchanged (SR-0093)")
+    if done is None:
+        if retired(project.get(uid), project.schema):
+            print(f"{uid} is already deleted — its tombstone is permanent and was "
+                  "left unchanged (SR-0093)")
+        else:
+            print(f"{uid} is already proposed for deletion — `tl ratify {uid}` "
+                  f"retires it, `tl restore {uid}` brings it back")
         return OK
     write_item(project.get(uid), project.register_of(uid))
-    print(f"tombstoned {uid} (UID retired, never reused)")
+    if done.outright:
+        print(f"tombstoned {uid} (UID retired, never reused) — retired outright: "
+              "nothing signed is undone")
+        return OK
+    print(f"proposed the deletion of {uid} (was {done.was}) — the tombstone stands "
+          f"once a human ratifies it: `tl ratify {uid}`; `tl restore {uid}` "
+          "declines it")
+    if done.signed:
+        print(f"  undoes the acceptance of {done.signed}")
+    if done.dependents:
+        print(f"  ratifying it marks {len(done.dependents)} dependent(s) suspect: "
+              + ", ".join(done.dependents))
+    return OK
+
+
+def cmd_restore(args) -> int:
+    """Decline a proposed deletion (SR-0268): the unsigned tombstone returns to
+    the status it held."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    uid = _resolve_uid(project, args.uid, "restore", "UID",
+                       allow=lambda it: it.is_deleted)
+    if uid is None:
+        return USAGE
+    try:
+        item = restore_item(project, uid)
+    except (ProjectError, GroundingError, SchemaError) as e:
+        return _err(str(e))
+    write_item(item, project.register_of(uid))
+    print(f"restored {uid} to {item.status} — the proposed deletion is declined")
     return OK
 
 
@@ -1014,7 +1068,7 @@ def cmd_check(args) -> int:
     note = baseline_note(project.schema, baseline)
     published = referenced_uids(project)  # None unless [docs] paths configured
     findings = validate(project, strict=args.strict, baseline=baseline.statuses,
-                        published=published)
+                        published=published, restorable=baseline.restorable)
     if args.format == "json":
         print(json.dumps([f.to_dict() for f in findings], indent=2))
         if note:
@@ -1430,9 +1484,10 @@ def cmd_ratify(args) -> int:
             if not _confirm(question):
                 print(f"{uid} not ratified", file=sys.stderr)
                 continue
+        cascade = Cascade()
         try:
             item = ratify(project, uid, by=by, index=idx, by_id=by_id,
-                          replacing=args.replacing, role=role)
+                          replacing=args.replacing, role=role, cascade=cascade)
         except IdentityError as e:
             return _err(str(e))
         except (ProjectError, GroundingError, SchemaError) as e:
@@ -1442,12 +1497,43 @@ def cmd_ratify(args) -> int:
         where = standing(item, schema)
         # "ratified" only when the item now counts as such (SR-0260); a signature
         # that leaves the item short of what its kind requires says so.
-        if where.met:
+        if item.is_deleted:
+            rc = _report_retirement(project, uid, signed, where, cascade) or rc
+        elif where.met:
             print(f"{uid} ratified by {describe(signed)}")
         else:
             print(f"{uid} signed by {describe(signed)} — {where.describe()}; "
                   "not yet ratified")
     return rc
+
+
+def _report_retirement(project, uid: str, signed: dict, where, cascade: Cascade) -> int:
+    """Write and report what ratifying a deletion did (SR-0269, SR-0270): the
+    dependents the cascade marked suspect, and the ones its lifecycle refused —
+    reported as `tl invalidate` reports them, so a cascade that did not fully
+    happen never reads as one that did (SR-0173)."""
+    if not where.met:
+        print(f"{uid} deletion signed by {describe(signed)} — {where.describe()}; "
+              "not yet retired")
+        return OK
+    for dep in cascade.marked:
+        write_item(project.get(dep), project.register_of(dep))
+    print(f"{uid} deletion ratified by {describe(signed)} — retired; "
+          f"{len(cascade.marked)} dependent(s) marked suspect")
+    for dep in cascade.marked:
+        print(f"  {dep}")
+    if cascade.refused:
+        sys.stdout.flush()
+        print(f"{len(cascade.refused)} dependent(s) could not be marked suspect:",
+              file=sys.stderr)
+        for r in cascade.refused:
+            print(f"  {r.uid}: {r.frm} -> {r.to} is not a declared transition",
+                  file=sys.stderr)
+        print("their grounding rests on an item that is now retired and nothing "
+              "records it; declare the move under [transitions] to close the gap",
+              file=sys.stderr)
+        return FINDINGS
+    return OK
 
 
 def cmd_invalidate(args) -> int:
@@ -1703,7 +1789,7 @@ def _composed_check(args) -> int:
         return _err(str(e))
     baseline_line = baseline_note(consumer.schema, baseline)
     findings = validate(union.project, strict=args.strict, baseline=baseline.statuses,
-                        published=published)
+                        published=published, restorable=baseline.restorable)
     # Report against a borrowed item only what this consumer can act on, and let a
     # local item grounded through a source count as grounded, widened by any rule
     # the consumer declared under [seam]. The same index then serves the summary,

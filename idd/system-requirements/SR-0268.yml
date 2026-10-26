@@ -1,0 +1,40 @@
+uid: SR-0268
+type: system_requirement
+status: ratified
+title: An unsigned tombstone can be restored to the status it held
+text: tl restore <UID> shall return an unsigned tombstone to the status its record
+  says it held, removing the deletion record and touching no signature. It shall
+  refuse a tombstone whose deletion is ratified or was outright (SR-0093), and one
+  whose record does not say what status it held. The transition gate shall accept
+  the restore of a tombstone that was unsigned at the baseline, since the item is
+  back where the lifecycle last left it.
+rationale: 'A proposed deletion a reviewer declines must be undoable without a hand
+  edit, and the item''s own signatures still cover its content, so nothing is re-signed.
+  Permanence (SR-0093) attaches to the retired tombstone: a record nobody has accepted
+  is a proposal, not a death record.'
+normative: true
+links:
+- target: UR-0002
+  type: implements
+- target: SR-0267
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-26T19:20:48Z'
+  fingerprint: sha256:a1513b69a884da0e03770707521d498b2b800588d323d01244ebae0cf8e857ac
+  content:
+    type: system_requirement
+    text: tl restore <UID> shall return an unsigned tombstone to the status its record
+      says it held, removing the deletion record and touching no signature. It shall
+      refuse a tombstone whose deletion is ratified or was outright (SR-0093), and
+      one whose record does not say what status it held. The transition gate shall
+      accept the restore of a tombstone that was unsigned at the baseline, since
+      the item is back where the lifecycle last left it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

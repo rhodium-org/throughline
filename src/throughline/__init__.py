@@ -33,9 +33,11 @@ from .dump import build_dump
 from .fingerprint import fingerprint, revision
 from .graph import Index
 from .grounding import (
+    Cascade,
     GroundingError,
     Invalidation,
     Refusal,
+    cascade_suspicion,
     ambiguity_report,
     attribute_owner,
     clarify,
@@ -72,6 +74,7 @@ from .inject import (
 )
 from .items import (
     Amendment,
+    Deletion,
     amend_item,
     birth_item,
     coerce_attr,
@@ -79,7 +82,9 @@ from .items import (
     new_item,
     newly_suspect,
     parse_attrs,
+    restore_item,
     review_items,
+    signed_dependents,
 )
 from .links import LinkError, add_link, remove_link, retype_link
 from .model import Item, Link, Project, Register
@@ -119,7 +124,9 @@ from .ratification import (
     wrap_words,
 )
 from .schema import AttrSpec, LinkRule, Requirement, Schema, SchemaError
-from .signatures import Standing, requirement_met, signatures, standing
+from .signatures import (
+    Standing, relevant, requirement_met, retired, signatures, signs_deletion, standing,
+)
 from .views import (
     check_summary,
     ground_line,
@@ -188,7 +195,8 @@ __all__ = [
     "Schema", "AttrSpec", "LinkRule", "Requirement", "SchemaError",
     # creating and changing an item
     "birth_item", "parse_attrs", "coerce_attr", "amend_item", "Amendment",
-    "newly_suspect", "new_item", "delete_item", "review_items",
+    "newly_suspect", "new_item", "delete_item", "Deletion", "restore_item",
+    "signed_dependents", "review_items",
     "add_link", "remove_link", "retype_link", "LinkError",
     # carrying out a change set drafted where the Tool cannot run
     "parse_change_set", "apply_change_set", "ApplyResult", "OperationResult",
@@ -198,7 +206,8 @@ __all__ = [
     "query_items", "eval_filter", "FilterError",
     # the grounding layer
     "GroundingError", "reaches_root", "grounding_gap", "is_unserved",
-    "set_status", "transition_refusal", "Refusal", "Invalidation",
+    "set_status", "transition_refusal", "Refusal", "Invalidation", "Cascade",
+    "cascade_suspicion",
     "ratify", "ratification_obstacle", "invalidate", "withdraw",
     "flag", "clarify", "is_flagged_ambiguous", "ambiguity_report",
     "attribute_owner",
@@ -210,7 +219,8 @@ __all__ = [
     # what awaits a signature, for an interface to draw
     "worklist", "WorklistEntry", "entry_for", "CONCERNS", "depths_from_roots",
     "is_ratified", "signature_is_stale", "ratification_progress",
-    "signatures", "standing", "Standing", "requirement_met",
+    "signatures", "standing", "Standing", "requirement_met", "relevant", "retired",
+    "signs_deletion",
     # who signs
     "default_ratifier", "default_identifier", "git_identity", "normalise_identifier",
     "IdentityError",

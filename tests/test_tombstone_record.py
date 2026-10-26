@@ -67,8 +67,10 @@ def test_deleting_a_tombstone_again_changes_nothing(graph, capsys):
 
 
 def test_a_tombstone_from_an_earlier_release_is_left_as_it_is(graph):
-    """Backward compatibility: a reason-only tombstone raises nothing and is never
-    rewritten, by check or by migrate."""
+    """Backward compatibility: a reason-only tombstone raises nothing and its
+    record is never rewritten, by check or by migrate. Outside git nothing can
+    sign it from history (SR-0273), so it stands as a proposed deletion and the
+    gate reports only that (SR-0267)."""
     assert _cli(["-C", graph, "delete", "REQ-0002", "--reason", "dropped"]) == 0
     path = _file(graph, "REQ-0002")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -76,6 +78,7 @@ def test_a_tombstone_from_an_earlier_release_is_left_as_it_is(graph):
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     old = path.read_bytes()
     findings = {(f.rule, f.uid) for f in validate(load_project(graph))}
-    assert not {f for f in findings if f[1] == "REQ-0002"}
-    migrate_project(graph)
+    assert {f for f in findings if f[1] == "REQ-0002"} == {("unratified", "REQ-0002")}
+    result = migrate_project(graph)
     assert path.read_bytes() == old
+    assert "REQ-0002" in result.unattributed

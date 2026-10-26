@@ -15,6 +15,7 @@ import argparse
 from pathlib import Path
 
 from .graph import Index
+from .signatures import retired
 from .parser import build_parser
 from .schema import WARNING
 from .views import _by_count, render_subgraph
@@ -316,7 +317,8 @@ _CTX_COMMAND_USAGE = {
     "withdraw": "tl withdraw <UID> [<UID> …] --reason <why> --by <who>",
     "clarify": "tl clarify <UID> --reason <why> --by <who>",
     "flag": "tl flag <UID> --reason <why> --by <who>",
-    "delete": "tl delete <UID>",
+    "delete": "tl delete <UID> --reason <why>",
+    "restore": "tl restore <UID>",
     "resolve": "tl resolve [--keep ours|theirs] [--trunk REF] [--dry-run]",
     "query": "tl query [--type T] [--status S] [--format json]",
     "register": "tl register new <PREFIX> <FOLDER> --title <…>",
@@ -331,7 +333,9 @@ _CTX_COMMAND_USAGE = {
 # an agent that had read only the rest of the brief would be surprised by.
 _CTX_COMMAND_EMPHASIS = {
     "check": "THE GATE — run before committing",
-    "ratify": "a human accepts a proposed item; never run this for a human",
+    "ratify": "a human accepts a proposed item, or a proposed deletion — signing a "
+              "tombstone retires it and marks its dependents suspect; never run "
+              "this for a human",
     "migrate": "idempotent repairs; extend this, never a script beside it",
     "invalidate": "retires an item and cascades suspicion — see grounding, below",
     "withdraw": "removes a signature that should not stand (wrong name, signed in "
@@ -343,7 +347,11 @@ _CTX_COMMAND_EMPHASIS = {
     "clarify": "removes an item's ambiguity flag once someone judges the ambiguity "
                "resolved, recording who and why; it accepts nothing — a proposed "
                "item still needs a human to ratify it",
-    "delete": "tombstones an item; the file stays, the item stops counting",
+    "delete": "proposes a deletion: the file stays as a tombstone, the UID is never "
+              "reused, and a human ratifies it before the item stops counting — "
+              "an item nobody signed, with no signed dependent, is retired outright",
+    "restore": "declines a proposed deletion: an unsigned tombstone returns to the "
+               "status it held; refused once the deletion is ratified",
     "resolve": "run when `git merge` stops on an add/add conflict for an item file "
                "(the same UID allocated on both branches); never settle that "
                "conflict by picking a side — that silently loses an item",
@@ -416,7 +424,7 @@ def _ctx_commands() -> str:
 
 
 def _ctx_snapshot(project) -> str:
-    live = [it for it in project.items() if not it.is_deleted]
+    live = [it for it in project.items() if not retired(it, project.schema)]
     out = ["## Live snapshot of this graph\n"]
     out.append(f"- **Items:** {len(live)} live — {_by_count(it.type for it in live)}")
     out.append(f"- **Status:** {_by_count(it.status for it in live)}")

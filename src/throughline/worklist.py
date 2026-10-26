@@ -22,7 +22,7 @@ from .grounding import (
     reaches_root,
     transition_refusal,
 )
-from .signatures import requirement_met, signatures, stale_entries, standing
+from .signatures import relevant, requirement_met, retired, stale_entries, standing
 
 #: The states a reviewer sorts by, most actionable first. `proposed` and `ready`
 #: can be signed now; `awaiting` holds signatures that do not yet meet what its
@@ -97,7 +97,7 @@ def depths_from_roots(project, index: Index | None = None) -> dict[str, int]:
     depth: dict[str, int] = {}
     queue: deque[str] = deque()
     for item in project.items():
-        if item.is_deleted:
+        if retired(item, schema):
             continue
         if schema.is_root(item):
             depth[item.uid] = 0
@@ -120,7 +120,10 @@ def entry_for(project, item, *, index: Index | None = None,
     idx = index if index is not None else Index.build(project)
     if depths is None:
         depths = depths_from_roots(project, idx)
-    dead = item.status in schema.dead_statuses()
+    # A tombstone is dead once it stands; one still proposed awaits a signature
+    # over its deletion (SR-0267) and is met here like any other proposal.
+    dead = retired(item, schema) or (item.status in schema.dead_statuses()
+                                     and not item.is_deleted)
     ambiguous = is_flagged_ambiguous(item)
     grounded = schema.is_root(item) or reaches_root(idx, schema, item.uid)
     ratified = is_ratified(schema, item)
@@ -129,7 +132,7 @@ def entry_for(project, item, *, index: Index | None = None,
     # ratification advances the status, that is a transition question; where a
     # project has declared it does not (SR-0172), no transition is involved.
     directly = (transition_refusal(schema, item, schema.status_role("ratified")) is None
-                if schema.ratify_moves_status else True)
+                if schema.ratify_moves_status and not item.is_deleted else True)
     obstacle = None if dead else ratification_obstacle(schema, idx, item)
     settled = ratified and not stale
     ratifiable = not dead and obstacle is None
@@ -142,9 +145,13 @@ def entry_for(project, item, *, index: Index | None = None,
         concern = "stale"
     elif settled:
         concern = "ratified"
-    elif signatures(item) and not requirement_met(item, schema):
+    elif relevant(item) and not requirement_met(item, schema):
         # Signed by some of the people its kind requires, not yet by all (SR-0260).
         concern = "awaiting"
+    elif item.is_deleted:
+        # A proposed deletion (SR-0267): grounding and ambiguity are no bar to
+        # retiring an item, so it is simply proposed.
+        concern = "proposed"
     elif ambiguous:
         concern = "ambiguous"
     elif not grounded:
@@ -161,7 +168,7 @@ def entry_for(project, item, *, index: Index | None = None,
         concern=concern, ratifiable=ratifiable, obstacle=obstacle,
         grounded=grounded, ambiguous=ambiguous, ratified=ratified, stale=stale,
         dead=dead, depth=depths.get(item.uid),
-        standing=standing(item, schema).describe() if signatures(item) else "",
+        standing=standing(item, schema).describe() if relevant(item) else "",
     )
 
 
@@ -196,7 +203,7 @@ def ratification_progress(project, *, index: Index | None = None) -> tuple[int, 
     dead = schema.dead_statuses()
     accepted = gradable = 0
     for item in project.items():
-        if item.status in dead:
+        if retired(item, schema) or (item.status in dead and not item.is_deleted):
             continue
         gradable += 1
         if is_ratified(schema, item) and not signature_is_stale(schema, item):

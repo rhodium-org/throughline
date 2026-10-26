@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-232
+239
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 37
@@ -138,7 +138,8 @@ tl init [--name NAME]                         # scaffold a project
 tl register new <PREFIX> <dir> [--parent P]   # add a register
 tl new <PREFIX> [--uid U] [--type T] [--ground UID]  # allocate + create (grounded at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
-tl delete <UID> --reason "…"                  # tombstone (never erased)
+tl delete <UID> --reason "…"                  # propose a deletion: a tombstone a human ratifies (never erased)
+tl restore <UID>                              # decline a proposed deletion
 tl apply <FILE> [--dry-run] | --describe       # carry out a change set drafted where tl cannot run, all or nothing
 tl review [<UID> | --all-clean]               # mark reviewed at current content
 tl check [--strict] [--format json]           # validate the graph — the CI gate
@@ -172,7 +173,7 @@ Upward and downward coverage are independent and both matter:
 | `orphan` | a non-root item with no grounding chain to a root |
 | `unserved-root` | a delivery root nobody derives from / mitigates |
 | `grounding-cycle` | circular justification |
-| `dangling-link` / `deleted-link-target` | link to a missing/tombstoned item |
+| `dangling-link` / `deleted-link-target` | link to a missing item, or into a tombstone whose deletion is ratified |
 | `uid-grammar` / `uid-collision` | malformed UID, or one UID in two places (merge) |
 | `uid-filename` | an item's file is not named `<UID>.yml` (git could not see it collide) |
 | `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
@@ -256,7 +257,13 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
 ## Grounding operations
 
 - **ratify** — a human takes accountability. Refused for ambiguous or ungrounded
-  items: the two states that must never be signed off.
+  items: the two states that must never be signed off. On a tombstone it signs the
+  deletion record: the item is retired, and every item grounded on it is marked
+  `suspect` by the same walk `invalidate` makes.
+- **delete** — propose a deletion. The file stays as a tombstone and `check`
+  reports it `unratified` until a human ratifies it; meanwhile the item is still
+  live scope, so nothing downstream changes. An item nobody signed, with no signed
+  dependent, is retired outright. `restore` declines a proposed deletion.
 - **invalidate** — falsify an assumption (or any node): it is rejected and every
   transitive dependent is marked `suspect` (its blast radius).
 - **withdraw** — set aside a signature that should no longer stand (wrong name,

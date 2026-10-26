@@ -12,13 +12,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .fingerprint import content_fingerprint, fingerprint
+from .fingerprint import content_fingerprint, deletion_fingerprint, fingerprint
 from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
-    CONTENT, STAMP, W_BY, W_OF, W_REASON, describe, signatures, stale_entries, standing,
+    CONTENT, STAMP, W_BY, W_OF, W_REASON, describe, relevant, retired, signatures,
+    signs_deletion, stale_entries, standing,
 )
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -74,10 +75,19 @@ def _file(item) -> str:
 
 def validate(project, strict: bool = False,
              baseline: dict[str, str] | None = None,
-             published: set[str] | None = None) -> list[Finding]:
+             published: set[str] | None = None,
+             restorable: frozenset[str] | set[str] | None = None) -> list[Finding]:
+    """``restorable`` names the items that were proposed deletions at the baseline
+    (SR-0268): one of them standing in a live status now was restored, which the
+    transition gate accepts — the item is back where the lifecycle last left it."""
     idx = Index.build(project)
     schema = project.schema
     out: list[Finding] = []
+    restorable = frozenset(restorable or ())
+    try:
+        tombstone_status = schema.status_role("tombstone")
+    except Exception:                       # the role is optional vocabulary
+        tombstone_status = None
 
     def add(rule, uid, file, msg):
         sev = schema.rule_severity(rule, _DEFAULT_SEVERITY.get(rule, WARNING), strict)
@@ -219,7 +229,10 @@ def validate(project, strict: bool = False,
                 f"file is named {Path(item._path).name} but holds "
                 f"{item.authored_uid} — rename it to {item.authored_uid}.yml, or "
                 "a collision with another branch's item will go unseen at merge")
-        if item.is_deleted:
+        # A tombstone that stands is dead scope and is held to nothing further;
+        # one still proposed (SR-0267) is live scope and is held to everything a
+        # live item is, so that an unsigned deletion changes nothing downstream.
+        if retired(item, schema):
             continue
         f = _file(item)
 
@@ -248,7 +261,11 @@ def validate(project, strict: bool = False,
         # baseline entry means the item is new here — creation is not a move.
         if baseline is not None:
             prev = baseline.get(item.uid)
-            if (prev is not None and prev != item.status
+            # A proposed deletion restored (SR-0268) is not a lifecycle move: the
+            # item is back where the lifecycle last left it.
+            restored = (prev == tombstone_status and item.uid in restorable
+                        and not item.is_deleted)
+            if (prev is not None and prev != item.status and not restored
                     and not schema.allows_transition(prev, item.status)):
                 add("bad-transition", item.uid, f,
                     f"status change '{prev}' -> '{item.status}' is not an "
@@ -286,18 +303,24 @@ def validate(project, strict: bool = False,
                 continue
             if target is None:
                 add("dangling-link", item.uid, f, f"link target '{link.target}' does not exist")
-            elif target.is_deleted:
+            # Only once the tombstone stands (SR-0271): a link into a proposed
+            # deletion is a link into live scope. The link is reported, never
+            # removed — it is the evidence for the dependent's suspicion.
+            elif retired(target, schema):
                 add("deleted-link-target", item.uid, f, f"link target '{link.target}' is deleted")
 
         # Grounding coverage — the anti-avalanche core (upward). The predicate is
         # shared with the link operations, which refuse a change this would report
         # (SR-0211).
-        gap = grounding_gap(schema, idx, item)
+        # Not of a proposed deletion (SR-0267): deleting an orphan is the remedy
+        # for it, and the remedy is what awaits a human. Its dependents keep their
+        # grounding through it until it is retired.
+        gap = None if item.is_deleted else grounding_gap(schema, idx, item)
         if gap is not None:
             add("orphan", item.uid, f, gap)
 
         # Downward coverage — every delivery root must be served (mirror).
-        if is_unserved(schema, idx, item):
+        if not item.is_deleted and is_unserved(schema, idx, item):
             add("unserved-root", item.uid, f,
                 f"{item.type} has nothing deriving from / mitigating it — unserved")
 
@@ -308,7 +331,24 @@ def validate(project, strict: bool = False,
         # ratified status directly names nobody — only the record `tl ratify` writes
         # is evidence. A terminal-status item is dead scope and needs no ratifier.
         origin = item.attrs.get("origin")
-        if (origin in schema.ai_origins and not signatures(item)
+        if item.is_deleted:
+            # A proposed deletion, whoever ran the command (SR-0267): the gate has
+            # already passed over every tombstone that stands, so this one awaits
+            # a human. Held to the same finding as a proposed item, because it is
+            # one — the proposal is that the item go.
+            record = item.deleted or {}
+            held = relevant(item)
+            if not held:
+                was = f" — was '{record['from']}'" if record.get("from") else ""
+                reason = f" ({record['reason']})" if record.get("reason") else ""
+                add("unratified", item.uid, f,
+                    f"deletion awaiting human ratification{was}{reason}")
+            elif not stale_entries(item, schema):
+                where = standing(item, schema)
+                add("awaiting-signatures", item.uid, f,
+                    f"deletion {where.describe()} — the signatures are recorded, "
+                    "but the item does not yet count as retired")
+        elif (origin in schema.ai_origins and not signatures(item)
                 and item.status not in schema.dead_statuses()):
             roles = schema.status_roles or {}
             if item.withdrawals:
@@ -340,7 +380,8 @@ def validate(project, strict: bool = False,
         # requirement was tightened after it was signed (SR-0264). Silent where
         # every signature is stale — that is the stale finding's to report — and
         # for a dead item.
-        if signatures(item) and item.status not in schema.dead_statuses():
+        if (signatures(item) and item.status not in schema.dead_statuses()
+                and not item.is_deleted):
             where = standing(item, schema)
             if not where.met and (where.held or not stale_entries(item, schema)):
                 add("awaiting-signatures", item.uid, f,
@@ -384,7 +425,7 @@ def validate(project, strict: bool = False,
         # Quality — grounded but ambiguous is still not deliverable. The wording
         # is the one `tl clarify` records, so its record holds what the person
         # removing the flag was shown here (SR-0213).
-        if is_flagged_ambiguous(item):
+        if is_flagged_ambiguous(item) and not item.is_deleted:
             add("ambiguous", item.uid, f, ambiguity_report(item))
 
         # Suspect links (SR-0034): stored stamp != target's current fingerprint.
@@ -412,7 +453,15 @@ def validate(project, strict: bool = False,
         for entry in item.ratifications:
             stamp = entry.get(STAMP)
             who = describe(entry)
-            content_moved = bool(stamp) and fingerprint(item, schema) != stamp
+            # A deletion signature is judged against the deletion record it was
+            # taken over (SR-0269); a content signature a tombstone keeps as
+            # history is judged against nothing — it is neither current nor stale.
+            if signs_deletion(entry):
+                content_moved = bool(stamp) and deletion_fingerprint(item) != stamp
+            elif item.is_deleted:
+                content_moved = False
+            else:
+                content_moved = bool(stamp) and fingerprint(item, schema) != stamp
             # Signed links (SR-0244): the links a human accepted with the item
             # have moved since. Silent where the project signs no link type, so
             # no graph gains this finding until it declares one (SR-0242).
@@ -486,7 +535,7 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
             continue
         expr = rule.get("filter", "")
         for item in project.items():
-            if item.is_deleted:
+            if retired(item, schema):
                 continue
             try:
                 matched = eval_filter(item, expr, idx)
@@ -572,7 +621,8 @@ def query_items(project, expr: str | None = None, *, include_deleted: bool = Fal
     expression matches everything, and a deleted item is left out unless asked
     for. Raises :class:`FilterError` for an expression the grammar cannot accept;
     it never falls back to evaluating it (SR-0103)."""
-    candidates = [it for it in project.items() if include_deleted or not it.is_deleted]
+    candidates = [it for it in project.items()
+                  if include_deleted or not retired(it, project.schema)]
     if expr:
         idx = index if index is not None else Index.build(project)
         candidates = [it for it in candidates if eval_filter(it, expr, idx)]

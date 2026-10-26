@@ -28,7 +28,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from .fingerprint import fingerprint
+from .fingerprint import DELETED_KEY, deletion_content, deletion_fingerprint, fingerprint, signed_content
 from .signed_links import links_moved
 
 # The two top-level fields.
@@ -100,9 +100,40 @@ def signatures(item) -> list[dict]:
     return [e for e in item.ratifications if e.get(BY)]
 
 
+def signs_deletion(entry: dict) -> bool:
+    """Whether ``entry`` is a signature over a deletion record (SR-0269) rather
+    than over the item's content: its recorded content holds the record."""
+    content = entry.get(CONTENT)
+    return isinstance(content, dict) and DELETED_KEY in content
+
+
+def relevant(item) -> list[dict]:
+    """The signatures that bear on ``item`` as it stands (SR-0269): the deletion
+    signatures of a tombstone, the content signatures of a live item. A tombstone
+    keeps the signatures over its content as the history of what the deletion
+    undid, and they count toward nothing; a live item cannot have been retired, so
+    a deletion signature on one is a record something else left behind."""
+    tombstone = item.is_deleted
+    return [e for e in signatures(item) if signs_deletion(e) == tombstone]
+
+
+def stamp_of(item, schema) -> str:
+    """The fingerprint a signature over ``item`` as it stands is taken over: the
+    deletion record of a tombstone (SR-0269), the content of anything else."""
+    return deletion_fingerprint(item) if item.is_deleted else fingerprint(item, schema)
+
+
+def signed_record(item, schema) -> dict:
+    """What ratify records beside the stamp for ``item`` as it stands: the
+    deletion record of a tombstone (SR-0269), the content of anything else
+    (SR-0215)."""
+    return deletion_content(item) if item.is_deleted else signed_content(item, schema)
+
+
 def latest(item) -> dict | None:
-    """The most recent signature, or None for an item nobody has signed."""
-    held = signatures(item)
+    """The most recent signature that bears on the item as it stands, or None
+    when nobody has signed it so."""
+    held = relevant(item)
     return held[-1] if held else None
 
 
@@ -115,8 +146,10 @@ def same_person(entry: dict, by: str | None, by_id: str | None) -> bool:
 
 
 def entry_of(item, *, by: str | None = None, by_id: str | None = None) -> dict | None:
-    """The signature the person named gave, or None."""
-    for entry in signatures(item):
+    """The signature the person named gave over the item as it stands, or None.
+    A person's signature over a tombstone's content is not their signature over
+    its deletion (SR-0269)."""
+    for entry in relevant(item):
         if same_person(entry, by, by_id):
             return entry
     return None
@@ -125,7 +158,7 @@ def entry_of(item, *, by: str | None = None, by_id: str | None = None) -> dict |
 def names(item) -> str:
     """The signers' names as prose: ``A``, ``A and B``, ``A, B and C``."""
     seen: list[str] = []
-    for entry in signatures(item):
+    for entry in relevant(item):
         name = str(entry.get(BY) or "a human")
         if name not in seen:
             seen.append(name)
@@ -153,20 +186,26 @@ def describe(entry: dict) -> str:
 
 def is_stale(item, schema, entry: dict) -> bool:
     """Whether ``entry`` no longer covers the item (SR-0261): its stamp differs
-    from the item's fingerprint, or the links it covers have moved. A signature
-    with no stamp cannot be judged and is not called stale."""
+    from the fingerprint it was taken over, or the links it covers have moved. A
+    signature with no stamp cannot be judged and is not called stale. A signature
+    that does not bear on the item as it stands — a content signature kept on a
+    tombstone as history (SR-0269) — is neither current nor stale, so it is not
+    called stale either."""
     stamp = entry.get(STAMP)
-    return bool(stamp) and (stamp != fingerprint(item, schema)
-                            or links_moved(item, schema, entry))
+    if not stamp or signs_deletion(entry) != item.is_deleted:
+        return False
+    if signs_deletion(entry):
+        return stamp != deletion_fingerprint(item)
+    return stamp != fingerprint(item, schema) or links_moved(item, schema, entry)
 
 
 def stale_entries(item, schema) -> list[dict]:
-    return [e for e in signatures(item) if is_stale(item, schema, e)]
+    return [e for e in relevant(item) if is_stale(item, schema, e)]
 
 
 def current(item, schema) -> list[dict]:
-    """The signatures that still cover the item."""
-    return [e for e in signatures(item) if not is_stale(item, schema, e)]
+    """The signatures that still cover the item as it stands."""
+    return [e for e in relevant(item) if not is_stale(item, schema, e)]
 
 
 @dataclass(frozen=True)
@@ -217,3 +256,21 @@ def standing(item, schema) -> Standing:
 def requirement_met(item, schema) -> bool:
     """Whether ``item`` counts as ratified by its signatures alone (SR-0260)."""
     return standing(item, schema).met
+
+
+# The key a tombstone's record carries when the item was retired outright
+# (SR-0272): no signature stood on it or on any dependent, so none is undone and
+# none is required.
+OUTRIGHT = "outright"
+
+
+def retired(item, schema) -> bool:
+    """Whether ``item`` is a tombstone that stands (SR-0012, SR-0267): its deletion
+    was ratified to the standing its kind requires, or it was retired outright
+    (SR-0272). A tombstone nobody has signed is a proposed deletion — the item is
+    still live scope, and nothing downstream has changed."""
+    if not item.is_deleted:
+        return False
+    if (item.deleted or {}).get(OUTRIGHT):
+        return True
+    return requirement_met(item, schema)

@@ -26,8 +26,9 @@ from .grounding import (
     attribute_removal_refusal,
     origin_change_refusal,
 )
+from .graph import Index
 from .model import Item, Link
-from .signatures import STAMP, latest, names
+from .signatures import OUTRIGHT, STAMP, latest, names, retired, signatures
 from .uid import UidError, next_uid, parse_uid
 
 def coerce_attr(schema, item_type: str, key: str, raw: str):
@@ -182,7 +183,7 @@ def newly_suspect(project, uid: str, was: str, now: str) -> list[str]:
         return []
     out = []
     for it in project.items():
-        if it.is_deleted:
+        if retired(it, project.schema):
             continue
         if any(l.target == uid and l.stamp == was for l in it.links):
             out.append(it.uid)
@@ -204,8 +205,12 @@ def amend_item(project, uid: str, *, title: str | None = None,
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
-    if item.is_deleted:
+    if retired(item, project.schema):
         raise GroundingError(f"{uid} is deleted — a tombstone is permanent (SR-0093)")
+    if item.is_deleted:
+        raise GroundingError(
+            f"{uid} is proposed for deletion — `tl restore {uid}` first to change "
+            "it, or ratify the deletion (SR-0267)")
     attrs = dict(attrs or {})
     unset = list(dict.fromkeys(name.strip() for name in unset))
     if "" in unset:
@@ -277,32 +282,115 @@ def amend_item(project, uid: str, *, title: str | None = None,
     )
 
 
-def delete_item(project, uid: str, *, reason: str = "unspecified") -> bool:
-    """Tombstone ``uid``: the file stays, the item stops counting, and the UID is
-    never reused (SR-0012, SR-0093). True when this call retired it, False when it
-    was already retired.
+@dataclass
+class Deletion:
+    """What `tl delete` did (SR-0267, SR-0272). ``outright`` is whether the
+    tombstone stands at once; otherwise it is proposed and ``signed`` names who
+    signed the item, whose acceptance a signature on the deletion will undo.
+    ``dependents`` are the live items that link to it along the withdrawing link
+    types — the ones ratifying the deletion will mark suspect (SR-0270)."""
+
+    uid: str
+    was: str
+    outright: bool
+    signed: str = ""
+    dependents: list[str] = field(default_factory=list)
+
+
+def signed_dependents(project, uid: str, index: Index | None = None) -> list[str]:
+    """The live items linking to ``uid`` that carry a signature (SR-0272): the
+    ones whose signed ground a deletion would take away, by any link type, since
+    any link into a retired tombstone is reported on the dependent (SR-0271)."""
+    idx = index if index is not None else Index.build(project)
+    out = []
+    for source, _kind in idx.in_links(uid):
+        dep = project.get(source)
+        if dep is None or source == uid or retired(dep, project.schema):
+            continue
+        if signatures(dep):
+            out.append(source)
+    return sorted(set(out))
+
+
+def delete_item(project, uid: str, *, reason: str = "unspecified") -> Deletion | None:
+    """Tombstone ``uid``: the file stays, the UID is never reused (SR-0012,
+    SR-0093), and the deletion is proposed until a human ratifies it (SR-0267) —
+    unless nothing signed is undone, when the item is retired outright (SR-0272).
+    None when it was already a tombstone.
 
     A tombstone is permanent, and so is what it records, so an item already retired
     is left exactly as it stands rather than gaining a second date and reason over
-    the first. The item is changed and returned to the caller to write."""
+    the first; a tombstone still proposed is left as proposed. The item is changed
+    and returned to the caller to write."""
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     schema = project.schema
     tombstone = schema.status_role("tombstone")
     if item.status == tombstone:
-        return False
+        return None
+    idx = Index.build(project)
+    # Retired outright (SR-0272) when no signature stands on the item or on any
+    # live dependent: no human's acceptance is undone, and no signed item loses
+    # its ground. Decided here and recorded on the tombstone, never recomputed: a
+    # dependent signed later must not change a tombstone's standing.
+    dependents = signed_dependents(project, uid, idx)
+    outright = not signatures(item) and not dependents
+    was = item.status
     set_status(schema, item, tombstone)
-    # What the tombstone keeps (SR-0012): the day the UID was retired, why, and the
+    # What the tombstone keeps (SR-0012): the day the UID was retired, why, the
     # fingerprint of the content it last held, so the record says what was retired
-    # wherever the file travels without its history. The day is taken in UTC so it
+    # wherever the file travels without its history, and the status it held, so a
+    # proposed deletion can be restored (SR-0268). The day is taken in UTC so it
     # does not depend on where the command was run.
     item.deleted = {
         "date": datetime.now(timezone.utc).date().isoformat(),
         "reason": reason or "unspecified",
         "fingerprint": fingerprint(item, schema),
+        "from": was,
     }
-    return True
+    if outright:
+        item.deleted[OUTRIGHT] = True
+    affected = [a for a in idx.impact(uid, schema.withdrawing_link_types())
+                if (dep := project.get(a)) is not None
+                and dep.status not in schema.dead_statuses()]
+    return Deletion(uid=uid, was=was, outright=outright, signed=names(item),
+                    dependents=sorted(affected))
+
+
+def restore_item(project, uid: str) -> Item:
+    """Return a proposed deletion to the status the item held (SR-0268): the
+    deletion record goes, the status comes back, and no signature is touched —
+    the item's own signatures still cover its content. Refused once the tombstone
+    stands (SR-0093): a ratified deletion is withdrawn with `tl withdraw` first,
+    and an outright retirement is permanent. The item is changed and returned to
+    the caller to write."""
+    item = project.get(uid)
+    if item is None:
+        raise GroundingError(f"{uid} does not exist")
+    if not item.is_deleted:
+        raise GroundingError(f"{uid} is not deleted — there is nothing to restore")
+    record = item.deleted or {}
+    if record.get(OUTRIGHT):
+        raise GroundingError(
+            f"{uid} was retired outright — nothing signed was undone, so there is "
+            "no proposal to decline; a tombstone is permanent (SR-0093)")
+    if retired(item, project.schema):
+        raise GroundingError(
+            f"{uid}'s deletion is ratified by {names(item)} — a tombstone is "
+            f"permanent (SR-0093); `tl withdraw {uid}` removes a signature that "
+            "should not stand")
+    was = record.get("from")
+    if not isinstance(was, str) or not was:
+        raise GroundingError(
+            f"{uid}'s tombstone does not record the status it held, so it cannot "
+            "be restored — ratify the deletion, or set the status with `tl status`")
+    if not project.schema.is_status(was):
+        raise GroundingError(
+            f"{uid} held the status '{was}', which the project no longer declares")
+    item.status = was
+    item.deleted = None
+    return item
 
 
 def review_items(project, uids=None, *, all_items: bool = False) -> list:
@@ -322,7 +410,7 @@ def review_items(project, uids=None, *, all_items: bool = False) -> list:
             targets.append(item)
     moved = []
     for item in targets:
-        if item is None or item.is_deleted:
+        if item is None or retired(item, project.schema):
             continue
         fp = fingerprint(item, project.schema)
         if item.reviewed != fp:

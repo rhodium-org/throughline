@@ -15,7 +15,9 @@ import json
 from pathlib import Path
 
 from .graph import Index
-from .signatures import describe, is_stale, signatures, standing
+from .signatures import (
+    describe, is_stale, relevant, retired, signatures, signs_deletion, standing,
+)
 from .grounding import reaches_root
 from .grounding import (
     CLARIFICATION_ATTRS,
@@ -154,6 +156,9 @@ def render_for_ratification(project, item, *, emit) -> None:
     """
     schema = project.schema
     emit("")
+    if item.is_deleted:
+        _render_deletion_for_ratification(project, item, emit=emit)
+        return
     emit(f"{item.uid}  [{item.type}/{item.status}] {item.title}".rstrip())
     for label, body in (("", item.text), ("rationale", item.rationale)):
         if not body:
@@ -209,6 +214,56 @@ def render_for_ratification(project, item, *, emit) -> None:
     emit("")
 
 
+def _render_deletion_for_ratification(project, item, *, emit) -> None:
+    """Put a proposed deletion in front of the person about to sign it (SR-0269):
+    the deletion record is what the signature is taken over, so it is what is
+    shown — what the item said, why it goes, and what ratifying it does to the
+    items grounded on it (SR-0270)."""
+    schema = project.schema
+    record = item.deleted or {}
+    was = record.get("from") or "unknown"
+    emit(f"DELETION of {item.uid}  [{item.type}/was {was}] {item.title}".rstrip())
+    emit("")
+    emit(f"reason: {record.get('reason') or 'unspecified'}")
+    emit(f"date:   {record.get('date') or 'unrecorded'}")
+    if record.get("fingerprint"):
+        emit(f"content retired: {record['fingerprint']}")
+    if item.text:
+        emit("")
+        emit("the item said:")
+        for line in item.text.splitlines():
+            emit(f"  {line}" if line else "")
+    history = [e for e in signatures(item) if not signs_deletion(e)]
+    if history:
+        emit("")
+        emit("this deletion undoes the acceptance of: "
+             + ", ".join(describe(e) for e in history))
+    idx = Index.build(project)
+    dead = schema.dead_statuses()
+    affected = [a for a in idx.impact(item.uid, schema.withdrawing_link_types())
+                if (dep := project.get(a)) is not None and dep.status not in dead]
+    emit("")
+    if affected:
+        emit(f"ratifying it marks {len(affected)} dependent(s) suspect:")
+        for aid in affected:
+            dep = project.get(aid)
+            emit(f"  {aid}  [{dep.type}/{dep.status}] {dep.title}".rstrip())
+    else:
+        emit("ratifying it marks no dependent suspect — nothing is grounded on it")
+    held = relevant(item)
+    if held:
+        emit("")
+        emit("signed so far:")
+        for entry in held:
+            when = f" at {entry['at']}" if entry.get("at") else ""
+            stale = "  (stale — the record has changed since)" if is_stale(item, schema, entry) else ""
+            emit(f"  {describe(entry)}{when}{stale}")
+        where = standing(item, schema)
+        if not where.met:
+            emit(f"  still requires {', '.join(where.missing)}")
+    emit("")
+
+
 def ground_line(project, link, schema) -> str | None:
     """One grounding link rendered with its target's title, or None for a link that
     confers no grounding — those are context, not justification, and listing them
@@ -226,7 +281,7 @@ def check_summary(project) -> list[str]:
     graph, how it is linked, and whether every requirement traces to a root."""
     schema = project.schema
     idx = Index.build(project)
-    live = [it for it in project.items() if not it.is_deleted]
+    live = [it for it in project.items() if not retired(it, schema)]
 
     links = [l.type for it in live for l in it.links]
     non_roots = [it for it in live if not schema.is_root(it)]

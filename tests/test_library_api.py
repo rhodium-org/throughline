@@ -258,15 +258,17 @@ def test_delete_review_and_query_are_operations_a_caller_can_use(tmp_path):
     project = load_project(root)
     assert review_items(project, ["REQ-0001"]) == []
 
-    # delete: True the first time, False for a tombstone that is already permanent
+    # delete: what it did the first time, None for a tombstone already written.
+    # Nothing here was signed, so the item is retired outright (SR-0272).
     project = load_project(root)
-    assert delete_item(project, "REQ-0002", reason="superseded") is True
+    done = delete_item(project, "REQ-0002", reason="superseded")
+    assert done.outright and done.was == "draft"
     write_item(project.get("REQ-0002"), project.register_of("REQ-0002"))
     project = load_project(root)
     item = project.get("REQ-0002")
     assert item.is_deleted and item.deleted["reason"] == "superseded"
     assert item.deleted["date"] and item.deleted["fingerprint"]
-    assert delete_item(project, "REQ-0002") is False
+    assert delete_item(project, "REQ-0002") is None
     # and a deleted item leaves the live view
     assert [i.uid for i in query_items(load_project(root))] == ["INT-0001", "REQ-0001"]
 
