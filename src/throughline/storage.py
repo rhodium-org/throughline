@@ -12,6 +12,7 @@ from __future__ import annotations
 import copy
 import io
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -793,6 +794,8 @@ class RepairResult(NamedTuple):
     # that could not be was left proposed.
     tombstones: Mapping[str, str] = _NO_STRINGS
     unattributed: Mapping[str, str] = _NO_STRINGS
+    # The sources whose withdrawn `reexport` key was removed (SR-0274).
+    withdrawn: tuple[str, ...] = ()
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -892,6 +895,52 @@ def _backfill_register_types(root: Path) -> dict[str, str]:
     return written
 
 
+def _remove_withdrawn_source_keys(root: Path) -> tuple[str, ...]:
+    """Remove the withdrawn ``reexport`` key from each of the project's own
+    ``[[sources]]`` entries (SR-0274). Returns the namespaces it was removed from.
+
+    Composing a source composes what it composes (throughline-compose SR-0045), so
+    the key has had no meaning since that rule and a consumer's own configuration
+    is refused while it carries it — which leaves the project uncheckable and, for
+    a composed graph, half-migrated: the standalone pass runs, then the union pass
+    cannot read the sources. Removing it is the one correct rewrite, loses nothing
+    the current major reads, and is the same forgiveness a published source already
+    gets. The key's lines go, the entry's other keys and comments stay.
+
+    Idempotent: a removed key is not there to be removed again."""
+    cfg_file = root / CONFIG_NAME
+    text = cfg_file.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    drop: set[int] = set()
+    removed: list[str] = []
+    for start, end in TomlDocument(text).array_table_spans("sources"):
+        namespace = "?"
+        hit = False
+        i = start + 1
+        while i < end:
+            line = lines[i]
+            named = re.match(r'\s*namespace\s*=\s*"([^"]*)"', line)
+            if named:
+                namespace = named.group(1)
+            if re.match(r"\s*reexport\s*=", line):
+                hit = True
+                drop.add(i)
+                # A multi-line array runs to its closing bracket.
+                depth = line.count("[") - line.count("]")
+                while depth > 0 and i + 1 < end:
+                    i += 1
+                    drop.add(i)
+                    depth += lines[i].count("[") - lines[i].count("]")
+            i += 1
+        if hit:
+            removed.append(namespace)
+    if removed:
+        out = "\n".join(line for n, line in enumerate(lines) if n not in drop)
+        cfg_file.write_text(out + ("\n" if text.endswith("\n") else ""),
+                            encoding="utf-8")
+    return tuple(removed)
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -916,6 +965,9 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # The flat record first (SR-0255): everything after it reads a signature
     # through the list, so a file still holding the format-3 attributes has to be
     # lifted before its record can be bound, completed or cached.
+    # The project's own sources first (SR-0274): a withdrawn key there stops the
+    # sources being read at all, so nothing after this could compose over them.
+    withdrawn = _remove_withdrawn_source_keys(root)
     lifted = _lift_ratification_records(root)
     roles = _backfill_status_roles(root)
     routes = _backfill_suspect_routes(root)
@@ -941,7 +993,7 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers, lifted, tombstones, unattributed)
+                        registers, lifted, tombstones, unattributed, withdrawn)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -1028,6 +1080,8 @@ class MigrationResult(NamedTuple):
     # that could not be was left proposed.
     tombstones: Mapping[str, str] = _NO_STRINGS
     unattributed: Mapping[str, str] = _NO_STRINGS
+    # The sources whose withdrawn `reexport` key was removed (SR-0274).
+    withdrawn: tuple[str, ...] = ()
 
 
 def migrate_project(path: str | Path, *,
@@ -1080,7 +1134,8 @@ def migrate_project(path: str | Path, *,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
                            result.contents, result.unprovable, result.registers,
-                           result.lifted, result.tombstones, result.unattributed)
+                           result.lifted, result.tombstones, result.unattributed,
+                           result.withdrawn)
 
 
 # ------------------------------------------------------------------- YAML dump
