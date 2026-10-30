@@ -1,6 +1,6 @@
 uid: SR-0282
 type: system_requirement
-status: proposed
+status: ratified
 title: A declared attribute holds a value of its declared kind
 text: Where the project's schema declares an attribute's kind, tl check shall report,
   under the rule attribute-kind, every item whose value is not of that kind, naming
@@ -32,3 +32,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T20:21:42Z'
+  fingerprint: sha256:a809f3086b38558cc569230b46b001e1bb102b1052bab55eb344ba5c212d9f04
+  content:
+    type: system_requirement
+    text: Where the project's schema declares an attribute's kind, tl check shall
+      report, under the rule attribute-kind, every item whose value is not of that
+      kind, naming the item, the attribute, the value and the kind; and every operation
+      that writes an attribute shall refuse such a value before writing. An int is
+      a whole number and never true or false; a float is any number; a bool is true
+      or false; a date is a calendar date written YYYY-MM-DD; a string or text is
+      text; an enum is one of its values. An attribute the schema does not declare,
+      or declares with no kind, is free-form.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
