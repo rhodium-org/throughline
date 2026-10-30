@@ -46,6 +46,7 @@ class Finding:
 # severities a project may override under [rules] (rule_name = "error"|"warning"|"off")
 _DEFAULT_SEVERITY = {
     "uid-grammar": ERROR, "uid-collision": ERROR, "prefix-collision": ERROR,
+    "key-collision": ERROR,
     "uid-filename": ERROR,
     "malformed-link": ERROR,
     "schema": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
@@ -107,7 +108,7 @@ def validate(project, strict: bool = False,
         "format_version", FORMAT_VERSION)
     if (isinstance(declared_major, int) and not isinstance(declared_major, bool)
             and declared_major >= STATUS_ROLES_MAJOR
-            and (project.config.get("status") or {}).get("roles") is None):
+            and (project.formed_config.get("status") or {}).get("roles") is None):
         add("no-status-roles", "", str(project.path / CONFIG_NAME),
             f"project is at format version {declared_major} but declares no "
             "[status.roles] — the statuses `tl new`, `ratify`, `invalidate` and "
@@ -133,7 +134,7 @@ def validate(project, strict: bool = False,
             ("status", "values", "status", "status", project.relied_on_statuses),
             ("links", "types", "link type", "linktype",
              project.relied_on_link_types)):
-        if (project.config.get(table) or {}).get(key) is not None:
+        if (project.formed_config.get(table) or {}).get(key) is not None:
             continue
         using = ", ".join(sorted(relied()))
         add("undeclared-vocabulary", "", str(project.path / CONFIG_NAME),
@@ -190,6 +191,19 @@ def validate(project, strict: bool = False,
     # UID collisions across the whole project (SR-0006).
     for uid in collisions(project):
         add("uid-collision", uid, "", "UID appears in more than one item (merge collision)")
+
+    # Keys held by more than one live item (SR-0280): the same creation asked for
+    # twice could then find either, so neither answer is the item it made.
+    holders: dict[str, list[str]] = {}
+    for it in project.items():
+        if it.key is not None and not it.is_deleted:
+            holders.setdefault(it.key, []).append(it.uid)
+    for key, uids in sorted(holders.items()):
+        if len(uids) > 1:
+            for uid in sorted(uids):
+                add("key-collision", uid, _file(project.get(uid)),
+                    f"key {key} is carried by {', '.join(sorted(uids))} — a key "
+                    "names the one item a creation made (SR-0280)")
 
     # Prefix collisions (SR-0101): two register folders declaring the same prefix
     # overlap a UID namespace, and the loader silently keeps only one — so the

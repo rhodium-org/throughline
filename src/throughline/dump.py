@@ -56,7 +56,7 @@ def build_dump(project: Project, tool_version: str) -> dict:
         d["revision"] = revision(it)
         return d
 
-    return {
+    out = {
         "throughline_dump": {
             "dump_schema_version": DUMP_SCHEMA_VERSION,
             "format_version": FORMAT_VERSION,
@@ -66,3 +66,15 @@ def build_dump(project: Project, tool_version: str) -> dict:
         "registers": registers,
         "items": [entry(it) for it in items],
     }
+    # A project that takes its schema from a source (SR-0275) says so, with the
+    # schema as formed and every declaration it inherited (SR-0279). `config`
+    # stays the project's own file. Absent for every other project, whose dump is
+    # unchanged.
+    inheritance = project.inheritance
+    if inheritance is not None:
+        out["schema_source"] = {
+            "namespace": inheritance.namespace,
+            "formed": project.formed_config,
+            "inherited": sorted(list(p) for p in inheritance.paths),
+        }
+    return out

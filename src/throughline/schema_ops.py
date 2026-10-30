@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Callable
 
 from .grounding import attribute_owner
+from .inherit import InheritanceError, declarations, describe, merge
 from .model import Item, Project
 from .schema import Schema, SchemaError
 from .storage import CONFIG_NAME, ProjectError, load_project, write_item
@@ -160,12 +161,16 @@ def may_invalidate(old: Schema, new: Schema, *, grounding_changed: bool) -> bool
     return False
 
 
-def _new_errors(project: Project, config: dict) -> list[Finding]:
+def _new_errors(project: Project, config: dict,
+                formed: dict | None = None) -> list[Finding]:
     """Error-severity findings the prospective config introduces. Measured as a
     difference so a graph that is already red does not block an unrelated
-    change, and so the report names only what this change did."""
+    change, and so the report names only what this change did. ``formed`` is the
+    schema configuration the change produces where the project takes its schema
+    from a source (SR-0275)."""
     before = {_key(f) for f in validate(project) if f.severity == ERROR}
-    prospective = dataclasses.replace(project, config=config, _schema=None)
+    prospective = dataclasses.replace(project, config=config, schema_config=formed,
+                                      _schema=None)
     return [f for f in validate(prospective)
             if f.severity == ERROR and _key(f) not in before]
 
@@ -180,15 +185,34 @@ def apply_change(root: Path, change: Change, because: str) -> Refusal | str:
     """Validate, pre-flight, and write ``change``. Returns the description on
     success or a :class:`Refusal` that left the file untouched."""
     project = load_project(root)
+    formed = None
+    inheritance = project.inheritance
+    if inheritance is not None:
+        # Every operation names what it changes and refuses an inherited one
+        # itself; this is the backstop, so no change can reach one unnamed. An
+        # inherited type gaining a local table is the one difference that is not
+        # a change to the source's declaration: it is where an added attribute goes.
+        before, after = declarations(project.config), declarations(change.config)
+        touched = [p for p in before.keys() | after.keys()
+                   if before.get(p) != after.get(p)
+                   and not (p[0] == "type" and p not in before)]
+        owned = sorted(p for p in touched if inheritance.owns(*p))
+        if owned:
+            raise _inherited(inheritance, owned[0])
+        try:
+            formed, _ = merge(inheritance.source_config, change.config,
+                              inheritance.namespace)
+        except InheritanceError as e:
+            raise SchemaOpError(str(e)) from e
     try:
-        prospective = Schema.from_config(change.config)
+        prospective = Schema.from_config(change.config if formed is None else formed)
     except SchemaError as e:
         raise SchemaOpError(f"that change does not produce a valid schema: {e}") from e
 
     grounding_changed = ((project.config.get("grounding") or {})
                          != (change.config.get("grounding") or {}))
     if may_invalidate(project.schema, prospective, grounding_changed=grounding_changed):
-        findings = _new_errors(project, change.config)
+        findings = _new_errors(project, change.config, formed)
         if findings:
             return Refusal(change.description, findings)
 
@@ -200,6 +224,21 @@ def apply_change(root: Path, change: Change, because: str) -> Refusal | str:
         raise SchemaOpError(f"cannot edit {cfg_file} safely: {e}") from e
     cfg_file.write_text(doc.text(), encoding="utf-8")
     return change.description
+
+
+def _inherited(inheritance, path) -> SchemaOpError:
+    ns = inheritance.namespace
+    return SchemaOpError(
+        f"{describe(path)} is declared by the schema source '{ns}', not by this "
+        f"project, so it cannot be changed here (SR-0279). Change it in '{ns}' and "
+        "move this project's pin to take it")
+
+
+def _refuse_inherited(project: Project, *path: str) -> None:
+    """Refuse, before anything is built, an operation on a declaration this project
+    inherits from its schema source (SR-0279)."""
+    if project.inheritance is not None and project.inheritance.owns(*path):
+        raise _inherited(project.inheritance, tuple(path))
 
 
 def is_composed(project: Project) -> bool:
@@ -297,7 +336,8 @@ def _declare(project: Project, table: str, key: str, values: list[str],
 
 
 def status_add(project: Project, name: str) -> Change:
-    if not _array(project.config, "status", "values"):
+    _refuse_inherited(project, "status", name)
+    if not _array(project.formed_config, "status", "values"):
         raise _undeclared("status", "status", name,
                           project.relied_on_statuses())
     return _add_to(project, "status", "values", name, "status")
@@ -308,11 +348,13 @@ def status_declare(project: Project, names: list[str]) -> Change:
 
 
 def status_remove(project: Project, name: str) -> Change:
+    _refuse_inherited(project, "status", name)
     return _remove_from(project, "status", "values", name, "status")
 
 
 def linktype_add(project: Project, name: str) -> Change:
-    if not _array(project.config, "links", "types"):
+    _refuse_inherited(project, "link", name)
+    if not _array(project.formed_config, "links", "types"):
         raise _undeclared("link type", "linktype", name,
                           project.relied_on_link_types())
     return _add_to(project, "links", "types", name, "link type")
@@ -323,17 +365,20 @@ def linktype_declare(project: Project, names: list[str]) -> Change:
 
 
 def linktype_remove(project: Project, name: str) -> Change:
+    _refuse_inherited(project, "link", name)
     return _remove_from(project, "links", "types", name, "link type")
 
 
 def grounding_add(project: Project, field: str, value: str) -> Change:
     _check_grounding_field(field)
+    _refuse_inherited(project, "grounding", field, value)
     return _add_to(project, "grounding", field, value, f"{field} entry",
                    current=sorted(getattr(project.schema, field)))
 
 
 def grounding_remove(project: Project, field: str, value: str) -> Change:
     _check_grounding_field(field)
+    _refuse_inherited(project, "grounding", field, value)
     return _remove_from(project, "grounding", field, value, f"{field} entry",
                         current=sorted(getattr(project.schema, field)))
 
@@ -346,6 +391,7 @@ def _check_grounding_field(field: str) -> None:
 
 
 def transition_allow(project: Project, frm: str, to: str) -> Change:
+    _refuse_inherited(project, "transition", frm)
     cfg = _copy(project)
     targets = _array(cfg, "transitions", frm)
     if to in targets:
@@ -358,6 +404,7 @@ def transition_allow(project: Project, frm: str, to: str) -> Change:
 
 
 def transition_deny(project: Project, frm: str, to: str) -> Change:
+    _refuse_inherited(project, "transition", frm)
     cfg = _copy(project)
     targets = _array(cfg, "transitions", frm)
     if to not in targets:
@@ -381,6 +428,7 @@ def _linkrule(project: Project, ltype: str, *, side: str, itype: str,
               add: bool) -> Change:
     if side not in ("from", "to"):
         raise SchemaOpError("a link rule side is 'from' or 'to'")
+    _refuse_inherited(project, "link_rule", ltype)
     cfg = _copy(project)
     rules = cfg.setdefault("link_rules", {})
     rule = dict(rules.get(ltype) or {})
@@ -410,6 +458,7 @@ def _linkrule(project: Project, ltype: str, *, side: str, itype: str,
 
 
 def linkrule_clear(project: Project, ltype: str) -> Change:
+    _refuse_inherited(project, "link_rule", ltype)
     cfg = _copy(project)
     rules = cfg.setdefault("link_rules", {})
     if ltype not in rules:
@@ -425,6 +474,7 @@ def _clear_rule(doc: TomlDocument, ltype: str, why: str) -> None:
 
 
 def type_add(project: Project, name: str, *, normative: bool = True) -> Change:
+    _refuse_inherited(project, "type", name)
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
     if name in types:
@@ -444,6 +494,7 @@ def type_normative(project: Project, name: str, value: bool) -> Change:
     """Declare whether items of an existing type are normative (SR-0201). The
     items already written keep their flag until `tl migrate` rewrites it (SR-0203),
     so this never rewrites an item; `check` reports the disagreement meanwhile."""
+    _refuse_inherited(project, "type", name)
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
     if name not in types:
@@ -461,6 +512,7 @@ def type_normative(project: Project, name: str, value: bool) -> Change:
 
 
 def type_remove(project: Project, name: str) -> Change:
+    _refuse_inherited(project, "type", name)
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
     if name not in types:
@@ -479,11 +531,15 @@ def _remove_type(doc: TomlDocument, name: str, why: str) -> None:
 def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None,
              values: list[str] | None = None, required: bool = False,
              normative: bool = False, default=None) -> Change:
+    _refuse_inherited(project, "attr", itype, name)
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
-    if itype not in types:
+    # An inherited type takes a new attribute in a table of this project's own
+    # (SR-0276): the type is checked against the schema as formed, the attribute
+    # written here.
+    if itype not in (project.formed_config.get("types") or {}):
         raise SchemaOpError(f"item type '{itype}' is not declared")
-    body = types[itype] = dict(types[itype] or {})
+    body = types[itype] = dict(types.get(itype) or {})
     attrs = body.setdefault("attrs", {})
     if name in attrs:
         raise SchemaOpError(f"'{itype}' already declares attribute '{name}'")
@@ -513,6 +569,7 @@ def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None
 
 
 def attr_remove(project: Project, itype: str, name: str) -> Change:
+    _refuse_inherited(project, "attr", itype, name)
     cfg = _copy(project)
     types = cfg.setdefault("types", {})
     if itype not in types:
@@ -601,6 +658,7 @@ def role_add(project: Project, role: str, identifier: str) -> Change:
     if not role:
         raise SchemaOpError("a role needs a name")
     ident = _identifier(identifier)
+    _refuse_inherited(project, "ratify_role", role)
     cfg = _copy(project)
     roles = _roles(cfg)
     present = role in roles
@@ -622,6 +680,7 @@ def role_remove(project: Project, role: str, identifier: str | None = None) -> C
     """Take ``identifier`` out of ``role``, or with none given withdraw the role.
     A role a requirement names is kept until the requirement no longer needs it,
     and a role is never left with nobody holding it (SR-0257)."""
+    _refuse_inherited(project, "ratify_role", role)
     cfg = _copy(project)
     roles = _roles(cfg)
     if role not in roles:
@@ -756,3 +815,14 @@ def rule_remove(project: Project, index: int) -> Change:
         f"removing coverage rule #{index} (needs {doomed.get('needs')})", cfg,
         lambda doc, why: doc.remove_array_table(_COVERAGE, index - 1,
                                                 because=why))
+
+
+def show(project: Project) -> list[dict]:
+    """Every declaration of the project's schema as formed, in file order, each
+    with the namespace of the schema source it came from or ``None`` for one this
+    project makes itself (SR-0279)."""
+    inheritance = project.inheritance
+    return [{"declaration": describe(path), "address": list(path), "value": value,
+             "from": (inheritance.namespace if inheritance is not None
+                      and inheritance.owns(*path) else None)}
+            for path, value in declarations(project.formed_config).items()]

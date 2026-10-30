@@ -45,6 +45,14 @@ def _add_schema_parser(sub, handlers) -> None:
     }
     made: dict[str, object] = {}
 
+    # `tl schema show` lists the schema rather than changing it, so it takes no
+    # --because; with a schema source it marks what each declaration came from
+    # (SR-0279).
+    shown = nouns.add_parser(
+        "show", help="list every declaration of the schema, marking where each came from")
+    shown.add_argument("--format", choices=["text", "json"], default="text")
+    shown.set_defaults(func=handlers.get("cmd_schema_show"))
+
     def _schema_verb(noun: str, verb: str, builder, help_text):
         """One `tl schema <noun> <verb>`, creating the noun's parser on first use."""
         if noun not in made:
@@ -273,6 +281,9 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                    help="grounding link type (default: derives_from)")
     s.add_argument("--no-interactive", action="store_true",
                    help="never prompt for a parent (for scripts/CI)")
+    s.add_argument("--key", default=None, metavar="UUID4",
+                   help="create under this key (a UUID version 4); where an item "
+                        "already carries it, create nothing and name that item")
     s.set_defaults(func=handlers.get("cmd_new"))
 
     s = sub.add_parser("link", help="add a typed link SRC -> DST")

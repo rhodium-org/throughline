@@ -72,7 +72,7 @@ class Union:
         The view is never validated and its UIDs are deliberately not legal core
         UIDs; the union it is taken from is untouched.
         """
-        out = Project(path=self.project.path, config=self.project.config)
+        out = self.project.shell()
         for prefix, reg in self.project.registers.items():
             owner = self.owners.get(prefix)
             shown = f"{owner[0]}:{owner[1]}" if owner else prefix
@@ -213,7 +213,7 @@ def build_union(consumer: Project, sources: dict[str, Project],
     label_maps = labels or {}
     mangler = _Mangler()
 
-    union = Project(path=consumer.path, config=consumer.config)
+    union = consumer.shell()
 
     # What loading recorded travels with the registers (SR-0240). The validator
     # reads prefix clashes, UIDs repeated within one folder and malformed links off

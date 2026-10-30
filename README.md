@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-240
+247
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-37
+39
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -136,7 +136,7 @@ detect items that "violate" a non-goal — that judgement stays with a human.
 ```
 tl init [--name NAME]                         # scaffold a project
 tl register new <PREFIX> <dir> [--parent P]   # add a register
-tl new <PREFIX> [--uid U] [--type T] [--ground UID]  # allocate + create (grounded at birth)
+tl new <PREFIX> [--uid U] [--type T] [--ground UID] [--key UUID4]  # allocate + create (grounded at birth); a held key creates nothing
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
 tl delete <UID> --reason "…"                  # propose a deletion: a tombstone a human ratifies (never erased)
 tl restore <UID>                              # decline a proposed deletion
@@ -212,6 +212,18 @@ reports every finding in `namespace:UID` vocabulary. `query`, `dump`, `docs`,
 `trace`, `subgraph`, `new`, `link`, `unlink`, `ratify`, `migrate` and `context`
 answer over the union too; everything else reads your graph alone, and a project
 that declares no sources is untouched by any of this.
+
+A graph whose own items follow a shared model — every deck in a series, every plan
+written to one standard — can take its schema from a source instead of copying it.
+Mark that one source `schema = true`; the project is then checked by the source's
+item types, attributes, link types, statuses, transitions, roles and grounding,
+plus whatever it adds itself. It may add an attribute, a type, a status or a link
+type, but never redefine one the source declares: a widened enum or a changed
+attribute is refused when the configuration is read, naming both values.
+`tl migrate` removes a copy the source makes redundant, `tl context`,
+`tl schema show` and `tl dump` mark what was inherited, and `tl schema` refuses
+to change it. Every operation then reads that one source; the rest wait for the
+union.
 
 Sources are read-only, fetched once into a per-user cache and reached again only
 when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A

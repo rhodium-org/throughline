@@ -102,10 +102,15 @@ withdrawals:                 # one record per signature withdrawn (SR-0197, SR-0
 reviewed: "sha256:77ab…04"   # own fingerprint at last review (SR-0038)
 created: 2026-07-08
 modified: 2026-07-08
+key: 3f0c1b7e-8a52-4c4e-9d61-2b7f5a9c0e14   # optional: the key it was created under (SR-0280)
 ```
 
 Rules:
 - Unknown keys are preserved verbatim on rewrite (NFR-0009).
+- `key` is optional: a UUID version 4 in canonical form that `tl new --key` or a
+  change set's `new` operation recorded, so the same creation asked for again
+  finds this item instead of making a second (SR-0280). It is outside the
+  fingerprint and the attributes, and two live items holding one key is an error.
 - `ratifications` and `withdrawals` are written only by `tl ratify`, `tl withdraw`
   and `tl migrate` (SR-0170, SR-0263). A signature may also carry `supersedes`
   (the identity a correction replaced, SR-0196), `backfilled` (a stamp bound by
