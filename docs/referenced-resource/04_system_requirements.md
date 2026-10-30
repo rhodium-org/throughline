@@ -308,11 +308,12 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0022 -->
 **SR-0022 — Built-in core fields** — `system_requirement`, status `ratified`
 
-> The Tool shall reserve these top-level fields on every item: `uid`, `type`, `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`, `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified` and `deleted`.
+> The Tool shall reserve these top-level fields on every item: `uid`, `type`, `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`, `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`, `deleted` and `key`.
 
 *Rationale:* The list named twelve fields while the Tool reserves fifteen, so a reader who built against it got an item shape that rejects valid files (issue #39). rationale, attrs and deleted were missing, and order/level named a field the Tool calls order; doc 06 §4 already showed all fifteen. The requirement says reserve rather than reserve and manage, because no command sets order, created or modified: the Tool reads them and writes them back unchanged.
 
 *Implements:* UR-0011
+*Relates:* SR-0280
 
 **priority**: must · **verification**: test
 

@@ -4,8 +4,8 @@ status: ratified
 title: Built-in core fields
 text: 'The Tool shall reserve these top-level fields on every item: `uid`, `type`,
   `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`,
-  `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified` and
-  `deleted`.'
+  `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`, `deleted`
+  and `key`.'
 rationale: 'The list named twelve fields while the Tool reserves fifteen, so a reader
   who built against it got an item shape that rejects valid files (issue #39). rationale,
   attrs and deleted were missing, and order/level named a field the Tool calls order;
@@ -16,21 +16,22 @@ normative: true
 links:
 - target: UR-0011
   type: implements
+- target: SR-0280
+  type: relates
 attrs:
   priority: must
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  at: '2026-10-25T12:21:32Z'
-  fingerprint: sha256:857a3a8c4c29bb52a9649b605cdedb15d0d24a22d976e38875683f6b1ddede15
+  at: '2026-10-30T19:13:28Z'
+  fingerprint: sha256:131747457bab28342a19606037d21155d64ad6784f0e040fb6ee39773e1ceea4
   content:
     type: system_requirement
     text: 'The Tool shall reserve these top-level fields on every item: `uid`, `type`,
       `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`,
-      `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`
-      and `deleted`.'
+      `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`,
+      `deleted` and `key`.'
     normative: true
     derived: false
     attrs:
       priority: must
-  revision: 78001cc875f289b3783468687a43c89cb169be7e

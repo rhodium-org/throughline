@@ -21,6 +21,9 @@ optional ``subdir`` (SR-0008) naming a directory, relative to the fetched
 repository root (or the local ``path``), that holds the throughline project — so a
 graph living under a subpath of a larger repo is a first-class source.
 
+At most one entry may say ``schema = true`` (SR-0275): that source is the project's
+*schema source*, whose schema the project takes and adds to (``inherit.py``).
+
 Composing a source composes what it composes (SR-0045): every source a declared
 source itself declares reaches the union, to any depth, under the label its
 declaring source gave it. The consumer's one lever over those labels is an
@@ -36,6 +39,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from pathlib import PurePosixPath
 
 # The namespace grammar mirrors the core's namespace-qualified reference token
@@ -62,6 +66,8 @@ class Source:
     # gave one of its own sources — to the namespace the consumer binds it under.
     # Empty when every label is kept as its declaring source gave it.
     alias: dict[str, str] = field(default_factory=dict)
+    # SR-0275: this source is the project's schema source.
+    schema: bool = False
 
     @property
     def is_remote(self) -> bool:
@@ -186,6 +192,15 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
         ref = entry.get("ref")
         subdir = _parse_subdir(ns, entry.get("subdir"))
         alias = _parse_alias(ns, entry.get("alias"))
+        schema = entry.get("schema", False)
+        if not isinstance(schema, bool):
+            raise SourceError(
+                f"source '{ns}' has a 'schema' that is not true or false (SR-0275)")
+        if schema and any(s.schema for s in out):
+            other = next(s.namespace for s in out if s.schema)
+            raise SourceError(
+                f"sources '{other}' and '{ns}' are both marked schema = true — a "
+                "project takes its schema from one source at most (SR-0275)")
 
         has_path = bool(path)
         has_url = bool(url)
@@ -204,7 +219,8 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
                 raise SourceError(
                     f"source '{ns}' declares a 'ref' with a local 'path' — a ref "
                     "only pins a 'url' (SR-0006)")
-            src = Source(namespace=ns, path=path, subdir=subdir, alias=alias)
+            src = Source(namespace=ns, path=path, subdir=subdir, alias=alias,
+                         schema=schema)
         else:
             if not isinstance(url, str):
                 raise SourceError(f"source '{ns}' has a non-string 'url'")
@@ -212,8 +228,26 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
                 raise SourceError(
                     f"source '{ns}' has a 'url' but no 'ref' — pin the edition with "
                     "a git tag, branch, or commit (SR-0006)")
-            src = Source(namespace=ns, url=url, ref=ref, subdir=subdir, alias=alias)
+            src = Source(namespace=ns, url=url, ref=ref, subdir=subdir, alias=alias,
+                         schema=schema)
 
         seen.add(ns)
         out.append(src)
     return out
+
+
+def declares_schema_source(config: dict) -> bool:
+    """Whether any ``[[sources]]`` entry in ``config`` says ``schema`` at all. A
+    project that never does is read exactly as before: its sources are not even
+    parsed until something composes them (SR-0275)."""
+    raw = config.get("sources")
+    return isinstance(raw, list) and any(
+        isinstance(e, dict) and "schema" in e for e in raw)
+
+
+def schema_source(config: dict, *, withdrawn: str = "refuse") -> Source | None:
+    """The source ``config`` marks ``schema = true``, or ``None`` (SR-0275)."""
+    if not declares_schema_source(config):
+        return None
+    return next((s for s in parse_sources(SimpleNamespace(config=config),
+                                          withdrawn=withdrawn) if s.schema), None)

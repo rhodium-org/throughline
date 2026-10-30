@@ -1,0 +1,36 @@
+uid: SR-0279
+type: system_requirement
+status: ratified
+title: The reported schema says where each declaration came from
+text: The brief, the schema listing and the dump shall show the project's schema
+  as formed from its schema source and mark each inherited declaration with that
+  source's namespace. A schema operation asked to change an inherited declaration
+  shall refuse before writing anything, naming the source to change instead.
+rationale: 'An agent reading the brief must see the rules it is checked by, wherever
+  they are declared, and must not edit a follower''s configuration to change a rule
+  the standard owns. Follows SR-0181''s refusal to change another graph''s schema.
+  Who pays: nobody new.'
+normative: true
+links:
+- target: UR-0041
+  type: implements
+- target: SR-0181
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:45:00Z'
+  fingerprint: sha256:09c6c4f4fa50ecc2c89e17e0ad1da7380c6ce972aa45bc7dd752bc368b841c86
+  content:
+    type: system_requirement
+    text: The brief, the schema listing and the dump shall show the project's schema
+      as formed from its schema source and mark each inherited declaration with that
+      source's namespace. A schema operation asked to change an inherited declaration
+      shall refuse before writing anything, naming the source to change instead.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

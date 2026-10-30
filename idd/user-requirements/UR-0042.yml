@@ -1,0 +1,41 @@
+uid: UR-0042
+type: user_requirement
+status: ratified
+title: A change set applied twice changes the graph once
+text: As someone applying a change set an assistant drafted, I want to apply it again,
+  by mistake or because I cannot tell whether it ran, and have the graph changed
+  only once, so that I never have to find and delete duplicate items by hand.
+rationale: 'A change set is all or nothing (SR-0252), so a half-applied set cannot
+  happen, but a whole set applied twice can: each new operation creates a second
+  item under the next UID, and the duplicates pass check because each is well formed
+  and grounded. On 25 October 2026 a day-old one-shot script re-ran inside a later
+  tool result on this workstation; a change set left beside a graph will be replayed
+  the same way. Rejected: matching an existing item by its title, which breaks the
+  first time an item is retitled, and the brief tells authors to rewrite. Rejected:
+  an exist-ok flag on tl link alone, which leaves new, the operation that duplicates,
+  unguarded. Who pays: an assistant writing a change set adds one key to each new
+  operation.'
+normative: true
+links:
+- target: BN-0007
+  type: derives_from
+- target: UR-0038
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:44Z'
+  fingerprint: sha256:fdbab3fc90033d0cba1c63c2c10552b9a7a183d270374221e2a8a03aeb1f8370
+  content:
+    type: user_requirement
+    text: As someone applying a change set an assistant drafted, I want to apply
+      it again, by mistake or because I cannot tell whether it ran, and have the
+      graph changed only once, so that I never have to find and delete duplicate
+      items by hand.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

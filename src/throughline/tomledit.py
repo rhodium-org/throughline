@@ -340,6 +340,10 @@ class TomlDocument:
             raise TomlEditError(f"no table [{_render_path(_as_path(name))}] "
                                 "in this document")
         start, end = span
+        if end < len(self._lines):
+            # The comment directly above the next header introduces that table,
+            # not this one, so it stays with it.
+            end = self._comment_start(end, start)
         del self._lines[self._comment_start(start, -1):end]
 
     def array_table_spans(self,

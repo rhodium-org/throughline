@@ -52,6 +52,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253 |
 | UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265 |
 | UR-0040 | A ratification record says when it was given | SR-0256 |
+| UR-0041 | A graph that follows a standard declares only what it adds | SR-0275, SR-0276, SR-0277, SR-0278, SR-0279 |
+| UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
 <!-- tl:end -->
 
 ## Coverage check

@@ -27,6 +27,14 @@ file the set had touched. Everything the set creates or changes is recorded
 with a machine origin, so it enters the lifecycle as proposed and a person still
 decides (SR-0092).
 
+A set may be applied more than once and changes the graph once (SR-0280, SR-0281).
+A ``new`` operation may carry a ``key``, a UUID version 4 recorded on the item it
+creates; where a live item already carries that key the operation creates nothing,
+and its label names that item. Any other operation whose result the graph already
+holds — a link already there, an unlink of one that is not, an amend whose fields
+already read so, a delete of a tombstone — is skipped and reported as already
+applied, whatever revision it quotes, since nothing would be written.
+
 These are the functions `tl apply` is made of; the command line is one caller
 (SR-0224, SR-0225). A program embedding the Tool reaches them by name.
 """
@@ -40,7 +48,8 @@ from typing import Callable
 
 from .fingerprint import fingerprint, revision
 from .grounding import GroundingError, set_status
-from .items import amend_item, delete_item, item_type_for, new_item, parse_attrs
+from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
+                    new_item, parse_attrs)
 from .links import GroundingView, LinkError, add_link, remove_link
 from .model import Item, Link
 from .schema import SchemaError
@@ -74,7 +83,7 @@ _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _KEYS: dict[str, tuple[set[str], set[str]]] = {
     "new": ({"register"},
             {"op", "register", "type", "title", "text", "rationale", "attrs",
-             "links", "label"}),
+             "links", "label", "key"}),
     "amend": ({"uid"},
               {"op", "uid", "title", "text", "rationale", "attrs",
                "unset"}),
@@ -117,7 +126,10 @@ The five operations:
  "links": [{{"target": "UR-0003", "type": "implements"}}], "label": "sr1"}}
   creates an item in the register with that prefix. "type" may be left out
   where the register declares one. "links" ground the item: a non-root item
-  must reach a root through them. "label" is optional.
+  must reach a root through them. "label" is optional. "key" is optional and
+  recommended: a fresh UUID version 4 (e.g. "3f0c1b7e-8a52-4c4e-9d61-2b7f5a9c0e14")
+  recorded on the item. Where an item already carries it, nothing is created
+  and the label names that item, so the set can be applied again safely.
 
 {{"op": "amend", "uid": "SR-0012", "revision": "sha256:...", "title": "...",
  "text": "...", "rationale": "...", "attrs": {{"priority": "must"}},
@@ -137,6 +149,10 @@ The five operations:
 {{"op": "delete", "uid": "SR-0012", "revision": "sha256:...",
  "reason": "..."}}
   tombstones the item: its file stays and its UID is never reused.
+
+Applying a set twice changes the graph once: an operation whose result the
+graph already holds (a link already there, an amend whose fields already read
+so, a delete of a deleted item) is skipped and reported as already applied.
 
 Rules: no other keys; a "uid", "target" or "label" is written exactly; every
 value is a string except "attrs" (strings, numbers or booleans), "stamp"
@@ -229,6 +245,7 @@ def parse_change_set(text: str) -> list[dict]:
     problems: list[str] = []
     ops: list[dict] = []
     labels: set[str] = set()
+    keys: set[str] = set()
     for i, op in enumerate(data, start=1):
         where = f"#{i}"
         if not isinstance(op, dict):
@@ -255,7 +272,7 @@ def parse_change_set(text: str) -> list[dict]:
         if missing:
             problems.append(f"{name}: missing {', '.join(missing)}")
         for key in ("uid", "target", "register", "type", "title", "text",
-                    "rationale", "label", "reason", quoted):
+                    "rationale", "label", "reason", "key", quoted):
             if key in op and not isinstance(op[key], str):
                 problems.append(f"{name}: \"{key}\" must be a string")
         if "stamp" in op and not isinstance(op["stamp"], bool):
@@ -289,6 +306,14 @@ def parse_change_set(text: str) -> list[dict]:
             elif isinstance(op[quoted], str) and not _DIGEST_RE.match(op[quoted]):
                 problems.append(f"{name} {uid}: \"{quoted}\" must be the sha256:… "
                                 "value the export gave")
+        if kind == "new" and isinstance(op.get("key"), str):
+            try:
+                check_key(op["key"])
+            except ValueError as e:
+                problems.append(f"{name}: {e}")
+            if op["key"] in keys:
+                problems.append(f"{name}: key {op['key']} is already used in this set")
+            keys.add(op["key"])
         if kind == "new":
             label = op.get("label")
             if isinstance(label, str):
@@ -361,24 +386,82 @@ def apply_change_set(project, operations: list[dict], *,
     ai = _ai_origin(schema)
     problems: list[str] = []
     labels: dict[str, str] = {}
+    # The operations whose result the graph already holds (SR-0280, SR-0281), by
+    # position: each is skipped rather than carried out.
+    held: set[int] = set()
+    # Held operations whose quoted version is no longer the item's: the mark of a
+    # set that has run before, as (position, name, uid, key, quoted, now).
+    stale: list[tuple[int, str, str, str, str, str]] = []
 
-    def existing(name: str, op: dict) -> Item | None:
+    def version(op: dict, item: Item) -> tuple[str, str]:
+        key = "revision" if "revision" in op else "fingerprint"
+        return key, (revision(item) if key == "revision" else fingerprint(item, schema))
+
+    def resolved(ref: str) -> str | None:
+        """A reference as it stands before anything is written: a UID, or the
+        existing item a label names, or ``None`` for an item still to be made."""
+        if not _is_label(ref):
+            return ref
+        return labels.get(ref[1:]) or None
+
+    def existing(name: str, op: dict, i: int) -> Item | None:
         uid = op["uid"]
         if _is_label(uid):
+            # A label naming an item the set found under its key is that item; an
+            # operation on it is judged as on any item created in the set, with
+            # no revision, but may already be held.
+            known = resolved(uid)
+            item = project.get(known) if known else None
+            if item is not None and holds(op, item):
+                held.add(i)
             return None
         item = project.get(uid)
         if item is None:
             problems.append(f"{name}: {uid} does not exist")
+        elif op["op"] == "delete" and item.is_deleted:
+            held.add(i)
         elif item.is_deleted:
             problems.append(f"{name}: {uid} is deleted — a tombstone is permanent")
+        elif holds(op, item):
+            held.add(i)
+            key, now = version(op, item)
+            if op.get(key) != now:
+                stale.append((i, name, uid, key, op.get(key), now))
         else:
-            key = "revision" if "revision" in op else "fingerprint"
-            now = revision(item) if key == "revision" else fingerprint(item, schema)
+            key, now = version(op, item)
             if op.get(key) != now:
                 problems.append(f"{name}: {uid} changed since the export — the set "
                                 f"quotes {key} {op.get(key)} but the item now "
                                 f"carries {now}")
         return item
+
+    def holds(op: dict, item: Item) -> bool:
+        """Whether ``item`` already shows what ``op`` would make it (SR-0281)."""
+        kind = op["op"]
+        if kind == "delete":
+            return item.is_deleted
+        if kind in ("link", "unlink"):
+            target = resolved(op["target"])
+            if target is None:
+                return False
+            there = any(l.target == target and (op.get("type") is None
+                                                or l.type == op["type"])
+                        for l in item.links)
+            return there if kind == "link" else not there
+        if kind == "amend":
+            for field_name in ("title", "text", "rationale"):
+                if field_name in op and getattr(item, field_name) != op[field_name]:
+                    return False
+            try:
+                pairs = [f"{k}={v}" for k, v in (op.get("attrs") or {}).items()]
+                wanted = parse_attrs(schema, item.type, pairs, command="apply",
+                                     declared_only=True)
+            except (SchemaError, ValueError):
+                return False
+            if any(item.attrs.get(k) != v for k, v in wanted.items()):
+                return False
+            return not any(k in item.attrs for k in op.get("unset", ()))
+        return False
 
     def target_known(name: str, ref: str) -> None:
         if _is_label(ref) or find(ref) is not None:
@@ -398,15 +481,32 @@ def apply_change_set(project, operations: list[dict], *,
                 if schema.link_types and l["type"] not in schema.link_types:
                     problems.append(f"{name}: '{l['type']}' is not a link type this "
                                     f"project declares ({', '.join(sorted(schema.link_types))})")
+            found = keyed_item(project, op["key"]) if "key" in op else None
+            if found is not None:
+                held.add(i)
             if "label" in op:
-                labels[op["label"]] = ""
+                labels[op["label"]] = found.uid if found is not None else ""
             continue
-        existing(name, op)
+        existing(name, op, i)
         if kind in ("link", "unlink"):
             target_known(name, op["target"])
         if kind == "link" and schema.link_types and op["type"] not in schema.link_types:
             problems.append(f"{name}: '{op['type']}' is not a link type this project "
                             f"declares ({', '.join(sorted(schema.link_types))})")
+    # A set that has run before can be applied again only where every item it
+    # creates carries a key (SR-0280): an unkeyed new operation cannot tell that
+    # it already ran, and would make its item a second time.
+    unkeyed = [f"#{i}" for i, op in enumerate(operations, start=1)
+               if op["op"] == "new" and "key" not in op]
+    if stale and unkeyed:
+        for _i, name, uid, key, quoted, now in stale:
+            problems.append(
+                f"{name}: {uid} changed since the export — the set quotes {key} "
+                f"{quoted} but the item now carries {now}. It already shows what "
+                f"this operation asks, so the set looks applied, and its new "
+                f"operation(s) {', '.join(unkeyed)} carry no key: applying it again "
+                "would create them twice. Nothing was changed. A set whose new "
+                "operations carry keys can be applied again safely (SR-0280)")
     if problems:
         raise ChangeSetError(problems)
 
@@ -445,6 +545,31 @@ def apply_change_set(project, operations: list[dict], *,
     try:
         for i, op in enumerate(operations, start=1):
             kind = op["op"]
+            if i in held:
+                # Held when judged, and skipped if held still. Where an earlier
+                # operation in this set undid it, it is carried out as asked if the
+                # version it quoted was current, and otherwise refused: a set
+                # applied twice cannot tell that apart from a conflict.
+                if kind == "new":
+                    found = keyed_item(project, op["key"])
+                    if found is None:
+                        raise ValueError(f"key {op['key']} no longer names an item")
+                    if "label" in op:
+                        labels[op["label"]] = found.uid
+                    result.operations.append(OperationResult(
+                        i, kind, found.uid, "already applied", f"key {op['key']}"))
+                    continue
+                item = project.get(resolve(op["uid"]))
+                if item is not None and holds(op, item):
+                    result.operations.append(OperationResult(
+                        i, kind, item.uid, "already applied", ""))
+                    continue
+                if i in {pos for pos, *_ in stale}:
+                    raise ValueError("an earlier operation in this set undid what "
+                                     "this one found already done, and the "
+                                     "revision it quotes is not the item's")
+                # An earlier operation in the set undid it, and the version it
+                # quoted was current: it is carried out as asked.
             if kind == "new":
                 prefix = op["register"]
                 item_type = item_type_for(project, prefix, op.get("type"))
@@ -452,7 +577,7 @@ def apply_change_set(project, operations: list[dict], *,
                 attrs = parse_attrs(schema, item_type, pairs, command="apply")
                 item = new_item(project, prefix, item_type=item_type,
                                 title=op.get("title", ""), text=op.get("text", ""),
-                                origin=ai, attrs=attrs)
+                                origin=ai, attrs=attrs, key=op.get("key"))
                 if op.get("rationale"):
                     item.rationale = op["rationale"]
                 for l in op.get("links", []):

@@ -10,9 +10,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .schema import Schema
 from .signatures import RATIFICATIONS, WITHDRAWALS, lift_legacy
+
+if TYPE_CHECKING:
+    from .inherit import Inheritance
 
 # Built-in core fields every item reserves (SR-0022). Anything else a project
 # defines lives under ``attrs`` (SR-0020). The ratification record is two of them
@@ -21,7 +25,7 @@ CORE_FIELDS = [
     "uid", "type", "status", "title", "text", "rationale",
     "normative", "derived", "order", "links", "attrs",
     RATIFICATIONS, WITHDRAWALS, "reviewed",
-    "created", "modified", "deleted",
+    "created", "modified", "deleted", "key",
 ]
 
 
@@ -68,6 +72,11 @@ class Item:
     created: str | None = None
     modified: str | None = None
     deleted: dict | None = None       # {date, reason, fingerprint} tombstone (SR-0012)
+    # The key the item was created under (SR-0280): a UUID version 4 that a change
+    # set or `tl new` gave it, so the same creation asked for again finds this item
+    # instead of making a second. Outside the fingerprint and the attributes: it
+    # says how the item came to be, not what it binds.
+    key: str | None = None
     extra: dict = field(default_factory=dict)
     _path: Path | None = None
     _register_prefix: str | None = None
@@ -166,6 +175,7 @@ class Item:
             withdrawals=withdrawn + withdrawals,
             reviewed=d.get("reviewed"), created=d.get("created"),
             modified=d.get("modified"), deleted=d.get("deleted"),
+            key=d.get("key"),
             extra={k: v for k, v in d.items() if k not in CORE_FIELDS},
             _path=path,
         )
@@ -202,6 +212,8 @@ class Item:
             d["modified"] = self.modified
         if self.deleted is not None:
             d["deleted"] = self.deleted
+        if self.key is not None:
+            d["key"] = self.key
         d.update(self.extra)
         return d
 
@@ -277,6 +289,14 @@ class Project:
     # read them as part of this one (SR-0239). Hidden directories are not searched,
     # so none is recorded from inside one.
     nested_projects: list[Path] = field(default_factory=list)
+    # The configuration the schema is built from when the project takes its schema
+    # from a source (SR-0275): the source's schema with this project's own
+    # declarations added. ``None`` when there is no schema source, and the schema
+    # is built from ``config`` alone. ``config`` stays exactly what this project's
+    # own file says, since that is the only file anything here may write.
+    schema_config: dict | None = None
+    # Where each inherited declaration came from (SR-0279); ``None`` likewise.
+    inheritance: "Inheritance | None" = None
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -285,8 +305,22 @@ class Project:
         first access and cached; every component reads its helpers instead of
         the raw config dict."""
         if self._schema is None:
-            self._schema = Schema.from_config(self.config)
+            self._schema = Schema.from_config(self.formed_config)
         return self._schema
+
+    @property
+    def formed_config(self) -> dict:
+        """The configuration the schema is built from: ``schema_config`` where the
+        project takes its schema from a source (SR-0275), else ``config``. Read the
+        schema's tables from here, never from ``config``, which holds only what
+        this project's own file declares."""
+        return self.config if self.schema_config is None else self.schema_config
+
+    def shell(self, path: Path | None = None) -> "Project":
+        """An empty project with this one's configuration and schema, for a view
+        or a union built over it."""
+        return Project(path=self.path if path is None else path, config=self.config,
+                       schema_config=self.schema_config, inheritance=self.inheritance)
 
     def items(self):
         for reg in self.registers.values():

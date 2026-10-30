@@ -106,7 +106,27 @@ def _ctx_working(schema) -> str:
     )
 
 
-def _ctx_types(schema) -> str:
+def _from(inheritance, *path: str) -> str:
+    """The mark on a declaration the schema source makes (SR-0279)."""
+    if inheritance is None or not inheritance.owns(*path):
+        return ""
+    return f" (from `{inheritance.namespace}`)"
+
+
+def _ctx_schema_source(inheritance) -> str:
+    """Where this project's schema comes from (SR-0279), so an agent changes a rule
+    where it is declared rather than in a file that only inherits it."""
+    ns = inheritance.namespace
+    return (
+        "## Schema source\n\n"
+        f"This project takes its schema from the source `{ns}` (SR-0275) and declares "
+        "only what it adds. Below, every declaration marked _(from "
+        f"`{ns}`)_ is the source's: it cannot be redefined here (SR-0276), and "
+        "`tl schema` refuses to change it (SR-0279). Change it in the source's own "
+        "graph and move this project's pin to take it.")
+
+
+def _ctx_types(schema, inheritance=None) -> str:
     out = ["## Item types and their attributes\n"]
     if not schema.types:
         out.append("_This project declares no per-type attribute schema; item "
@@ -120,6 +140,8 @@ def _ctx_types(schema) -> str:
             tags.append("delivery-root")
         if not schema.is_normative(tname):
             tags.append("non-normative")
+        if _from(inheritance, "type", tname):
+            tags.append(f"from `{inheritance.namespace}`")
         tag = f" _({', '.join(tags)})_" if tags else ""
         out.append(f"### `{tname}`{tag}\n")
         specs = schema.attrs_for(tname)
@@ -132,19 +154,30 @@ def _ctx_types(schema) -> str:
             s = specs[aname]
             vals = ", ".join(f"`{v}`" for v in s.values) if s.values else "—"
             out.append(
-                f"| `{aname}` | {s.kind or 'free'} | "
+                f"| `{aname}`{_from(inheritance, 'attr', tname, aname)} | "
+                f"{s.kind or 'free'} | "
                 f"{'yes' if s.required else 'no'} | "
                 f"{'yes' if s.normative else 'no'} | {vals} |")
         out.append("")
     return "\n".join(out).rstrip()
 
 
-def _ctx_links(schema) -> str:
+def _inherited_of(inheritance, kind: str, names) -> str:
+    """The members of ``names`` the schema source declares, as a brief line."""
+    if inheritance is None:
+        return ""
+    theirs = [n for n in names if inheritance.owns(kind, n)]
+    return (f"  Of these, {_fmt_set(theirs)} come from the schema source "
+            f"`{inheritance.namespace}`." if theirs else "")
+
+
+def _ctx_links(schema, inheritance=None) -> str:
     out = ["## Links\n"]
     if schema.link_types is None:
         out.append("- **Link vocabulary:** unconstrained (any link type is legal).")
     else:
-        out.append(f"- **Link vocabulary:** {_fmt_set(schema.link_types)}.")
+        out.append(f"- **Link vocabulary:** {_fmt_set(schema.link_types)}."
+                   + _inherited_of(inheritance, "link", schema.link_types))
     out.append(f"- **Grounding links** (these carry justification): "
                f"{_fmt_set(schema.ground_link_types)}.")
     if schema.link_rules:
@@ -164,18 +197,20 @@ def _ctx_links(schema) -> str:
     return "\n".join(out)
 
 
-def _ctx_status(schema) -> str:
+def _ctx_status(schema, inheritance=None) -> str:
     out = ["## Status and lifecycle\n"]
     if schema.statuses is None:
         out.append("- **Statuses:** unconstrained (any status string is legal).")
     else:
-        out.append(f"- **Statuses:** {_fmt_set(schema.statuses)}.")
+        out.append(f"- **Statuses:** {_fmt_set(schema.statuses)}."
+                   + _inherited_of(inheritance, "status", schema.statuses))
     if schema.transitions:
         out.append("- **Allowed transitions** (a status may only move along "
                    "these edges; staying put is always allowed):\n")
         for frm in sorted(schema.transitions):
             tos = schema.transitions[frm]
-            out.append(f"  - `{frm}` → {_fmt_set(tos)}")
+            out.append(f"  - `{frm}` → {_fmt_set(tos)}"
+                       + _from(inheritance, "transition", frm))
         out.append("\n  Render this as a diagram with "
                    "`tl diagram transitions`.")
     else:
@@ -471,13 +506,15 @@ def context_markdown(project) -> str:
         "configuration changes, regenerate it with `tl context`. "
         "If a capability isn't described here, it isn't in the tool."
     )
+    inheritance = project.inheritance
     sections = [
         header,
         _ctx_idd(schema),
         _ctx_working(schema),
-        _ctx_types(schema),
-        _ctx_links(schema),
-        _ctx_status(schema),
+        *([_ctx_schema_source(inheritance)] if inheritance is not None else []),
+        _ctx_types(schema, inheritance),
+        _ctx_links(schema, inheritance),
+        _ctx_status(schema, inheritance),
         _ctx_grounding(schema),
         _ctx_coverage(schema),
         _CTX_FORMAT,

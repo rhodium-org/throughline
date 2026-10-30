@@ -478,7 +478,7 @@ def local_view(view: Project, consumer: Project) -> Project:
     SR-0040). Ownership is read from the consumer's own register set rather than
     inferred from the shape of a displayed name, so narrowing cannot disagree with
     what was loaded."""
-    out = Project(path=view.path, config=view.config)
+    out = view.shell()
     for prefix, reg in view.registers.items():
         if prefix in consumer.registers:
             out.registers[prefix] = reg

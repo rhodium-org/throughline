@@ -9,6 +9,7 @@ keys survive read-modify-write (NFR-0009).
 """
 from __future__ import annotations
 
+import contextvars
 import copy
 import io
 import os
@@ -796,6 +797,8 @@ class RepairResult(NamedTuple):
     unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
+    # The declarations removed because the schema source makes them (SR-0277).
+    inherited: tuple[str, ...] = ()
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -941,6 +944,112 @@ def _remove_withdrawn_source_keys(root: Path) -> tuple[str, ...]:
     return tuple(removed)
 
 
+def _schema_source_config_declared(root: Path) -> bool:
+    """Whether the project's own configuration marks a schema source (SR-0275)."""
+    from .sources import schema_source
+    config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
+    return schema_source(config) is not None
+
+
+def _remove_inherited_declarations(root: Path) -> tuple[str, ...]:
+    """Remove from the project's own configuration each declaration its schema
+    source already makes identically (SR-0277), and return what was removed, in
+    words. A declaration that differs is left for its keeper, and the comments on
+    what remains stay where they are; a table left with nothing in it goes, with
+    the comment that introduced it.
+
+    Removing an identical declaration cannot change the schema the project is
+    formed with: the source supplies it either way. A declaration written in a form
+    this editor cannot follow is left as it is, which is harmless for the same
+    reason. Idempotent: a removed declaration is not there to be removed again."""
+    from .inherit import declarations, describe, redundant
+
+    cfg_file = root / CONFIG_NAME
+    text = cfg_file.read_text(encoding="utf-8")
+    config = tomllib.loads(text)
+    found = _schema_source_config(root, config)
+    if found is None:
+        return ()
+    _namespace, theirs = found
+    gone = redundant(theirs, config)
+    if not gone:
+        return ()
+    doc = TomlDocument(text)
+    mine = declarations(config)
+    removed: list[str] = []
+
+    def attempt(path, edit) -> None:
+        try:
+            edit()
+        except TomlEditError:
+            return
+        removed.append(describe(path))
+
+    def shrink(table, key, kind, paths) -> None:
+        # Members of a list the source holds go; the project's own stay, in place.
+        here = (config.get(table) or {}).get(key) or []
+        drop = [m for m in here if (*kind, m) in paths]
+        if not drop:
+            return
+        rest = [m for m in here if m not in drop]
+        try:
+            if rest:
+                doc.set_key(table, key, rest)
+            else:
+                doc.remove_key(table, key)
+        except TomlEditError:
+            return
+        removed.extend(describe((*kind, m)) for m in drop)
+
+    paths = set(gone)
+    for tname in (config.get("types") or {}):
+        if ("type", tname) not in paths:
+            continue
+        own = [p for p in mine if p[0] in ("type", "type_key", "attr") and p[1] == tname]
+        if all(p in paths for p in own):
+            attempt(("type", tname), lambda t=tname: doc.remove_table(("types", t)))
+            continue
+        for p in own:
+            if p in paths and p[0] == "attr":
+                attempt(p, lambda p=p: doc.remove_key(("types", p[1]), ("attrs", p[2])))
+            elif p in paths and p[0] == "type_key":
+                attempt(p, lambda p=p: doc.remove_key(("types", p[1]), p[2]))
+    shrink("links", "types", ("link",), paths)
+    shrink("status", "values", ("status",), paths)
+    for path in gone:
+        kind = path[0]
+        if kind == "link_rule":
+            attempt(path, lambda p=path: doc.remove_key("link_rules", p[1]))
+        elif kind == "status_role":
+            attempt(path, lambda p=path: doc.remove_key(("status", "roles"), p[1]))
+        elif kind == "transition":
+            attempt(path, lambda p=path: doc.remove_key("transitions", p[1]))
+        elif kind == "ratify_role":
+            attempt(path, lambda p=path: doc.remove_key(("ratify", "roles"), p[1]))
+        elif kind == "grounding" and len(path) == 2:
+            attempt(path, lambda p=path: doc.remove_key("grounding", p[1]))
+    for key, value in (config.get("grounding") or {}).items():
+        if isinstance(value, list):
+            shrink("grounding", key, ("grounding", key), paths)
+
+    # A table the removals emptied goes too, innermost first.
+    for table in (*((("types", t),) for t in (config.get("types") or {})),
+                  (("status", "roles"),), (("ratify", "roles"),), (("link_rules",),),
+                  (("links",),), (("status",),), (("transitions",),),
+                  (("ratify",),), (("grounding",),), (("types",),)):
+        name = table[0]
+        now = tomllib.loads(doc.text())
+        body = now
+        for part in name:
+            body = body.get(part) if isinstance(body, dict) else None
+        if body == {} and doc.has_table(name):
+            doc.remove_table(name)
+
+    if removed:
+        cfg_file.write_text(doc.text(), encoding="utf-8")
+    return tuple(removed)
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -968,10 +1077,18 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # The project's own sources first (SR-0274): a withdrawn key there stops the
     # sources being read at all, so nothing after this could compose over them.
     withdrawn = _remove_withdrawn_source_keys(root)
+    # The copy of the schema source's declarations next (SR-0277), while the
+    # configuration still reads; and for a project that takes its schema from a
+    # source, the three configuration backfills are the source's business, not
+    # this file's: whatever the schema lacks, the source must declare.
+    inherited = _remove_inherited_declarations(root)
     lifted = _lift_ratification_records(root)
-    roles = _backfill_status_roles(root)
-    routes = _backfill_suspect_routes(root)
-    vocabularies = _backfill_vocabularies(root)
+    if inherited or _schema_source_config_declared(root):
+        roles, routes, vocabularies = None, {}, {}
+    else:
+        roles = _backfill_status_roles(root)
+        routes = _backfill_suspect_routes(root)
+        vocabularies = _backfill_vocabularies(root)
     # Signed content before the flags (SR-0218): a record whose item reproduces its
     # stamp now is proved by the item as it stands, and the flag repair below may
     # change a fingerprint input and leave only history to prove it from.
@@ -993,7 +1110,8 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers, lifted, tombstones, unattributed, withdrawn)
+                        registers, lifted, tombstones, unattributed, withdrawn,
+                        inherited)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -1082,6 +1200,8 @@ class MigrationResult(NamedTuple):
     unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
+    # The declarations removed because the schema source makes them (SR-0277).
+    inherited: tuple[str, ...] = ()
 
 
 def migrate_project(path: str | Path, *,
@@ -1135,7 +1255,7 @@ def migrate_project(path: str | Path, *,
                            result.normative, result.restamped, result.stale,
                            result.contents, result.unprovable, result.registers,
                            result.lifted, result.tombstones, result.unattributed,
-                           result.withdrawn)
+                           result.withdrawn, result.inherited)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -1190,14 +1310,78 @@ def _backfill_status_roles_config(config: dict) -> dict:
 _CONFIG_UPGRADES: dict[int, Callable[[dict], dict]] = {2: _backfill_status_roles_config}
 
 
-def _build_project(root: Path, config: dict, manifest_names: set[str]) -> Project:
+# The project roots whose schema sources are being resolved, outermost first, so a
+# chain of schema sources that comes back on itself is refused rather than followed
+# for ever (SR-0275).
+_FORMING: contextvars.ContextVar[tuple[Path, ...]] = contextvars.ContextVar(
+    "throughline_schema_forming", default=())
+
+
+def schema_inheritance(root: Path, config: dict, *, base: Path | None = None):
+    """The schema configuration ``config`` takes from its schema source, and the
+    record of what it inherited, or ``(None, None)`` when it names none (SR-0275).
+
+    Every operation that loads the project reads its schema, so every one of them
+    resolves the schema source, and that source only (SR-0278); the rest of the
+    union waits for an operation whose answer depends on it. The source is
+    resolved through the resolver registry like any other, so the cache-only
+    switch and a host's own resolver apply here unchanged, and a source that names
+    a schema source of its own is formed the same way first. ``base`` is the
+    directory a ``path`` source is relative to, when ``root`` is a copy of the
+    project rather than the project itself."""
+    from .inherit import InheritanceError, merge
+
+    found = _schema_source_config(root, config, base=base)
+    if found is None:
+        return None, None
+    namespace, theirs = found
+    try:
+        return merge(theirs, config, namespace)
+    except InheritanceError as e:
+        raise ProjectError(f"invalid configuration in {root / CONFIG_NAME}: {e}") from e
+
+
+def _schema_source_config(root: Path, config: dict, *,
+                          base: Path | None = None) -> tuple[str, dict] | None:
+    """The namespace of ``config``'s schema source and that source's schema
+    configuration as formed, or ``None`` when it names none (SR-0275)."""
+    from .sources import SourceError, schema_source
+
+    cfg_file = root / CONFIG_NAME
+    try:
+        source = schema_source(config)
+    except SourceError as e:
+        raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
+    if source is None:
+        return None
+    here = root.resolve()
+    forming = _FORMING.get()
+    if here in forming:
+        chain = " -> ".join(str(p) for p in (*forming[forming.index(here):], here))
+        raise ProjectError(f"schema sources form a cycle (SR-0275): {chain}")
+    from .resolvers import ResolverError, resolver_for
+    token = _FORMING.set((*forming, here))
+    try:
+        resolved = resolver_for(source).resolve(source, base or root)
+    except ResolverError as e:
+        raise ProjectError(
+            f"cannot read the schema source '{source.namespace}' of {cfg_file}: {e}") from e
+    finally:
+        _FORMING.reset(token)
+    return source.namespace, resolved.project.formed_config
+
+
+def _build_project(root: Path, config: dict, manifest_names: set[str], *,
+                   base: Path | None = None) -> Project:
     """Assemble a :class:`Project` from an already-parsed config and the register
     manifests found in the project's own tree under ``root`` (SR-0239).
     ``manifest_names`` bounds which filenames count as a register manifest — one name
     for the strict current-major load, every known name for the tolerant read of a
     possibly-older source."""
     cfg_file = root / CONFIG_NAME
-    project = Project(path=root, config=config)
+    schema_config, inheritance = schema_inheritance(root, config, base=base)
+    project = Project(path=root, config=config, schema_config=schema_config,
+                      inheritance=inheritance)
     try:
         project.schema  # build + validate now, so bad config fails fast (SR-0082)
     except SchemaError as e:
@@ -1240,14 +1424,17 @@ def _build_project(root: Path, config: dict, manifest_names: set[str]) -> Projec
     return project
 
 
-def load_project(path: str | Path) -> Project:
+def load_project(path: str | Path, *, base: str | Path | None = None) -> Project:
+    """Load the project at ``path``. ``base``, where given, is the directory its
+    ``path`` sources are relative to, for a copy of a project read away from it."""
     root = Path(path)
     cfg_file = root / CONFIG_NAME
     if not cfg_file.exists():
         raise ProjectError(f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
     _gate_format_version(config, root)
-    return _build_project(root, config, {MANIFEST_NAME})
+    return _build_project(root, config, {MANIFEST_NAME},
+                          base=Path(base) if base is not None else None)
 
 
 def read_project(path: str | Path) -> Project:
@@ -1549,7 +1736,7 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
             except TypeError:  # pragma: no cover - older stdlib without filter=
                 tar.extractall(tmp)
         try:
-            project = load_project(tmp)
+            project = load_project(tmp, base=root)
         except ProjectError as e:
             raise ProjectError(f"no throughline project at {ref} — {e}") from e
         # load_project reads every item into memory here, so the project is

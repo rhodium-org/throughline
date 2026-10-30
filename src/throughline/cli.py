@@ -83,10 +83,12 @@ from .items import (
     Amendment,
     amend_item,
     birth_item,
+    check_key,
     coerce_attr,
     delete_item,
     restore_item,
     item_type_for,
+    keyed_item,
     new_item,
     newly_suspect,
     parse_attrs,
@@ -286,6 +288,7 @@ def cmd_migrate(args) -> int:
                  or result.cached or result.normative or result.contents
                  or result.unprovable or result.registers or result.lifted
                  or result.tombstones or result.unattributed or result.withdrawn
+                 or result.inherited
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -388,6 +391,13 @@ def cmd_migrate(args) -> int:
               "declared source that carries it:")
         for ns in result.withdrawn:
             print(f"  {ns}")
+    # The copy of the schema source's declarations removed (SR-0277), each named
+    # so the keeper can read the diff against this list.
+    if result.inherited:
+        print(f"removed {len(result.inherited)} declaration(s) the schema source "
+              "already makes identically:")
+        for what in result.inherited:
+            print(f"  {what}")
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")
@@ -453,6 +463,24 @@ def cmd_schema(args) -> int:
     return OK
 
 
+def cmd_schema_show(args) -> int:
+    """List the project's schema as formed, each declaration marked with the schema
+    source it came from (SR-0279)."""
+    try:
+        project = schema_ops.load(Path(args.path))
+    except schema_ops.SchemaOpError as e:
+        return _err(str(e))
+    rows = schema_ops.show(project)
+    if args.format == "json":
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+        return OK
+    for row in rows:
+        value = "" if row["value"] is True else f" = {json.dumps(row['value'])}"
+        origin = f"  (from {row['from']})" if row["from"] else ""
+        print(f"{row['declaration']}{value}{origin}")
+    return OK
+
+
 def cmd_schema_attr_remove(args) -> int:
     """Withdraw an attribute from an item type, naming the items that still carry
     it, and with --unset remove it from them as well (SR-0207).
@@ -466,7 +494,7 @@ def cmd_schema_attr_remove(args) -> int:
         project = schema_ops.load(root)
         declared = project.schema.attr(args.itype, args.name) is not None
         carriers = schema_ops.attr_carriers(project, args.itype, args.name)
-        type_declared = args.itype in (project.config.get("types") or {})
+        type_declared = args.itype in (project.formed_config.get("types") or {})
         if declared:
             change = schema_ops.attr_remove(project, args.itype, args.name)
         elif args.unset and carriers and type_declared:
@@ -689,11 +717,23 @@ def cmd_new(args) -> int:
     # honoured, including for a root type (SR-0091).
     default_type = args.ground_type or "derives_from"
     named = list(args.ground or ())
+    # The same creation asked for again (SR-0280): the item made under this key
+    # is named, and nothing is created or written.
+    key = getattr(args, "key", None)
+    if key is not None:
+        try:
+            check_key(key)
+        except ValueError as e:
+            return _err(str(e))
+        held = keyed_item(project, key)
+        if held is not None:
+            print(f"exists {held.uid} -> {held._path} (key {key}) — nothing created")
+            return OK
     try:
         item = new_item(project, args.prefix, item_type=item_type, uid=args.uid,
                         title=args.title or "", text=args.text or "",
                         status=args.status, origin=args.origin, attrs=attrs,
-                        ground=named, ground_type=default_type)
+                        ground=named, ground_type=default_type, key=key)
     except (ProjectError, GroundingError, SchemaError, UidError) as e:
         return _err(str(e))
     grounds = [(target, default_type) for target in named]

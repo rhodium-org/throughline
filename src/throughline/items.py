@@ -438,10 +438,32 @@ def item_type_for(project, prefix: str, explicit: str | None) -> str:
         "it where the register's items agree on one)")
 
 
+def check_key(key: str) -> str:
+    """``key`` if it is a key as SR-0280 defines one — a UUID version 4 in its
+    canonical form, lowercase and hyphenated — else a ``ValueError`` saying why.
+    One spelling only, so the same key can never be written two ways and missed."""
+    import uuid
+    try:
+        parsed = uuid.UUID(key)
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError(f"key {key!r} is not a UUID (SR-0280)") from None
+    if parsed.version != 4 or str(parsed) != key:
+        raise ValueError(f"key {key!r} is not a UUID version 4 in canonical form, "
+                         f"e.g. {uuid.uuid4()} (SR-0280)")
+    return key
+
+
+def keyed_item(project, key: str) -> Item | None:
+    """The live item in ``project`` created under ``key``, or ``None`` (SR-0280)."""
+    return next((it for it in project.items()
+                 if it.key == key and not it.is_deleted), None)
+
+
 def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
              title: str = "", text: str = "", status: str | None = None,
              origin: str | None = None, attrs: dict | None = None,
-             ground=(), ground_type: str = "derives_from") -> Item:
+             ground=(), ground_type: str = "derives_from",
+             key: str | None = None) -> Item:
     """Create an item in ``prefix``'s register, grounded at birth (SR-0005, SR-0073).
 
     The UID is allocated from the register unless one is given, in which case it
@@ -452,7 +474,16 @@ def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
 
     The item is returned for the caller to write, along with its register, which is
     where `tl new` also asks a human for a parent when none was named.
+
+    ``key`` is recorded on the item (SR-0280). A caller asked to create under a key
+    a live item already carries creates nothing and names that item instead
+    (:func:`keyed_item`); reaching here with one is refused, never a second item.
     """
+    if key is not None:
+        check_key(key)
+        held = keyed_item(project, key)
+        if held is not None:
+            raise GroundingError(f"{held.uid} already carries key {key}")
     reg = project.registers.get(prefix)
     if reg is None:
         raise GroundingError(
@@ -471,5 +502,6 @@ def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
         if project.get(target) is None:
             raise GroundingError(f"grounding target {target} does not exist")
         item.links.append(Link(target=target, type=ground_type))
+    item.key = key
     reg.items[uid] = item
     return item
