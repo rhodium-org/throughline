@@ -1,0 +1,27 @@
+uid: SR-0280
+type: system_requirement
+status: proposed
+title: A new operation may carry a key, recorded on the item it creates
+text: 'A new operation in a change set, and tl new, may carry a key: a UUID version
+  4 string. The Tool shall record it on the item it creates, outside the item''s
+  fingerprint and attributes, and report it in the dump. Where a live item in the
+  project already carries that key, the operation shall create nothing and name that
+  item; any later operation in the same set naming the operation''s label shall act
+  on that item. A key on more than one item is an error check reports.'
+rationale: 'Outside the attributes, so that no project has to declare it on every
+  type before an assistant can use it, and outside the fingerprint, because a key
+  says how an item was created, not what it binds, and must never make a signature
+  stale. UUID version 4, so that an assistant can mint one without reading the graph
+  and two assistants never collide. Rejected: a key per change set, which cannot
+  tell which of its items already exist when a set has been edited between runs.
+  Who pays: nobody until a change set uses it.'
+normative: true
+links:
+- target: UR-0042
+  type: implements
+- target: SR-0252
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

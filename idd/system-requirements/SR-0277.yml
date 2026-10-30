@@ -1,0 +1,23 @@
+uid: SR-0277
+type: system_requirement
+status: proposed
+title: Migration removes declarations the schema source already makes
+text: Migration shall remove from a project's configuration each declaration its
+  schema source makes identically, keep the comments on what remains, and name each
+  one removed. A declaration that differs is left in place for its keeper. A second
+  run removes nothing.
+rationale: 'Without it every follower deletes its copy by hand, table by table, which
+  is the hand edit of the configuration SR-0181 exists to end. A repair of the kind
+  SR-0137 describes: one correct rewrite, idempotent. Rejected: removing differing
+  declarations as well, which would silently change what a follower''s items are
+  checked against. Who pays: nobody; a keeper reviews the diff migration leaves.'
+normative: true
+links:
+- target: UR-0041
+  type: implements
+- target: SR-0137
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

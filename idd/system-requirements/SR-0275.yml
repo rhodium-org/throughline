@@ -1,0 +1,25 @@
+uid: SR-0275
+type: system_requirement
+status: proposed
+title: A project may take its schema from one declared source
+text: 'A [[sources]] entry may be marked as the project''s schema source, and at
+  most one may be. The project''s schema shall then be that source''s schema, resolved
+  the same way to any depth, with the project''s own declarations added: item types
+  and attributes, link types and endpoint rules, statuses, transitions and status
+  roles, ratify roles, and grounding configuration. A cycle of schema sources is
+  refused when the configuration is read. A project with no schema source is unchanged
+  in every answer.'
+rationale: 'One source, not several: two standards declaring the same type would
+  need a merge rule, and no graph in the estate needs two. Rejected: taking the schema
+  of every source, since most sources are composed for their items, not their model.
+  Who pays: nobody until a project opts in.'
+normative: true
+links:
+- target: UR-0041
+  type: implements
+- target: SR-0230
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

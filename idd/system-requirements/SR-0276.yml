@@ -1,0 +1,24 @@
+uid: SR-0276
+type: system_requirement
+status: proposed
+title: A project may add to its schema source but never redefine it
+text: Where a project's own declaration names something its schema source already
+  declares, the Tool shall accept it only when it is identical, and otherwise refuse
+  the configuration when it is read, naming the declaration, the source and both
+  values. Redefining includes changing an attribute's kind, whether it is required
+  or normative, adding or removing an enum value, removing a status or transition,
+  and changing a status role.
+rationale: 'The application that reads a standard''s followers reads them by the
+  standard''s model; a follower that widens an enum emits values that application
+  was never told about, which is the drift this removes. Rejected: allowing a follower
+  its own enum values, which would keep one series'' screenshot and video layouts
+  local but leave the standard no longer a guarantee. Who pays: a keeper who needs
+  a new value proposes it in the standard and moves the pin.'
+normative: true
+links:
+- target: UR-0041
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

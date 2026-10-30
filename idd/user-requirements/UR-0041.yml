@@ -1,0 +1,29 @@
+uid: UR-0041
+type: user_requirement
+status: proposed
+title: A graph that follows a standard declares only what it adds
+text: As the keeper of a graph that follows a standard published as another graph,
+  I want my graph to take its schema from that standard and declare only what it
+  adds, so that a change to the standard reaches my graph when I move one pin, never
+  by my copying it into my configuration.
+rationale: 'Found 30 October 2026: six presentation series compose presentation-manager''s
+  briefing rules, and each holds its own hand copy of the same item types. They have
+  drifted to five different schemas across two format versions, and one copy records
+  an attribute missing from the copy this graph began from. Composition borrows items
+  but checks the union under the consumer''s own schema (SR-0230), so a graph whose
+  own items must follow a shared model has to copy that model. Rejected: a template
+  a graph is initialised from, which is the same copy made once; a script that syncs
+  the tables, which is a second reader of the schema outside the Tool. Who pays:
+  the maintainer carries the code; a keeper names their schema source and runs migrate
+  once; a standard''s keeper now changes every follower that moves its pin, so a
+  breaking change to a standard is a breaking release of it.'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0037
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

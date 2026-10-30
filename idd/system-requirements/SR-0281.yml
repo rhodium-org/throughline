@@ -1,0 +1,24 @@
+uid: SR-0281
+type: system_requirement
+status: proposed
+title: Apply skips an operation whose result the graph already holds
+text: tl apply shall skip, and report as already applied, a link the item already
+  has, an unlink of a link it does not have, an amend whose fields already hold the
+  given values, and a delete of an item already tombstoned, even where the quoted
+  revision is no longer the item's current one. A set every operation of which is
+  skipped shall write nothing.
+rationale: 'After a set has been applied once, every revision it quotes is stale,
+  so without this a second apply is refused, which is safe but tells the person the
+  set failed when it had succeeded. Skipping is safe only because nothing is written:
+  an operation that would change anything still needs a current revision. Who pays:
+  nobody.'
+normative: true
+links:
+- target: UR-0042
+  type: implements
+- target: SR-0252
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
