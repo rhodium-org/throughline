@@ -237,6 +237,19 @@ with `tl docs --check` (SR-0094).
 *Ratified by:* Henry Grech-Cini
 <!-- tl:end -->
 
+<!-- tl:item NFR-0023 -->
+**NFR-0023 — The README and the IDD guide name the other uses of Intent-Driven Development** — `nfr`, status `ratified`
+
+> The README and the guide to how IDD differs from BDD shall each say that the phrase Intent-Driven Development and the acronym IDD are used elsewhere for other practices, and shall name the closest of those uses, say which axis it sits on, and link it. Where the spelled-out phrase is not itself the subject, those two documents shall say IDD, throughline or tl instead.
+
+*Rationale:* Neither the phrase nor the acronym is unique to throughline: both were in public use before its first release, mostly for intent as what an AI agent builds from. The closest in subject is ECC's intent-driven-development skill, because it also works on requirements; it uses the phrase for acceptance-criteria capture, which is BDD's what axis, so a reader who meets it there first can take throughline for an acceptance-criteria tool. Naming the closest use and its axis corrects that without claiming the name or asserting any lineage. Scoped to the two documents where a newcomer meets the term; the generated agent brief defines it inline for its reader. Rejected: renaming the practice (the name runs through the tool, its agent brief and its docs) and listing every use (it rots, and the axis is what tells them apart). The cost falls on documentation authors, who keep the note current.
+
+*Implements:* UR-0020
+*Refines:* NFR-0021
+
+**priority**: should · **verification**: inspection · **origin**: ai · **ratified_by**: Henry Grech-Cini · **ratified_fingerprint**: sha256:e52cd48644f45d7aaa3e537793eca453a9b128da8de2110f885d6dd7768aa44b
+<!-- tl:end -->
+
 ## Quality of implementation
 
 <!-- tl:item NFR-0017 -->
