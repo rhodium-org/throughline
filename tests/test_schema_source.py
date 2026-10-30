@@ -192,9 +192,8 @@ def test_migrate_removes_the_copy_keeps_what_is_added_and_runs_once(tmp_path, ca
     # What the project adds, and the comments on it, stay.
     assert "attrs.tone" in text and "# a local attribute" in text
     assert "# the slide type, copied" in text
-    # The comment introducing the coverage rule belongs to it, not to the
-    # emptied table before it.
-    assert "# Coverage: every live requirement" in text and "[[rules.coverage]]" in text
+    # The template's coverage rule is the standard's too, so its copy goes (SR-0275).
+    assert "[[rules.coverage]]" not in text
     after = load_project(fol).schema
     assert after == before
     assert _cli(["-C", fol, "check"]) == 0
@@ -314,3 +313,47 @@ def test_an_attribute_is_added_to_an_inherited_type_in_the_project_itself(tmp_pa
     project = load_project(fol)
     assert project.config["types"]["slide"]["attrs"] == {"caption": {"type": "string"}}
     assert project.schema.attr("slide", "layout") is not None
+
+
+# --------------------------------------------------------------------------- #
+# SR-0275 — a schema source passes on its coverage rules
+# --------------------------------------------------------------------------- #
+
+RULE = ('\n[[rules.coverage]]\nfilter = "type == \'slide\'"\n'
+        'needs = "incoming:derives_from"\nseverity = "error"\n')
+# A rule the follower adds itself, which the standard does not state.
+OWN = ("\n# the follower's own rule"
+       '\n[[rules.coverage]]\nfilter = "type == \'nfr\'"\n'
+       'needs = "incoming:verifies"\n')
+
+
+def test_a_follower_is_held_to_its_sources_coverage_rules(tmp_path):
+    _standard(tmp_path, extra=STANDARD + RULE)
+    fol = _follower(tmp_path, OWN)
+    filters = [r["filter"] for r in load_project(fol).schema.coverage]
+    # The source's rules first, the follower's own after them, and the template
+    # rule both carry stated once.
+    assert filters == ["type == 'requirement' and status != 'deleted'",
+                       "type == 'slide'", "type == 'nfr'"]
+
+
+def test_the_brief_marks_an_inherited_rule_and_numbers_only_the_followers(tmp_path, capsys):
+    _standard(tmp_path, extra=STANDARD + RULE)
+    fol = _follower(tmp_path, OWN)
+    capsys.readouterr()
+    assert _cli(["-C", fol, "context"]) == 0
+    out = capsys.readouterr().out
+    section = out.split("## Coverage rules", 1)[1].split("\n## ", 1)[0]
+    assert "- items where `type == 'slide'`" in section and "(from `std`)" in section
+    assert "1. items where `type == 'nfr'`" in section and "2. " not in section
+
+
+def test_migrate_removes_a_copied_coverage_rule_and_keeps_the_followers(tmp_path):
+    _standard(tmp_path, extra=STANDARD + RULE)
+    fol = _follower(tmp_path, RULE + OWN)
+    before = load_project(fol).schema.coverage
+    migrate_project(fol)
+    text = (fol / "throughline.toml").read_text(encoding="utf-8")
+    assert "type == 'slide'" not in text and "status != 'deleted'" not in text
+    assert text.count("[[rules.coverage]]") == 1 and "# the follower's own rule" in text
+    assert load_project(fol).schema.coverage == before

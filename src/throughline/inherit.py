@@ -10,9 +10,9 @@ formed, and the project's own.
 
 What is inherited is exactly what SR-0275 names: item types and their attributes,
 link types and endpoint rules, statuses, transitions and status roles, ratify
-roles, and the grounding configuration. Everything else in ``throughline.toml`` —
-the project's name, its rules, docs, sources, the rest of ``[ratify]`` — stays the
-project's own.
+roles, the grounding configuration, and coverage rules. Everything else in
+``throughline.toml`` — the project's name, the severities of its named rules, docs,
+sources, the rest of ``[ratify]`` — stays the project's own.
 
 A project may add to what it inherits but never redefine it (SR-0276). A name the
 source declares may be declared again only with the identical value; a list the
@@ -24,6 +24,7 @@ enum's values belong to whoever declares the attribute.
 from __future__ import annotations
 
 import copy
+import json
 from dataclasses import dataclass
 
 from .schema import _GROUNDING_DEFAULTS, SchemaError
@@ -31,7 +32,8 @@ from .schema import _GROUNDING_DEFAULTS, SchemaError
 # A declaration's address: ("type", name), ("attr", type, name), ("link", name),
 # ("link_rule", type), ("status", value), ("status_role", role),
 # ("transition", from), ("ratify_role", role), ("grounding", key, member) for a
-# list member and ("grounding", key) for any other value.
+# list member, ("grounding", key) for any other value, and ("coverage", rule) for a
+# coverage rule, the rule written as canonical JSON since a rule has no name.
 Path = tuple[str, ...]
 
 
@@ -73,6 +75,10 @@ def describe(path: Path) -> str:
         return f"transitions from '{path[1]}'"
     if kind == "ratify_role":
         return f"ratify role '{path[1]}'"
+    if kind == "coverage":
+        rule = json.loads(path[1])
+        return (f"coverage rule: items where {rule.get('filter', '*')} need "
+                f"{rule.get('needs', '?')}")
     if len(path) == 3:
         return f"grounding {path[1]} entry '{path[2]}'"
     return f"grounding {path[1]}"
@@ -109,7 +115,15 @@ def declarations(config: dict) -> dict[Path, object]:
                 out[("grounding", key, member)] = True
         else:
             out[("grounding", key)] = value
+    for rule in ((config.get("rules") or {}).get("coverage") or []):
+        out[coverage_path(rule)] = True
     return out
+
+
+def coverage_path(rule: dict) -> Path:
+    """A coverage rule's address: the rule itself, written so that two rules saying
+    the same thing have the same address."""
+    return ("coverage", json.dumps(rule, sort_keys=True, ensure_ascii=False))
 
 
 def _refuse(path: Path, namespace: str, here, there) -> InheritanceError:
@@ -192,6 +206,17 @@ def merge(source: dict, local: dict, namespace: str) -> tuple[dict, Inheritance]
                     **copy.deepcopy((local.get("ratify") or {}).get("roles") or {})}
     if ratify_roles:
         out["ratify"] = {**(local.get("ratify") or {}), "roles": ratify_roles}
+
+    # Coverage rules: the source's, then the project's own that the source does not
+    # already state. A follower cannot drop one it inherits; it has no way to say so.
+    theirs_rules = list(((source.get("rules") or {}).get("coverage")) or [])
+    mine_rules = list(((local.get("rules") or {}).get("coverage")) or [])
+    if theirs_rules:
+        seen = {coverage_path(r) for r in theirs_rules}
+        rules_out = dict(local.get("rules") or {})
+        rules_out["coverage"] = copy.deepcopy(theirs_rules) + [
+            copy.deepcopy(r) for r in mine_rules if coverage_path(r) not in seen]
+        out["rules"] = rules_out
 
     grounding = dict(local.get("grounding") or {})
     for key in set(source.get("grounding") or {}) | set(grounding):

@@ -16,6 +16,7 @@ at load time so the tool fails fast instead of silently mis-behaving.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import re
 from dataclasses import dataclass, field
 
@@ -56,6 +57,40 @@ _ATTR_KINDS = {"enum", "string", "text", "int", "float", "bool", "date"}
 # attribute kinds above); the mapped *values* are the project's choice.
 _STATUS_ROLE_KEYS = frozenset(
     {"initial", "proposed", "ratified", "invalidated", "suspect", "tombstone"})
+
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def kind_accepts(kind: str | None, value) -> bool:
+    """Whether ``value`` is of the declared attribute ``kind`` (SR-0282). A kind of
+    ``None`` is free-form and accepts anything; an enum's membership is its own
+    check (SR-0023). Defined once, for check and for every write."""
+    if kind is None or kind == "enum":
+        return True
+    if kind == "int":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if kind == "float":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if kind == "bool":
+        return isinstance(value, bool)
+    if kind in ("string", "text"):
+        return isinstance(value, str)
+    if kind == "date":
+        # YAML reads an unquoted 2026-10-30 as a date; a quoted one is text in the
+        # same shape. A timestamp is not a calendar date.
+        if isinstance(value, _dt.datetime):
+            return False
+        if isinstance(value, _dt.date):
+            return True
+        if isinstance(value, str) and _ISO_DATE.match(value):
+            try:
+                _dt.date.fromisoformat(value)
+            except ValueError:
+                return False
+            return True
+        return False
+    return True
 
 
 class SchemaError(ValueError):

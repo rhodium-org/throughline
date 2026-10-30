@@ -16,6 +16,7 @@ from .fingerprint import content_fingerprint, deletion_fingerprint, fingerprint
 from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
 from .graph import Index
+from .schema import kind_accepts
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
     CONTENT, STAMP, W_BY, W_OF, W_REASON, describe, relevant, retired, signatures,
@@ -49,7 +50,7 @@ _DEFAULT_SEVERITY = {
     "key-collision": ERROR,
     "uid-filename": ERROR,
     "malformed-link": ERROR,
-    "schema": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
+    "schema": ERROR, "attribute-kind": ERROR, "unknown-key": ERROR, "empty-graph": ERROR,
     "empty-registers": WARNING,
     "dangling-link": ERROR, "deleted-link-target": ERROR, "refines-cycle": ERROR,
     "namespace-unresolved": ERROR,
@@ -293,6 +294,12 @@ def validate(project, strict: bool = False,
             if present and spec.kind == "enum" and item.attrs[name] not in spec.values:
                 add("schema", item.uid, f,
                     f"attribute '{name}'='{item.attrs[name]}' not in {list(spec.values)}")
+            # The declared kind (SR-0282): a rule of its own, so a project upgrading
+            # with values written under the old leniency can lower it alone.
+            if present and not kind_accepts(spec.kind, item.attrs[name]):
+                add("attribute-kind", item.uid, f,
+                    f"attribute '{name}' is declared {spec.kind} but holds "
+                    f"{item.attrs[name]!r}")
 
         # Link integrity (SR-0032) + type legality (SR-0030).
         for link in item.links:

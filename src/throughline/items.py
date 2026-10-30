@@ -28,6 +28,7 @@ from .grounding import (
 )
 from .graph import Index
 from .model import Item, Link
+from .schema import kind_accepts
 from .signatures import OUTRIGHT, STAMP, latest, names, retired, signatures
 from .uid import UidError, next_uid, parse_uid
 
@@ -61,6 +62,9 @@ def coerce_attr(schema, item_type: str, key: str, raw: str):
             if low in ("false", "0", "no"):
                 return False
             raise ValueError(f"expected a boolean, got '{raw}'")
+        if kind == "date" and not kind_accepts("date", raw):
+            # A date was taken as any text until SR-0282.
+            raise ValueError(f"expected a calendar date written YYYY-MM-DD, got '{raw}'")
     except ValueError as e:
         raise UidError(f"--attr {key}={raw}: {e}") from e
     return raw

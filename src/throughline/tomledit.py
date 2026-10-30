@@ -388,6 +388,9 @@ class TomlDocument:
                 f"this document has {len(spans)} [[{written}]] block(s); "
                 f"there is no #{index + 1}")
         start, end = spans[index]
+        if end < len(self._lines):
+            # The comment directly above the next header introduces that block.
+            end = self._comment_start(end, start)
         floor = spans[index - 1][1] - 1 if index else -1
         at = self._comment_start(start, floor)
         self._lines[at:end] = comment_block(because) if because else []
