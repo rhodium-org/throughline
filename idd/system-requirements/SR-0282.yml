@@ -1,0 +1,34 @@
+uid: SR-0282
+type: system_requirement
+status: proposed
+title: A declared attribute holds a value of its declared kind
+text: Where the project's schema declares an attribute's kind, tl check shall report,
+  under the rule attribute-kind, every item whose value is not of that kind, naming
+  the item, the attribute, the value and the kind; and every operation that writes
+  an attribute shall refuse such a value before writing. An int is a whole number
+  and never true or false; a float is any number; a bool is true or false; a date
+  is a calendar date written YYYY-MM-DD; a string or text is text; an enum is one
+  of its values. An attribute the schema does not declare, or declares with no kind,
+  is free-form.
+rationale: 'SR-0023 asks check to validate items against the schema, and SR-0142
+  asks creation to refuse a value the schema cannot accept, but only required attributes
+  and enum membership were ever checked, and a date was checked nowhere: a source''s
+  checked day reading next tuesday passed every gate (30 October 2026). A standard
+  a series inherits its schema from declares kinds it could not then guarantee. A
+  rule of its own, attribute-kind, so a project upgrading with values it wrote under
+  the old leniency can lower it while it corrects them, without silencing the other
+  schema findings. Rejected: coercing a wrong value in place, which would guess at
+  what was meant. Who pays: a project whose items hold a value of the wrong kind
+  meets new errors on upgrade, each naming the value to correct.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0023
+  type: refines
+- target: SR-0142
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
