@@ -1,6 +1,6 @@
 uid: SR-0278
 type: system_requirement
-status: proposed
+status: ratified
 title: Every operation that reads the schema resolves the schema source
 text: In a project with a schema source, every operation that reads the project's
   schema shall resolve that source and its own schema sources, and no other source
@@ -24,3 +24,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:59Z'
+  fingerprint: sha256:d1ceae1fbe01e7b16de3fed2bedbab83cb2c98c8dcc5b8f515c6061bed61402e
+  content:
+    type: system_requirement
+    text: In a project with a schema source, every operation that reads the project's
+      schema shall resolve that source and its own schema sources, and no other source
+      unless its answer depends on the union. In cache-only mode a cold cache for
+      a schema source is a refusal.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,6 +1,6 @@
 uid: UR-0041
 type: user_requirement
-status: proposed
+status: ratified
 title: A graph that follows a standard declares only what it adds
 text: As the keeper of a graph that follows a standard published as another graph,
   I want my graph to take its schema from that standard and declare only what it
@@ -27,3 +27,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:19Z'
+  fingerprint: sha256:9a710dae4212b3a11aa7793570c1017c0a4b38fd1f6e9f8a40f18b0af368f65f
+  content:
+    type: user_requirement
+    text: As the keeper of a graph that follows a standard published as another graph,
+      I want my graph to take its schema from that standard and declare only what
+      it adds, so that a change to the standard reaches my graph when I move one
+      pin, never by my copying it into my configuration.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

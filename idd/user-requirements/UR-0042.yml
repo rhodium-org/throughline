@@ -1,6 +1,6 @@
 uid: UR-0042
 type: user_requirement
-status: proposed
+status: ratified
 title: A change set applied twice changes the graph once
 text: As someone applying a change set an assistant drafted, I want to apply it again,
   by mistake or because I cannot tell whether it ran, and have the graph changed
@@ -25,3 +25,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:44Z'
+  fingerprint: sha256:fdbab3fc90033d0cba1c63c2c10552b9a7a183d270374221e2a8a03aeb1f8370
+  content:
+    type: user_requirement
+    text: As someone applying a change set an assistant drafted, I want to apply
+      it again, by mistake or because I cannot tell whether it ran, and have the
+      graph changed only once, so that I never have to find and delete duplicate
+      items by hand.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

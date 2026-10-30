@@ -1,6 +1,6 @@
 uid: SR-0281
 type: system_requirement
-status: proposed
+status: ratified
 title: Apply skips an operation whose result the graph already holds
 text: tl apply shall skip, and report as already applied, a link the item already
   has, an unlink of a link it does not have, an amend whose fields already hold the
@@ -22,3 +22,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:45:01Z'
+  fingerprint: sha256:5130a0084640a2587882ab5898d69c85f7ff386e579227b85c73e7f3868e4b08
+  content:
+    type: system_requirement
+    text: tl apply shall skip, and report as already applied, a link the item already
+      has, an unlink of a link it does not have, an amend whose fields already hold
+      the given values, and a delete of an item already tombstoned, even where the
+      quoted revision is no longer the item's current one. A set every operation
+      of which is skipped shall write nothing.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,6 +1,6 @@
 uid: SR-0276
 type: system_requirement
-status: proposed
+status: ratified
 title: A project may add to its schema source but never redefine it
 text: Where a project's own declaration names something its schema source already
   declares, the Tool shall accept it only when it is identical, and otherwise refuse
@@ -22,3 +22,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:52Z'
+  fingerprint: sha256:0960c1d8e94fd2259666ad48738599207afe5e9ca176dabd862b9f3b875d3665
+  content:
+    type: system_requirement
+    text: Where a project's own declaration names something its schema source already
+      declares, the Tool shall accept it only when it is identical, and otherwise
+      refuse the configuration when it is read, naming the declaration, the source
+      and both values. Redefining includes changing an attribute's kind, whether
+      it is required or normative, adding or removing an enum value, removing a status
+      or transition, and changing a status role.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

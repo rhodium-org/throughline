@@ -1,6 +1,6 @@
 uid: SR-0280
 type: system_requirement
-status: proposed
+status: ratified
 title: A new operation may carry a key, recorded on the item it creates
 text: 'A new operation in a change set, and tl new, may carry a key: a UUID version
   4 string. The Tool shall record it on the item it creates, outside the item''s
@@ -25,3 +25,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:45:00Z'
+  fingerprint: sha256:97585f88e8fbdc0721f7259a1dd61f68c63823c4a803be49300ab53f10595764
+  content:
+    type: system_requirement
+    text: 'A new operation in a change set, and tl new, may carry a key: a UUID version
+      4 string. The Tool shall record it on the item it creates, outside the item''s
+      fingerprint and attributes, and report it in the dump. Where a live item in
+      the project already carries that key, the operation shall create nothing and
+      name that item; any later operation in the same set naming the operation''s
+      label shall act on that item. A key on more than one item is an error check
+      reports.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

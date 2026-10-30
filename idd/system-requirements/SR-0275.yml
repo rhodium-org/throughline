@@ -1,6 +1,6 @@
 uid: SR-0275
 type: system_requirement
-status: proposed
+status: ratified
 title: A project may take its schema from one declared source
 text: 'A [[sources]] entry may be marked as the project''s schema source, and at
   most one may be. The project''s schema shall then be that source''s schema, resolved
@@ -23,3 +23,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-10-30T18:44:48Z'
+  fingerprint: sha256:a8c9357103bd7e59d7ee4c9a9dc5c989eb5a3a0009e12da7005993dadcf83826
+  content:
+    type: system_requirement
+    text: 'A [[sources]] entry may be marked as the project''s schema source, and
+      at most one may be. The project''s schema shall then be that source''s schema,
+      resolved the same way to any depth, with the project''s own declarations added:
+      item types and attributes, link types and endpoint rules, statuses, transitions
+      and status roles, ratify roles, and grounding configuration. A cycle of schema
+      sources is refused when the configuration is read. A project with no schema
+      source is unchanged in every answer.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
