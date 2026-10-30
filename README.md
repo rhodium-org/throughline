@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-247
+248
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 39
@@ -178,6 +178,7 @@ Upward and downward coverage are independent and both matter:
 | `uid-filename` | an item's file is not named `<UID>.yml` (git could not see it collide) |
 | `tombstone-deleted` | a retired UID's tombstone was erased (bad merge / stray `git rm`) |
 | `schema` | missing required attr or out-of-enum value |
+| `attribute-kind` | an attribute's value is not of its declared kind (`int`, `float`, `bool`, `date` as YYYY-MM-DD, `string`, `text`) |
 | `suspect-link` | target changed since the link was last confirmed |
 | `unreviewed` | item content changed since last review |
 | `unratified` | AI-origin item still `proposed` |
@@ -216,7 +217,7 @@ that declares no sources is untouched by any of this.
 A graph whose own items follow a shared model — every deck in a series, every plan
 written to one standard — can take its schema from a source instead of copying it.
 Mark that one source `schema = true`; the project is then checked by the source's
-item types, attributes, link types, statuses, transitions, roles and grounding,
+item types, attributes, link types, statuses, transitions, roles, grounding and coverage rules,
 plus whatever it adds itself. It may add an attribute, a type, a status or a link
 type, but never redefine one the source declares: a widened enum or a changed
 attribute is refused when the configuration is read, naming both values.

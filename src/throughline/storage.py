@@ -962,7 +962,7 @@ def _remove_inherited_declarations(root: Path) -> tuple[str, ...]:
     formed with: the source supplies it either way. A declaration written in a form
     this editor cannot follow is left as it is, which is harmless for the same
     reason. Idempotent: a removed declaration is not there to be removed again."""
-    from .inherit import declarations, describe, redundant
+    from .inherit import coverage_path, declarations, describe, redundant
 
     cfg_file = root / CONFIG_NAME
     text = cfg_file.read_text(encoding="utf-8")
@@ -1031,6 +1031,13 @@ def _remove_inherited_declarations(root: Path) -> tuple[str, ...]:
     for key, value in (config.get("grounding") or {}).items():
         if isinstance(value, list):
             shrink("grounding", key, ("grounding", key), paths)
+    # Coverage rules are blocks of their own, taken last to first so each
+    # removal leaves the positions before it where they were.
+    mine_rules = list(((config.get("rules") or {}).get("coverage")) or [])
+    for index in reversed(range(len(mine_rules))):
+        path = coverage_path(mine_rules[index])
+        if path in paths:
+            attempt(path, lambda i=index: doc.remove_array_table(("rules", "coverage"), i))
 
     # A table the removals emptied goes too, innermost first.
     for table in (*((("types", t),) for t in (config.get("types") or {})),

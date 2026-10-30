@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .inherit import coverage_path
 from .graph import Index
 from .signatures import retired
 from .parser import build_parser
@@ -282,7 +283,7 @@ def _describe_requirement(req) -> str:
     return " and ".join(parts)
 
 
-def _ctx_coverage(schema) -> str:
+def _ctx_coverage(schema, inheritance=None) -> str:
     out = ["## Coverage rules\n"]
     if not schema.coverage:
         out.append("_No `[[rules.coverage]]` declared._")
@@ -290,12 +291,19 @@ def _ctx_coverage(schema) -> str:
     out.append("Each rule requires the matching items to have the stated link "
                "(unmet → a `coverage` finding). They are numbered as "
                "`tl schema rule remove` counts them:\n")
-    for pos, rule in enumerate(schema.coverage, start=1):
+    pos = 0
+    for rule in schema.coverage:
         filt = rule.get("filter", "*")
         needs = rule.get("needs", "?")
         sev = rule.get("severity", WARNING)
-        out.append(f"{pos}. items where `{filt}` **need** `{needs}` "
-                   f"(severity: {sev})")
+        line = f"items where `{filt}` **need** `{needs}` (severity: {sev})"
+        # An inherited rule is the schema source's (SR-0275, SR-0279): it is not
+        # this project's to remove, so it takes no number here.
+        if inheritance is not None and inheritance.owns(*coverage_path(rule)):
+            out.append(f"- {line} (from `{inheritance.namespace}`)")
+            continue
+        pos += 1
+        out.append(f"{pos}. {line}")
     return "\n".join(out)
 
 
@@ -516,7 +524,7 @@ def context_markdown(project) -> str:
         _ctx_links(schema, inheritance),
         _ctx_status(schema, inheritance),
         _ctx_grounding(schema),
-        _ctx_coverage(schema),
+        _ctx_coverage(schema, inheritance),
         _CTX_FORMAT,
         _ctx_commands(),
         _ctx_snapshot(project),
