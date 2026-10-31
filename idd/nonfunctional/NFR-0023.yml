@@ -1,0 +1,35 @@
+uid: NFR-0023
+type: nfr
+status: proposed
+title: Grounding rules carry machine-checked proofs
+text: The Tool's grounding verdict, the guard that refuses a link change which would
+  leave the graph ungrounded (SR-0211) and the suspect-link rule (SR-0034) shall
+  each be modelled in Lean, with theorems stating what those requirements ask proved
+  by the Lean kernel and resting on Lean's standard axioms alone. A test shall require
+  the shipped implementation to give the same verdicts as the model's executable
+  on generated graphs, including grounding cycles and links to items not in the graph.
+rationale: 'A test shows the rules hold on the graphs someone thought to write; a
+  proof shows they hold on every graph, and these three rules decide whether a requirement
+  counts as grounded and whether a change is refused, so a silent fault in them misleads
+  every reader of the gate. A proof speaks only about its model, which is why the
+  agreement test is part of this requirement and not an extra: it is what ties the
+  theorems to the Python that ships. Writing the proofs also brings out what the
+  requirements rely on without saying, such as SR-0034 assuming the fingerprint tells
+  different contents apart. Who pays: anyone who changes grounding.py, links.py or
+  the suspect check keeps formal/ in step, and the formal CI job installs a Lean
+  toolchain. Out of scope: the parts of the Tool that are mostly file and command-line
+  handling, which a model would not make safer.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+- target: SR-0211
+  type: relates
+  stamp: sha256:6e269cff44d9623b5920c7c7c456f32e090598ee4c0cbb8042f7eb35041154ce
+- target: SR-0034
+  type: relates
+  stamp: sha256:8093147342e18ed00c7e6c7a839a47997497806305ce4bb63c0e29ae2dc2484e
+attrs:
+  priority: should
+  verification: test
+  origin: ai

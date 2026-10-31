@@ -1,0 +1,10 @@
+name = "throughline-formal"
+version = "0.1.0"
+defaultTargets = ["Throughline", "tl-formal"]
+
+[[lean_lib]]
+name = "Throughline"
+
+[[lean_exe]]
+name = "tl-formal"
+root = "Main"

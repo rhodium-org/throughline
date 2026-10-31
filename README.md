@@ -14,7 +14,7 @@ version control; a `check` command validates the whole graph and gates CI.
 39
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
-21
+22
 <!-- tl:end --> NFRs, every one grounded to a root and green under `tl check --strict`.
 These counts are rendered from the live graph by the `tl:count` directive (SR-0109)
 and gated fresh by `tl docs --check`, so they can never drift from the spec they describe.
