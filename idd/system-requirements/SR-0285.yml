@@ -1,18 +1,29 @@
 uid: SR-0285
 type: system_requirement
 status: proposed
-title: A standard declares its registers in [[registers]]
-text: 'A project''s configuration may declare [[registers]], each with a prefix,
-  a folder (dir), the type its items hold, an optional title (default: the folder)
-  and required (default true). Each prefix must be a valid register prefix, each
-  folder must lie inside the project, each type must be one the project declares
-  or inherits, and prefixes and folders must each be unique; a configuration that
-  breaks any of these is refused when it is read, naming the entry.'
-rationale: 'One table, read by tl, instead of a list in a rule''s prose and another
-  in a script. required = false covers a register a tool understands but not every
-  follower needs, such as ROLE in the series graphs. The checks run at config read
-  for the reason SR-0284''s did: a standard that declares a register it could never
-  hold should fail where it is written, not in each follower.'
+title: A standard declares each register its followers hold as a register item
+text: 'tl shall supply an item type named register, with the attributes prefix, dir
+  and holds (strings, all required), label (an optional string) and required (a bool,
+  true when absent). Every live item of this type declares one register: the UID
+  prefix, the folder, the type of item it holds, its title (label, else the folder)
+  and whether a follower must hold it. tl check reports an error, under the rule
+  register-declaration, for a register item whose prefix is not a valid register
+  prefix, whose folder does not lie inside the project, whose holds names a type
+  the project neither declares nor inherits, or whose prefix or folder another live
+  register item already declares. A project that declares a type named register shall
+  declare these five attributes as tl supplies them, or its configuration is refused
+  when it is read.'
+rationale: 'A register a tool depends on is a decision, so it is an item: ratified,
+  traced, and marked stale when it changes, where a line in throughline.toml would
+  change unsigned (operator, 1 November 2026, after reviewing the worked example
+  in rhodium-org/76234gasd65). tl gives meaning to this one type and no other, which
+  is the price of tools being able to rely on the result. Every live register item
+  binds, signed or not, so a follower''s check is deterministic; a standard is released
+  from a strict gate, which a proposed item cannot pass. label exists because the
+  item''s title states the decision (Slides live in SLD), not the register''s name.
+  That a standard must hold at least one is a rule of the standard for standards,
+  not of tl, which cannot know a graph is a standard until it is followed; tl warns
+  instead (SR-0286).'
 normative: true
 links:
 - target: UR-0044

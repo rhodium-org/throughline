@@ -3,24 +3,27 @@ type: system_requirement
 status: proposed
 title: tl check holds a follower to the registers its schema source declares
 text: 'A project that takes its schema from a source (SR-0275) shall be held to the
-  [[registers]] that source itself declares. tl check reports an error, under the
-  rule declared-register, for each required register the follower does not hold,
-  and for each register in the follower whose prefix or folder is declared but whose
-  prefix, folder or type differs from the declaration. An optional register need
-  not exist; if it does, it must match. A follower may hold registers of its own
-  beyond these and may not redeclare a declared prefix or folder in its own [[registers]].
-  Only the source''s own declarations bind: a project is not held to the registers
-  it declares itself, nor to those its source inherited from a source of its own.
-  tl register new refuses a declared prefix or folder with any other folder, prefix
-  or type.'
+  live register items that source holds itself (SR-0285). tl check reports an error,
+  under the rule declared-register, for each required register the follower does
+  not hold, and for each register in the follower whose prefix or folder a register
+  item declares but whose prefix, folder or type differs from it, naming the register
+  item. A register whose item is not required need not exist; if it does, it must
+  match. A follower may hold registers of its own beyond these. Only the source''s
+  own register items bind: a project is not held to the register items it holds itself,
+  nor to those its source borrowed from a source of its own. tl register new refuses
+  a declared prefix or folder with any other folder, prefix or type. A schema source
+  that holds no live register item draws the warning no-declared-registers in each
+  follower: nothing fixes where that follower keeps its items.'
 rationale: 'The guarantee a tool needs is a check, not a starting point: a series
-  that passes tl check has slides in SLD. Declarations bind the follower, not the
-  declarer, because a standard declares the registers of the graphs that follow it,
-  not its own (the presentation standard holds rules, not slides). They do not pass
-  down a chain: a series follows the presentation standard, which follows the standard
-  for standards, and the series must not be made to hold a rules register. A follower
-  may add registers because a series may need more than the standard foresaw; it
-  may not move one, because then the tool cannot find it.'
+  that passes tl check has slides in SLD. Register items bind the follower, not the
+  standard that holds them, because a standard declares the registers of the graphs
+  that follow it, not its own (the presentation standard holds rules, not slides).
+  They do not pass down a chain: a series follows the presentation standard, which
+  follows the standard for standards, and the series must not be made to hold a rules
+  register. A follower may add registers because a series may need more than the
+  standard foresaw; it may not move one, because then the tool cannot find it. A
+  source with no register items is a warning, not a refusal, so a graph shared only
+  for its vocabulary of types can still be followed (operator, 1 November 2026).'
 normative: true
 links:
 - target: UR-0044

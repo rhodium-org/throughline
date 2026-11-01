@@ -3,9 +3,10 @@ type: system_requirement
 status: proposed
 title: tl init --from-schema creates the registers the standard requires
 text: tl init --from-schema (SR-0283) shall create, after resolving the source and
-  before reporting success, one register for each required register the source declares,
-  with its prefix, folder, type and title, and no others. Optional registers are
-  left for the follower to create with tl register new.
+  before reporting success, one register for each live register item the source holds
+  whose required is not false, with its prefix, folder, type and title (SR-0285),
+  and no others. Registers whose item is not required are left for the follower to
+  create with tl register new.
 rationale: A follower that init leaves without its required registers fails its first
   tl check, so init creates them; it creates no optional ones, because one a follower
   does not need would be an empty register to explain. Replaces starter registers
