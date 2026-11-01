@@ -285,6 +285,12 @@ def build_union(consumer: Project, sources: dict[str, Project],
                     union.registers[mangled_prefix] = target
                 target.items[mangled_uid] = merged
 
+    # Which source prefix each mangled one stands for, for checks that read a
+
+    # link's target register (SR-0291).
+
+    union.prefix_owners = dict(mangler.owners)
+
     return Union(project=union, owners=mangler.owners)
 
 
