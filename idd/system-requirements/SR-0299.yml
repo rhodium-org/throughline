@@ -1,0 +1,39 @@
+uid: SR-0299
+type: system_requirement
+status: implemented
+title: A follower may alias a declaration it imports
+text: A follower may declare an alias for a register, attribute or link type its
+  standard declares, naming the standard's declaration and the name it is written
+  under in the follower. tl check reads the alias as that declaration, and tl dump
+  reports it under the standard's name. An alias that clashes with another name in
+  the follower is refused when read.
+rationale: Lets a follower keep its own name when a standard, or a new version of
+  it, declares the same one, without renaming its items or coalescing two meanings
+  under one name. The app still sees only the standard's names.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0290
+  type: relates
+- target: SR-0294
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:58:21Z'
+  fingerprint: sha256:7c9030b42290b5ac4956291f9c112e2348e60ed4cb9f97fd9d2afbf12d526526
+  content:
+    type: system_requirement
+    text: A follower may declare an alias for a register, attribute or link type
+      its standard declares, naming the standard's declaration and the name it is
+      written under in the follower. tl check reads the alias as that declaration,
+      and tl dump reports it under the standard's name. An alias that clashes with
+      another name in the follower is refused when read.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

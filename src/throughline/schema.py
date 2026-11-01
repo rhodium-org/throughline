@@ -247,16 +247,6 @@ def _parse_requirements(raw, roles: dict[str, tuple[str, ...]],
     return out
 
 
-@dataclass(frozen=True)
-class StarterRegister:
-    """A register a standard asks the graphs that follow it to start with
-    (SR-0284): created once by ``tl init --schema``, then the follower's own."""
-    prefix: str
-    dir: str
-    type: str
-    title: str
-
-
 def _parse_suggested_namespace(raw) -> str | None:
     """Read ``[project] suggested_namespace`` (SR-0283), refusing one that no
     follower could use as a namespace."""
@@ -268,53 +258,6 @@ def _parse_suggested_namespace(raw) -> str | None:
             f"[project] suggested_namespace {raw!r} is not a namespace: lower-case "
             "letters, digits, '-' and '_', starting with a letter")
     return raw
-
-
-def _parse_starter_registers(raw, declared_types: set[str]) -> tuple[StarterRegister, ...]:
-    """Read ``[[starter_registers]]`` (SR-0284). Each names a prefix, a folder
-    relative to the project and a type the schema declares; prefixes and folders
-    are unique. Refused when the configuration is read, so a standard's keeper
-    finds a bad entry before any follower is started from it."""
-    from .uid import PREFIX_GRAMMAR, valid_prefix
-
-    if raw is None:
-        return ()
-    if not isinstance(raw, list):
-        raise SchemaError("[[starter_registers]] must be an array of tables")
-    out: list[StarterRegister] = []
-    for i, entry in enumerate(raw):
-        if not isinstance(entry, dict):
-            raise SchemaError(f"[[starter_registers]] entry {i} is not a table")
-        unknown = set(entry) - {"prefix", "dir", "type", "title"}
-        if unknown:
-            raise SchemaError(
-                f"[[starter_registers]] entry {i} declares unknown key(s) "
-                f"{sorted(unknown)} — the keys are 'prefix', 'dir', 'type' and 'title'")
-        prefix, folder, tname = entry.get("prefix"), entry.get("dir"), entry.get("type")
-        if not isinstance(prefix, str) or not valid_prefix(prefix):
-            raise SchemaError(
-                f"[[starter_registers]] entry {i} has prefix {prefix!r}, which is not "
-                f"a register prefix ({PREFIX_GRAMMAR})")
-        parts = folder.replace("\\", "/").split("/") if isinstance(folder, str) else []
-        if (not parts or folder.startswith(("/", "\\")) or ":" in folder
-                or any(part in ("", ".", "..") for part in parts)):
-            raise SchemaError(
-                f"starter register {prefix} has dir {folder!r} — name a folder "
-                "inside the project, e.g. \"activities\"")
-        if not isinstance(tname, str) or tname not in declared_types:
-            raise SchemaError(
-                f"starter register {prefix} holds type {tname!r}, which the schema "
-                f"does not declare — the types are {sorted(declared_types)}")
-        title = entry.get("title", folder)
-        if not isinstance(title, str) or not title.strip():
-            raise SchemaError(f"starter register {prefix} has an empty 'title'")
-        if any(r.prefix == prefix for r in out):
-            raise SchemaError(f"starter register prefix {prefix} is declared twice")
-        if any(r.dir == folder for r in out):
-            raise SchemaError(f"starter register folder {folder!r} is declared twice")
-        out.append(StarterRegister(prefix=prefix, dir=folder, type=tname, title=title))
-    return tuple(out)
-
 
 @dataclass
 class Schema:
@@ -358,13 +301,9 @@ class Schema:
     # that never declared the key is unchanged by upgrading, and opts in by
     # declaring it.
     type_normative: dict[str, bool] = field(default_factory=dict)
-    # The registers a graph started from this one as its schema source begins
-    # with (SR-0284). Never inherited: they are read from the project's own
-    # configuration, and a follower that holds none has none.
-    starter_registers: tuple[StarterRegister, ...] = ()
     # [project] suggested_namespace: what a graph that follows this one as its
     # schema source names it, unless told otherwise (SR-0283). Read from this
-    # configuration only, like the starter registers.
+    # configuration only.
     suggested_namespace: str | None = None
 
     # ------------------------------------------------------------------ build
@@ -503,8 +442,6 @@ class Schema:
         roles = _parse_roles(ratify_cfg.get("roles"))
         requirements = _parse_requirements(ratify_cfg.get("requires"), roles,
                                            set(types))
-        starter_registers = _parse_starter_registers(config.get("starter_registers"),
-                                                     set(types))
 
         schema = cls(
             name=name, types=types, link_types=link_types, statuses=statuses,
@@ -518,7 +455,6 @@ class Schema:
             signed_link_types=signed_link_types,
             roles=roles, requirements=requirements,
             type_normative=type_normative,
-            starter_registers=starter_registers,
             suggested_namespace=suggested_namespace,
         )
         schema._check_consistency()

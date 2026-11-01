@@ -1,0 +1,46 @@
+uid: UR-0044
+type: user_requirement
+status: implemented
+title: A standard declares its followers' shape as items, and tl check can check
+  followers against it
+text: As the keeper of a standard, and of an app that reads the graphs following
+  it, I want the standard to declare the registers, types, value sets, attributes
+  and links its followers hold as items I ratify, and tl check to be able to check
+  a follower against them, reporting where it departs, so that the app reads any
+  follower deterministically and no follower copies or interprets the standard.
+rationale: 'Mocked 1 Nov 2026 in rhodium-org/76234gasd65-meta, 76234gasd65-standard
+  and 76234gasd65 (throwaway, private) and challenged by the operator item by item.
+  presentation-manager relies on SLD, CLM, THR and about fifty attributes existing
+  in every series; a standard that only lends item types cannot promise them. Rejected:
+  declarations in the configuration, which are unsigned (the [[starter_registers]]
+  of the withdrawn 4.5.0); a register of prose rules, which a deterministic reader
+  cannot apply; declarations inferred from the followers, which record drift as the
+  rule. Who pays: the maintainer carries the checks; a standard''s keeper writes
+  and ratifies declarations; a follower''s keeper sees its drift reported on the
+  first check after adopting; every consumer of a standard implements the base types.'
+normative: true
+links:
+- target: BN-0007
+  type: derives_from
+- target: UR-0041
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:54:40Z'
+  fingerprint: sha256:5183292d8f64e036b9c7845b46cc16fcc30231b250f2ebf215eb26365725e39b
+  content:
+    type: user_requirement
+    text: As the keeper of a standard, and of an app that reads the graphs following
+      it, I want the standard to declare the registers, types, value sets, attributes
+      and links its followers hold as items I ratify, and tl check to be able to
+      check a follower against them, reporting where it departs, so that the app
+      reads any follower deterministically and no follower copies or interprets the
+      standard.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

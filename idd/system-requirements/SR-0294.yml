@@ -1,0 +1,37 @@
+uid: SR-0294
+type: system_requirement
+status: implemented
+title: A follower may declare its own additions, which never collide
+text: A follower may hold its own declarations, of the same six kinds, for the registers,
+  attributes, links and link types it adds; they are checked as its standard's are.
+  One naming a prefix, folder, attribute or link type its standard declares is refused
+  when read, naming both; a collision first made by moving the pin to a new version
+  of the standard is refused the same way.
+rationale: The second consumer of a follower is the AI writing it, which may keep
+  its own bookkeeping (open questions, draft notes). A generator standard of its
+  own is warranted only for a specific generator app.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0276
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:47:33Z'
+  fingerprint: sha256:4719706dd3040492e147d4fbc1a44574155d20994cff0cb7ee9b16ae14fccca0
+  content:
+    type: system_requirement
+    text: A follower may hold its own declarations, of the same six kinds, for the
+      registers, attributes, links and link types it adds; they are checked as its
+      standard's are. One naming a prefix, folder, attribute or link type its standard
+      declares is refused when read, naming both; a collision first made by moving
+      the pin to a new version of the standard is refused the same way.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

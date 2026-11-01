@@ -1,0 +1,45 @@
+uid: SR-0285
+type: system_requirement
+status: implemented
+title: A standard declares its followers' shape as items of six kinds
+text: A project whose schema source holds items of the types register, type, enum,
+  attribute, link and link_type shall take from those items, and not from the source's
+  configuration, the registers, attribute kinds and values, link types and link endpoint
+  rules its followers are checked against. The six types, their attributes and their
+  meaning are those of the meta-standard version the Tool implements; a standard
+  cannot change them. A standard that makes the same kind of declaration both in
+  its configuration and by items is refused when read, naming both.
+rationale: 'One definition per declaration: items are ratified and fingerprinted,
+  so amending a type makes every attribute using it suspect. Refusing both forms
+  at once stops the two drifting apart. The meta-standard describes itself with the
+  same six kinds.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0275
+  type: relates
+- target: SR-0084
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:45:29Z'
+  fingerprint: sha256:803be1f37596f3708bacb3948489612dd58bc5f67baeaacaa906e0f9340e26e0
+  content:
+    type: system_requirement
+    text: A project whose schema source holds items of the types register, type,
+      enum, attribute, link and link_type shall take from those items, and not from
+      the source's configuration, the registers, attribute kinds and values, link
+      types and link endpoint rules its followers are checked against. The six types,
+      their attributes and their meaning are those of the meta-standard version the
+      Tool implements; a standard cannot change them. A standard that makes the same
+      kind of declaration both in its configuration and by items is refused when
+      read, naming both.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
