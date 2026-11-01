@@ -1,6 +1,6 @@
 uid: SR-0284
 type: system_requirement
-status: proposed
+status: ratified
 title: A standard may declare the registers its followers start with
 text: A project's configuration may declare starter registers, each a prefix, a folder
   and the item type it holds, naming only types its schema declares. When init names
@@ -24,3 +24,21 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-01T05:42:57Z'
+  fingerprint: sha256:ca272643a08b58c9a18b360113fa7cb53f020fd01f24a52e191b9949e48b6712
+  content:
+    type: system_requirement
+    text: A project's configuration may declare starter registers, each a prefix,
+      a folder and the item type it holds, naming only types its schema declares.
+      When init names that project as the schema source it shall create those registers
+      in the new project. They are then the follower's own registers, created once
+      and never resolved from the source again, so a follower may add, rename or
+      drop them. A schema source that declares none gives a project with no registers,
+      and init says so.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
