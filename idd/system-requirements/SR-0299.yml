@@ -1,6 +1,6 @@
 uid: SR-0299
 type: system_requirement
-status: ratified
+status: implemented
 title: A follower may alias a declaration it imports
 text: A follower may declare an alias for a register, attribute or link type its
   standard declares, naming the standard's declaration and the name it is written

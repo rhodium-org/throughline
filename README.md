@@ -238,20 +238,40 @@ the one `schema = true` source and none of tl's own default registers. The
 namespace is the one the standard suggests, or else the last part of the url as
 written; name your own with `--namespace`. A name too long for the standard's items
 to be borrowed under is refused, never shortened. A path to a graph beside you works
-in place of a url. A standard suggests its namespace, and may list the registers its
-followers start with, which init creates; from then on they are the follower's own:
+in place of a url. A standard suggests its namespace with `[project]
+suggested_namespace`, and init creates every register the standard declares.
 
-```toml
-[project]
-name = "Plan standard"
-suggested_namespace = "plan"
+### A standard declared as items
 
-[[starter_registers]]
-prefix = "ACT"
-dir = "activities"
-type = "activity"
-title = "Activities"   # optional; the folder by default
-```
+A standard can declare the shape of the graphs that follow it as items you ratify,
+instead of tables in its configuration. Six kinds of item, whose meaning is fixed by
+the meta-standard this Tool implements, say everything a follower must hold:
+
+| item | declares | names, by a link |
+|---|---|---|
+| `register` | a register: `prefix`, `dir`, `holds`, `required`, `exactly_one` | |
+| `type` | a named type: one base type plus `min`, `max`, `pattern` | `has_type` → one base type |
+| `enum` | a value set: `values` | `has_type` → the base type enum |
+| `attribute` | an attribute: `name`, `required`, `required_when`, `absent_when`, `list` | `belongs_to` → one register, `has_type` → one type or value set |
+| `link` | the links between registers: `min`, `max`, `per_target_min`, `when`, `from_when` | `from` → a register, `to` → registers, `via` → a link type |
+| `link_type` | a link type: `name`, `grounds` | |
+
+The base types are string, text, int, float, bool, date, enum and file; a pattern
+uses only the subset that reads the same in Python and JavaScript, and `tl` names
+the equivalent of anything else (`\d` is `[0-9]`). A condition compares an enum
+with `==`, `!=`, `in (…)` or `not in (…)`, and an int, float or date with
+`== != < <= > >=`, against a fixed value, naming its own register or one declared
+`exactly_one`.
+
+A follower's `tl check` then reports, under `register-declared`,
+`attribute-declared`, `link-declared` and `undeclared`, every register, attribute
+and link that departs from the declarations, and names the likely intended one for
+a near miss (`monht`: did you mean `month`?). A follower may declare its own
+additions with `scope = "this-graph"`, which never collide with the standard's; an
+attribute is declared once per register, and a follower avoids a clash by renaming
+or by an `aliases` link to the standard's declaration. `tl dump` marks, under
+`declared`, what the standard declares, so an app can ignore the rest. A graph
+whose standard declares only in its configuration is unchanged.
 
 Sources are read-only, fetched once into a per-user cache and reached again only
 when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A

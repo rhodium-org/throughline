@@ -77,4 +77,11 @@ def build_dump(project: Project, tool_version: str) -> dict:
             "formed": project.formed_config,
             "inherited": sorted(list(p) for p in inheritance.paths),
         }
+    # What the standard declares, by item (SR-0295): an app reads only what is
+    # marked and ignores the follower's own additions. Absent where nothing is
+    # declared by items.
+    from .declared import marks
+    declared = marks(project)
+    if declared:
+        out["declared"] = dict(sorted(declared.items()))
     return out

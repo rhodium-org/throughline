@@ -1,6 +1,6 @@
 uid: SR-0292
 type: system_requirement
-status: ratified
+status: implemented
 title: Link types are declared as items
 text: A link_type declaration names one link type and says whether it grounds. A
   standard's link types and its grounding link types shall be its link_type declarations

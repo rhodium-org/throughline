@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextvars
 import copy
+import dataclasses
 import io
 import os
 import re
@@ -1338,18 +1339,19 @@ def schema_inheritance(root: Path, config: dict, *, base: Path | None = None):
     project rather than the project itself."""
     from .inherit import InheritanceError, merge
 
-    found = _schema_source_config(root, config, base=base)
+    found = _schema_source_config(root, config, base=base, with_project=True)
     if found is None:
         return None, None
-    namespace, theirs = found
+    namespace, theirs, source_project = found
     try:
-        return merge(theirs, config, namespace)
+        formed, inheritance = merge(theirs, config, namespace)
+        return formed, dataclasses.replace(inheritance, source_project=source_project)
     except InheritanceError as e:
         raise ProjectError(f"invalid configuration in {root / CONFIG_NAME}: {e}") from e
 
 
-def _schema_source_config(root: Path, config: dict, *,
-                          base: Path | None = None) -> tuple[str, dict] | None:
+def _schema_source_config(root: Path, config: dict, *, base: Path | None = None,
+                          with_project: bool = False) -> tuple | None:
     """The namespace of ``config``'s schema source and that source's schema
     configuration as formed, or ``None`` when it names none (SR-0275)."""
     from .sources import SourceError, schema_source
@@ -1375,6 +1377,8 @@ def _schema_source_config(root: Path, config: dict, *,
             f"cannot read the schema source '{source.namespace}' of {cfg_file}: {e}") from e
     finally:
         _FORMING.reset(token)
+    if with_project:
+        return source.namespace, resolved.project.formed_config, resolved.project
     return source.namespace, resolved.project.formed_config
 
 
@@ -1428,6 +1432,14 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
                 project.duplicate_uids.add(item.uid)
             reg.items[item.uid] = item
         project.registers[reg.prefix] = reg
+    # Declarations held as items (SR-0285): formed once the items are read, since a
+    # follower's own declarations are items too.
+    from .declared import attach
+    try:
+        attach(project)
+        project.schema
+    except SchemaError as e:
+        raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
     return project
 
 
@@ -1934,7 +1946,8 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
                      else {**entry, "namespace": "standard"})
     try:
         standard = resolver_for(source).resolve(source, root).project
-        starters = standard.schema.starter_registers
+        offered = getattr(standard, "offered", None)
+        starters = list(offered.registers.values()) if offered else []
         suggested = standard.schema.suggested_namespace
     except (ResolverError, ProjectError, SchemaError) as e:
         raise ProjectError(f"cannot follow {given}: {e}") from e
@@ -1971,9 +1984,10 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
         lines.append(f"path = {_toml_string(source.path)}")
     lines.append("schema = true")
     (root / CONFIG_NAME).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # Every register the standard declares, required or optional (SR-0296).
     for starter in starters:
-        reg = Register(prefix=starter.prefix, type=starter.type, title=starter.title,
-                       path=root / starter.dir)
+        reg = Register(prefix=starter.prefix, type=starter.holds,
+                       title=starter.label or starter.dir, path=root / starter.dir)
         reg.path.mkdir(parents=True, exist_ok=True)
         write_manifest(reg)
     return load_project(root)

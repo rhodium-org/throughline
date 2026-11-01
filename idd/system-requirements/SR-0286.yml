@@ -1,6 +1,6 @@
 uid: SR-0286
 type: system_requirement
-status: ratified
+status: implemented
 title: A standard builds its types only from the base types
 text: 'A type declaration shall name exactly one base type, by a has_type link: string,
   text, int, float, bool, date, enum or file. Its constraints are min and max (int,

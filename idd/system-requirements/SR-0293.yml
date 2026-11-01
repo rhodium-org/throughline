@@ -1,6 +1,6 @@
 uid: SR-0293
 type: system_requirement
-status: ratified
+status: implemented
 title: In a follower, what is not declared is an error
 text: 'In a project whose schema source declares by items, tl check shall report,
   under the rule undeclared, every attribute an item uses that no attribute declaration

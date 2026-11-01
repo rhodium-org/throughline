@@ -1,6 +1,6 @@
 uid: SR-0294
 type: system_requirement
-status: ratified
+status: implemented
 title: A follower may declare its own additions, which never collide
 text: A follower may hold its own declarations, of the same six kinds, for the registers,
   attributes, links and link types it adds; they are checked as its standard's are.

@@ -25,12 +25,6 @@ from throughline.validate import validate
 STANDARD = """
 [types.slide]
 attrs.layout = { type = "enum", values = ["cards", "stats"], required = true }
-
-[[starter_registers]]
-prefix = "SLD"
-dir = "slides"
-type = "slide"
-title = "Slides"
 """
 
 
@@ -51,7 +45,10 @@ def _standard(tmp_path: Path, name: str = "std", extra: str = STANDARD) -> Path:
 
 
 def _errors(root: Path) -> list:
-    return [f for f in validate(load_project(root)) if f.severity == "error"]
+    # A standard here declares in its configuration, not by register items, so the
+    # new graph starts with no registers and is empty until one is made (SR-0296).
+    return [f for f in validate(load_project(root))
+            if f.severity == "error" and f.rule != "empty-graph"]
 
 
 # --------------------------------------------------------------------------- #
@@ -67,8 +64,7 @@ def test_the_new_graph_holds_the_schema_source_and_none_of_the_defaults(tmp_path
     # Nothing of tl's own starter schema: the standard is the schema.
     assert "[types." not in text and "[grounding]" not in text
     project = load_project(tmp_path / "fol")
-    assert set(project.registers) == {"SLD"}
-    assert not list(project.items())
+    assert not project.registers and not list(project.items())
     assert project.schema.attr("slide", "layout").values == ("cards", "stats")
     assert not _errors(tmp_path / "fol")
 
@@ -227,90 +223,13 @@ def test_an_invalid_namespace_is_refused_before_anything_is_written(tmp_path, mo
 
 
 # --------------------------------------------------------------------------- #
-# SR-0284 — a standard may declare the registers its followers start with
+# SR-0296 — init creates the registers a standard declares by items; one that
+# declares only in its configuration gives none (tests/test_declared.py has the rest)
 # --------------------------------------------------------------------------- #
 
-def test_a_standard_without_starter_registers_gives_none_and_says_so(tmp_path, monkeypatch, capsys):
+def test_a_standard_declaring_no_registers_gives_none_and_says_so(tmp_path, monkeypatch, capsys):
     _standard(tmp_path, extra='\n[types.slide]\n')
     monkeypatch.chdir(tmp_path)
     assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    assert "no starter registers" in capsys.readouterr().out
+    assert "declares no registers" in capsys.readouterr().out
     assert not load_project(tmp_path / "fol").registers
-
-
-def test_starter_registers_hold_the_declared_type_and_title(tmp_path, monkeypatch):
-    _standard(tmp_path)
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    reg = load_project(tmp_path / "fol").registers["SLD"]
-    assert (reg.type, reg.title, reg.path.name) == ("slide", "Slides", "slides")
-    assert _cli(["-C", "fol", "new", "SLD", "--title", "cover", "--attr", "layout=cards",
-                 "--no-interactive"]) == 0
-    assert load_project(tmp_path / "fol").get("SLD-0001").type == "slide"
-
-
-def test_the_title_defaults_to_the_folder(tmp_path, monkeypatch):
-    _standard(tmp_path, extra='\n[types.slide]\n\n[[starter_registers]]\n'
-                              'prefix = "SLD"\ndir = "slides"\ntype = "slide"\n')
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    assert load_project(tmp_path / "fol").registers["SLD"].title == "slides"
-
-
-def test_starter_registers_are_not_inherited_by_the_follower(tmp_path, monkeypatch):
-    _standard(tmp_path)
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    assert load_project(tmp_path / "fol").schema.starter_registers == ()
-
-
-def test_a_follower_keeps_its_registers_when_the_standard_changes_them(tmp_path, monkeypatch):
-    std = _standard(tmp_path)
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    cfg = std / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8").replace('prefix = "SLD"', 'prefix = "SL"')
-                   .replace('dir = "slides"', 'dir = "pages"'), encoding="utf-8")
-    project = load_project(tmp_path / "fol")
-    assert set(project.registers) == {"SLD"}
-    assert (tmp_path / "fol" / "slides").is_dir() and not (tmp_path / "fol" / "pages").exists()
-
-
-def test_a_follower_may_drop_a_starter_register(tmp_path, monkeypatch):
-    _standard(tmp_path)
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
-    shutil.rmtree(tmp_path / "fol" / "slides")
-    assert not load_project(tmp_path / "fol").registers
-
-
-@pytest.mark.parametrize("entry, says", [
-    ('prefix = "X"\ndir = "x"\ntype = "slide"', "register prefix"),
-    ('prefix = "SLD"\ndir = "slides"\ntype = "video"', "does not declare"),
-    ('prefix = "SLD"\ndir = "../out"\ntype = "slide"', "inside the project"),
-    ('prefix = "SLD"\ndir = "/abs"\ntype = "slide"', "inside the project"),
-    ('prefix = "SLD"\ndir = "slides"\ntype = "slide"\ncolour = "red"', "unknown key"),
-    ('prefix = "SLD"\ndir = "slides"\ntype = "slide"\ntitle = " "', "empty"),
-])
-def test_a_bad_starter_register_is_refused_when_the_configuration_is_read(tmp_path, entry, says):
-    std = _standard(tmp_path, extra=f"\n[types.slide]\n\n[[starter_registers]]\n{entry}\n")
-    with pytest.raises(ProjectError, match=says):
-        load_project(std)
-
-
-@pytest.mark.parametrize("second, says", [
-    ('prefix = "SLD"\ndir = "more"\ntype = "slide"', "prefix SLD is declared twice"),
-    ('prefix = "MORE"\ndir = "slides"\ntype = "slide"', "folder 'slides' is declared twice"),
-])
-def test_starter_prefixes_and_folders_are_unique(tmp_path, second, says):
-    std = _standard(tmp_path, extra=STANDARD + f"\n[[starter_registers]]\n{second}\n")
-    with pytest.raises(ProjectError, match=says):
-        load_project(std)
-
-
-def test_a_standard_with_a_bad_starter_register_starts_no_follower(tmp_path, monkeypatch):
-    _standard(tmp_path, extra='\n[types.slide]\n\n[[starter_registers]]\n'
-                              'prefix = "SLD"\ndir = "slides"\ntype = "video"\n')
-    monkeypatch.chdir(tmp_path)
-    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 2
-    assert not (tmp_path / "fol").exists()

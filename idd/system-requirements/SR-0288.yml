@@ -1,6 +1,6 @@
 uid: SR-0288
 type: system_requirement
-status: ratified
+status: implemented
 title: Every attribute is checked against its declaration
 text: tl check shall report, under the rule attribute-declared, every item with an
   attribute whose value is not valid for its declaration's type and constraints,

@@ -1,6 +1,6 @@
 uid: SR-0289
 type: system_requirement
-status: ratified
+status: implemented
 title: A condition compares values of its own register or of one holding exactly
   one item
 text: A condition is one or more comparisons joined by and or or. For an enum attribute

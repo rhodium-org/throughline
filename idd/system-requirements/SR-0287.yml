@@ -1,6 +1,6 @@
 uid: SR-0287
 type: system_requirement
-status: ratified
+status: implemented
 title: A follower holds every register its standard declares
 text: tl check shall report, under the rule register-declared, a follower that lacks
   a register its standard declares required, that holds a declared register at another

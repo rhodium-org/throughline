@@ -1,6 +1,6 @@
 uid: SR-0285
 type: system_requirement
-status: ratified
+status: implemented
 title: A standard declares its followers' shape as items of six kinds
 text: A project whose schema source holds items of the types register, type, enum,
   attribute, link and link_type shall take from those items, and not from the source's

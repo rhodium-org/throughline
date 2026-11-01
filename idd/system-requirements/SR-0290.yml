@@ -1,6 +1,6 @@
 uid: SR-0290
 type: system_requirement
-status: ratified
+status: implemented
 title: An attribute is declared once per register
 text: 'An attribute of a register shall be declared at most once across a follower,
   its standard and the standard''s own schema sources. A second declaration of the

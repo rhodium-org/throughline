@@ -267,13 +267,13 @@ def cmd_init(args) -> int:
         where = f"{source.url}@{source.ref}" if source.url else source.path
         print(f"follows {where} as its schema source (namespace '{source.namespace}')")
         if project.registers:
-            print("created the registers the standard starts its graphs with — "
+            print("created the registers the standard declares — "
                   "add items with `tl new <PREFIX>`:")
             for reg in project.registers.values():
                 print(f"  {reg.prefix}  {reg.path.relative_to(root).as_posix()}/  "
                       f"{reg.type}")
         else:
-            print("the standard declares no starter registers, so this graph has "
+            print("the standard declares no registers, so this graph has "
                   "none — add them with `tl register new <PREFIX> <dir> --type <type>`")
         return OK
     # Report exactly what was seeded, mirroring the same precedence init_project

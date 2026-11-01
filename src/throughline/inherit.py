@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .schema import _GROUNDING_DEFAULTS, SchemaError
 
@@ -49,6 +49,9 @@ class Inheritance:
     namespace: str
     source_config: dict
     paths: frozenset
+    # The schema source as loaded, whose declarations a follower is checked
+    # against (SR-0285). Not part of the record's identity.
+    source_project: object = field(default=None, compare=False, repr=False)
 
     def owns(self, *path: str) -> bool:
         return tuple(path) in self.paths

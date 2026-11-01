@@ -1,6 +1,6 @@
 uid: SR-0291
 type: system_requirement
-status: ratified
+status: implemented
 title: A follower's links are counted against its standard's link declarations
 text: A link declaration names the register links run from by a from link, each register
   they run to by a to link, and its link type by a via link, and carries only min,

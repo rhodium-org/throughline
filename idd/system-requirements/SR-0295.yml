@@ -1,6 +1,6 @@
 uid: SR-0295
 type: system_requirement
-status: ratified
+status: implemented
 title: The dump marks what the standard declares
 text: tl dump of a follower shall mark each register, attribute and link that its
   standard declares with the UID of that declaration. Those the follower declares

@@ -297,6 +297,12 @@ class Project:
     schema_config: dict | None = None
     # Where each inherited declaration came from (SR-0279); ``None`` likewise.
     inheritance: "Inheritance | None" = None
+    # Declarations held as items (SR-0285): what this project is checked against,
+    # what it declares for its followers, and every declaration it and its schema
+    # sources hold, for a follower to resolve against. Set by the loader.
+    declarations: object = field(default=None, repr=False, compare=False)
+    offered: object = field(default=None, repr=False, compare=False)
+    formed_declarations: object = field(default=None, repr=False, compare=False)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -320,7 +326,9 @@ class Project:
         """An empty project with this one's configuration and schema, for a view
         or a union built over it."""
         return Project(path=self.path if path is None else path, config=self.config,
-                       schema_config=self.schema_config, inheritance=self.inheritance)
+                       schema_config=self.schema_config, inheritance=self.inheritance,
+                       declarations=self.declarations, offered=self.offered,
+                       formed_declarations=self.formed_declarations)
 
     def items(self):
         for reg in self.registers.values():

@@ -1,6 +1,6 @@
 uid: UR-0044
 type: user_requirement
-status: ratified
+status: implemented
 title: A standard declares its followers' shape as items, and tl check can check
   followers against it
 text: As the keeper of a standard, and of an app that reads the graphs following
