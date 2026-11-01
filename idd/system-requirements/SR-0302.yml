@@ -1,0 +1,17 @@
+uid: SR-0302
+type: system_requirement
+status: proposed
+title: tl migrate --beneath --apply skips a graph with uncommitted changes, and names
+  it
+text: With --apply, a graph whose repository has uncommitted changes under the graph's
+  root, tracked or untracked, is not migrated. It is named with that reason. A graph
+  not inside a git repository is also skipped and named, because nothing would show
+  what the migration changed.
+normative: true
+links:
+- target: UR-0045
+  type: implements
+attrs:
+  priority: should
+  verification: test
+  origin: ai

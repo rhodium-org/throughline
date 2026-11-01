@@ -1,0 +1,25 @@
+uid: UR-0045
+type: user_requirement
+status: proposed
+title: Migrate every graph beneath a path
+text: As the keeper of many graphs across many repositories, I want tl migrate to
+  find every graph beneath the paths I name, show me which are below the current
+  format and in which repository, and on request migrate those that are safe to rewrite,
+  so that upgrading tl does not leave graphs that no tool can open until each is
+  migrated by hand.
+rationale: 'Asked 1 Nov 2026: tl-ratify 0.18 over ~/Projects/01-applications and
+  ~/Projects/04-throughlines found 430 graphs, 268 of them unreadable because they
+  were at format 3 under throughline 4.x, spread over 143 directories including linked
+  worktrees and test fixtures. It belongs in tl migrate rather than tl-ratify, which
+  only ever writes signatures. Rejected: migrating without looking first, which would
+  rewrite fixtures kept at an old format on purpose; migrating dirty graphs or other
+  sessions'' worktrees, which would mix the rewrite into someone else''s uncommitted
+  work; committing the result, which is each repository owner''s act.'
+normative: true
+links:
+- target: BN-0006
+  type: derives_from
+attrs:
+  priority: should
+  verification: test
+  origin: ai

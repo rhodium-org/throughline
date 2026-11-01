@@ -1,0 +1,19 @@
+uid: SR-0300
+type: system_requirement
+status: proposed
+title: tl migrate --beneath finds the graphs beneath each path it is given
+text: tl migrate --beneath PATH, which may be repeated, finds every graph at or beneath
+  each PATH, breadth first to five levels down. It does not enter a directory whose
+  name begins with a dot, a symbolic link, a virtualenv (a directory holding pyvenv.cfg)
+  or a directory its git repository ignores, and it leaves out a graph that an enclosing
+  graph found by the same search declares as a local path source. A graph reached
+  from two of the paths is listed once. The search is a function of throughline's
+  library, so other tools find graphs the same way instead of copying it.
+normative: true
+links:
+- target: UR-0045
+  type: implements
+attrs:
+  priority: should
+  verification: test
+  origin: ai

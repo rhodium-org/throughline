@@ -1,0 +1,17 @@
+uid: SR-0303
+type: system_requirement
+status: proposed
+title: tl migrate --beneath --apply skips a graph in a linked git worktree, and names
+  it
+text: With --apply, a graph inside a linked git worktree, where git's common directory
+  differs from the worktree's own git directory, is not migrated. It is named with
+  that reason, because a linked worktree is another branch, usually another session's,
+  and its migration belongs to whoever works on it.
+normative: true
+links:
+- target: UR-0045
+  type: implements
+attrs:
+  priority: should
+  verification: test
+  origin: ai
