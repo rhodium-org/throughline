@@ -1,6 +1,6 @@
 uid: SR-0304
 type: system_requirement
-status: proposed
+status: ratified
 title: tl migrate --beneath --apply migrates the rest, commits nothing and carries
   on past a failure
 text: With --apply, every graph below the current format that is not skipped is migrated
@@ -17,3 +17,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T20:19:55Z'
+  fingerprint: sha256:2b80ae6c889003937f89e3b77ece92acc4cae061a6a048b8dee8b3d831e0ab18
+  content:
+    type: system_requirement
+    text: With --apply, every graph below the current format that is not skipped
+      is migrated by the same lossless migration tl migrate applies to one graph,
+      without resolving its sources. Nothing is committed. One line per repository
+      names how many graphs were migrated there, so that its owner reviews and commits
+      them. A graph that fails to migrate is named with the reason, the others are
+      still migrated, and the command exits 1 if any failed.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
