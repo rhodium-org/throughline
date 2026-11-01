@@ -1,15 +1,16 @@
 uid: SR-0290
 type: system_requirement
-status: proposed
-title: Two declarations of one attribute must have exclusive conditions
-text: Where two attribute declarations name the same attribute of one register, the
-  Tool shall decide, from the intervals and value sets their conditions allow, whether
-  any item can satisfy both, and if one can refuse the standard when read, naming
-  both declarations and a shared case, and printing exclusive conditions that would
-  fix it and the tl amend command that applies them.
-rationale: 'A claim''s role is news or background in a briefing and guidance or product
-  in training: two declarations, each with its own value set. Failing fast with the
-  rewrite keeps the fix one command away.'
+status: ratified
+title: An attribute is declared once per register
+text: 'An attribute of a register shall be declared at most once across a follower,
+  its standard and the standard''s own schema sources. A second declaration of the
+  same attribute of the same register is refused when read, whatever its conditions,
+  naming both declarations and the ways to avoid the clash: rename one, or alias
+  the imported one.'
+rationale: 'No coalescence: one name means one declaration, so an app never has to
+  work out which of two declarations an attribute answers to. Two meanings get two
+  names. (Operator, 1 Nov 2026; replaces two declarations of one attribute under
+  exclusive conditions.)'
 normative: true
 links:
 - target: UR-0044
@@ -18,3 +19,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:58:00Z'
+  fingerprint: sha256:103a89d3447ef308671035375d131fb0f2631c9996f824d9c149e00d6160e81a
+  content:
+    type: system_requirement
+    text: 'An attribute of a register shall be declared at most once across a follower,
+      its standard and the standard''s own schema sources. A second declaration of
+      the same attribute of the same register is refused when read, whatever its
+      conditions, naming both declarations and the ways to avoid the clash: rename
+      one, or alias the imported one.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

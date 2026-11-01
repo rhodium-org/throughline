@@ -1,13 +1,15 @@
 uid: SR-0293
 type: system_requirement
-status: proposed
+status: ratified
 title: In a follower, what is not declared is an error
-text: In a project whose schema source declares by items, tl check shall report,
+text: 'In a project whose schema source declares by items, tl check shall report,
   under the rule undeclared, every attribute an item uses that no attribute declaration
   names for its register, every register the project holds that no register declaration
   names, and every link whose link type and registers no link declaration names.
-  A project whose schema source declares only in its configuration, or that has none,
-  is unchanged.
+  Where a declared name of the same kind is within an edit distance of two of the
+  undeclared one, the finding names it as the likely intended one (monht: did you
+  mean month, ATTR-0021?). A project whose schema source declares only in its configuration,
+  or that has none, is unchanged.'
 rationale: 'A typo such as monht is caught, and an app never meets a value it was
   not told about. Rejected: checking only what is declared, which lets drift through
   silently.'
@@ -19,3 +21,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:54:33Z'
+  fingerprint: sha256:bb2c518e46ab782685c3026619d1e472474dc4bc3b5dc5816d0533cb5dd6adf6
+  content:
+    type: system_requirement
+    text: 'In a project whose schema source declares by items, tl check shall report,
+      under the rule undeclared, every attribute an item uses that no attribute declaration
+      names for its register, every register the project holds that no register declaration
+      names, and every link whose link type and registers no link declaration names.
+      Where a declared name of the same kind is within an edit distance of two of
+      the undeclared one, the finding names it as the likely intended one (monht:
+      did you mean month, ATTR-0021?). A project whose schema source declares only
+      in its configuration, or that has none, is unchanged.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

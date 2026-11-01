@@ -1,14 +1,15 @@
 uid: SR-0289
 type: system_requirement
-status: proposed
+status: ratified
 title: A condition compares values of its own register or of one holding exactly
   one item
-text: A condition is one or more comparisons REGISTER.attribute OP value joined by
-  and or or. For an enum the operators are == and !=, and the value one of its values;
-  for an int, float or date they are ==, !=, <, <=, > and >=, and the value one of
-  that base type. A declaration whose condition names an attribute of neither its
-  own register nor a register declared exactly_one, uses an operator its type does
-  not allow, or compares with a value its type does not allow, is refused when read.
+text: A condition is one or more comparisons joined by and or or. For an enum attribute
+  a comparison is REGISTER.attribute == value, != value, in (value, ...) or not in
+  (value, ...), each value one of its values; for an int, float or date it is REGISTER.attribute
+  OP value with OP one of ==, !=, <, <=, > and >=, and the value one of that base
+  type. A declaration whose condition names an attribute of neither its own register
+  nor a register declared exactly_one, uses a comparison its type does not allow,
+  or compares with a value its type does not allow, is refused when read.
 rationale: 'No walking links: a briefing edition reaches SER.kind because the series
   register holds one item, not by following derives_from. Dates and numbers compare
   as well as enums (operator, 1 Nov 2026). Every comparison is against a fixed value,
@@ -22,3 +23,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:54:51Z'
+  fingerprint: sha256:09e5c6435710396573388e18f83c903b5cc140f5e83869a3c24488d37cea8c01
+  content:
+    type: system_requirement
+    text: A condition is one or more comparisons joined by and or or. For an enum
+      attribute a comparison is REGISTER.attribute == value, != value, in (value,
+      ...) or not in (value, ...), each value one of its values; for an int, float
+      or date it is REGISTER.attribute OP value with OP one of ==, !=, <, <=, > and
+      >=, and the value one of that base type. A declaration whose condition names
+      an attribute of neither its own register nor a register declared exactly_one,
+      uses a comparison its type does not allow, or compares with a value its type
+      does not allow, is refused when read.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

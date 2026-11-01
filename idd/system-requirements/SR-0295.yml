@@ -1,6 +1,6 @@
 uid: SR-0295
 type: system_requirement
-status: proposed
+status: ratified
 title: The dump marks what the standard declares
 text: tl dump of a follower shall mark each register, attribute and link that its
   standard declares with the UID of that declaration. Those the follower declares
@@ -18,3 +18,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:47:47Z'
+  fingerprint: sha256:db75ab0cca5a5deb235ed0b97b799ca7c1e7008fec89a8e4eabf3176f033fd92
+  content:
+    type: system_requirement
+    text: tl dump of a follower shall mark each register, attribute and link that
+      its standard declares with the UID of that declaration. Those the follower
+      declares for itself carry no mark.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

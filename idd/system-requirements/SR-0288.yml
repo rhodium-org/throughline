@@ -1,6 +1,6 @@
 uid: SR-0288
 type: system_requirement
-status: proposed
+status: ratified
 title: Every attribute is checked against its declaration
 text: tl check shall report, under the rule attribute-declared, every item with an
   attribute whose value is not valid for its declaration's type and constraints,
@@ -20,3 +20,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:45:42Z'
+  fingerprint: sha256:3bc33513a6bb253c575ce55e90dde9ce28573608d4c5264324a68ff90ef5c89f
+  content:
+    type: system_requirement
+    text: tl check shall report, under the rule attribute-declared, every item with
+      an attribute whose value is not valid for its declaration's type and constraints,
+      every item lacking an attribute declared required or whose required_when holds,
+      and every item carrying an attribute whose absent_when holds. An attribute
+      declared list holds a YAML list of valid values and is left out rather than
+      empty.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

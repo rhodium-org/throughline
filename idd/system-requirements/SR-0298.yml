@@ -1,6 +1,6 @@
 uid: SR-0298
 type: system_requirement
-status: proposed
+status: ratified
 title: tl proposes declarations from the graphs that would follow
 text: tl shall propose, as proposed AI-origin items in a standard, the register,
   attribute, value set and link declarations that one or more named graphs hold,
@@ -16,3 +16,17 @@ attrs:
   priority: could
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:48:06Z'
+  fingerprint: sha256:c8d6e24f53010b0854a67178a4f6cd4ad1792f9a0bfd19d62bb1bf9a7c129b53
+  content:
+    type: system_requirement
+    text: tl shall propose, as proposed AI-origin items in a standard, the register,
+      attribute, value set and link declarations that one or more named graphs hold,
+      and report each place the graphs disagree. It never changes a declaration once
+      written.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

@@ -1,6 +1,6 @@
 uid: SR-0296
 type: system_requirement
-status: proposed
+status: ratified
 title: tl init --from-schema creates every register the standard declares
 text: When tl init --from-schema names a standard, init shall create in the new project
   every register the standard's register declarations name, required or optional,
@@ -18,3 +18,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:47:53Z'
+  fingerprint: sha256:a8ae224d8cc4c0fa5550613ab1a2910496094a2f4c942167e2d4da0aaf1e011a
+  content:
+    type: system_requirement
+    text: When tl init --from-schema names a standard, init shall create in the new
+      project every register the standard's register declarations name, required
+      or optional, each at its declared prefix and folder, holding its declared type,
+      and no other. An optional register is created empty.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

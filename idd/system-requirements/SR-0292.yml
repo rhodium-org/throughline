@@ -1,6 +1,6 @@
 uid: SR-0292
 type: system_requirement
-status: proposed
+status: ratified
 title: Link types are declared as items
 text: A link_type declaration names one link type and says whether it grounds. A
   standard's link types and its grounding link types shall be its link_type declarations
@@ -18,3 +18,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T16:46:41Z'
+  fingerprint: sha256:c761980aba75c1b4de9fc6b096db66d051653962bc5e2991c9abdefcf01a69fc
+  content:
+    type: system_requirement
+    text: A link_type declaration names one link type and says whether it grounds.
+      A standard's link types and its grounding link types shall be its link_type
+      declarations and those of its own schema source; tl check reports a link of
+      a type neither declares under the rule undeclared, and a standard whose configuration
+      also lists link types is refused when read.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
