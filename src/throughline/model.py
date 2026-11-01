@@ -303,6 +303,7 @@ class Project:
     declarations: object = field(default=None, repr=False, compare=False)
     offered: object = field(default=None, repr=False, compare=False)
     formed_declarations: object = field(default=None, repr=False, compare=False)
+    declaration_errors: list = field(default_factory=list, repr=False, compare=False)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property
@@ -328,7 +329,8 @@ class Project:
         return Project(path=self.path if path is None else path, config=self.config,
                        schema_config=self.schema_config, inheritance=self.inheritance,
                        declarations=self.declarations, offered=self.offered,
-                       formed_declarations=self.formed_declarations)
+                       formed_declarations=self.formed_declarations,
+                       declaration_errors=self.declaration_errors)
 
     def items(self):
         for reg in self.registers.values():

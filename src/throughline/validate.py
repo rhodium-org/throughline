@@ -66,7 +66,7 @@ _DEFAULT_SEVERITY = {
     "unpublished": WARNING, "normative-mismatch": WARNING,
     "register-type-mismatch": WARNING,
     "register-declared": ERROR, "attribute-declared": ERROR, "link-declared": ERROR,
-    "undeclared": ERROR,
+    "undeclared": ERROR, "declaration": ERROR,
 }
 # `rule-filter` is deliberately absent above. Every rule there describes a
 # judgement a project may reasonably make differently; a coverage rule that
@@ -531,6 +531,8 @@ def validate(project, strict: bool = False,
     out.extend(_coverage_rules(project, idx, strict))
     # A follower against its standard's declarations (SR-0287..SR-0293). Only its
     # own items: a borrowed item is its own graph's to answer for.
+    for fault in getattr(project, "declaration_errors", None) or ():
+        add("declaration", "", str(project.path / CONFIG_NAME), fault)
     from .declared import check as check_declared
     local = [it for it in project.items() if it._authored_uid is None]
     for found in check_declared(project, local):

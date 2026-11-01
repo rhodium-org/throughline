@@ -53,6 +53,7 @@ attrs.label = {{ type = "string" }}
 attrs.required = {{ type = "bool" }}
 attrs.exactly_one = {{ type = "bool" }}
 attrs.scope = {{ type = "string" }}
+attrs.normative = {{ type = "bool" }}
 [types.type]
 {ORIGIN}
 attrs.pattern = {{ type = "string" }}
@@ -69,6 +70,7 @@ attrs.required_when = {{ type = "string" }}
 attrs.absent_when = {{ type = "string" }}
 attrs.list = {{ type = "bool" }}
 attrs.scope = {{ type = "string" }}
+attrs.normative = {{ type = "bool" }}
 [types.link]
 {ORIGIN}
 attrs.min = {{ type = "int" }}
@@ -147,7 +149,7 @@ def standard(tmp: Path, *, attrs=(), links=(), types=(), enums=(), regs=None,
         item("ATTR-0003", "attribute", [("belongs_to", "REG-0002"), ("has_type", "TYPE-0004")],
              name="presented"),
         item("ATTR-0004", "attribute", [("belongs_to", "REG-0003"), ("has_type", "TYPE-0003")],
-             name="order", required=True),
+             name="order", required=True, normative=True),
         item("ATTR-0005", "attribute", [("belongs_to", "REG-0003"), ("has_type", "ENUM-0002")],
              name="layout", required=True),
         item("ATTR-0006", "attribute", [("belongs_to", "REG-0003"), ("has_type", "TYPE-0005")],
@@ -391,8 +393,21 @@ def test_a_follower_declaration_colliding_with_the_standard_is_refused(tmp_path)
         item("ATTR-0001", "attribute", [("belongs_to", "presentation:REG-0003"),
                                         ("has_type", "presentation:TYPE-0001")],
              name="layout", scope="this-graph")])}
-    with pytest.raises(ProjectError, match="SLD.layout is declared twice"):
-        load_project(follower(tmp_path, extra=extra))
+    # The follower holds the faulty declaration, so it still loads, to be put right
+    # with tl, and its check reports the clash.
+    root = follower(tmp_path, extra=extra)
+    faults = [f for f in validate(load_project(root)) if f.rule == "declaration"]
+    assert faults and "SLD.layout is declared twice" in faults[0].message
+
+
+def test_a_half_written_declaration_leaves_its_graph_loadable(tmp_path):
+    std = standard(tmp_path)
+    half = item("ATTR-0009", "attribute", [("belongs_to", "REG-0003")], name="x")
+    (std / "attributes" / "ATTR-0009.yml").write_text(yaml.safe_dump(half), encoding="utf-8")
+    faults = [f for f in validate(load_project(std)) if f.rule == "declaration"]
+    assert faults and "has_type" in faults[0].message
+    with pytest.raises(ProjectError, match="holds a faulty declaration"):
+        load_project(follower(tmp_path))
 
 
 def test_an_alias_lets_a_follower_write_the_standards_attribute_under_its_own_name(tmp_path):
@@ -501,3 +516,16 @@ def test_tl_check_over_the_union_judges_only_the_followers_own_items(tmp_path, c
     main(["-C", str(root), "check", "--format", "json"])
     out = json.loads(capsys.readouterr().out)
     assert [f for f in out if f["rule"] in DECLARED_RULES] == []
+
+
+def test_normative_declarations_reach_the_schema_and_so_the_fingerprint(tmp_path):
+    regs = [
+        item("REG-0001", "register", prefix="SER", dir="series", holds="series", exactly_one=True),
+        item("REG-0002", "register", prefix="ED", dir="editions", holds="edition"),
+        item("REG-0003", "register", prefix="SLD", dir="slides", holds="slide", normative=False),
+    ]
+    standard(tmp_path, regs=regs)
+    schema = load_project(follower(tmp_path)).schema
+    assert schema.attr("slide", "order").normative
+    assert not schema.attr("slide", "layout").normative
+    assert schema.is_normative("edition") and not schema.is_normative("slide")

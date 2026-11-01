@@ -204,6 +204,7 @@ class RegDecl:
     exactly_one: bool = False
     scope: str = FOLLOWERS
     std_prefix: str | None = None             # set when this is an alias
+    normative: bool = True                    # whether the type it holds is normative
 
 
 @dataclass(frozen=True)
@@ -218,6 +219,7 @@ class AttrDecl:
     list: bool = False
     scope: str = FOLLOWERS
     std_name: str | None = None               # set when this is an alias
+    normative: bool = False                   # feeds the item's fingerprint
 
 
 @dataclass(frozen=True)
@@ -351,9 +353,14 @@ def build(items, *, dead: frozenset[str], source: "Declarations | None",
                 if base != "string":
                     raise DeclarationError(f"{it.uid}: pattern applies to string, not {base}")
                 check_pattern(str(pat))
+            # A bound is written as its base type's value, or as text in that form.
+            bounds = []
             for k, v in (("min", lo), ("max", hi)):
-                if v is not None and not base_accepts(base, v):
+                b = v if v is None or base_accepts(base, v) else _coerce(base, v)
+                if v is not None and (b is None or not base_accepts(base, b)):
                     raise DeclarationError(f"{it.uid}: {k} {v!r} is not a {base}")
+                bounds.append(b)
+            lo, hi = bounds
             out.by_uid[it.uid] = TypeDecl(it.uid, it.title, base, lo, hi,
                                           str(pat) if pat is not None else None)
         elif it.type == "enum":
@@ -374,7 +381,8 @@ def build(items, *, dead: frozenset[str], source: "Declarations | None",
             out.by_uid[it.uid] = RegDecl(
                 it.uid, str(it.attrs["prefix"]), str(it.attrs["dir"]), str(it.attrs["holds"]),
                 str(it.attrs.get("label") or ""), _flag(it, "required", True),
-                _flag(it, "exactly_one", False), _scope(it))
+                _flag(it, "exactly_one", False), _scope(it),
+                normative=_flag(it, "normative", True))
         elif it.type == "link_type":
             if not it.attrs.get("name"):
                 raise DeclarationError(f"{it.uid}: a link type declaration names its link type")
@@ -401,7 +409,8 @@ def build(items, *, dead: frozenset[str], source: "Declarations | None",
             out.by_uid[it.uid] = AttrDecl(
                 it.uid, reg.prefix, str(it.attrs["name"]), typ, _flag(it, "required", False),
                 conds.get("required_when"), conds.get("absent_when"), _flag(it, "list", False),
-                _scope(it) if "scope" in it.attrs else reg.scope)
+                _scope(it) if "scope" in it.attrs else reg.scope,
+                normative=_flag(it, "normative", False))
         elif it.type == "link":
             frm = reg_of(it, "from", "register it runs from")
             tos = [resolve(t) for t in _targets(it, "to")]
@@ -510,6 +519,29 @@ def _decl_items(project):
 
 
 def attach(project) -> None:
+    """Form ``project``'s declarations (see :func:`_attach`). A faulty declaration
+    in the graph holding it is a finding there, under ``declaration``, so the graph
+    can still be loaded and put right with tl; any graph following it is refused
+    when read."""
+    project.declaration_errors = []
+    inh = project.inheritance
+    source = getattr(inh, "source_project", None) if inh else None
+    faults = getattr(source, "declaration_errors", None) if source else None
+    if faults:
+        raise DeclarationError(
+            f"the schema source '{inh.namespace}' holds a faulty declaration: {faults[0]}")
+    try:
+        _attach(project)
+    except DeclarationError as e:
+        if not _decl_items(project):
+            raise
+        project.declaration_errors = [str(e)]
+        project.formed_declarations = None
+        project.offered = Declarations()
+        project.declarations = Declarations()
+
+
+def _attach(project) -> None:
     """Form ``project``'s declarations, extend its schema configuration with what
     they declare, and refuse what collides. Sets ``project.formed_declarations``
     (every declaration it and its sources hold, for its followers to resolve
@@ -680,8 +712,12 @@ def _extend_schema_config(project, decls: Declarations) -> None:
                     spec["values"] = list(a.type.values or ())
             if a.required:
                 spec["required"] = True
+            if a.normative:
+                spec["normative"] = True
             attrs[a.name] = spec
         body = dict(types.get(reg.holds) or {})
+        if not reg.normative:
+            body["normative"] = False
         body["attrs"] = {**(body.get("attrs") or {}), **attrs}
         types[reg.holds] = body
     if decls.link_types:
@@ -689,7 +725,10 @@ def _extend_schema_config(project, decls: Declarations) -> None:
         have = list(links.get("types") or [])
         links["types"] = have + [n for n in decls.link_types if n not in have]
         grounding = base.setdefault("grounding", {})
-        g = list(grounding.get("ground_link_types") or [])
+        # Where no configuration names its grounding link types, they are the
+        # declared ones alone, not the Tool's defaults (SR-0292).
+        g = list(grounding.get("ground_link_types") or []) \
+            if "ground_link_types" in grounding else []
         grounding["ground_link_types"] = g + [
             n for n, lt in decls.link_types.items() if lt.grounds and n not in g]
     project.schema_config = base
