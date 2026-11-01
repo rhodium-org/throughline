@@ -252,6 +252,14 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
 
     s = sub.add_parser("migrate",
                        help="upgrade an older project's on-disk format to this tl")
+    s.add_argument("--beneath", metavar="PATH", action="append",
+                   help="every graph beneath PATH instead of the -C project "
+                        "(repeatable); lists what is behind unless --apply "
+                        "(SR-0300, SR-0301)")
+    s.add_argument("--apply", action="store_true",
+                   help="with --beneath: migrate each graph that is behind, has no "
+                        "uncommitted changes and is not in a linked worktree; "
+                        "commits nothing (SR-0302..SR-0304)")
     s.set_defaults(func=handlers.get("cmd_migrate"))
 
     s = sub.add_parser("register", help="register (prefix-owning collection) operations")
