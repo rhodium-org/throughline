@@ -1,19 +1,24 @@
 uid: SR-0283
 type: system_requirement
 status: ratified
-title: Init can name a schema source and writes nothing until it resolves
-text: The init command shall accept a schema source (a url with a ref, or a path)
-  and write a project whose configuration holds that one [[sources]] entry marked
-  as the schema source, and no default registers or starter items. It shall resolve
-  the source before writing anything; a source that cannot be fetched, or that is
-  not a throughline project, leaves no project behind and exits with a usage error
-  naming the source. The namespace defaults to the source's last path segment and
-  may be named.
-rationale: Resolving first means a typo in the url never leaves a half-made graph
-  to clean up (SR-0077's change-nothing-on-refusal). No default registers, because
-  the defaults belong to tl's own starter schema, not to the standard being followed.
-  A url without a ref is accepted as composition accepts it; pinning is the follower's
-  call.
+title: tl init --from-schema follows a standard and writes nothing until it resolves
+text: 'tl init --from-schema <source> shall write a project whose configuration holds
+  that one [[sources]] entry marked schema = true, and no default registers or starter
+  items. <source> is a git url, pinned with --ref <tag, branch or commit>, or a path
+  to another graph, written relative to the new project. The source is resolved before
+  anything is written: a source that cannot be fetched, that is not a throughline
+  project, or whose items could not be borrowed under the namespace leaves no project
+  behind and exits with a usage error naming the source. --namespace names the namespace;
+  by default it is the last part of the url or path, lower-cased, without .git, a
+  leading "throughline-" or a trailing "-standard".'
+rationale: 'Resolving first means a typo in the url never leaves a half-made graph
+  to clean up (SR-0077''s change-nothing-on-refusal). No default registers, because
+  the defaults belong to tl''s own starter schema, not to the standard being followed.
+  The flag is --from-schema, not --schema (operator, 1 November 2026): the command
+  starts a graph that follows a schema, not a schema. The default namespace drops
+  throughline- and -standard because the estate names every standard that way and
+  the full name is too long to compose: plan + CON fits a UID prefix, THROUGHLINEPLANSTANDARD
+  + CON does not. A url needs a ref, as composition requires (SR-0006).'
 normative: true
 links:
 - target: UR-0043
