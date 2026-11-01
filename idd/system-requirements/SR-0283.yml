@@ -1,6 +1,6 @@
 uid: SR-0283
 type: system_requirement
-status: proposed
+status: ratified
 title: Init can name a schema source and writes nothing until it resolves
 text: The init command shall accept a schema source (a url with a ref, or a path)
   and write a project whose configuration holds that one [[sources]] entry marked
@@ -24,3 +24,21 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-01T05:42:57Z'
+  fingerprint: sha256:23019dca63ac61fc083d41dcb7b88b054887b98ff3ba7f370cd2e88f20aacfa5
+  content:
+    type: system_requirement
+    text: The init command shall accept a schema source (a url with a ref, or a path)
+      and write a project whose configuration holds that one [[sources]] entry marked
+      as the schema source, and no default registers or starter items. It shall resolve
+      the source before writing anything; a source that cannot be fetched, or that
+      is not a throughline project, leaves no project behind and exits with a usage
+      error naming the source. The namespace defaults to the source's last path segment
+      and may be named.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

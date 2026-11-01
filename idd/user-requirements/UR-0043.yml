@@ -1,6 +1,6 @@
 uid: UR-0043
 type: user_requirement
-status: proposed
+status: ratified
 title: A graph that follows a standard is started with one command
 text: As someone starting a graph that follows a standard published as another graph,
   I want one init command naming the standard to give me a graph that already follows
@@ -25,3 +25,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-01T05:42:57Z'
+  fingerprint: sha256:a36d61eea6cf2fc0ceaa964d7860f3da20d7c730a4d3d3fb162149008c9b628a
+  content:
+    type: user_requirement
+    text: As someone starting a graph that follows a standard published as another
+      graph, I want one init command naming the standard to give me a graph that
+      already follows it, with the registers the standard expects, so that I need
+      not hand-edit the configuration or work out the register set the standard already
+      settled.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
