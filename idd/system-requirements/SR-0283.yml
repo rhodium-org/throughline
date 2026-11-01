@@ -1,0 +1,26 @@
+uid: SR-0283
+type: system_requirement
+status: proposed
+title: Init can name a schema source and writes nothing until it resolves
+text: The init command shall accept a schema source (a url with a ref, or a path)
+  and write a project whose configuration holds that one [[sources]] entry marked
+  as the schema source, and no default registers or starter items. It shall resolve
+  the source before writing anything; a source that cannot be fetched, or that is
+  not a throughline project, leaves no project behind and exits with a usage error
+  naming the source. The namespace defaults to the source's last path segment and
+  may be named.
+rationale: Resolving first means a typo in the url never leaves a half-made graph
+  to clean up (SR-0077's change-nothing-on-refusal). No default registers, because
+  the defaults belong to tl's own starter schema, not to the standard being followed.
+  A url without a ref is accepted as composition accepts it; pinning is the follower's
+  call.
+normative: true
+links:
+- target: UR-0043
+  type: implements
+- target: SR-0077
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
