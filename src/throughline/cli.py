@@ -121,6 +121,7 @@ from .sources import SourceError, parse_sources
 from .union import ComposeError, build_union, translate_finding
 from .storage import (
     CONFIG_NAME,
+    FORMAT_VERSION,
     MANIFEST_NAME,
     ProjectError,
     baseline_note,
@@ -146,6 +147,7 @@ from .validate import (
     validate,
 )
 from .version import distribution_version
+from . import migrate_beneath
 
 OK, FINDINGS, USAGE = 0, 1, 2
 
@@ -293,6 +295,11 @@ def cmd_init(args) -> int:
 
 
 def cmd_migrate(args) -> int:
+    if getattr(args, "beneath", None):
+        return _migrate_beneath(args)
+    if getattr(args, "apply", False):
+        return _err("--apply migrates the graphs found by --beneath; name at least "
+                    "one --beneath PATH (SR-0301)")
     try:
         result = migrate_project(args.path)
     except ProjectError as e:
@@ -2173,6 +2180,77 @@ def _composed_ratify(args) -> int:
     return OK
 
 
+def _migrate_beneath(args) -> int:
+    """Every graph beneath the given paths: listed (SR-0301), or migrated where it
+    is safe to rewrite (SR-0302..SR-0304). Nothing is ever committed."""
+    found = migrate_beneath.survey(args.beneath)
+    behind = [f for f in found if f.behind]
+    if not args.apply:
+        _print_behind(behind)
+    _print_unmigratable(found)
+    current = sum(1 for f in found if f.declared == FORMAT_VERSION)
+    print(f"{current} graph(s) already at format version {FORMAT_VERSION}")
+    if not args.apply:
+        if behind:
+            print("nothing was written — run again with --apply to migrate those "
+                  "with no uncommitted changes and not in a linked worktree")
+        return OK
+
+    outcomes = migrate_beneath.apply(behind)
+    skipped = [o for o in outcomes if o.skipped]
+    failed = [o for o in outcomes if o.failed]
+    if skipped:
+        print(f"skipped {len(skipped)} graph(s):")
+        for o in skipped:
+            print(f"  {o.found.root} — {o.skipped}")
+    if failed:
+        print(f"failed to migrate {len(failed)} graph(s):")
+        for o in failed:
+            print(f"  {o.found.root} — {o.failed}")
+    by_repo: dict[Path, int] = {}
+    for o in outcomes:
+        if o.migrated:
+            by_repo[o.found.repository] = by_repo.get(o.found.repository, 0) + 1
+    for repo, n in by_repo.items():
+        print(f"migrated {n} graph(s) in {repo} to format version {FORMAT_VERSION} "
+              "— review with `git diff` and commit them there")
+    if not by_repo:
+        print("migrated nothing")
+    return FINDINGS if failed else OK
+
+
+def _print_behind(behind) -> None:
+    if not behind:
+        print(f"no graph is below format version {FORMAT_VERSION}")
+        return
+    print(f"{len(behind)} graph(s) below format version {FORMAT_VERSION}:")
+    groups: dict[Path | None, list] = {}
+    for f in behind:
+        groups.setdefault(f.repository, []).append(f)
+    # By repository, so each owner's graphs read together; those outside any last.
+    for repo, graphs in sorted(groups.items(),
+                               key=lambda g: (g[0] is None, str(g[0]))):
+        print(f"  {repo if repo is not None else '(not in a git repository)'}")
+        for f in graphs:
+            # Forward slashes, so a listing reads the same on every platform.
+            where = f.root if repo is None else f.root.relative_to(repo).as_posix()
+            print(f"    {where}  format {f.declared}")
+
+
+def _print_unmigratable(found) -> None:
+    unread = [f for f in found if f.error is not None]
+    ahead = [f for f in found if f.ahead]
+    if unread:
+        print(f"{len(unread)} graph(s) whose configuration cannot be read:")
+        for f in unread:
+            print(f"  {f.root} — {f.error}")
+    if ahead:
+        print(f"{len(ahead)} graph(s) newer than this tl's format version "
+              f"{FORMAT_VERSION} — upgrade tl to open them:")
+        for f in ahead:
+            print(f"  {f.root}  format {f.declared}")
+
+
 def _composed_migrate(args) -> int:
     """Migrate the consumer, judging its ratification records over the union
     (SR-0153).
@@ -2185,7 +2263,9 @@ def _composed_migrate(args) -> int:
     bound record carries a fingerprint and never matches again, so the union pass
     can only add."""
     rc = cmd_migrate(args)
-    if rc != OK:
+    if rc != OK or getattr(args, "beneath", None):
+        # Over many graphs each is migrated alone (SR-0304): the -C project's
+        # sources have nothing to say about them.
         return rc
 
     # The project is loadable from here — the repair has upgraded it if it needed it.

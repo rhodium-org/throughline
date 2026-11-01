@@ -1,0 +1,35 @@
+uid: SR-0301
+type: system_requirement
+status: implemented
+title: Without --apply, tl migrate --beneath lists what it would migrate and writes
+  nothing
+text: Without --apply, tl migrate --beneath writes nothing. It lists every graph
+  found below the current format version, grouped by the git repository holding it,
+  with the format version each declares, then counts the graphs already at the current
+  version. A graph whose configuration cannot be read, or which declares a version
+  newer than this tl, is listed with the reason. It exits 0. --apply without --beneath
+  is a usage error.
+normative: true
+links:
+- target: UR-0045
+  type: implements
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-01T20:19:53Z'
+  fingerprint: sha256:99e0884b01ffa1cbce4863cd1dbd259f376bd3dde511c9aec38840e7e831ce34
+  content:
+    type: system_requirement
+    text: Without --apply, tl migrate --beneath writes nothing. It lists every graph
+      found below the current format version, grouped by the git repository holding
+      it, with the format version each declares, then counts the graphs already at
+      the current version. A graph whose configuration cannot be read, or which declares
+      a version newer than this tl, is listed with the reason. It exits 0. --apply
+      without --beneath is a usage error.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
