@@ -240,6 +240,14 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                    help="skip the default registers (implies --no-demo)")
     s.add_argument("--bare", action="store_true",
                    help="write only throughline.toml (same as --no-defaults)")
+    s.add_argument("--from-schema", metavar="SOURCE",
+                   help="follow a standard: a git url (with --ref) or a path to "
+                        "another graph, whose schema this graph takes and whose "
+                        "starter registers it begins with (SR-0283, SR-0284)")
+    s.add_argument("--ref", help="the tag, branch or commit of a --from-schema url")
+    s.add_argument("--namespace",
+                   help="the --from-schema source's namespace (default: the last "
+                        "part of its url or path)")
     s.set_defaults(func=handlers.get("cmd_init"))
 
     s = sub.add_parser("migrate",

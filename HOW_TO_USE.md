@@ -112,6 +112,10 @@ need — the starter is a runway, not a fixture. Prefer to begin from nothing?
 `tl init --bare` writes only `throughline.toml`, which is exactly what the next
 section uses to teach the grounding layer.
 
+Following a published standard instead? `tl init --from-schema <url> --ref <tag>`
+starts a graph that takes the standard's schema and the registers it declares,
+with nothing of tl's own defaults to remove.
+
 ---
 
 ## 4. Build a graph from scratch — the grounding lesson
@@ -266,6 +270,7 @@ default; edit it to fit your project.
 
 ```
 tl init [--name NAME] [--bare]                 # scaffold a project (--bare = config only, no seed)
+tl init --from-schema <url|path> [--ref REF]   # a graph that follows a standard (SR-0283)
 tl migrate                                     # upgrade an older project's on-disk format to this tl
 tl register new <PREFIX> <dir> [--parent P]    # add a register (prefix-owning collection)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID [--ground-type K]]  # allocate + create (ground at birth)

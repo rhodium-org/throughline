@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-248
+250
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-39
+40
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -135,6 +135,7 @@ detect items that "violate" a non-goal — that judgement stays with a human.
 
 ```
 tl init [--name NAME]                         # scaffold a project
+tl init --from-schema <url|path> [--ref REF] [--namespace NS]  # a graph that follows a standard
 tl register new <PREFIX> <dir> [--parent P]   # add a register
 tl new <PREFIX> [--uid U] [--type T] [--ground UID] [--key UUID4]  # allocate + create (grounded at birth); a held key creates nothing
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
@@ -225,6 +226,27 @@ attribute is refused when the configuration is read, naming both values.
 `tl schema show` and `tl dump` mark what was inherited, and `tl schema` refuses
 to change it. Every operation then reads that one source; the rest wait for the
 union.
+
+Starting a graph that follows a standard is one command:
+
+```bash
+tl init --from-schema https://github.com/rhodium-org/throughline-plan-standard --ref v1.0.0
+```
+
+It resolves the standard first, so a mistyped url leaves nothing behind, then writes
+the one `schema = true` source and none of tl's own default registers. The
+namespace is the last part of the url without `throughline-` or `-standard`
+(`plan` here), or name it with `--namespace`; a path to a graph beside you works in
+place of a url. A standard may list the registers its followers start with, and
+init creates them; from then on they are the follower's own:
+
+```toml
+[[starter_registers]]
+prefix = "ACT"
+dir = "activities"
+type = "activity"
+title = "Activities"   # optional; the folder by default
+```
 
 Sources are read-only, fetched once into a per-user cache and reached again only
 when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A
