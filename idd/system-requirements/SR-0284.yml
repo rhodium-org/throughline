@@ -1,6 +1,6 @@
 uid: SR-0284
 type: system_requirement
-status: implemented
+status: deleted
 title: A standard may declare the registers its followers start with
 text: A project's configuration may declare [[starter_registers]], each a table of
   prefix, dir (a folder inside the project), type (a type its schema declares) and
@@ -45,3 +45,10 @@ ratifications:
     derived: false
     attrs:
       priority: should
+deleted:
+  date: '2026-11-01'
+  reason: 'Superseded by register declarations as items (SR-0296): [[starter_registers]]
+    declared a standard''s registers in its configuration, unsigned; 4.5.0, which
+    shipped it, was withdrawn before PyPI.'
+  fingerprint: sha256:c5c088e617ec0c2b937378e334a8b716138c7f6de148876a1a58ffb5c899e770
+  from: implemented

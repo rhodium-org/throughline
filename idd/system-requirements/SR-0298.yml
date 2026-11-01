@@ -1,0 +1,18 @@
+uid: SR-0298
+type: system_requirement
+status: proposed
+title: tl proposes declarations from the graphs that would follow
+text: tl shall propose, as proposed AI-origin items in a standard, the register,
+  attribute, value set and link declarations that one or more named graphs hold,
+  and report each place the graphs disagree. It never changes a declaration once
+  written.
+rationale: 'Starts the real presentation standard from the six series and reports
+  their drift. Never syncs: a rule that follows the data records drift as the rule.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: could
+  verification: test
+  origin: ai

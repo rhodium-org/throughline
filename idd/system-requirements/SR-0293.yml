@@ -1,0 +1,20 @@
+uid: SR-0293
+type: system_requirement
+status: proposed
+title: In a follower, what is not declared is an error
+text: In a project whose schema source declares by items, tl check shall report,
+  under the rule undeclared, every attribute that no declaration covers for its item's
+  register, every register no declaration covers, and every link whose link type
+  and registers no link declaration covers. A project whose schema source declares
+  only in its configuration, or that has none, is unchanged.
+rationale: 'A typo such as monht is caught, and an app never meets a value it was
+  not told about. Rejected: checking only what is declared, which lets drift through
+  silently.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

@@ -1,0 +1,19 @@
+uid: SR-0287
+type: system_requirement
+status: proposed
+title: A follower holds every register its standard declares
+text: tl check shall report, under the rule register-declared, a follower that lacks
+  a register its standard declares required, that holds a declared register at another
+  prefix or folder or holding another type, or that holds other than exactly one
+  live item in a register declared exactly_one.
+rationale: An app finds slides at SLD in slides/ in every series, or the series fails
+  its check. exactly_one makes the one series item's attributes a value for the whole
+  graph, which conditions rely on.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

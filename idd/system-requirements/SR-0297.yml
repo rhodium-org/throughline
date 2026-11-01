@@ -1,0 +1,21 @@
+uid: SR-0297
+type: system_requirement
+status: proposed
+title: Migration turns a schema's configuration declarations into items
+text: tl migrate, asked to turn a project's schema into items, shall write as proposed
+  AI-origin items a declaration for each item type, attribute, enum, link type and
+  link endpoint rule its configuration makes, and remove those tables, naming each.
+  A second run writes nothing.
+rationale: The existing standards (presentation, plan, uxui) declare their shape
+  in toml today. Extends migrate (SR-0277) instead of a script beside it; the written
+  items still need ratifying.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0277
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

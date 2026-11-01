@@ -1,0 +1,22 @@
+uid: SR-0288
+type: system_requirement
+status: proposed
+title: Every attribute is checked against its declaration
+text: tl check shall report, under the rule attribute-declared, every item with an
+  attribute whose value is not valid for its declaration's type and constraints,
+  every item lacking an attribute declared required or whose required_when holds,
+  and every item carrying an attribute whose absent_when holds. An attribute declared
+  list holds a YAML list of valid values and is left out rather than empty.
+rationale: The declaration names its register by a belongs_to link and its type by
+  a has_type link to one type or value set, so the attribute itself carries only
+  its name, whether it is required, its conditions and list.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0282
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

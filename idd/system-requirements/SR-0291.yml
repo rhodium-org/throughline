@@ -1,0 +1,24 @@
+uid: SR-0291
+type: system_requirement
+status: proposed
+title: A follower's links are counted against its standard's link declarations
+text: A link declaration names the register links run from by a from link, each register
+  they run to by a to link, and its link type by a via link, and carries only min,
+  max, per_target_min, when and from_when. tl check shall report, under the rule
+  link-declared, every item whose links of that type to items of those registers
+  number fewer than min or more than max, where when holds for the graph and from_when
+  for the item, and every item of a target register with fewer than per_target_min
+  such links pointing to it.
+rationale: Links stay where they are, on the item they start from; a link declaration
+  is the rule they are counted against, as a foreign key is to rows. Naming registers
+  by links, not attributes, says each once.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0084
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

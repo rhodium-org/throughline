@@ -1,0 +1,20 @@
+uid: SR-0292
+type: system_requirement
+status: proposed
+title: Link types are declared as items
+text: A link_type declaration names one link type and says whether it grounds. A
+  standard's link types and its grounding link types shall be its link_type declarations
+  and those of its own schema source; tl check reports a link of a type neither declares
+  under the rule undeclared, and a standard whose configuration also lists link types
+  is refused when read.
+rationale: Moves [links] and ground_link_types out of the configuration, as the declaration
+  kinds were. The meta-standard declares derives_from, belongs_to, has_type, from,
+  to and via; a standard adds its own.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

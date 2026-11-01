@@ -1,0 +1,19 @@
+uid: SR-0289
+type: system_requirement
+status: proposed
+title: A condition names its own register or one holding exactly one item
+text: A condition is one or more comparisons REGISTER.attribute == value joined by
+  and or or, where the attribute is an enum and the value one of its values. A declaration
+  whose condition names an attribute of neither its own register nor a register declared
+  exactly_one, or a value its value set does not hold, is refused when read.
+rationale: 'No walking links: a briefing edition reaches SER.kind because the series
+  register holds one item, not by following derives_from. Enum-only comparisons keep
+  every condition decidable, which the overlap check needs.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

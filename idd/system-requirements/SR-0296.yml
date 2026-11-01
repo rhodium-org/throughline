@@ -1,0 +1,19 @@
+uid: SR-0296
+type: system_requirement
+status: proposed
+title: tl init --from-schema creates the registers the standard declares required
+text: When tl init --from-schema names a standard, init shall create in the new project
+  each register the standard's register declarations mark required, at its declared
+  prefix and folder, holding its declared type, and no other.
+rationale: Replaces [[starter_registers]], which declared the same in the configuration,
+  unsigned, and is deleted with this item's proposal.
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0283
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

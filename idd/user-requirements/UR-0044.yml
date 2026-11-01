@@ -1,0 +1,30 @@
+uid: UR-0044
+type: user_requirement
+status: proposed
+title: A standard declares its followers' shape as items, and tl checks every follower
+  against it
+text: As the keeper of a standard, and of an app that reads the graphs following
+  it, I want the standard to declare the registers, types, value sets, attributes
+  and links its followers hold as items I ratify, and tl check to report every follower
+  that departs from them, so that the app reads any follower deterministically and
+  no follower copies or interprets the standard.
+rationale: 'Mocked 1 Nov 2026 in rhodium-org/76234gasd65-meta, 76234gasd65-standard
+  and 76234gasd65 (throwaway, private) and challenged by the operator item by item.
+  presentation-manager relies on SLD, CLM, THR and about fifty attributes existing
+  in every series; a standard that only lends item types cannot promise them. Rejected:
+  declarations in the configuration, which are unsigned (the [[starter_registers]]
+  of the withdrawn 4.5.0); a register of prose rules, which a deterministic reader
+  cannot apply; declarations inferred from the followers, which record drift as the
+  rule. Who pays: the maintainer carries the checks; a standard''s keeper writes
+  and ratifies declarations; a follower''s keeper sees its drift reported on the
+  first check after adopting; every consumer of a standard implements the base types.'
+normative: true
+links:
+- target: BN-0007
+  type: derives_from
+- target: UR-0041
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
