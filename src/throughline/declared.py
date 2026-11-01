@@ -542,6 +542,26 @@ def attach(project) -> None:
 
 
 def _attach(project) -> None:
+    import copy
+    before = copy.deepcopy(project.formed_config)
+    try:
+        _attach_formed(project)
+    finally:
+        # What a follower inherits: the configuration as this graph's own file and
+        # its source formed it, with the link vocabulary its declarations added,
+        # but never the item types they derive: a follower derives its own, and a
+        # type this graph declares for itself is no follower's (SR-0285).
+        inheritable = before
+        formed = project.formed_config
+        if "links" in formed:
+            inheritable["links"] = copy.deepcopy(formed["links"])
+        g = (formed.get("grounding") or {}).get("ground_link_types")
+        if g is not None:
+            inheritable.setdefault("grounding", {})["ground_link_types"] = list(g)
+        project.inheritable_config = inheritable
+
+
+def _attach_formed(project) -> None:
     """Form ``project``'s declarations, extend its schema configuration with what
     they declare, and refuse what collides. Sets ``project.formed_declarations``
     (every declaration it and its sources hold, for its followers to resolve
@@ -551,7 +571,7 @@ def _attach(project) -> None:
     source = getattr(inh, "source_project", None) if inh else None
     src_formed = getattr(source, "formed_declarations", None) if source else None
     src_offered = getattr(source, "offered", None) if source else None
-    dead = project.schema.dead_statuses()
+    dead = _dead(project)
     own_items = _decl_items(project)
     if not own_items and not src_offered:
         project.formed_declarations = src_formed
@@ -594,6 +614,17 @@ def _attach(project) -> None:
     project.declarations = effective
     if effective:
         _extend_schema_config(project, effective)
+    # A standard knows the link types it declares for its followers, so its own
+    # coverage rules, which its followers inherit, may name them (SR-0292).
+    extra = [n for n in project.offered.link_types if n not in effective.link_types]
+    if extra:
+        import copy
+        base = copy.deepcopy(project.formed_config)
+        links = base.setdefault("links", {})
+        have = list(links.get("types") or [])
+        links["types"] = have + [n for n in extra if n not in have]
+        project.schema_config = base
+        project._schema = None
 
 
 def _refuse_twice(project) -> None:
@@ -612,6 +643,13 @@ def _refuse_twice(project) -> None:
         raise DeclarationError(
             f"link type(s) {sorted(clash)} are declared both in throughline.toml and by "
             "link_type items; declare them once, by items (SR-0292)")
+
+
+def _dead(project) -> frozenset[str]:
+    """The statuses that mean an item is gone, read from the configuration as
+    formed, since the schema itself may wait on these declarations."""
+    roles = ((project.formed_config.get("status") or {}).get("roles")) or {}
+    return frozenset(roles[r] for r in ("invalidated", "tombstone") if r in roles)
 
 
 def _offered_items(offered: Declarations):
@@ -834,6 +872,12 @@ def check(project, items=None) -> list[Found]:
     for it in live:
         by_prefix.setdefault(_prefix(it.uid), []).append(it)
     out: list[Found] = []
+    owners = getattr(project, "prefix_owners", None) or {}
+
+    def target_prefix(target: str) -> str:
+        # In a union a borrowed target's prefix is mangled; read it back.
+        p = _prefix(target)
+        return owners[p][1] if p in owners else p
 
     def file_of(it) -> str:
         return str(it._path) if getattr(it, "_path", None) else ""
@@ -910,7 +954,7 @@ def check(project, items=None) -> list[Found]:
         if p not in decls.registers:
             continue
         for link in it.links:
-            tp = _prefix(link.target)
+            tp = target_prefix(link.target)
             if not any(l.frm == p and l.via == link.type and tp in l.to for l in decls.links):
                 near = _near(link.type, decls.link_types) if link.type not in decls.link_types else None
                 out.append(Found("undeclared", it.uid, file_of(it),
@@ -926,7 +970,7 @@ def check(project, items=None) -> list[Found]:
         for it in sources:
             n = 0
             for link in it.links:
-                if link.type == l.via and _prefix(link.target) in l.to:
+                if link.type == l.via and target_prefix(link.target) in l.to:
                     n += 1
                     incoming[link.target] = incoming.get(link.target, 0) + 1
             if l.min is not None and n < l.min:

@@ -529,3 +529,12 @@ def test_normative_declarations_reach_the_schema_and_so_the_fingerprint(tmp_path
     assert schema.attr("slide", "order").normative
     assert not schema.attr("slide", "layout").normative
     assert schema.is_normative("edition") and not schema.is_normative("slide")
+
+
+def test_a_coverage_rule_may_need_a_link_type_only_an_item_declares(tmp_path):
+    lts = [item("LT-0001", "link_type", name="verifies", grounds=True, scope="this-graph")]
+    std = standard(tmp_path, lts=lts, toml_extra=(
+        '[[rules.coverage]]\nfilter = "type == \'slide\'"\nneeds = "incoming:verifies"\n'
+        'severity = "warning"\n'))
+    load_project(std)
+    load_project(follower(tmp_path))

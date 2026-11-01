@@ -304,6 +304,7 @@ class Project:
     offered: object = field(default=None, repr=False, compare=False)
     formed_declarations: object = field(default=None, repr=False, compare=False)
     declaration_errors: list = field(default_factory=list, repr=False, compare=False)
+    inheritable_config: dict | None = field(default=None, repr=False, compare=False)
     _schema: Schema | None = field(default=None, repr=False, compare=False)
 
     @property

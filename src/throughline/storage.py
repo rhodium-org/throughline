@@ -1377,9 +1377,12 @@ def _schema_source_config(root: Path, config: dict, *, base: Path | None = None,
             f"cannot read the schema source '{source.namespace}' of {cfg_file}: {e}") from e
     finally:
         _FORMING.reset(token)
+    # A source whose declarations are items hands on its configuration without the
+    # item types those declarations derive (SR-0285).
+    formed = getattr(resolved.project, "inheritable_config", None) or resolved.project.formed_config
     if with_project:
-        return source.namespace, resolved.project.formed_config, resolved.project
-    return source.namespace, resolved.project.formed_config
+        return source.namespace, formed, resolved.project
+    return source.namespace, formed
 
 
 def _build_project(root: Path, config: dict, manifest_names: set[str], *,
@@ -1393,10 +1396,15 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
     schema_config, inheritance = schema_inheritance(root, config, base=base)
     project = Project(path=root, config=config, schema_config=schema_config,
                       inheritance=inheritance)
+    # Build + validate now, so bad config fails fast (SR-0082). A schema whose
+    # declarations are items (SR-0285) is judged again once they are read, so a
+    # refusal that those items settle waits for them.
+    early: SchemaError | None = None
     try:
-        project.schema  # build + validate now, so bad config fails fast (SR-0082)
+        project.schema
     except SchemaError as e:
-        raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
+        early = e
+        project._schema = None
     nested: list[Path] = []
     manifests = sorted(here / name for here, names in _walk_project(root, nested)
                        for name in names if name in manifest_names)
@@ -1437,6 +1445,8 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
     from .declared import attach
     try:
         attach(project)
+        if early is not None and not project.declarations:
+            raise early
         project.schema
     except SchemaError as e:
         raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
