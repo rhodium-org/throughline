@@ -1,0 +1,8 @@
+uid: INT-0001
+type: intent
+status: proposed
+title: A deck copied from another series and changed
+text: Started from a copy; its registers have since moved.
+normative: false
+attrs:
+  origin: ai

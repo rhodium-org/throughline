@@ -1,0 +1,11 @@
+uid: THR-0001
+type: thread
+status: proposed
+title: What changes for the business
+text: The thread the deck follows from cost to risk.
+normative: true
+links:
+- target: INT-0001
+  type: derives_from
+attrs:
+  origin: ai

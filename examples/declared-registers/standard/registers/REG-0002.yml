@@ -1,0 +1,14 @@
+uid: REG-0002
+type: register
+status: proposed
+title: Slides live in SLD
+text: A deck graph holds its slides in the register SLD, folder slides/.
+normative: true
+links:
+- target: INT-0001
+  type: derives_from
+attrs:
+  prefix: SLD
+  dir: slides
+  holds: slide
+  origin: ai

@@ -1,0 +1,16 @@
+uid: REG-0004
+type: register
+status: proposed
+title: Roles, when a deck has them, live in ROLE
+text: A deck graph that names roles holds them in the register ROLE, folder roles/;
+  a deck with no roles holds no ROLE register.
+normative: true
+links:
+- target: INT-0001
+  type: derives_from
+attrs:
+  prefix: ROLE
+  dir: roles
+  holds: role
+  required: false
+  origin: ai

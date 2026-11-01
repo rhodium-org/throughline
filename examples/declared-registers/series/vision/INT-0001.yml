@@ -1,0 +1,8 @@
+uid: INT-0001
+type: intent
+status: proposed
+title: Explain AI to a board in five minutes
+text: One deck a board can follow without a technical background.
+normative: false
+attrs:
+  origin: ai

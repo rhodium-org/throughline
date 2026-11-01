@@ -1,0 +1,4 @@
+prefix: REG
+digits: 4
+title: Registers
+type: register

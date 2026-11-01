@@ -1,0 +1,11 @@
+[project]
+name = "AI in five (example deck series)"
+format_version = 4
+
+# The standard this graph follows: its item types, attributes, links,
+# statuses and rules are this graph's schema (SR-0275). Declare here only
+# what this graph adds (SR-0276).
+[[sources]]
+namespace = "deck"
+path = "../standard"
+schema = true

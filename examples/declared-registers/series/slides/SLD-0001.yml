@@ -1,0 +1,12 @@
+uid: SLD-0001
+type: slide
+status: proposed
+title: A first draft in minutes
+text: 'Three cards: email, report, code.'
+normative: true
+links:
+- target: CLM-0001
+  type: derives_from
+attrs:
+  layout: cards
+  origin: ai

@@ -1,0 +1,68 @@
+# An example standard for reviewing the proposal in rhodium-org/throughline#127.
+# It is a cut-down presentation standard: it declares the kinds of item a deck
+# graph holds, and — the point of the example — the registers every deck graph
+# must hold, as ratifiable `register` items in REG.
+[project]
+name = "Deck standard"
+format_version = 4
+# The namespace a graph that follows this standard borrows it under (SR-0283).
+suggested_namespace = "deck"
+
+[grounding]
+root_types = ["intent", "non_goal"]
+delivery_roots = ["intent"]
+ground_link_types = ["derives_from", "verifies"]
+ai_origins = ["ai", "hybrid"]
+
+[links]
+types = ["derives_from", "verifies", "relates"]
+
+[status]
+values = ["proposed", "draft", "approved", "ratified", "implemented",
+          "suspect", "rejected", "deleted"]
+
+[status.roles]
+initial = "draft"
+proposed = "proposed"
+ratified = "ratified"
+invalidated = "rejected"
+suspect = "suspect"
+tombstone = "deleted"
+
+# ---------------------------------------------------------------------------
+# Kinds of item the standard itself holds.
+# ---------------------------------------------------------------------------
+[types.intent]
+normative = false
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[types.rule]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+# PROPOSED: `register` is the one item type tl would give meaning to. A ratified
+# item of this type declares a register every graph following the standard must
+# hold (or, with required = false, may hold — and if it does, exactly so).
+# Today this table is ordinary configuration; under the proposal tl would supply
+# it, so a standard would not declare it at all.
+[types.register]
+attrs.prefix   = { type = "string", required = true }  # the UID prefix, e.g. SLD
+attrs.dir      = { type = "string", required = true }  # the folder, e.g. slides
+attrs.holds    = { type = "string", required = true }  # the item type, e.g. slide
+attrs.required = { type = "bool" }                     # absent means true
+attrs.origin   = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+# ---------------------------------------------------------------------------
+# Kinds of item a deck graph holds. The standard declares them and holds none.
+# ---------------------------------------------------------------------------
+[types.claim]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[types.slide]
+attrs.layout = { type = "enum", values = ["title", "cards", "stats"], required = true }
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[types.thread]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
+
+[types.role]
+attrs.origin = { type = "enum", values = ["human", "ai", "hybrid"] }
