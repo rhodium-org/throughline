@@ -1,9 +1,0 @@
-uid: INT-0001
-type: intent
-status: proposed
-title: Every deck graph has one shape a renderer can rely on
-text: A deck graph following this standard keeps its claims, slides and threads where
-  a renderer looks for them, so the renderer reads any deck the same way.
-normative: false
-attrs:
-  origin: ai
