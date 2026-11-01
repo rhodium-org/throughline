@@ -8,17 +8,27 @@ text: 'tl init --from-schema <source> shall write a project whose configuration 
   to another graph, written relative to the new project. The source is resolved before
   anything is written: a source that cannot be fetched, that is not a throughline
   project, or whose items could not be borrowed under the namespace leaves no project
-  behind and exits with a usage error naming the source. --namespace names the namespace;
-  by default it is the last part of the url or path, lower-cased, without .git, a
-  leading "throughline-" or a trailing "-standard".'
+  behind and exits with a usage error naming the source and --namespace. --namespace
+  names the namespace. Without it, the namespace is the standard''s own suggested_namespace,
+  an optional key under its [project]; a standard that suggests none is followed
+  under the last part of the url or path, lower-cased, without .git, and otherwise
+  as written. A suggested_namespace that is not a valid namespace is refused when
+  the standard''s configuration is read.'
 rationale: 'Resolving first means a typo in the url never leaves a half-made graph
   to clean up (SR-0077''s change-nothing-on-refusal). No default registers, because
   the defaults belong to tl''s own starter schema, not to the standard being followed.
   The flag is --from-schema, not --schema (operator, 1 November 2026): the command
-  starts a graph that follows a schema, not a schema. The default namespace drops
-  throughline- and -standard because the estate names every standard that way and
-  the full name is too long to compose: plan + CON fits a UID prefix, THROUGHLINEPLANSTANDARD
-  + CON does not. A url needs a ref, as composition requires (SR-0006).'
+  starts a graph that follows a schema, not a schema. The standard suggests its own
+  namespace (operator, 1 November 2026) because it knows what it is and a follower''s
+  folder name does not; the key says suggested_namespace because the value is a namespace
+  and the follower may override it. It is optional here because tl cannot know a
+  graph is a standard until someone follows it; a standard for standards may make
+  it mandatory for those that follow it. Without a suggestion the name is taken as
+  written, never shortened by a guess: stripping throughline- and -standard wrote
+  one estate''s naming into a public tool, and initials read badly in every borrowed
+  UID and collide (plan and presentation standards are both tps). A name too long
+  to compose is refused, not shortened. A url needs a ref, as composition requires
+  (SR-0006).'
 normative: true
 links:
 - target: UR-0043

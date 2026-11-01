@@ -125,18 +125,80 @@ def test_a_ref_or_namespace_without_from_schema_is_refused(tmp_path):
 
 
 @pytest.mark.parametrize("folder, expected", [
-    ("throughline-deck-standard", "deck"),
-    ("deck-standard", "deck"),
+    ("deck", "deck"),
     ("Deck", "deck"),
-    ("throughline-standard", "standard"),
+    ("deck-standard", "deck-standard"),
 ])
-def test_the_namespace_defaults_to_the_last_part_without_the_estate_naming(
+def test_without_a_suggestion_the_namespace_is_the_last_part_as_written(
         tmp_path, monkeypatch, folder, expected):
     _standard(tmp_path, folder)
     monkeypatch.chdir(tmp_path)
     assert _cli(["-C", "fol", "init", "--from-schema", folder]) == 0
     text = (tmp_path / "fol" / "throughline.toml").read_text(encoding="utf-8")
     assert f'namespace = "{expected}"' in text
+
+
+def test_a_name_too_long_to_compose_is_refused_not_shortened(tmp_path, monkeypatch, capsys):
+    std = _standard(tmp_path, "throughline-deck-standard")
+    assert _cli(["-C", std, "register", "new", "SLD", "slides", "--type", "slide"]) == 0
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "throughline-deck-standard"]) == 2
+    assert "--namespace" in capsys.readouterr().err
+    assert not (tmp_path / "fol").exists()
+
+
+def _suggest(std: Path, namespace: str) -> None:
+    cfg = std / "throughline.toml"
+    text = cfg.read_text(encoding="utf-8")
+    cfg.write_text(text.replace("[project]\n",
+                                f'[project]\nsuggested_namespace = "{namespace}"\n', 1),
+                   encoding="utf-8")
+
+
+def test_the_standard_suggests_its_own_namespace(tmp_path, monkeypatch):
+    std = _standard(tmp_path, "throughline-deck-standard")
+    assert _cli(["-C", std, "register", "new", "SLD", "slides", "--type", "slide"]) == 0
+    _suggest(std, "deck")
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "throughline-deck-standard"]) == 0
+    text = (tmp_path / "fol" / "throughline.toml").read_text(encoding="utf-8")
+    assert 'namespace = "deck"' in text
+    assert not _errors(tmp_path / "fol")
+
+
+def test_named_namespace_beats_the_suggestion(tmp_path, monkeypatch):
+    std = _standard(tmp_path)
+    _suggest(std, "deck")
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "std", "--namespace", "slides"]) == 0
+    text = (tmp_path / "fol" / "throughline.toml").read_text(encoding="utf-8")
+    assert 'namespace = "slides"' in text
+
+
+def test_the_suggestion_is_not_inherited_by_the_follower(tmp_path, monkeypatch):
+    std = _standard(tmp_path)
+    _suggest(std, "deck")
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
+    assert load_project(tmp_path / "fol").schema.suggested_namespace is None
+
+
+@pytest.mark.parametrize("bad", ["Deck", "9x", "a b", ""])
+def test_a_suggestion_that_is_not_a_namespace_is_refused_when_read(tmp_path, bad):
+    std = _standard(tmp_path)
+    _suggest(std, bad)
+    with pytest.raises(ProjectError, match="suggested_namespace"):
+        load_project(std)
+
+
+def test_a_provisional_name_that_is_not_a_namespace_still_takes_the_suggestion(
+        tmp_path, monkeypatch):
+    std = _standard(tmp_path, "9deck")
+    _suggest(std, "deck")
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "9deck"]) == 0
+    text = (tmp_path / "fol" / "throughline.toml").read_text(encoding="utf-8")
+    assert 'namespace = "deck"' in text
 
 
 def test_the_namespace_may_be_named(tmp_path, monkeypatch):

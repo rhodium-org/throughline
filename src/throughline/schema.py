@@ -257,6 +257,19 @@ class StarterRegister:
     title: str
 
 
+def _parse_suggested_namespace(raw) -> str | None:
+    """Read ``[project] suggested_namespace`` (SR-0283), refusing one that no
+    follower could use as a namespace."""
+    if raw is None:
+        return None
+    from .sources import _NAMESPACE_RE
+    if not isinstance(raw, str) or not _NAMESPACE_RE.match(raw):
+        raise SchemaError(
+            f"[project] suggested_namespace {raw!r} is not a namespace: lower-case "
+            "letters, digits, '-' and '_', starting with a letter")
+    return raw
+
+
 def _parse_starter_registers(raw, declared_types: set[str]) -> tuple[StarterRegister, ...]:
     """Read ``[[starter_registers]]`` (SR-0284). Each names a prefix, a folder
     relative to the project and a type the schema declares; prefixes and folders
@@ -349,6 +362,10 @@ class Schema:
     # with (SR-0284). Never inherited: they are read from the project's own
     # configuration, and a follower that holds none has none.
     starter_registers: tuple[StarterRegister, ...] = ()
+    # [project] suggested_namespace: what a graph that follows this one as its
+    # schema source names it, unless told otherwise (SR-0283). Read from this
+    # configuration only, like the starter registers.
+    suggested_namespace: str | None = None
 
     # ------------------------------------------------------------------ build
 
@@ -357,6 +374,8 @@ class Schema:
         config = config or {}
 
         name = ((config.get("project") or {}).get("name")) or ""
+        suggested_namespace = _parse_suggested_namespace(
+            (config.get("project") or {}).get("suggested_namespace"))
 
         types: dict[str, dict[str, AttrSpec]] = {}
         type_normative: dict[str, bool] = {}
@@ -500,6 +519,7 @@ class Schema:
             roles=roles, requirements=requirements,
             type_normative=type_normative,
             starter_registers=starter_registers,
+            suggested_namespace=suggested_namespace,
         )
         schema._check_consistency()
         return schema

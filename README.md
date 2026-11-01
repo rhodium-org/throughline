@@ -235,12 +235,17 @@ tl init --from-schema https://github.com/rhodium-org/throughline-plan-standard -
 
 It resolves the standard first, so a mistyped url leaves nothing behind, then writes
 the one `schema = true` source and none of tl's own default registers. The
-namespace is the last part of the url without `throughline-` or `-standard`
-(`plan` here), or name it with `--namespace`; a path to a graph beside you works in
-place of a url. A standard may list the registers its followers start with, and
-init creates them; from then on they are the follower's own:
+namespace is the one the standard suggests, or else the last part of the url as
+written; name your own with `--namespace`. A name too long for the standard's items
+to be borrowed under is refused, never shortened. A path to a graph beside you works
+in place of a url. A standard suggests its namespace, and may list the registers its
+followers start with, which init creates; from then on they are the follower's own:
 
 ```toml
+[project]
+name = "Plan standard"
+suggested_namespace = "plan"
+
 [[starter_registers]]
 prefix = "ACT"
 dir = "activities"

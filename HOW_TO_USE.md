@@ -113,7 +113,7 @@ need — the starter is a runway, not a fixture. Prefer to begin from nothing?
 section uses to teach the grounding layer.
 
 Following a published standard instead? `tl init --from-schema <url> --ref <tag>`
-starts a graph that takes the standard's schema and the registers it declares,
+starts a graph that takes the standard's schema, the namespace it suggests and the registers it declares,
 with nothing of tl's own defaults to remove.
 
 ---

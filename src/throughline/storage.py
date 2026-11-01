@@ -1899,17 +1899,16 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
     from types import SimpleNamespace
 
     from .resolvers import ResolverError, resolver_for
-    from .sources import SourceError, parse_sources
+    from .sources import _NAMESPACE_RE, SourceError, parse_sources
 
     remote = "://" in given or given.startswith("git@")
-    if namespace is None:
+    named = namespace is not None
+    if not named:
+        # Provisional until the standard is read: it may suggest its own (SR-0283).
+        # Otherwise the name is taken as written, never shortened by a guess.
         last = given.rstrip("/\\").replace("\\", "/").rsplit("/", 1)[-1]
         last = last.rsplit(":", 1)[-1]
-        last = (last[:-4] if last.endswith(".git") else last).lower()
-        # throughline-plan-standard follows as `plan`: the estate's naming says
-        # twice what every schema source is, and a long stem cannot compose.
-        last = last.removeprefix("throughline-")
-        namespace = last.removesuffix("-standard") or last
+        namespace = (last[:-4] if last.endswith(".git") else last).lower()
     entry: dict = {"namespace": namespace, "schema": True}
     if remote:
         entry["url"] = given
@@ -1920,16 +1919,29 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
             raise ProjectError(f"--ref pins a url; {given} is a path (SR-0006)")
         entry["path"] = Path(os.path.relpath(Path(given).resolve(),
                                              root.resolve())).as_posix()
-    try:
-        (source,) = parse_sources(SimpleNamespace(config={"sources": [entry]}))
-    except SourceError as e:
-        hint = (" — name it with --namespace" if "namespace" in str(e) else "")
-        raise ProjectError(f"cannot follow {given}: {e}{hint}") from e
+
+    def _source(entry: dict):
+        try:
+            (source,) = parse_sources(SimpleNamespace(config={"sources": [entry]}))
+        except SourceError as e:
+            hint = (" — name it with --namespace" if "namespace" in str(e) else "")
+            raise ProjectError(f"cannot follow {given}: {e}{hint}") from e
+        return source
+
+    # The resolver uses the namespace only to name the source in what it says, so
+    # a provisional one that is not a valid namespace still resolves.
+    source = _source(entry if named or _NAMESPACE_RE.match(namespace)
+                     else {**entry, "namespace": "standard"})
     try:
         standard = resolver_for(source).resolve(source, root).project
         starters = standard.schema.starter_registers
+        suggested = standard.schema.suggested_namespace
     except (ResolverError, ProjectError, SchemaError) as e:
         raise ProjectError(f"cannot follow {given}: {e}") from e
+    if not named and suggested:
+        namespace = suggested
+    entry["namespace"] = namespace
+    source = _source(entry)
     # Its items are borrowed under the namespace, so a namespace too long for
     # their prefixes would write a graph that cannot compose (SR-0283).
     from .union import ComposeError, _Mangler
