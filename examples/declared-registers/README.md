@@ -65,9 +65,15 @@ writes, the standard and nothing else:
 ```toml
 [[sources]]
 namespace = "deck"
-path = "../standard"
+url = "https://github.com/rhodium-org/throughline"
+ref = "declared-registers"
+subdir = "examples/declared-registers/standard"
 schema = true
 ```
+
+It follows the standard by url, as a real series would. A `path = "../standard"`
+source composes with tl, but table.iddn.uk reads only the folder of the graph it
+opens, so a sibling path is not there to read.
 
 Under the proposal, init then creates `CLM claims/`, `SLD slides/` and
 `THR threads/`, every **required** REG item and no optional one. Here they

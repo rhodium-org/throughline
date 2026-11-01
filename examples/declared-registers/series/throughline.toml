@@ -7,5 +7,8 @@ format_version = 4
 # what this graph adds (SR-0276).
 [[sources]]
 namespace = "deck"
-path = "../standard"
+url = "https://github.com/rhodium-org/throughline"
+# the example standard lives in this repo on the proposal branch
+ref = "declared-registers"
+subdir = "examples/declared-registers/standard"
 schema = true
