@@ -1,6 +1,6 @@
 uid: SR-0300
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate --beneath finds the graphs beneath each path it is given
 text: tl migrate --beneath PATH, which may be repeated, finds every graph at or beneath
   each PATH, breadth first to five levels down. It does not enter a directory whose

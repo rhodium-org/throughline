@@ -1,6 +1,6 @@
 uid: SR-0304
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate --beneath --apply migrates the rest, commits nothing and carries
   on past a failure
 text: With --apply, every graph below the current format that is not skipped is migrated

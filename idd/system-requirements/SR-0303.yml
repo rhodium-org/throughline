@@ -1,6 +1,6 @@
 uid: SR-0303
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate --beneath --apply skips a graph in a linked git worktree, and names
   it
 text: With --apply, a graph inside a linked git worktree, where git's common directory

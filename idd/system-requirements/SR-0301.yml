@@ -1,6 +1,6 @@
 uid: SR-0301
 type: system_requirement
-status: ratified
+status: implemented
 title: Without --apply, tl migrate --beneath lists what it would migrate and writes
   nothing
 text: Without --apply, tl migrate --beneath writes nothing. It lists every graph

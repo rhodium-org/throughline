@@ -1,6 +1,6 @@
 uid: SR-0302
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate --beneath --apply skips a graph with uncommitted changes, and names
   it
 text: With --apply, a graph whose repository has uncommitted changes under the graph's

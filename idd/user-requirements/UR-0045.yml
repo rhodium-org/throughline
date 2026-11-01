@@ -1,6 +1,6 @@
 uid: UR-0045
 type: user_requirement
-status: ratified
+status: implemented
 title: Migrate every graph beneath a path
 text: As the keeper of many graphs across many repositories, I want tl migrate to
   find every graph beneath the paths I name, show me which are below the current
