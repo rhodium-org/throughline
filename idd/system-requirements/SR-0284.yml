@@ -1,0 +1,47 @@
+uid: SR-0284
+type: system_requirement
+status: implemented
+title: A standard may declare the registers its followers start with
+text: A project's configuration may declare [[starter_registers]], each a table of
+  prefix, dir (a folder inside the project), type (a type its schema declares) and
+  an optional title (by default the folder). Prefixes and folders are unique, and
+  a bad entry is refused when the configuration is read. When tl init --from-schema
+  names that project, init shall create those registers in the new project. They
+  are then the follower's own registers, created once and never resolved from the
+  source again, so a follower may add, rename or drop them. A schema source that
+  declares none gives a project with no registers, and init says so.
+rationale: 'Registers hold the follower''s own items in the follower''s own folders,
+  so unlike the schema they are not inherited on every read: changing a standard''s
+  suggested prefix must never move a follower''s files. Declared in the standard,
+  not inferred from its types, because a type is not a folder (a standard may expect
+  two registers of one type, or none for a type kept for its own examples). Naming
+  an undeclared type is refused when the standard''s configuration is read.'
+normative: true
+links:
+- target: UR-0043
+  type: implements
+- target: SR-0275
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-01T07:38:51Z'
+  fingerprint: sha256:c5c088e617ec0c2b937378e334a8b716138c7f6de148876a1a58ffb5c899e770
+  content:
+    type: system_requirement
+    text: A project's configuration may declare [[starter_registers]], each a table
+      of prefix, dir (a folder inside the project), type (a type its schema declares)
+      and an optional title (by default the folder). Prefixes and folders are unique,
+      and a bad entry is refused when the configuration is read. When tl init --from-schema
+      names that project, init shall create those registers in the new project. They
+      are then the follower's own registers, created once and never resolved from
+      the source again, so a follower may add, rename or drop them. A schema source
+      that declares none gives a project with no registers, and init says so.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

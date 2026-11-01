@@ -368,7 +368,7 @@ _CTX_COMMAND_USAGE = {
     "schema": "tl schema <noun> <verb> … --because <why>",
     "migrate": "tl migrate",
     "review": "tl review",
-    "init": "tl init [--demo]",
+    "init": "tl init [--demo] | tl init --from-schema <url|path> [--ref REF]",
     "context": "tl context [<UID>]",
 }
 

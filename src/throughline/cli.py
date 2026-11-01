@@ -252,13 +252,30 @@ def cmd_init(args) -> int:
     try:
         init_project(args.path, name=args.name, force=args.force,
                      defaults=not args.no_defaults, demo=not args.no_demo,
-                     bare=args.bare, on_progress=progress)
+                     bare=args.bare, on_progress=progress,
+                     from_schema=args.from_schema, ref=args.ref,
+                     namespace=args.namespace)
     except ProjectError as e:
         progress.clear()
         return _err(str(e))
     progress.clear()
     root = Path(args.path).resolve()
     print(f"initialised throughline project at {root}")
+    if args.from_schema is not None:
+        project = load_project(root)
+        (source,) = parse_sources(project)
+        where = f"{source.url}@{source.ref}" if source.url else source.path
+        print(f"follows {where} as its schema source (namespace '{source.namespace}')")
+        if project.registers:
+            print("created the registers the standard starts its graphs with — "
+                  "add items with `tl new <PREFIX>`:")
+            for reg in project.registers.values():
+                print(f"  {reg.prefix}  {reg.path.relative_to(root).as_posix()}/  "
+                      f"{reg.type}")
+        else:
+            print("the standard declares no starter registers, so this graph has "
+                  "none — add them with `tl register new <PREFIX> <dir> --type <type>`")
+        return OK
     # Report exactly what was seeded, mirroring the same precedence init_project
     # applies: --bare / --no-defaults win over the demo (SR-0100).
     made_defaults = not (args.bare or args.no_defaults)

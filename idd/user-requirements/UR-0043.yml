@@ -1,0 +1,43 @@
+uid: UR-0043
+type: user_requirement
+status: implemented
+title: A graph that follows a standard is started with one command
+text: As someone starting a graph that follows a standard published as another graph,
+  I want one init command naming the standard to give me a graph that already follows
+  it, with the registers the standard expects, so that I need not hand-edit the configuration
+  or work out the register set the standard already settled.
+rationale: 'Found 1 November 2026 starting a plan against throughline-plan-standard:
+  init --bare, then a hand-written [[sources]] block with schema = true, then one
+  register new per kind, each prefix and folder copied from the conformance example.
+  The standard had already decided all of it. Rejected: the shape skill, which discovers
+  a register set by conversation and is the right tool only where no standard has
+  settled one. Rejected: a template copied at init, which UR-0041 already rejects
+  for the schema; writing the source line is not a copy. Who pays: the maintainer
+  carries the init option; a standard''s keeper may declare its registers, and need
+  not.'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0041
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-01T05:42:57Z'
+  fingerprint: sha256:a36d61eea6cf2fc0ceaa964d7860f3da20d7c730a4d3d3fb162149008c9b628a
+  content:
+    type: user_requirement
+    text: As someone starting a graph that follows a standard published as another
+      graph, I want one init command naming the standard to give me a graph that
+      already follows it, with the registers the standard expects, so that I need
+      not hand-edit the configuration or work out the register set the standard already
+      settled.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

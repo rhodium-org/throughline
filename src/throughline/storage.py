@@ -1816,6 +1816,9 @@ def init_project(
     demo: bool = True,
     bare: bool = False,
     on_progress: Callable[[int], None] | None = None,
+    from_schema: str | None = None,
+    ref: str | None = None,
+    namespace: str | None = None,
 ) -> Project:
     """Create a new project. The seeded content is independently suppressible so the
     newcomer-friendly default (SR-0100) does not trap experienced users:
@@ -1826,9 +1829,29 @@ def init_project(
       off when ``defaults`` is off.
     - ``bare`` is a convenience for "schema only" — equivalent to ``defaults`` and
       ``demo`` both off — retained so existing ``--bare`` callers are unaffected.
+    - ``from_schema`` names a standard to follow (SR-0283): a url, pinned by
+      ``ref``, or a path relative to the working directory. The project then holds
+      that one schema source and the standard's starter registers (SR-0284), and
+      none of the defaults above. The source is resolved before anything is
+      written, so a source that cannot be read leaves no project behind.
     """
     root = Path(path)
+    created = not root.exists()
     root.mkdir(parents=True, exist_ok=True)
+    try:
+        return _init_project(root, name, force, defaults, demo, bare, on_progress,
+                             from_schema, ref, namespace)
+    except ProjectError:
+        # Leave the folder as we found it (SR-0077, SR-0283): one we made for
+        # this project goes again if nothing was written into it.
+        if created and root.is_dir() and not any(root.iterdir()):
+            root.rmdir()
+        raise
+
+
+def _init_project(root: Path, name: str, force: bool, defaults: bool, demo: bool,
+                  bare: bool, on_progress, from_schema: str | None, ref: str | None,
+                  namespace: str | None) -> Project:
     cfg = root / CONFIG_NAME
     if cfg.exists():
         raise ProjectError(f"{cfg} already exists")
@@ -1845,6 +1868,11 @@ def init_project(
                 f"{root.resolve()} already contains a throughline project at "
                 f"{nested} — refusing to wrap it; pass --force to override"
             )
+    if from_schema is not None:
+        return _init_from_schema(root, name, from_schema, ref, namespace)
+    if ref is not None or namespace is not None:
+        raise ProjectError("a ref or a namespace names the source of --from-schema, "
+                           "which was not given")
     if bare:
         defaults = demo = False
     if not defaults:
@@ -1861,6 +1889,100 @@ def init_project(
     if demo:
         _seed_demo(root, name, by_prefix)
     return load_project(root)
+
+
+def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
+                      namespace: str | None) -> Project:
+    """A project that follows the standard ``given`` (SR-0283) and starts with the
+    registers it declares (SR-0284). Everything is checked before a file is
+    written: the source entry, the source itself, and its starter registers."""
+    from types import SimpleNamespace
+
+    from .resolvers import ResolverError, resolver_for
+    from .sources import _NAMESPACE_RE, SourceError, parse_sources
+
+    remote = "://" in given or given.startswith("git@")
+    named = namespace is not None
+    if not named:
+        # Provisional until the standard is read: it may suggest its own (SR-0283).
+        # Otherwise the name is taken as written, never shortened by a guess.
+        last = given.rstrip("/\\").replace("\\", "/").rsplit("/", 1)[-1]
+        last = last.rsplit(":", 1)[-1]
+        namespace = (last[:-4] if last.endswith(".git") else last).lower()
+    entry: dict = {"namespace": namespace, "schema": True}
+    if remote:
+        entry["url"] = given
+        if ref is not None:
+            entry["ref"] = ref
+    else:
+        if ref is not None:
+            raise ProjectError(f"--ref pins a url; {given} is a path (SR-0006)")
+        entry["path"] = Path(os.path.relpath(Path(given).resolve(),
+                                             root.resolve())).as_posix()
+
+    def _source(entry: dict):
+        try:
+            (source,) = parse_sources(SimpleNamespace(config={"sources": [entry]}))
+        except SourceError as e:
+            hint = (" — name it with --namespace" if "namespace" in str(e) else "")
+            raise ProjectError(f"cannot follow {given}: {e}{hint}") from e
+        return source
+
+    # The resolver uses the namespace only to name the source in what it says, so
+    # a provisional one that is not a valid namespace still resolves.
+    source = _source(entry if named or _NAMESPACE_RE.match(namespace)
+                     else {**entry, "namespace": "standard"})
+    try:
+        standard = resolver_for(source).resolve(source, root).project
+        starters = standard.schema.starter_registers
+        suggested = standard.schema.suggested_namespace
+    except (ResolverError, ProjectError, SchemaError) as e:
+        raise ProjectError(f"cannot follow {given}: {e}") from e
+    if not named and suggested:
+        namespace = suggested
+    entry["namespace"] = namespace
+    source = _source(entry)
+    # Its items are borrowed under the namespace, so a namespace too long for
+    # their prefixes would write a graph that cannot compose (SR-0283).
+    from .union import ComposeError, _Mangler
+    mangler = _Mangler()
+    try:
+        for prefix in standard.registers:
+            mangler.prefix(source.namespace, prefix)
+    except ComposeError as e:
+        raise ProjectError(f"cannot follow {given}: {e} with --namespace") from e
+
+    lines = [
+        "[project]",
+        f"name = {_toml_string(name)}",
+        f"format_version = {FORMAT_VERSION}",
+        "",
+        "# The standard this graph follows: its item types, attributes, links,",
+        "# statuses and rules are this graph's schema (SR-0275). Declare here only",
+        "# what this graph adds (SR-0276).",
+        "[[sources]]",
+        f"namespace = {_toml_string(source.namespace)}",
+    ]
+    if source.url is not None:
+        lines += [f"url = {_toml_string(source.url)}",
+                  "# move to take a new edition of the standard",
+                  f"ref = {_toml_string(source.ref)}"]
+    else:
+        lines.append(f"path = {_toml_string(source.path)}")
+    lines.append("schema = true")
+    (root / CONFIG_NAME).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    for starter in starters:
+        reg = Register(prefix=starter.prefix, type=starter.type, title=starter.title,
+                       path=root / starter.dir)
+        reg.path.mkdir(parents=True, exist_ok=True)
+        write_manifest(reg)
+    return load_project(root)
+
+
+def _toml_string(value: str) -> str:
+    """``value`` as a TOML basic string."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 def _seed_registers(root: Path) -> dict[str, Register]:

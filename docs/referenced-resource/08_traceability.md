@@ -54,6 +54,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0040 | A ratification record says when it was given | SR-0256 |
 | UR-0041 | A graph that follows a standard declares only what it adds | SR-0275, SR-0276, SR-0277, SR-0278, SR-0279 |
 | UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
+| UR-0043 | A graph that follows a standard is started with one command | SR-0283, SR-0284 |
 <!-- tl:end -->
 
 ## Coverage check
