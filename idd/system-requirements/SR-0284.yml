@@ -1,6 +1,6 @@
 uid: SR-0284
 type: system_requirement
-status: ratified
+status: implemented
 title: A standard may declare the registers its followers start with
 text: A project's configuration may declare [[starter_registers]], each a table of
   prefix, dir (a folder inside the project), type (a type its schema declares) and

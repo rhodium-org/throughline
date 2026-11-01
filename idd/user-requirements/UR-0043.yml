@@ -1,6 +1,6 @@
 uid: UR-0043
 type: user_requirement
-status: ratified
+status: implemented
 title: A graph that follows a standard is started with one command
 text: As someone starting a graph that follows a standard published as another graph,
   I want one init command naming the standard to give me a graph that already follows

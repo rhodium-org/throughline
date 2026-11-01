@@ -1,6 +1,6 @@
 uid: SR-0283
 type: system_requirement
-status: ratified
+status: implemented
 title: tl init --from-schema follows a standard and writes nothing until it resolves
 text: 'tl init --from-schema <source> shall write a project whose configuration holds
   that one [[sources]] entry marked schema = true, and no default registers or starter
