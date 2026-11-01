@@ -1,13 +1,13 @@
 uid: SR-0295
 type: system_requirement
 status: proposed
-title: The dump says which declaration covers each register, attribute and link
-text: tl dump of a follower shall mark each register, attribute and link with the
-  UID of the declaration that covers it and whether that declaration is its standard's
-  or the follower's own. An item that the check reports under undeclared carries
-  no mark.
-rationale: An app reads only what its standard declares and ignores the follower's
-  own additions; the mark lets it do so without re-implementing the check.
+title: The dump marks what the standard declares
+text: tl dump of a follower shall mark each register, attribute and link that its
+  standard declares with the UID of that declaration. Those the follower declares
+  for itself carry no mark.
+rationale: 'An app reads only what its standard declares; the mark lets it skip the
+  follower''s own additions without re-implementing the check (operator, 1 Nov 2026:
+  mark only what the standard declares).'
 normative: true
 links:
 - target: UR-0044

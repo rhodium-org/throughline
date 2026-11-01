@@ -8,9 +8,10 @@ text: 'A type declaration shall name exactly one base type, by a has_type link: 
   enum item, which builds on the base type enum and lists its values. The Tool shall
   accept and refuse each value as the meta-standard''s test values for that base
   type and constraint say. A pattern may use only the subset the meta-standard defines,
-  which reads the same in Python and JavaScript; any other construct is refused when
-  read. A standard following a meta-standard version the Tool does not implement
-  is refused, naming both versions.'
+  which reads the same in Python and JavaScript; a pattern using any other construct
+  is refused when read, naming the construct, why it can read differently, and its
+  equivalent in the subset where one exists (\d is [0-9]). A standard following a
+  meta-standard version the Tool does not implement is refused, naming both versions.'
 rationale: 'Every consumer of a standard (tl, presentation-manager, table.iddn.uk,
   the AI writing the graph) must implement every base type, so the set is small,
   closed and versioned. Range and limit are min and max, not types. Rejected: json,
