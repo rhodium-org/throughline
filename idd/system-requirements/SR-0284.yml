@@ -29,17 +29,18 @@ attrs:
 ratifications:
 - by: Henry Grech-Cini
   id: github:rhodium289
-  at: '2026-11-01T05:42:57Z'
-  fingerprint: sha256:ca272643a08b58c9a18b360113fa7cb53f020fd01f24a52e191b9949e48b6712
+  at: '2026-11-01T07:38:51Z'
+  fingerprint: sha256:c5c088e617ec0c2b937378e334a8b716138c7f6de148876a1a58ffb5c899e770
   content:
     type: system_requirement
-    text: A project's configuration may declare starter registers, each a prefix,
-      a folder and the item type it holds, naming only types its schema declares.
-      When init names that project as the schema source it shall create those registers
-      in the new project. They are then the follower's own registers, created once
-      and never resolved from the source again, so a follower may add, rename or
-      drop them. A schema source that declares none gives a project with no registers,
-      and init says so.
+    text: A project's configuration may declare [[starter_registers]], each a table
+      of prefix, dir (a folder inside the project), type (a type its schema declares)
+      and an optional title (by default the folder). Prefixes and folders are unique,
+      and a bad entry is refused when the configuration is read. When tl init --from-schema
+      names that project, init shall create those registers in the new project. They
+      are then the follower's own registers, created once and never resolved from
+      the source again, so a follower may add, rename or drop them. A schema source
+      that declares none gives a project with no registers, and init says so.
     normative: true
     derived: false
     attrs:

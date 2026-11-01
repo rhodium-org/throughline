@@ -42,17 +42,23 @@ attrs:
 ratifications:
 - by: Henry Grech-Cini
   id: github:rhodium289
-  at: '2026-11-01T05:42:57Z'
-  fingerprint: sha256:23019dca63ac61fc083d41dcb7b88b054887b98ff3ba7f370cd2e88f20aacfa5
+  at: '2026-11-01T07:38:51Z'
+  fingerprint: sha256:7df4aefe1278df022f1ce82749309bbf824d7848f047344a5cb4fa24800279cc
   content:
     type: system_requirement
-    text: The init command shall accept a schema source (a url with a ref, or a path)
-      and write a project whose configuration holds that one [[sources]] entry marked
-      as the schema source, and no default registers or starter items. It shall resolve
-      the source before writing anything; a source that cannot be fetched, or that
-      is not a throughline project, leaves no project behind and exits with a usage
-      error naming the source. The namespace defaults to the source's last path segment
-      and may be named.
+    text: 'tl init --from-schema <source> shall write a project whose configuration
+      holds that one [[sources]] entry marked schema = true, and no default registers
+      or starter items. <source> is a git url, pinned with --ref <tag, branch or
+      commit>, or a path to another graph, written relative to the new project. The
+      source is resolved before anything is written: a source that cannot be fetched,
+      that is not a throughline project, or whose items could not be borrowed under
+      the namespace leaves no project behind and exits with a usage error naming
+      the source and --namespace. --namespace names the namespace. Without it, the
+      namespace is the standard''s own suggested_namespace, an optional key under
+      its [project]; a standard that suggests none is followed under the last part
+      of the url or path, lower-cased, without .git, and otherwise as written. A
+      suggested_namespace that is not a valid namespace is refused when the standard''s
+      configuration is read.'
     normative: true
     derived: false
     attrs:
