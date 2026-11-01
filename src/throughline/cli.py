@@ -2232,7 +2232,8 @@ def _print_behind(behind) -> None:
                                key=lambda g: (g[0] is None, str(g[0]))):
         print(f"  {repo if repo is not None else '(not in a git repository)'}")
         for f in graphs:
-            where = f.root if repo is None else f.root.relative_to(repo)
+            # Forward slashes, so a listing reads the same on every platform.
+            where = f.root if repo is None else f.root.relative_to(repo).as_posix()
             print(f"    {where}  format {f.declared}")
 
 
