@@ -545,3 +545,9 @@ def test_a_follower_redefining_a_declared_type_in_its_configuration_is_refused(t
     toml = FOLLOWER_TOML + '\n[types.slide]\nattrs.layout = { type = "enum", values = ["cards", "wide"] }\n'
     with pytest.raises(ProjectError, match=r"cannot be redefined here \(SR-0276\)"):
         load_project(follower(tmp_path, toml=toml))
+
+
+def test_a_follower_may_still_say_a_declared_type_is_not_normative(tmp_path):
+    standard(tmp_path)
+    toml = FOLLOWER_TOML + '\n[types.slide]\nnormative = false\n'
+    assert not load_project(follower(tmp_path, toml=toml)).schema.is_normative("slide")
