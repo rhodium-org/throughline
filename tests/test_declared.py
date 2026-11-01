@@ -538,3 +538,10 @@ def test_a_coverage_rule_may_need_a_link_type_only_an_item_declares(tmp_path):
         'severity = "warning"\n'))
     load_project(std)
     load_project(follower(tmp_path))
+
+
+def test_a_follower_redefining_a_declared_type_in_its_configuration_is_refused(tmp_path):
+    standard(tmp_path)
+    toml = FOLLOWER_TOML + '\n[types.slide]\nattrs.layout = { type = "enum", values = ["cards", "wide"] }\n'
+    with pytest.raises(ProjectError, match=r"cannot be redefined here \(SR-0276\)"):
+        load_project(follower(tmp_path, toml=toml))
