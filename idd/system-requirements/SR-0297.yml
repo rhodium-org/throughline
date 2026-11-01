@@ -1,6 +1,6 @@
 uid: SR-0297
 type: system_requirement
-status: proposed
+status: deleted
 title: Migration turns a schema's configuration declarations into items
 text: tl migrate, asked to turn a project's schema into items, shall write as proposed
   AI-origin items a declaration for each item type, attribute, enum, link type and
@@ -19,3 +19,11 @@ attrs:
   priority: must
   verification: test
   origin: ai
+deleted:
+  date: '2026-11-01'
+  reason: 'Rejected by the operator, 1 Nov 2026: turning configuration declarations
+    into items is a one-time need for the few existing standards, not a feature others
+    will need once throughline matures; it can be done once when needed.'
+  fingerprint: sha256:6a261ccff70e38f044e4dc468c54e1aa2224d5a0dd1c0bc9fc2cf4eadd767c0f
+  from: proposed
+  outright: true

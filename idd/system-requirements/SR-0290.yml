@@ -3,10 +3,10 @@ type: system_requirement
 status: proposed
 title: Two declarations of one attribute must have exclusive conditions
 text: Where two attribute declarations name the same attribute of one register, the
-  Tool shall try every combination of the enum values their conditions compare and
-  refuse the standard when read if any satisfies both, naming both declarations and
-  the shared case, and printing the exclusive conditions that would fix it and the
-  tl amend command that applies them.
+  Tool shall decide, from the intervals and value sets their conditions allow, whether
+  any item can satisfy both, and if one can refuse the standard when read, naming
+  both declarations and a shared case, and printing exclusive conditions that would
+  fix it and the tl amend command that applies them.
 rationale: 'A claim''s role is news or background in a briefing and guidance or product
   in training: two declarations, each with its own value set. Failing fast with the
   rewrite keeps the fix one command away.'
