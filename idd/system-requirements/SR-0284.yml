@@ -1,6 +1,6 @@
 uid: SR-0284
 type: system_requirement
-status: implemented
+status: deleted
 title: A standard may declare the registers its followers start with
 text: A project's configuration may declare [[starter_registers]], each a table of
   prefix, dir (a folder inside the project), type (a type its schema declares) and
@@ -45,3 +45,10 @@ ratifications:
     derived: false
     attrs:
       priority: should
+deleted:
+  date: '2026-11-01'
+  reason: 'Replaced by SR-0285, SR-0286 and SR-0287 before 4.5.0 reached PyPI: a
+    starter register became the follower''s own to rename or drop, so it gave a tool
+    that reads the graph no guarantee (operator, 1 November 2026).'
+  fingerprint: sha256:c5c088e617ec0c2b937378e334a8b716138c7f6de148876a1a58ffb5c899e770
+  from: implemented

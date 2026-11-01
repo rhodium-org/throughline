@@ -1,0 +1,23 @@
+uid: SR-0285
+type: system_requirement
+status: proposed
+title: A standard declares its registers in [[registers]]
+text: 'A project''s configuration may declare [[registers]], each with a prefix,
+  a folder (dir), the type its items hold, an optional title (default: the folder)
+  and required (default true). Each prefix must be a valid register prefix, each
+  folder must lie inside the project, each type must be one the project declares
+  or inherits, and prefixes and folders must each be unique; a configuration that
+  breaks any of these is refused when it is read, naming the entry.'
+rationale: 'One table, read by tl, instead of a list in a rule''s prose and another
+  in a script. required = false covers a register a tool understands but not every
+  follower needs, such as ROLE in the series graphs. The checks run at config read
+  for the reason SR-0284''s did: a standard that declares a register it could never
+  hold should fail where it is written, not in each follower.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

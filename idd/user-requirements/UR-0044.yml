@@ -1,0 +1,24 @@
+uid: UR-0044
+type: user_requirement
+status: proposed
+title: A tool that reads a graph following a standard can rely on the standard's
+  registers
+text: 'A user whose tool reads graphs that follow a standard, such as presentation-manager
+  reading series graphs, shall be able to rely on the registers the standard declares:
+  the prefix, the folder and the kind of item each holds, the same in every follower
+  that passes tl check.'
+rationale: 'presentation-manager finds slides in SLD, claims in CLM and threads in
+  THR. In November 2026 six series held those registers only because each was copied
+  from the last, and ROLE had already drifted to four of the six. Starter registers
+  (SR-0284) could not help: once created they were the follower''s own to rename
+  or drop, so a passing tl check promised a tool nothing (operator, 1 November 2026).'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+- target: UR-0041
+  type: relates
+- target: UR-0043
+  type: relates
+attrs:
+  origin: ai
