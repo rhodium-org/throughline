@@ -605,6 +605,20 @@ def _attach_formed(project) -> None:
         for d in list(mine.registers.values()) + list(mine.attrs.values()) \
                 + mine.links + list(mine.link_types.values()):
             _index(effective, d.uid, d)
+        # A follower's own configuration may not say anything about a type its
+        # standard declares by items: an addition is a declaration item (SR-0276,
+        # SR-0294).
+        # A type-level key such as normative still applies from the configuration:
+        # the meta-standard's own intent is non-normative only by its followers'
+        # configurations until it declares so itself.
+        for reg in (src_offered or Declarations()).registers.values():
+            body = (project.config.get("types") or {}).get(reg.holds) or {}
+            if body.get("attrs"):
+                raise DeclarationError(
+                    f"item type '{reg.holds}' is declared by the schema source "
+                    f"'{inh.namespace}' ({_qualify(reg.uid, inh.namespace)}) and cannot be "
+                    "redefined here (SR-0276): declare an addition as an item with "
+                    "scope = \"this-graph\" (SR-0294)")
         offered_lts = _transitive_link_types(source)
         for name, lt in offered_lts.items():
             if name not in effective.link_types:
