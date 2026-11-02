@@ -1,6 +1,6 @@
 uid: SR-0305
 type: system_requirement
-status: proposed
+status: ratified
 title: tl check names tl migrate beside an error a repair resolves
 text: 'When tl check reports a finding that a repair tl migrate would apply to the
   graph resolves (SR-0137), such as an unsigned tombstone that history can attribute
@@ -25,3 +25,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-02T19:54:57Z'
+  fingerprint: sha256:ddcb42e8359ed93344664023681ac87be8e957472286effb2f1a46b53d832928
+  content:
+    type: system_requirement
+    text: 'When tl check reports a finding that a repair tl migrate would apply to
+      the graph resolves (SR-0137), such as an unsigned tombstone that history can
+      attribute (SR-0273), it says so once after the findings: how many of them tl
+      migrate resolves and the command to run. It does not run the repair, and it
+      does not change any finding''s severity or the exit code.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

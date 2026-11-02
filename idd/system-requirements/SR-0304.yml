@@ -19,16 +19,17 @@ attrs:
   origin: ai
 ratifications:
 - by: Henry Grech-Cini
-  at: '2026-11-01T20:19:55Z'
-  fingerprint: sha256:2b80ae6c889003937f89e3b77ece92acc4cae061a6a048b8dee8b3d831e0ab18
+  id: github:rhodium289
+  at: '2026-11-02T19:54:57Z'
+  fingerprint: sha256:42f6fb56e03e9ceceb7d46503f7887a10cfda15ecc2382afb8ed0ca9fc98b390
   content:
     type: system_requirement
-    text: With --apply, every graph below the current format that is not skipped
-      is migrated by the same lossless migration tl migrate applies to one graph,
-      without resolving its sources. Nothing is committed. One line per repository
-      names how many graphs were migrated there, so that its owner reviews and commits
-      them. A graph that fails to migrate is named with the reason, the others are
-      still migrated, and the command exits 1 if any failed.
+    text: With --apply, every graph that is behind (SR-0301) and not skipped is migrated
+      by the same lossless migration tl migrate applies to one graph, without resolving
+      its sources. Nothing is committed. One line per repository names how many graphs
+      were migrated there, so that its owner reviews and commits them. A graph that
+      fails to migrate is named with the reason, the others are still migrated, and
+      the command exits 1 if any failed.
     normative: true
     derived: false
     attrs:
