@@ -3,12 +3,22 @@ type: system_requirement
 status: implemented
 title: Without --apply, tl migrate --beneath lists what it would migrate and writes
   nothing
-text: Without --apply, tl migrate --beneath writes nothing. It lists every graph
-  found below the current format version, grouped by the git repository holding it,
-  with the format version each declares, then counts the graphs already at the current
-  version. A graph whose configuration cannot be read, or which declares a version
-  newer than this tl, is listed with the reason. It exits 0. --apply without --beneath
-  is a usage error.
+text: 'Without --apply, tl migrate --beneath writes nothing. It lists every graph
+  that is behind, grouped by the git repository holding it: a graph is behind when
+  it declares a format version below the current one, or when it is at the current
+  version and a repair tl migrate applies to it (SR-0137) would change it. Each graph
+  is listed with the format version it declares and, for one at the current version,
+  the repairs that would change it. It then counts the graphs that are neither. A
+  graph whose configuration cannot be read, or which declares a version newer than
+  this tl, is listed with the reason. It exits 0. --apply without --beneath is a
+  usage error.'
+rationale: 'A repair is how a rule added inside a major reaches graphs already at
+  that major (SR-0137, SR-0273). Keying behind on the declared version alone hid
+  every such graph: on 2 November 2026 4.7.0 listed none of 41 graphs holding 4,470
+  unsigned tombstones, which SR-0273''s backfill signs, while their strict gates
+  went red. Rejected: bumping the format version for every repair, which makes each
+  consumer migrate and rewrite its configuration to pick up a fix that changes nothing
+  else about the format.'
 normative: true
 links:
 - target: UR-0045

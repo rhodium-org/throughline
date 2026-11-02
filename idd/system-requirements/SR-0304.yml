@@ -3,7 +3,7 @@ type: system_requirement
 status: implemented
 title: tl migrate --beneath --apply migrates the rest, commits nothing and carries
   on past a failure
-text: With --apply, every graph below the current format that is not skipped is migrated
+text: With --apply, every graph that is behind (SR-0301) and not skipped is migrated
   by the same lossless migration tl migrate applies to one graph, without resolving
   its sources. Nothing is committed. One line per repository names how many graphs
   were migrated there, so that its owner reviews and commits them. A graph that fails

@@ -56,7 +56,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
 | UR-0043 | A graph that follows a standard is started with one command | SR-0283 |
 | UR-0044 | A standard declares its followers' shape as items, and tl check can check followers against it | SR-0285, SR-0286, SR-0287, SR-0288, SR-0289, SR-0290, SR-0291, SR-0292, SR-0293, SR-0294, SR-0295, SR-0296, SR-0298, SR-0299 |
-| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304 |
+| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0305 |
 <!-- tl:end -->
 
 ## Coverage check
