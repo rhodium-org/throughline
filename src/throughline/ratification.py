@@ -36,6 +36,8 @@ import difflib
 import re
 import subprocess
 import tomllib
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -154,9 +156,37 @@ def _git(top: Path, *args: str) -> str | None:
     return done.stdout
 
 
+# A dry run of `tl migrate` works on a copy of a graph (SR-0301, SR-0305). While
+# it does, the copy's paths stand for the original's whenever history is read, so
+# a repair that reads git (SR-0273) sees the commits the real graph has.
+_STANDS_FOR: ContextVar[tuple[Path, Path] | None] = ContextVar("_STANDS_FOR",
+                                                               default=None)
+
+
+@contextmanager
+def history_of(copy: Path, original: Path):
+    """Read history for paths under ``copy`` as if they were under ``original``."""
+    token = _STANDS_FOR.set((Path(copy).resolve(), Path(original).resolve()))
+    try:
+        yield
+    finally:
+        _STANDS_FOR.reset(token)
+
+
+def _original(path: Path) -> Path:
+    alias = _STANDS_FOR.get()
+    if alias is None:
+        return path
+    copy, original = alias
+    try:
+        return original / Path(path).resolve().relative_to(copy)
+    except ValueError:
+        return path
+
+
 def repo_top(path: str | Path) -> Path | None:
     """The work tree containing ``path``, or None when it is not in one."""
-    out = _git(Path(path), "rev-parse", "--show-toplevel")
+    out = _git(_original(Path(path)), "rev-parse", "--show-toplevel")
     return Path(out.strip()) if out and out.strip() else None
 
 
@@ -204,7 +234,7 @@ def _item_at(top: Path, sha: str, rel: str) -> Item | None:
 
 def _relative(top: Path, path: Path) -> str | None:
     try:
-        return path.resolve().relative_to(top).as_posix()
+        return _original(path).resolve().relative_to(top).as_posix()
     except ValueError:
         return None
 

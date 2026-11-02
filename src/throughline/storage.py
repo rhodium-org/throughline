@@ -15,11 +15,13 @@ import dataclasses
 import io
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
 import tempfile
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 from typing import NamedTuple
 
@@ -1264,6 +1266,58 @@ def migrate_project(path: str | Path, *,
                            result.contents, result.unprovable, result.registers,
                            result.lifted, result.tombstones, result.unattributed,
                            result.withdrawn, result.inherited)
+
+
+# What each kind of repair is called when a dry run reports it (SR-0301): the
+# fields of a MigrationResult that record something written, and only those.
+# `unprovable`, `unattributed` and `stale` say what a repair could not do, so a
+# graph holding only those is not behind.
+_REPAIR_NAMES = (
+    ("repaired", "status roles"), ("routed", "routes to suspicion"),
+    ("declared", "vocabularies"), ("bound", "ratification stamps"),
+    ("cached", "ratified revisions"), ("normative", "normative flags"),
+    ("restamped", "link stamps"), ("contents", "ratification contents"),
+    ("registers", "register types"), ("lifted", "flat ratification records"),
+    ("tombstones", "tombstones signed from history"),
+    ("withdrawn", "withdrawn reexport keys"), ("inherited", "inherited declarations"))
+
+# Never part of a graph, and costly to copy where a graph sits at a repo's root.
+_NOT_COPIED = shutil.ignore_patterns(".git", "node_modules", ".venv", "venv",
+                                     "__pycache__")
+
+
+# A revision cached beside a signature (SR-0166) is a hint every use re-verifies,
+# not something the graph records, and every signature tl-ratify gives lacks one
+# until tl migrate runs. Counting it would list every newly signed graph as behind.
+_CACHES = frozenset({"cached"})
+
+
+def repairs_written(result: MigrationResult) -> tuple[str, ...]:
+    """The names of the repairs that changed what the graph records in ``result``,
+    leaving out a cache (SR-0301)."""
+    # `repaired` is None when the configuration backfill wrote nothing and may be
+    # an empty table when it did (MigrationResult); every other field is empty
+    # exactly when its repair wrote nothing.
+    return tuple(name for attr, name in _REPAIR_NAMES
+                 if attr not in _CACHES
+                 and (result.repaired is not None if attr == "repaired"
+                     else bool(getattr(result, attr))))
+
+
+@contextmanager
+def repaired_copy(path: str | Path):
+    """Run `tl migrate` on a copy of the graph at ``path`` and yield the copy's
+    root and what the migration did, leaving ``path`` untouched (SR-0301,
+    SR-0305). History is read from the original's repository, so a repair that
+    attributes from git (SR-0273) does on the copy what it would do for real. The
+    copy is removed when the block ends."""
+    from .ratification import history_of
+    root = Path(path).resolve()
+    with tempfile.TemporaryDirectory(prefix="tl-dry-run-") as tmp:
+        scratch = Path(tmp) / root.name
+        shutil.copytree(root, scratch, symlinks=True, ignore=_NOT_COPIED)
+        with history_of(scratch, root):
+            yield scratch, migrate_project(scratch)
 
 
 # ------------------------------------------------------------------- YAML dump
