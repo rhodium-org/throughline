@@ -127,6 +127,8 @@ from .storage import (
     baseline_note,
     nested_note,
     read_baseline,
+    repaired_copy,
+    repairs_written,
     init_project,
     load_project,
     create_register,
@@ -1147,6 +1149,9 @@ def cmd_check(args) -> int:
         print(json.dumps([f.to_dict() for f in findings], indent=2))
         if note:
             print(note, file=sys.stderr)
+        repairable = _repairable_note(project, findings, args, baseline, published)
+        if repairable:
+            print(repairable, file=sys.stderr)
         return FINDINGS if any(f.severity == ERROR for f in findings) else OK
 
     for f in sorted(findings, key=lambda x: (x.severity != ERROR, x.uid)):
@@ -1166,11 +1171,41 @@ def cmd_check(args) -> int:
     # even when quiet, because it qualifies the result a quiet run still reports.
     if note:
         print(f"\n{note}", file=sys.stderr)
+    repairable = _repairable_note(project, findings, args, baseline, published)
+    if repairable:
+        print(f"\n{repairable}", file=sys.stderr)
     tally = f"\n{errs} error(s), {warns} warning(s)"
     if not args.quiet and errs == 0:
         tally += "  — graph is sound" + (" (strict)" if args.strict else "")
     print(tally, file=sys.stderr)
     return FINDINGS if any(f.severity == ERROR for f in findings) else OK
+
+
+def _repairable_note(project, findings, args, baseline, published) -> str | None:
+    """How many of ``findings`` tl migrate resolves, and the command (SR-0305).
+
+    Found by validating a copy the repairs have run on, against the same baseline
+    and published set, so the count is what migrating would actually clear. A
+    sound graph pays nothing for this; a graph whose dry run cannot complete gets
+    no note rather than a guess. Not a finding: neither the findings nor the exit
+    status move."""
+    if not findings:
+        return None
+    try:
+        with repaired_copy(project.path) as (scratch, result):
+            if not repairs_written(result):
+                return None
+            after = validate(load_project(scratch), strict=args.strict,
+                             baseline=baseline.statuses, published=published,
+                             restorable=baseline.restorable)
+    except Exception:  # noqa: BLE001 - the note is advisory; the check stands without it
+        return None
+    remaining = {(f.rule, f.uid) for f in after}
+    resolved = sum(1 for f in findings if (f.rule, f.uid) not in remaining)
+    if not resolved:
+        return None
+    return (f"{resolved} of these finding(s) `tl migrate` resolves — run "
+            f"`tl -C {args.path} migrate`, then review and commit what it writes")
 
 
 def cmd_query(args) -> int:
@@ -2188,8 +2223,8 @@ def _migrate_beneath(args) -> int:
     if not args.apply:
         _print_behind(behind)
     _print_unmigratable(found)
-    current = sum(1 for f in found if f.declared == FORMAT_VERSION)
-    print(f"{current} graph(s) already at format version {FORMAT_VERSION}")
+    current = sum(1 for f in found if f.declared == FORMAT_VERSION and not f.behind)
+    print(f"{current} graph(s) at format version {FORMAT_VERSION} with nothing to repair")
     if not args.apply:
         if behind:
             print("nothing was written — run again with --apply to migrate those "
@@ -2221,9 +2256,11 @@ def _migrate_beneath(args) -> int:
 
 def _print_behind(behind) -> None:
     if not behind:
-        print(f"no graph is below format version {FORMAT_VERSION}")
+        print(f"no graph is below format version {FORMAT_VERSION} or has a repair "
+              "to apply")
         return
-    print(f"{len(behind)} graph(s) below format version {FORMAT_VERSION}:")
+    print(f"{len(behind)} graph(s) behind — below format version {FORMAT_VERSION}, "
+          "or at it with a repair to apply:")
     groups: dict[Path | None, list] = {}
     for f in behind:
         groups.setdefault(f.repository, []).append(f)
@@ -2234,7 +2271,8 @@ def _print_behind(behind) -> None:
         for f in graphs:
             # Forward slashes, so a listing reads the same on every platform.
             where = f.root if repo is None else f.root.relative_to(repo).as_posix()
-            print(f"    {where}  format {f.declared}")
+            repairs = f"  repairs: {', '.join(f.repairs)}" if f.repairs else ""
+            print(f"    {where}  format {f.declared}{repairs}")
 
 
 def _print_unmigratable(found) -> None:

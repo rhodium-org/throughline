@@ -1,6 +1,6 @@
 uid: SR-0305
 type: system_requirement
-status: ratified
+status: implemented
 title: tl check names tl migrate beside an error a repair resolves
 text: 'When tl check reports a finding that a repair tl migrate would apply to the
   graph resolves (SR-0137), such as an unsigned tombstone that history can attribute

@@ -105,9 +105,9 @@ def test_without_apply_it_lists_by_repository_and_writes_nothing(tmp_path, capsy
 
     assert _cli(["migrate", "--beneath", tmp_path]) == 0
     out = capsys.readouterr().out
-    assert "2 graph(s) below format version" in out
+    assert "2 graph(s) behind — below format version" in out
     assert f"  {one.resolve()}\n    idd  format 3\n    docs/idd  format 3\n" in out
-    assert f"1 graph(s) already at format version {FORMAT_VERSION}" in out
+    assert f"1 graph(s) at format version {FORMAT_VERSION} with nothing to repair" in out
     assert "nothing was written" in out
     assert (one / "idd" / "throughline.toml").read_text(encoding="utf-8") == before
     assert _git(one, "status", "--porcelain") == ""
