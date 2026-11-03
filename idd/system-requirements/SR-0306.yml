@@ -4,15 +4,18 @@ status: proposed
 title: tl init --from-schema copies the standard's guidance for followers
 text: When tl init --from-schema names a standard whose project folder holds follower/AGENTS.md,
   init shall copy that file, as it is at the source's --ref, to AGENTS.md in the
-  new project's folder. Where the new project's folder already holds an AGENTS.md,
-  init leaves it unchanged and says so. A standard without follower/AGENTS.md gives
-  no file, and init says nothing of it.
+  new project's folder. Where that folder already holds an AGENTS.md, init shall
+  warn, naming the file, write nothing, and exit with a usage error. A standard without
+  follower/AGENTS.md gives no file, and init says nothing of it.
 rationale: 'follower/AGENTS.md, not the standard''s own AGENTS.md: a standard''s
   repository may carry an AGENTS.md for agents working on the standard itself, which
-  is the wrong brief for a follower. Copied once and then the follower''s own, like
-  the registers (SR-0296), so a follower may add to it. AGENTS.md because it is the
-  file most agent frameworks load on their own. An existing file is kept, because
-  overwriting a follower''s own instructions is not init''s to do.'
+  is the wrong brief for a follower. AGENTS.md in the follower because it is the
+  file most agent frameworks load on their own. Copied once and then the follower''s
+  own, like the registers (SR-0296). An existing AGENTS.md halts init rather than
+  being kept or merged (operator, 3 Nov 2026): the follower then starts without the
+  guidance its standard''s consumers rely on, or loses instructions of its own, and
+  either should be a choice made by a person; halting before anything is written
+  follows SR-0283.'
 normative: true
 links:
 - target: UR-0046

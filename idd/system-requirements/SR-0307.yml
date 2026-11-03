@@ -1,6 +1,6 @@
 uid: SR-0307
 type: system_requirement
-status: proposed
+status: deleted
 title: tl context includes the schema source's guidance at its pinned version
 text: Where a project's schema source holds follower/AGENTS.md, tl context shall
   include that file, as it is at the pinned ref, under a heading naming the source
@@ -21,3 +21,9 @@ attrs:
   priority: should
   verification: test
   origin: ai
+deleted:
+  date: '2026-11-03'
+  reason: unspecified
+  fingerprint: sha256:9cd332b7f51edbc99608e6a9bcf1526637d764b7a0a99b7977f41e898b04aa16
+  from: proposed
+  outright: true
