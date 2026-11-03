@@ -1,6 +1,6 @@
 uid: SR-0308
 type: system_requirement
-status: proposed
+status: ratified
 title: A signature covers the content of the files an item names
 text: When an item holds an attribute whose type is built on the base type file,
   its ratification shall record a sha256 of each named file's content beside the
@@ -22,3 +22,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-03T09:17:58Z'
+  fingerprint: sha256:7aa6904084de724ac6e3d94125e03e40b67bcbf23782494c1659189919a66b6e
+  content:
+    type: system_requirement
+    text: When an item holds an attribute whose type is built on the base type file,
+      its ratification shall record a sha256 of each named file's content beside
+      the item's content. tl check shall report the ratification stale, naming the
+      file, when a named file's content no longer matches what was signed, as it
+      does for changed item content (SR-0215).
+    normative: true
+    derived: false
+    attrs:
+      priority: should
