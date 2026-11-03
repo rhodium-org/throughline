@@ -1,0 +1,29 @@
+uid: SR-0307
+type: system_requirement
+status: deleted
+title: tl context includes the schema source's guidance at its pinned version
+text: Where a project's schema source holds follower/AGENTS.md, tl context shall
+  include that file, as it is at the pinned ref, under a heading naming the source
+  and its ref, after the schema source section.
+rationale: 'The copy SR-0306 makes is as old as the init; when the follower moves
+  its pin, the copy does not move. Printing the guidance in tl context at the pinned
+  ref means the brief an agent is told to read first always matches the standard
+  the graph is checked against, so the copied file never needs to be kept in step
+  by hand. Who pays: a longer brief for followers of a standard with guidance; nothing
+  for any other project.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0306
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+deleted:
+  date: '2026-11-03'
+  reason: unspecified
+  fingerprint: sha256:9cd332b7f51edbc99608e6a9bcf1526637d764b7a0a99b7977f41e898b04aa16
+  from: proposed
+  outright: true

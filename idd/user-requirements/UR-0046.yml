@@ -1,0 +1,45 @@
+uid: UR-0046
+type: user_requirement
+status: ratified
+title: A standard's guidance for AI agents arrives with every graph that follows
+  it
+text: As someone starting a graph that follows a standard, I want the guidance the
+  standard's keeper writes for AI agents (how its items are written, what its consumers
+  check beyond the declarations) to arrive in my graph when I start it from the standard,
+  so that an agent writes items those consumers accept the first time, without a
+  template repository to copy and keep current.
+rationale: 'Asked for by the operator on 3 Nov 2026 after a deck template (rhodium-org/presentation-manager-deck-template)
+  fell behind the presentation standard it copied: it pinned v1.0.0 while the standard
+  reached v2.1.0, and tl refused it under the new standard. A blank graph from tl
+  init stays current, but tl context describes only the declarations, and what presentation-manager
+  checks beyond them (slide text format, date windows) reached the agent only as
+  a failed build. Rejected: a template repository, which ages; prose rules as standard
+  items, which a deterministic reader cannot apply (UR-0044). Who pays: a standard''s
+  keeper writes and versions the guidance, optionally; a follower gets one more file,
+  which it owns.'
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+- target: UR-0044
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-03T09:17:58Z'
+  fingerprint: sha256:3cda523d02d48f74b21d6233e9a75d1ae02d94834ce6b63ea4fa72bc24f8f12b
+  content:
+    type: user_requirement
+    text: As someone starting a graph that follows a standard, I want the guidance
+      the standard's keeper writes for AI agents (how its items are written, what
+      its consumers check beyond the declarations) to arrive in my graph when I start
+      it from the standard, so that an agent writes items those consumers accept
+      the first time, without a template repository to copy and keep current.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
