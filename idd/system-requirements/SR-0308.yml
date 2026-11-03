@@ -1,0 +1,24 @@
+uid: SR-0308
+type: system_requirement
+status: proposed
+title: A signature covers the content of the files an item names
+text: When an item holds an attribute whose type is built on the base type file,
+  its ratification shall record a sha256 of each named file's content beside the
+  item's content. tl check shall report the ratification stale, naming the file,
+  when a named file's content no longer matches what was signed, as it does for changed
+  item content (SR-0215).
+rationale: 'The meta-standard''s base type file promises that a signature covers
+  the file as well as its path (BASE-0008, amended 3 Nov 2026). Without it a guidance
+  file (SR-0306) or a series'' cover mark could be rewritten after a person signed
+  for it, and the graph would still say signed. Who pays: a keeper signs again after
+  changing a named file; tl hashes those files on every check.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0215
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
