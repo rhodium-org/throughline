@@ -1,6 +1,6 @@
 uid: SR-0307
 type: system_requirement
-status: ratified
+status: implemented
 title: A graph that declares approved keeps it until a person changes it
 text: The Tool shall go on loading, checking and moving items through a project whose
   configuration declares a status no role binds, such as approved, as it did before.

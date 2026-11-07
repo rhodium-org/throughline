@@ -1,6 +1,6 @@
 uid: SR-0305
 type: system_requirement
-status: ratified
+status: implemented
 title: The lifecycle tl init writes has no status that claims agreement without a
   signature
 text: The configuration tl init writes shall declare no status that says an item

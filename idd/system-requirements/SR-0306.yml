@@ -1,6 +1,6 @@
 uid: SR-0306
 type: system_requirement
-status: ratified
+status: implemented
 title: Only tl ratify puts an item in the ratified status
 text: tl new shall refuse a --status, and tl status a target, that names the status
   bound to the ratified role, saying that tl ratify is the command that puts an item
