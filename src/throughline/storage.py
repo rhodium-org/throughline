@@ -973,6 +973,33 @@ def _remove_inherited_declarations(root: Path) -> tuple[str, ...]:
     return tuple(removed)
 
 
+def unsigned_agreement_statuses(config: dict) -> tuple[str, ...]:
+    """The statuses SR-0313 retires, read from a configuration and writing
+    nothing: the initial status where it is not the proposed one, and every status
+    bound to no role that the proposed status may move to and that may move to the
+    ratified status. Empty for a project with nothing left to retire, so a survey
+    can tell a graph at the current format that still holds them (SR-0316)."""
+    status_cfg = config.get("status") or {}
+    roles = status_cfg.get("roles") or {}
+    values = status_cfg.get("values")
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if not proposed or not ratified or values is None:
+        return ()
+    transitions = config.get("transitions")
+    bound = set(roles.values())
+    retiring = []
+    initial = roles.get("initial")
+    if initial and initial != proposed and initial in values:
+        retiring.append(initial)
+    if transitions is not None:
+        for status in values:
+            if (status not in bound and status != proposed
+                    and status in transitions.get(proposed, ())
+                    and ratified in transitions.get(status, ())):
+                retiring.append(status)
+    return tuple(retiring)
+
+
 def _retire_unsigned_agreement(root: Path) -> tuple[tuple[str, ...], dict[str, str]]:
     """Retire the statuses that stood between proposal and signature (SR-0313).
 
@@ -996,17 +1023,8 @@ def _retire_unsigned_agreement(root: Path) -> tuple[tuple[str, ...], dict[str, s
     if not proposed or not ratified or values is None:
         return (), {}
     transitions = config.get("transitions")
-    bound = set(roles.values())
-    retiring = []
     initial = roles.get("initial")
-    if initial and initial != proposed and initial in values:
-        retiring.append(initial)
-    if transitions is not None:
-        for status in values:
-            if (status not in bound and status != proposed
-                    and status in transitions.get(proposed, ())
-                    and ratified in transitions.get(status, ())):
-                retiring.append(status)
+    retiring = list(unsigned_agreement_statuses(config))
     if not retiring:
         # Nothing to retire; a project whose initial role is unbound still has it
         # bound to proposal, where every item is born (SR-0311).

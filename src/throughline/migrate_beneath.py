@@ -1,7 +1,8 @@
 # Copyright (c) 2026 Henry J Grech-Cini
 # SPDX-License-Identifier: Apache-2.0
 """``tl migrate --beneath``: every graph beneath some paths brought to the current
-format (UR-0045).
+format (UR-0045), and every graph at it that still holds a status between proposal
+and signature (SR-0316).
 
 Surveying writes nothing (SR-0301). Applying migrates only the graphs it is safe
 to rewrite — not one with uncommitted work (SR-0302), not one in another branch's
@@ -15,7 +16,8 @@ from pathlib import Path
 
 from . import discovery
 from .storage import (CONFIG_NAME, FORMAT_VERSION, ProjectError,
-                      _read_format_version, migrate_project)
+                      _read_format_version, migrate_project,
+                      unsigned_agreement_statuses)
 
 
 @dataclass(frozen=True)
@@ -26,10 +28,19 @@ class Found:
     repository: Path | None   # the git working tree holding it, if any
     declared: int | None      # its format version, when it could be read
     error: str | None = None  # why it could not be, when it could not
+    # The statuses between proposal and signature it still declares (SR-0316):
+    # 5.0 retired them without a new format, so its format alone cannot say.
+    retires: tuple[str, ...] = ()
 
     @property
     def behind(self) -> bool:
         return self.declared is not None and self.declared < FORMAT_VERSION
+
+    @property
+    def due(self) -> bool:
+        """Something ``tl migrate`` would change: below the current format, or at
+        it with statuses still to retire (SR-0316)."""
+        return self.behind or (self.declared == FORMAT_VERSION and bool(self.retires))
 
     @property
     def ahead(self) -> bool:
@@ -46,7 +57,8 @@ def _found(root: Path) -> Found:
     repository = discovery.repository_of(root)
     try:
         config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
-        return Found(root, repository, _read_format_version(config, root))
+        return Found(root, repository, _read_format_version(config, root),
+                     retires=unsigned_agreement_statuses(config))
     except (OSError, ValueError, ProjectError) as e:
         return Found(root, repository, None, str(e).splitlines()[0])
 
@@ -75,12 +87,13 @@ class Outcome:
 
 
 def apply(graphs: list[Found]) -> list[Outcome]:
-    """Migrate each graph behind the current format that is safe to rewrite,
+    """Migrate each graph that is due (behind the current format, or holding a
+    status to retire, SR-0316) and safe to rewrite,
     carrying on past any that fails (SR-0304). Sources are not resolved: the
     migration is the one a graph gets alone, which is lossless and offline."""
     outcomes: list[Outcome] = []
     for found in graphs:
-        if not found.behind:
+        if not found.due:
             continue
         reason = skip_reason(found)
         if reason is not None:
