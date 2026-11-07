@@ -1,6 +1,6 @@
 uid: SR-0308
 type: system_requirement
-status: proposed
+status: ratified
 title: The worklist lists only what needs a signature or a decision
 text: The worklist shall count an item as ratified only by the signatures it carries,
   never by its status. It shall have no blocked concern. A draft is in the draft
@@ -23,3 +23,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:d0437c737b485d42a6fec509d02c022c1cb9dc5d4c1534efca143b5685ef890a
+  content:
+    type: system_requirement
+    text: The worklist shall count an item as ratified only by the signatures it
+      carries, never by its status. It shall have no blocked concern. A draft is
+      in the draft concern, carrying the status it would be agreed to, and is not
+      counted in the ratification progress. Every other unsigned live item is proposed
+      or ready, or must be grounded or clarified first.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

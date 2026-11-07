@@ -4,3 +4,13 @@ status: ratified
 title: Users have email
 text: Every user can receive email at signup.
 normative: true
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:16Z'
+  fingerprint: sha256:1e9d8ab102a4635483494041feb541009fec6f9768a9877defe718e29738a68e
+  content:
+    type: assumption
+    text: Every user can receive email at signup.
+    normative: true
+    derived: false
+    attrs: {}

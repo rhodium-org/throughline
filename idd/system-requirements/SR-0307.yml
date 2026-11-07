@@ -1,6 +1,6 @@
 uid: SR-0307
 type: system_requirement
-status: proposed
+status: ratified
 title: An item in a separate initial status is agreed or deleted, never signed
 text: 'Where a project keeps an initial status apart from its proposed status, ratify
   shall refuse an item in it, saying that a draft is not signed and naming the two
@@ -25,3 +25,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:e175a9e195f93cfec74b4915e665d4315d537cdfcfa34f6dd935360b2c5aadd4
+  content:
+    type: system_requirement
+    text: 'Where a project keeps an initial status apart from its proposed status,
+      ratify shall refuse an item in it, saying that a draft is not signed and naming
+      the two ways out: agree it, moving it to the status it would be agreed to,
+      or delete it with tl delete. The status a draft is agreed to is the proposed
+      status where the transitions allow the move, and otherwise the first status
+      the transitions allow from the draft from which the ratified status can be
+      reached, neither dead nor suspect.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

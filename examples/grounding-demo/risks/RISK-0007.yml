@@ -4,3 +4,13 @@ status: ratified
 title: Account takeover
 text: Credential stuffing against the login endpoint.
 normative: true
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:17Z'
+  fingerprint: sha256:5ed4fe9d2d7781331ff014888a15fc33a303029ef5c6a97f96d4958b6db8002e
+  content:
+    type: risk
+    text: Credential stuffing against the login endpoint.
+    normative: true
+    derived: false
+    attrs: {}

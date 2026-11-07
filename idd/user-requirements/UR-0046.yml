@@ -1,6 +1,6 @@
 uid: UR-0046
 type: user_requirement
-status: proposed
+status: ratified
 title: Proposed until a person signs it
 text: 'Every item shall enter the graph proposed, whoever or whatever wrote it, and
   shall count as agreed only once a person has signed it. A signature is the only
@@ -27,3 +27,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:32:59Z'
+  fingerprint: sha256:ee7dcd0c0e417b895c8f8a1e48ab7c7398cc33d3bbc070bf2236bc50bdf411d9
+  content:
+    type: user_requirement
+    text: 'Every item shall enter the graph proposed, whoever or whatever wrote it,
+      and shall count as agreed only once a person has signed it. A signature is
+      the only agreement: there shall be no status meaning agreed without one, and
+      an item carried on to implemented or verified shall still need a signature.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

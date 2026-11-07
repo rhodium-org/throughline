@@ -1,6 +1,6 @@
 uid: SR-0314
 type: system_requirement
-status: proposed
+status: ratified
 title: A status the project no longer declares is not judged as a move
 text: 'Check shall not report a bad transition for an item whose status in the baseline
   is one the project no longer declares: retiring a status is a change to the vocabulary,
@@ -19,3 +19,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:04Z'
+  fingerprint: sha256:1bb45b9f9e868d7215376e20ae9c0bc0cd644fd5d97d4ca46f83169b45755b43
+  content:
+    type: system_requirement
+    text: 'Check shall not report a bad transition for an item whose status in the
+      baseline is one the project no longer declares: retiring a status is a change
+      to the vocabulary, made in the configuration, not a lifecycle move.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

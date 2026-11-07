@@ -1,6 +1,6 @@
 uid: SR-0311
 type: system_requirement
-status: proposed
+status: ratified
 title: Every item is born proposed
 text: tl new shall create every item in the proposed status, whatever its origin,
   where the project declares a proposed status; an explicit --status still names
@@ -19,3 +19,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:e8ae7b4d259d2b5dc801f60699354fbb2403eb5419317a4dbbd176e4268ca4a5
+  content:
+    type: system_requirement
+    text: tl new shall create every item in the proposed status, whatever its origin,
+      where the project declares a proposed status; an explicit --status still names
+      another. Where no proposed status is declared the item is born in the initial
+      status.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,6 +1,6 @@
 uid: SR-0306
 type: system_requirement
-status: proposed
+status: ratified
 title: A signature is taken where the item stands when the ratified status is out
   of reach
 text: Where ratification moves the status, ratify shall move an item to the ratified
@@ -26,3 +26,17 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:02Z'
+  fingerprint: sha256:7acef2faabec1c4c1f0b5567235574a0ce02bb6d3b5f616a1b40f75863342bfa
+  content:
+    type: system_requirement
+    text: Where ratification moves the status, ratify shall move an item to the ratified
+      status only when the transitions allow that move from where it stands. Otherwise
+      it shall record the signature and leave the status as it is, for a first signature
+      as for a later one. The transitions never refuse a signature.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

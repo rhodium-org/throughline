@@ -1,6 +1,6 @@
 uid: SR-0310
 type: system_requirement
-status: proposed
+status: ratified
 title: The starter graph is seeded proposed
 text: The example items tl init writes shall be born proposed, as every item is.
   tl check passes over them with a warning for each; check --strict fails until a
@@ -20,3 +20,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:e1263eeb81924a09c08fb369bf2b70c1809c44a10fa388dfe8204ba3eb48c791
+  content:
+    type: system_requirement
+    text: The example items tl init writes shall be born proposed, as every item
+      is. tl check passes over them with a warning for each; check --strict fails
+      until a person signs or deletes each placeholder.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

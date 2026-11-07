@@ -34,23 +34,22 @@ attrs:
   priority: must
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:d6d001aa68e8812dc37169bb1950614ac1b1ee10269420a662c5108ec42da42d
+  at: '2026-11-07T18:33:07Z'
+  fingerprint: sha256:6d7f95ab7e7f5cf71135d1007184911dfc7ea51b59a7b0e3b84a66c976f2929a
   content:
     type: system_requirement
     text: 'When an item that already carries a ratification record is amended, the
       record goes stale until a human signs it again. Where the project moves an
       item''s status on ratification, that second signature shall not move the status
       if the transition to the ratified status is not allowed from where the item
-      stands. The record is refreshed and the status is left alone. A first signature
-      still moves the status as before, and a first signature that cannot reach the
-      ratified status is still refused. An item whose content has not changed since
-      its record was taken is refused with the same words whatever its status, never
-      with a transition refusal. A suspect item is not covered: the ratified status
-      is reachable from it, and re-signing it is how a human confirms it again. The
-      worklist judges an amended item past the ratified status by its record, not
-      by whether that status can be reached.'
+      stands. The record is refreshed and the status is left alone, as for a first
+      signature (SR-0306). An item whose content has not changed since its record
+      was taken is refused with the same words whatever its status, never with a
+      transition refusal. A suspect item is not covered: the ratified status is reachable
+      from it, and re-signing it is how a human confirms it again. The worklist judges
+      an amended item past the ratified status by its record, not by whether that
+      status can be reached.'
     normative: true
     derived: false
     attrs:
       priority: must
-  revision: 7c6442156f2733d461d2f11a4651c573a2ff8bd1
