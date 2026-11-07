@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shlex
+import re
 import shutil
 import sys
 import time
@@ -310,7 +310,7 @@ def _advise_signing(path) -> None:
     waiting = _awaiting_signature(path)
     if not waiting:
         return
-    where = shlex.quote(str(path))
+    where = _shown_path(path)
     print(f"next: {len(waiting)} item(s) await a person's signature, and "
           "`tl check --strict` fails until each is signed — none was signed for you:")
     print(f"  tl -C {where} check                        lists them")
@@ -318,6 +318,15 @@ def _advise_signing(path) -> None:
           "signs it (pip install throughline-ratify)")
     print(f'  tl -C {where} ratify <UID> --by "<your name>"   signs one you have read')
     print("  then commit the signatures")
+
+
+def _shown_path(path) -> str:
+    """A path as it is typed: as it stands, or in double quotes where it holds
+    a space or a shell character. Not shlex.quote, which quotes every Windows
+    path for its backslashes and a quote in POSIX single quotes no Windows shell
+    reads."""
+    text = str(path)
+    return text if re.fullmatch(r"[\w@%+=:,./\\~-]+", text) else f'"{text}"'
 
 
 def _awaiting_signature(path) -> list[str]:

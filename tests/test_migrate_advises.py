@@ -86,3 +86,10 @@ def test_apply_gives_each_migrated_graph_its_count(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "next: 4 item(s) in 1 graph(s) await a person's signature" in out
     assert f"{root}  4 item(s)" in out
+
+
+def test_a_path_is_shown_as_typed_and_quoted_only_where_it_must_be():
+    from throughline.cli import _shown_path
+    assert _shown_path("idd") == "idd"
+    assert _shown_path(r"C:\Users\grace\repo\idd") == r"C:\Users\grace\repo\idd"
+    assert _shown_path("/home/grace/my repo/idd") == '"/home/grace/my repo/idd"'
