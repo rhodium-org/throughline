@@ -1,6 +1,6 @@
 uid: SR-0318
 type: system_requirement
-status: ratified
+status: implemented
 title: Only tl ratify puts an item in the ratified status
 text: tl new and tl status shall refuse the status bound to the ratified role, naming
   tl ratify, and write nothing; the refusal shall follow the role, not the word.
