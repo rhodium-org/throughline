@@ -1,0 +1,25 @@
+uid: SR-0308
+type: system_requirement
+status: proposed
+title: The worklist lists only what needs a signature or a decision
+text: The worklist shall count an item as ratified only by the signatures it carries,
+  never by its status. It shall have no blocked concern. A draft is in the draft
+  concern, carrying the status it would be agreed to, and is not counted in the ratification
+  progress. Every other unsigned live item is proposed or ready, or must be grounded
+  or clarified first.
+rationale: 'The worklist showed items as ready that the gate did not require, and
+  items as blocked that could never be signed, and called an item ratified because
+  its status said so. A reviewer acted on the queue and the gate disagreed. With
+  signatures taken in place (SR-0306) nothing is blocked; a draft is a decision,
+  not a signature. Who pays: interfaces that draw the blocked concern (tl-ratify,
+  table.iddn.uk), which must draw draft instead.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0229
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

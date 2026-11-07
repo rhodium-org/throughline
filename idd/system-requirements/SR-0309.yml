@@ -1,0 +1,20 @@
+uid: SR-0309
+type: system_requirement
+status: proposed
+title: The brief says every item that counts is signed
+text: The brief tl context generates shall state that every item outside the draft
+  status counts only once a person has signed it, whatever its origin; that a draft
+  is agreed or deleted, not signed; and that tl ratify signs an item where it stands
+  when the ratified status is out of reach.
+rationale: 'The brief told agents only that machine-origin items are provisional,
+  so an agent moving its own human-labelled work to implemented had no reason to
+  expect the gate to want a signature. Who pays: nobody; it is the brief agreeing
+  with the gate.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

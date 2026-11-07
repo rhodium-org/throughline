@@ -1,0 +1,28 @@
+uid: SR-0306
+type: system_requirement
+status: proposed
+title: A signature is taken where the item stands when the ratified status is out
+  of reach
+text: Where ratification moves the status, ratify shall move an item to the ratified
+  status only when the transitions allow that move from where it stands. Otherwise
+  it shall record the signature and leave the status as it is, for a first signature
+  as for a later one. The transitions never refuse a signature.
+rationale: 'The signature is a record on the item, apart from its status (SR-0254).
+  Refusing a first signature on an implemented item, as SR-0237 did, left it unsignable
+  without walking its status back through suspect and forward again, which falsifies
+  the item''s history for a signature, and tl-ratify did exactly that walk. Rejected:
+  a transition from implemented to ratified, which says the item went back. Who pays:
+  nobody new; a project whose transitions reach ratified from where an item stands
+  sees no change.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0237
+  type: refines
+- target: UR-0011
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

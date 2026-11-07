@@ -1,0 +1,27 @@
+uid: UR-0046
+type: user_requirement
+status: proposed
+title: Every item that counts carries a person's signature
+text: 'Every live item outside the draft status shall count as accepted only while
+  it carries a person''s signature, whatever its origin and whatever status the lifecycle
+  has carried it to. A draft is neither signed nor counted: it is agreed or deleted.
+  No item shall sit approved, implemented or verified with no one named for it.'
+rationale: 'An item a human authored and moved to approved or implemented passed
+  check --strict with no one''s name on it, while tl-ratify listed it as ready, and
+  one implemented with no route to ratified as blocked (hitl-hci, 2026-11-07). The
+  operator''s ruling: an item is signed or tombstoned, with nothing between. Rejected:
+  keeping the gate on machine origin alone, which leaves human items unsigned for
+  ever and a queue that offers signatures the gate does not need. Who pays: every
+  adopter whose graph holds human items that were never signed. Their strict gate
+  goes red until a person signs that backlog once with tl ratify or tl-ratify. Nothing
+  is signed for them.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+- target: UR-0023
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
