@@ -25,6 +25,7 @@ from .grounding import (
     attribute_owner,
     attribute_removal_refusal,
     origin_change_refusal,
+    refuse_ratified_status,
 )
 from .graph import Index
 from .model import Item, Link
@@ -124,6 +125,7 @@ def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
     # not watch is how unsigned scope passed as agreed (SR-0141). If the project
     # declares no 'proposed' role we fall back to 'initial'.
     has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
+    refuse_ratified_status(schema, status)
     if status is None:
         status = schema.status_role("proposed" if has_proposed_role else "initial")
     # The flag is the kind's, not the command's (SR-0201): an intent or a

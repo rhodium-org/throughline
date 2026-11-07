@@ -206,8 +206,12 @@ def test_nothing_is_ever_blocked():
 
 def test_a_status_alone_is_not_a_signature(graph, capsys):
     """SR-0308 — an item set to the ratified status by hand names nobody: it is
-    offered for a signature, not counted as ratified."""
-    assert _cli(["-C", graph, "status", "REQ-0001", "ratified"]) == 0
+    offered for a signature, not counted as ratified. (`tl status` refuses that
+    status, SR-0318, so the hand edit is made on the file.)"""
+    path = Path(graph) / "requirements" / "REQ-0001.yml"
+    path.write_text(path.read_text(encoding="utf-8")
+                    .replace("status: proposed", "status: ratified"),
+                    encoding="utf-8")
     capsys.readouterr()
     project = load_project(graph)
     entry = _by_uid(worklist(project))["REQ-0001"]
