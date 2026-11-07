@@ -21,7 +21,7 @@ from .fingerprint import fingerprint
 from .signatures import (
     AT, BY, CONTENT, ID, LINKS, ROLE, STAMP, SUPERSEDES,
     W_AT, W_BY, W_ID, W_OF, W_OF_ID, W_REASON,
-    describe, entry_of, is_stale, latest, names, now_iso, relevant,
+    describe, entry_of, is_draft, is_stale, latest, names, now_iso, relevant,
     requirement_met, retired, signatures, signed_record, stale_entries, stamp_of,
     standing,
 )
@@ -252,6 +252,42 @@ def attribute_removal_refusal(schema, item: Item, name: str) -> str | None:
     return None
 
 
+def agree_to(schema, item: Item) -> str | None:
+    """The status a draft is agreed to (SR-0307), or ``None`` when ``item`` is no
+    draft or its transitions offer nowhere to agree it to: the proposed status
+    where the move is allowed, and otherwise the first status the move is allowed
+    to — neither dead nor suspect — from which the ratified status can be reached.
+    Read from the roles and transitions alone, so every interface offers the same
+    move."""
+    if not is_draft(item, schema):
+        return None
+    roles = schema.status_roles or {}
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if proposed and schema.allows_transition(item.status, proposed):
+        return proposed
+    if schema.transitions is None or ratified is None:
+        return None
+    avoid = schema.dead_statuses() | {roles.get("suspect"), item.status}
+    for to in sorted(schema.transitions.get(item.status, frozenset())):
+        if to not in avoid and (to == ratified
+                                or schema.allows_transition(to, ratified)):
+            return to
+    return None
+
+
+def draft_refusal(schema, item: Item) -> str | None:
+    """Why ``item`` may not be signed because it is a draft (SR-0307), naming the
+    two ways out, or ``None`` when it is no draft."""
+    if not is_draft(item, schema):
+        return None
+    to = agree_to(schema, item)
+    agree = (f"agree it (`tl status {item.uid} {to}`)" if to
+             else "agree it (move it out of the draft status)")
+    return (f"{item.uid} is a draft, and a draft is neither signed nor counted: "
+            f"{agree} and sign it then, or delete it (`tl delete {item.uid} "
+            "--reason <why>`)")
+
+
 def ratification_obstacle(schema, idx: Index, item: Item, *,
                           replacing: bool = False, by: str | None = None,
                           by_id: str | None = None) -> str | None:
@@ -268,19 +304,11 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     predicate the migration repair binds against (SR-0152) — an unstamped record
     is exactly what that repair exists to complete, so it must not be told that an
     already-ratified item has nothing to accept."""
-    refusal = ratification_refusal(schema, idx, item)
+    # A draft is agreed or deleted, never signed (SR-0307): asked first, because
+    # it is the answer whatever else is wrong with the item.
+    refusal = draft_refusal(schema, item) or ratification_refusal(schema, idx, item)
     if refusal is not None:
         return refusal
-    # An item the workflow has carried past the ratified status — it holds a
-    # record, it is live, and the ratified status cannot be reached from where it
-    # stands — is already ratified for every purpose here (SR-0237). A suspect
-    # item is not: the ratified status is reachable, and re-signing it is how a
-    # human confirms it again.
-    ratified_status = schema.status_role("ratified")
-    past = (schema.ratify_moves_status
-            and bool(signatures(item))
-            and item.status not in schema.dead_statuses()
-            and transition_refusal(schema, item, ratified_status) is not None)
     unchanged = (" and signed links have " if signed_link_types(item, schema)
                  else " has ") + "not changed since — there is nothing to accept"
     # A suspect item is never "already ratified": something it rested on was
@@ -315,20 +343,10 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
             return (f"{item.uid} is already ratified by {names(item)} and its "
                     f"content{unchanged}; pass --replacing to correct the recorded "
                     "ratifier instead")
-    # The move :func:`ratify` makes is asked about here too, so a status the
-    # transitions do not let reach the ratified role is refused before anything is
-    # rendered or asked (SR-0195) and before any item in a run is written
-    # (SR-0199). Only where ratification moves the status: where a project declares
-    # it does not (SR-0172), no move is made and nothing can be in the way. Nor is
-    # anything in the way of a second signature: an item that already holds a
-    # record and has been carried past the ratified status is signed where it
-    # stands, because it is the record that went stale, not the status (SR-0237).
-    # A tombstone is signed where it stands (SR-0269): ratifying a deletion
-    # retires the item, it does not move it to the ratified status.
-    if schema.ratify_moves_status and not past and not item.is_deleted:
-        refusal = transition_refusal(schema, item, ratified_status)
-        if refusal is not None:
-            return refusal
+    # No transition is in the way of a signature (SR-0306): the signature is a
+    # record on the item, apart from its status, so where the ratified status
+    # cannot be reached from where the item stands it is signed there, first
+    # signature or later (SR-0237).
     return None
 
 
@@ -495,10 +513,9 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     # project that binds the ratified role to a workflow state turns this off, and
     # the sign-off is then recorded where the item already stands (SR-0172). The
     # status moves only once the signatures meet what the item's kind requires
-    # (SR-0260); until then they are recorded and the item stays where it is. A
-    # re-signature over amended content on an item the workflow has carried past
-    # the ratified status is recorded where the item stands (SR-0237); the obstacle
-    # check above has already refused every first signature that cannot get there.
+    # (SR-0260); until then they are recorded and the item stays where it is. An
+    # item from which the ratified status cannot be reached is signed where it
+    # stands, first signature or later (SR-0306, SR-0237).
     if item.is_deleted:
         # The signature that brings the deletion to the standing its kind requires
         # retires the item, and a retired item withdraws the footing of everything

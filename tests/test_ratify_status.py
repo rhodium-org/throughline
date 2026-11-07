@@ -90,12 +90,14 @@ def test_declaring_the_default_explicitly_is_the_same_thing():
     assert ratify(p, "X-0002", by="j.doe").status == "backlog"
 
 
-def test_the_default_still_refuses_an_item_that_cannot_reach_ratified():
-    """The behaviour SR-0172 makes optional, not the behaviour it removes. Under
-    the default an illegal transition is still refused rather than forced."""
+def test_the_default_signs_where_the_item_stands_when_ratified_is_out_of_reach():
+    """SR-0306 — the transitions never refuse a signature. Under the default an
+    item from which the ratified status cannot be reached is neither forced there
+    nor refused: it is signed where it stands."""
     p = _graph(_WORKFLOW, status="done")
-    with pytest.raises(GroundingError):
-        ratify(p, "X-0002", by="j.doe")
+    item = ratify(p, "X-0002", by="j.doe")
+    assert item.status == "done"
+    assert item.ratifications[-1]["by"] == "j.doe"
 
 
 # --------------------------------------------------------------------------
@@ -219,7 +221,13 @@ def test_an_unamended_item_past_ratified_has_nothing_to_accept():
         ratify(p, "X-0002", by="Bob")
 
 
-def test_a_first_signature_that_cannot_reach_ratified_is_still_refused():
+def test_a_first_signature_that_cannot_reach_ratified_is_taken_where_it_stands():
+    """SR-0306 — a first signature on an item past the ratified status, never
+    signed, is recorded there, as a second one is (SR-0237); the worklist offers
+    it as ready, never blocked (SR-0308)."""
     p = _graph(_WORKFLOW, status="done")
-    with pytest.raises(GroundingError, match="not an allowed transition"):
-        ratify(p, "X-0002", by="Ann")
+    assert entry_for(p, p.get("X-0002")).concern == "ready"
+    item = ratify(p, "X-0002", by="Ann")
+    assert item.status == "done"
+    assert item.ratifications[-1]["fingerprint"] == fingerprint(item, p.schema)
+    assert entry_for(p, item).concern == "ratified"

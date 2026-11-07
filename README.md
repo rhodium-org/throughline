@@ -8,10 +8,10 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-268
+274
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
-42
+43
 <!-- tl:end --> user requirements, and
 <!-- tl:count type == 'nfr' -->
 21
@@ -50,10 +50,11 @@ Doorstop, StrictDoc, and OpenFastTrace already do Git-native, plain-text
 requirements with permanent IDs and link-based traceability — and so does
 throughline's core. The difference is the **grounding layer**. Those tools trace
 links *once the items exist*; none of them gate on whether an item has any
-*reason* to exist, or on whether a machine-generated item has been signed off by
-a person. throughline makes both a build failure: an item that reaches no root
-is an `orphan`, a delivery root nobody serves is `unserved-root`, and an
-AI-`proposed` item stays `unratified` until a human ratifies it. That is the axis
+*reason* to exist, or on whether an item has been signed off by a person.
+throughline makes both a build failure: an item that reaches no root is an
+`orphan`, a delivery root nobody serves is `unserved-root`, and every item past
+the draft — whoever or whatever wrote it — stays `unratified` until a person
+signs it. That is the axis
 this tool adds — not "are the links well-formed?" but **"should this scope exist
 at all, and who took responsibility for it?"** It is why throughline is built for
 an age where a machine can generate a hundred plausible requirements an hour:
@@ -182,7 +183,7 @@ Upward and downward coverage are independent and both matter:
 | `attribute-kind` | an attribute's value is not of its declared kind (`int`, `float`, `bool`, `date` as YYYY-MM-DD, `string`, `text`) |
 | `suspect-link` | target changed since the link was last confirmed |
 | `unreviewed` | item content changed since last review |
-| `unratified` | AI-origin item still `proposed` |
+| `unratified` | an item past the draft that no person has signed, whatever its origin (a draft is not counted: agree it or delete it) |
 | `ambiguous` | flagged ambiguous by `tl flag` — blocked from ratification until `tl clarify` removes the flag |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
 | `unpublished` | a normative item is referenced by no published document (inert until `[docs] paths` are set) |
@@ -317,7 +318,10 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
 ## Grounding operations
 
 - **ratify** — a human takes accountability. Refused for ambiguous or ungrounded
-  items: the two states that must never be signed off. On a tombstone it signs the
+  items: the two states that must never be signed off. Refused for a draft too,
+  which is agreed or deleted rather than signed. Where the ratified status cannot
+  be reached from where an item stands (`implemented`, `verified`), the signature
+  is recorded there and the status is left alone. On a tombstone it signs the
   deletion record: the item is retired, and every item grounded on it is marked
   `suspect` by the same walk `invalidate` makes.
 - **delete** — propose a deletion. The file stays as a tombstone and `check`

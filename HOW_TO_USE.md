@@ -333,7 +333,7 @@ replaced by anyone — withdraw it and sign again.
 | `schema` | missing required attribute or out-of-enum value |
 | `suspect-link` | a link's target changed since it was last confirmed |
 | `unreviewed` | item content changed since last review |
-| `unratified` | an AI-origin item is still `proposed` |
+| `unratified` | an item past the draft that no person has signed, whatever its origin |
 | `ratified-stale` | a ratified item's normative content, or one of its signed links, changed since it was signed |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
@@ -405,6 +405,16 @@ See this repository's own [`.pre-commit-config.yaml`](.pre-commit-config.yaml)
 and [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — throughline gates both
 the [demo project](examples/grounding-demo) and [its own
 requirements](requirements) exactly this way.
+
+**Upgrading to 5.0: nothing counts unsigned.** From 5.0.0 every item past the
+draft needs a person's signature, whatever its `origin`. An `approved`,
+`ratified`, `implemented` or `verified` item nobody signed is reported
+`unratified`: a warning in `tl check`, an error under `--strict`. Nothing is signed
+for you, and `tl migrate` has nothing to repair here. Run `tl check`, then sign the
+items it lists once, with `tl-ratify` (which shows each item before it is signed)
+or `tl ratify <UID> --by <name>`. An item past `ratified` is signed where it
+stands; its status does not move. A `draft` is neither signed nor counted: agree
+it (move it to the status `tl ratify` names) and sign it, or `tl delete` it.
 
 ---
 

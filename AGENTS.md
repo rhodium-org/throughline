@@ -76,7 +76,8 @@ create or edit any item, and trust it over any static list (including this file)
 1. **Author the why first.** Before building, create the grounded requirement
    (throughline's "red test"):
    `tl -C idd new SR --type system_requirement --ground UR-0001 --ground-type implements --title "…" --origin ai --no-interactive`.
-   Machine-origin items you create are `proposed` and need human ratification.
+   Machine-origin items you create are `proposed`. Every item past the draft,
+   whatever its origin, counts only once a person has signed it.
 2. **Implement** the change.
 3. **Cite the item** — reference the UID(s) it satisfies in the commit message.
 4. **Gate:** keep `tl -C idd check --strict` green (and `tl -C idd docs --check`

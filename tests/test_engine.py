@@ -532,7 +532,8 @@ def test_ai_origin_item_with_a_ratifier_is_accepted_in_any_status():
 def test_initial_status_item_is_not_accused_of_leaving_proposed():
     """SR-0149 — an item still in the initial status was never proposed, so the
     finding must say that rather than claim it escaped the proposed status."""
-    msg = next(f.message for f in _ai_findings("draft") if f.rule == "unratified")
+    msg = next(f.message for f in _ai_findings("draft")
+               if f.rule == "unratified" and f.uid == "FR-1")
     assert "never proposed" in msg and "left the proposed status" not in msg
 
 def test_terminal_status_ai_item_needs_no_ratifier():
@@ -542,13 +543,48 @@ def test_terminal_status_ai_item_needs_no_ratifier():
     assert ("FR-1", "unratified") not in _ai_item("rejected")
     assert ("FR-1", "unratified") in _ai_item("deleted")
 
-def test_human_origin_item_is_never_chased_for_ratification():
-    intent = Item(uid="INT-1", type="intent", status="ratified")
-    fr = Item(uid="FR-1", type="requirement", status="approved",
+@pytest.mark.parametrize("status", ["proposed", "approved", "ratified",
+                                    "implemented", "verified"])
+def test_a_human_origin_item_past_the_draft_is_chased_for_its_signature(status):
+    """SR-0305 — nothing counts unsigned, whatever its origin: a human-origin item
+    past the draft that no person signed is unratified, an error under --strict."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    fr = Item(uid="FR-1", type="requirement", status=status,
               attrs={"origin": "human"},
               links=[Link(target="INT-1", type="derives_from")])
-    assert ("FR-1", "unratified") not in _rules(validate(
-        _project(_doc("INT", intent), _doc("FR", fr), config=_ROLES)))
+    findings = validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES),
+                        strict=True)
+    hit = [f for f in findings if f.uid == "FR-1" and f.rule == "unratified"]
+    assert hit and hit[0].severity == "error"
+    assert "human-origin item" in hit[0].message
+
+
+def test_an_unsigned_counted_item_is_a_warning_without_strict():
+    """SR-0305 — the finding is a warning, which only --strict raises to an error,
+    so an adopter's ordinary `tl check` names the backlog without failing."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    fr = Item(uid="FR-1", type="requirement", status="implemented",
+              attrs={"origin": "human"},
+              links=[Link(target="INT-1", type="derives_from")])
+    findings = validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES))
+    hit = [f for f in findings if f.uid == "FR-1" and f.rule == "unratified"]
+    assert hit and hit[0].severity == "warning"
+
+
+def test_a_human_origin_draft_is_not_counted():
+    """SR-0305 — a draft is neither signed nor counted, so the gate asks nothing of
+    it; an item with no origin at all is held to the rule like any other."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    draft = Item(uid="FR-1", type="requirement", status="draft",
+                 attrs={"origin": "human"},
+                 links=[Link(target="INT-1", type="derives_from")])
+    bare = Item(uid="FR-2", type="requirement", status="implemented",
+                links=[Link(target="INT-1", type="derives_from")])
+    rules = _rules(validate(_project(_doc("INT", intent), _doc("FR", draft, bare),
+                                     config=_ROLES), strict=True))
+    assert ("FR-1", "unratified") not in rules
+    assert ("INT-1", "unratified") not in rules
+    assert ("FR-2", "unratified") in rules
 
 def test_bad_status_flagged_against_declared_vocabulary():
     cfg = {"status": {"values": ["draft", "approved"]}}
@@ -996,6 +1032,18 @@ def test_context_states_the_idd_contract():
     assert "red test" in doc
     assert "ratif" in doc.lower()          # AI-origin items need human ratification
     assert "tl check" in doc          # the gate
+
+
+def test_context_says_nothing_counts_unsigned():
+    """SR-0309 — the brief agrees with the gate: every item past the draft needs a
+    person's signature whatever its origin, a draft is agreed or deleted, and
+    ratify signs where the item stands."""
+    doc = _ctx()
+    assert "Nothing counts unsigned" in doc
+    assert "whatever its origin" in doc
+    assert "agreed or deleted" in doc
+    assert "signs an item where it stands" in doc
+    assert "AI-origin items are provisional" not in doc
 
 def test_context_renders_types_and_normative_attrs_from_schema():
     doc = _ctx()
@@ -1973,15 +2021,17 @@ def test_a_supplied_index_is_only_a_grounding_view_not_a_way_past_the_gates():
 
 def test_a_supplied_index_still_obeys_the_projects_transitions():
     """Grounding is the only thing handed in; the status move remains the config's
-    to permit or refuse (SR-0130)."""
+    to permit (SR-0130). Where it does not, the signature is taken where the item
+    stands (SR-0306)."""
     borrowed = Item(uid="INT-1", type="intent", status="ratified")
-    fr = Item(uid="FR-1", type="requirement", status="draft",
+    fr = Item(uid="FR-1", type="requirement", status="implemented",
               links=[Link(target="INT-1", type="derives_from")])
-    cfg = {"transitions": {"draft": ["proposed"], "proposed": ["ratified"]}}
+    cfg = {"transitions": {"draft": ["proposed"], "proposed": ["ratified"],
+                           "implemented": ["verified"]}}
     consumer = _project(_doc("FR", fr), config=cfg)
     union = _project(_doc("INT", borrowed), _doc("FR", fr), config=cfg)
-    with pytest.raises(GroundingError, match="not an allowed transition"):
-        ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+    ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+    assert fr.status == "implemented" and fr.ratifications[-1]["by"] == "j.doe"
 
 
 def test_rewritten_content_after_ratification_is_reported():
@@ -2401,9 +2451,9 @@ def test_set_status_refuses_illegal_transition():
 
 
 def test_ratify_refuses_draft_when_transitions_forbid_it():
-    """The regression: ratify must not emit a state `check --strict` would reject.
-    With a transitions table that forbids draft -> ratified, ratify is refused
-    rather than writing an illegal status (SR-0130)."""
+    """The regression: ratify must not emit a state `check --strict` would reject,
+    and a draft is agreed or deleted, never signed (SR-0307): the refusal names
+    the status it is agreed to and `tl delete`."""
     intent = Item(uid="INT-1", type="intent", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status="draft",
               links=[Link(target="INT-1", type="derives_from")])
@@ -2411,9 +2461,11 @@ def test_ratify_refuses_draft_when_transitions_forbid_it():
                       "roles": {"initial": "draft", "ratified": "ratified"}},
            "transitions": {"draft": ["approved"], "approved": ["ratified"]}}
     p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
-    with pytest.raises(GroundingError, match="not an allowed transition"):
+    with pytest.raises(GroundingError, match="is a draft") as refused:
         ratify(p, "FR-1", by="j.doe")
-    assert fr.status == "draft"
+    assert "tl status FR-1 approved" in str(refused.value)
+    assert "tl delete FR-1" in str(refused.value)
+    assert fr.status == "draft" and not fr.ratifications
 
 
 def test_operation_without_bound_role_fails_fast():
@@ -2796,7 +2848,10 @@ def test_init_seeds_a_check_clean_starter_graph(tmp_path):
     proj = load_project(root)
     assert {it.uid for it in proj.items()} == {
         "INT-0001", "REQ-0001", "NFR-0001", "TEST-0001", "NG-0001"}
-    # sound under the strictest gate, with no hand-fixing required
+    # sound under the strictest gate, with no hand-fixing required and nothing
+    # signed for the user: every placeholder is a draft (SR-0310)
+    assert {it.status for it in proj.items()} == {"draft"}
+    assert not any(it.ratifications for it in proj.items())
     assert _cli(["-C", str(root), "check", "--strict", "--quiet"]) == 0
     # and the published document ships already rendered, not as empty markers
     overview = (root / "docs" / "overview.md").read_text(encoding="utf-8")

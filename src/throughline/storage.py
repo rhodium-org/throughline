@@ -2040,34 +2040,38 @@ def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
     injected before return, so it ships already rendered."""
     # The flag on each seeded item is the type's (SR-0202): the demo and `tl new`
     # read the same declaration, so a fresh project holds one value per kind.
-    normative = load_project(root).schema.is_normative
+    # Each is a placeholder nobody has agreed to, so it is seeded as a draft
+    # (SR-0310): nothing counts unsigned (UR-0046), and a draft is not counted.
+    schema = load_project(root).schema
+    normative = schema.is_normative
+    draft = schema.status_role("initial")
     items = [
-        Item(uid="INT-0001", type="intent", status="approved",
+        Item(uid="INT-0001", type="intent", status=draft,
              normative=normative("intent"),
              title=f"Deliver {name}",
              text="Describe the outcome this project exists to create. Every "
                   "requirement below grounds back to this intent."),
-        Item(uid="REQ-0001", type="requirement", status="approved",
+        Item(uid="REQ-0001", type="requirement", status=draft,
              normative=normative("requirement"),
              title="First requirement",
              text="State something the system shall do, then replace this with a "
                   "real requirement.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"priority": "must", "origin": "human"}),
-        Item(uid="NFR-0001", type="nfr", status="approved",
+        Item(uid="NFR-0001", type="nfr", status=draft,
              normative=normative("nfr"),
              title="First quality attribute",
              text="State a quality the system shall have (performance, security, "
                   "usability), then replace this.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"origin": "human"}),
-        Item(uid="TEST-0001", type="test", status="approved",
+        Item(uid="TEST-0001", type="test", status=draft,
              normative=normative("test"),
              title="Verifies the first requirement",
              text="Describe how REQ-0001 is checked. This verifies link satisfies "
                   "the coverage rule declared in throughline.toml.",
              links=[Link(target="REQ-0001", type="verifies")]),
-        Item(uid="NG-0001", type="non_goal", status="approved",
+        Item(uid="NG-0001", type="non_goal", status=draft,
              normative=normative("non_goal"),
              title="First non-goal",
              text="Record something deliberately out of scope, so nobody proposes "

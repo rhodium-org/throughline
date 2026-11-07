@@ -84,11 +84,12 @@ def test_every_item_is_placed_and_the_reason_is_the_tools_own(graph):
     entries = _by_uid(worklist(project))
     assert entries["REQ-0001"].concern == "proposed"
     assert entries["REQ-0001"].ratifiable and entries["REQ-0001"].obstacle is None
-    # A human-authored item is born in a status the shipped lifecycle cannot move
-    # straight to ratified, so it is blocked, and the obstacle says why.
-    assert entries["REQ-0002"].concern == "blocked"
+    # A human-authored item is born a draft: agreed or deleted, never signed
+    # (SR-0307), so it is a draft in the worklist, carrying where it is agreed to.
+    assert entries["REQ-0002"].concern == "draft"
     assert not entries["REQ-0002"].ratifiable
-    assert "not an allowed transition" in entries["REQ-0002"].obstacle
+    assert "is a draft" in entries["REQ-0002"].obstacle
+    assert entries["REQ-0002"].agree_to == "proposed"
     assert entries["REQ-0003"].concern == "ambiguous"
     assert "flagged ambiguous" in entries["REQ-0003"].obstacle
     assert entries["REQ-0004"].concern == "ungrounded"
@@ -117,7 +118,9 @@ def test_a_signed_item_leaves_the_worklist_and_a_rewritten_one_returns(graph):
     amend_item(project, "REQ-0001", text="The Tool shall do A, within 200 ms.")
     write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))
     back = _by_uid(worklist(load_project(graph)))["REQ-0001"]
-    assert back.concern == "stale" and back.stale and back.ratified
+    # The status still says ratified; the signature no longer covers the words,
+    # and only the signature counts (SR-0308).
+    assert back.concern == "stale" and back.stale and not back.ratified
 
 
 def test_a_withdrawn_signature_puts_the_item_back(graph):
@@ -192,4 +195,65 @@ def test_the_model_needs_no_subprocess_socket_or_terminal(graph, monkeypatch):
     project = load_project(graph)
     assert {e.uid for e in worklist(project)} == {
         "INT-0001", "REQ-0001", "REQ-0002", "REQ-0003", "REQ-0004"}
-    assert ratification_progress(project) == (0, 5)
+    # The two drafts (INT-0001, REQ-0002) are not counted (SR-0308).
+    assert ratification_progress(project) == (0, 3)
+
+
+# ------------------------------------------- SR-0308: only what needs a signature
+
+def test_nothing_is_ever_blocked():
+    """SR-0308 — a signature is taken where an item stands (SR-0306), so the
+    vocabulary has no blocked concern; a draft is a decision of its own."""
+    assert "blocked" not in CONCERNS and "draft" in CONCERNS
+
+
+def test_a_status_alone_is_not_a_signature(graph, capsys):
+    """SR-0308 — an item set to the ratified status by hand names nobody: it is
+    offered for a signature, not counted as ratified."""
+    assert _cli(["-C", graph, "status", "REQ-0001", "ratified"]) == 0
+    capsys.readouterr()
+    project = load_project(graph)
+    entry = _by_uid(worklist(project))["REQ-0001"]
+    assert entry.concern == "ready" and not entry.ratified and entry.ratifiable
+    assert ratification_progress(project)[0] == 0
+
+
+def test_an_implemented_item_nobody_signed_is_ready_and_signed_where_it_stands(
+        graph, capsys):
+    """SR-0306, SR-0308 — the hitl-hci case: a human item carried to implemented
+    with no signature is ready, not blocked, and signing it leaves it implemented."""
+    for to in ("approved", "implemented"):
+        assert _cli(["-C", graph, "status", "INT-0001", to]) == 0
+    capsys.readouterr()
+    project = load_project(graph)
+    entry = _by_uid(worklist(project))["INT-0001"]
+    assert entry.concern == "ready" and entry.ratifiable and entry.obstacle is None
+    item = ratify(project, "INT-0001", by="Ada", index=Index.build(project))
+    assert item.status == "implemented" and item.ratifications[-1]["by"] == "Ada"
+
+
+def test_a_draft_is_agreed_to_the_first_status_that_reaches_ratified(tmp_path):
+    """SR-0307 — where the transitions do not move a draft to proposed, it is
+    agreed to the first status, neither dead nor suspect, from which the ratified
+    status can be reached; where none exists it can only be deleted."""
+    from throughline import agree_to
+    from throughline.model import Item
+    from throughline.schema import Schema
+    roles = {"initial": "draft", "proposed": "proposed", "ratified": "ratified",
+             "invalidated": "rejected", "suspect": "suspect",
+             "tombstone": "deleted"}
+    statuses = ["proposed", "draft", "deferred", "approved", "ratified",
+                "implemented", "suspect", "rejected", "deleted"]
+
+    def schema(draft_moves):
+        return Schema.from_config({
+            "status": {"values": statuses, "roles": roles},
+            "transitions": {"draft": draft_moves, "approved": ["ratified"],
+                            "deferred": ["approved"]}})
+
+    draft = Item(uid="X-1", type="requirement", status="draft")
+    hitl = schema(["approved", "deferred", "suspect", "rejected", "deleted"])
+    assert agree_to(hitl, draft) == "approved"
+    assert agree_to(schema(["deferred", "deleted"]), draft) is None
+    assert agree_to(hitl, Item(uid="X-2", type="requirement",
+                               status="approved")) is None

@@ -274,3 +274,21 @@ def retired(item, schema) -> bool:
     if (item.deleted or {}).get(OUTRIGHT):
         return True
     return requirement_met(item, schema)
+
+
+def is_draft(item, schema) -> bool:
+    """Whether ``item`` sits in the initial status (SR-0307): specified, not yet
+    agreed. A draft is neither signed nor counted; it is agreed or deleted. A
+    project that binds the initial and proposed roles to one status has no draft:
+    its items are born proposals, which are signed."""
+    roles = schema.status_roles or {}
+    initial = roles.get("initial")
+    return (initial is not None and initial != roles.get("proposed")
+            and not item.is_deleted and item.status == initial)
+
+
+def counts(item, schema) -> bool:
+    """Whether ``item`` counts, and so must carry a person's signature whatever its
+    origin (UR-0046, SR-0305): live, not a tombstone, and past the draft."""
+    return (not item.is_deleted and item.status not in schema.dead_statuses()
+            and not is_draft(item, schema))

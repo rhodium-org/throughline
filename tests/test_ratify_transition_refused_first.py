@@ -3,11 +3,11 @@
 """SR-0195 and SR-0199 — ratify refuses an item it cannot ratify before it renders
 or asks anything, and a run holding such an item writes nothing.
 
-An item whose status cannot move to the ratified status is one ratify cannot
-ratify. The precondition check did not ask about the move, so the item was rendered,
-the ratifier was asked to confirm, and only the write refused it. In a batch the
-items before it had already been signed. Where a project declares that ratification
-leaves the status where it is (SR-0172), no move is involved and nothing is refused.
+A draft is one ratify cannot ratify (SR-0307): it is agreed or deleted, never
+signed. The precondition check once did not ask, so the item was rendered, the
+ratifier was asked to confirm, and only the write refused it. In a batch the items
+before it had already been signed. A draft is refused whether or not ratification
+moves the status (SR-0172).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import pytest
 from throughline.cli import main as cli_main
 from throughline.storage import load_project
 
-DISALLOWED = "status change 'draft' -> 'ratified' is not an allowed transition"
+DISALLOWED = "REQ-0002 is a draft, and a draft is neither signed nor counted"
 
 
 def _cli(argv) -> int:
@@ -90,7 +90,7 @@ def test_a_run_holding_one_such_item_writes_nothing(graph, capsys, uids):
     before = _bytes(graph)
     assert _cli(["-C", graph, "ratify", *uids, "--by", "Ada"]) == 2
     err = capsys.readouterr().err
-    assert f"REQ-0002: {DISALLOWED}" in err
+    assert DISALLOWED in err
     assert "nothing in this run was ratified" in err
     assert _bytes(graph) == before
 
@@ -111,16 +111,16 @@ def test_the_ratifiable_item_is_still_ratified_on_its_own(graph):
     assert item.status == "ratified" and item.ratifications[-1]["by"] == "Ada"
 
 
-def test_nothing_is_refused_where_ratification_leaves_the_status_alone(graph):
-    """SR-0172: a project that declares ratification does not move the status signs
-    an item wherever it stands, so no transition can be in the way."""
+def test_a_draft_is_refused_where_ratification_leaves_the_status_alone(graph):
+    """SR-0307: a project that declares ratification does not move the status
+    (SR-0172) still does not sign a draft — it is agreed or deleted."""
     config = graph / "throughline.toml"
     text = config.read_text(encoding="utf-8")
     assert "[ratify]" not in text
     config.write_text(text + "\n[ratify]\nmoves_status = false\n", encoding="utf-8")
-    assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 0
-    item = load_project(graph).get("REQ-0002")
-    assert item.status == "draft" and item.ratifications[-1]["by"] == "Ada"
+    before = _bytes(graph)
+    assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada"]) == 2
+    assert _bytes(graph) == before
 
 
 def test_the_refusal_is_the_one_the_write_would_raise(graph):
@@ -131,7 +131,8 @@ def test_the_refusal_is_the_one_the_write_would_raise(graph):
     project = load_project(graph)
     item = project.get("REQ-0002")
     obstacle = ratification_obstacle(project.schema, Index.build(project), item)
-    assert obstacle == f"REQ-0002: {DISALLOWED}"
+    assert obstacle.startswith(DISALLOWED)
+    assert "tl status REQ-0002 proposed" in obstacle
     with pytest.raises(GroundingError) as exc:
         ratify(project, "REQ-0002", by="Ada")
     assert str(exc.value) == obstacle

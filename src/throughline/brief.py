@@ -47,10 +47,14 @@ def _ctx_idd(schema) -> str:
         "not yet built. Implement it, then flip it to `approved`/`implemented` "
         "when the thing exists. Ground at birth with "
         "`tl new <PREFIX> --type <T> --ground <PARENT_UID>`.\n"
-        f"- **AI-origin items are provisional.** An item whose `origin` is one of "
-        f"{_fmt_set(schema.ai_origins)} enters `proposed` and must be **ratified** "
-        "by a human (`tl ratify <UID> --by <who>`) before it counts as "
-        "agreed. If you are that agent, you propose; a human accepts.\n"
+        "- **Nothing counts unsigned.** Every item past the draft counts only once "
+        "a person has **signed** it (`tl ratify <UID> --by <who>`), whatever its "
+        "origin; an approved or implemented item with no signature fails "
+        "`tl check --strict`. A draft is neither signed nor counted: it is agreed "
+        "or deleted. `tl ratify` signs an item where it stands when the ratified "
+        "status cannot be reached from there. An item whose `origin` is one of "
+        f"{_fmt_set(schema.ai_origins)} enters `proposed`; if you are that agent, "
+        "you propose, and a person signs.\n"
         "- **`tl check` is the gate.** It validates the whole graph and "
         "returns a stable exit code (0 ok · 1 error-severity findings · 2 usage "
         "error). An ungrounded, unserved, or otherwise invalid graph **fails the "
@@ -244,8 +248,9 @@ def _ctx_grounding(schema) -> str:
             "- **Withdrawing link types:** none declared — `tl invalidate` "
             "spreads suspicion along the grounding links above and nothing else.")
     out.append(
-        f"- **AI origins** (items with these origins enter `proposed` and need "
-        f"human ratification): {_fmt_set(schema.ai_origins)}")
+        f"- **AI origins** (items with these origins enter `proposed`; every item "
+        f"past the draft, whatever its origin, needs a person's signature): "
+        f"{_fmt_set(schema.ai_origins)}")
     if schema.signed_link_types:
         out.append(
             f"- **Signed link types:** {_fmt_set(schema.signed_link_types)} — a "
@@ -376,7 +381,8 @@ _CTX_COMMAND_USAGE = {
 # an agent that had read only the rest of the brief would be surprised by.
 _CTX_COMMAND_EMPHASIS = {
     "check": "THE GATE — run before committing",
-    "ratify": "a human accepts a proposed item, or a proposed deletion — signing a "
+    "ratify": "a human signs an item past the draft, where it stands, or a "
+              "proposed deletion — signing a "
               "tombstone retires it and marks its dependents suspect; never run "
               "this for a human",
     "migrate": "idempotent repairs; extend this, never a script beside it",

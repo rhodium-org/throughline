@@ -37,6 +37,7 @@ from .grounding import (
     GroundingError,
     Invalidation,
     Refusal,
+    agree_to,
     cascade_suspicion,
     ambiguity_report,
     attribute_owner,
@@ -125,7 +126,8 @@ from .ratification import (
 )
 from .schema import AttrSpec, LinkRule, Requirement, Schema, SchemaError
 from .signatures import (
-    Standing, relevant, requirement_met, retired, signatures, signs_deletion, standing,
+    Standing, counts, is_draft, relevant, requirement_met, retired, signatures,
+    signs_deletion, standing,
 )
 from .views import (
     check_summary,
@@ -208,7 +210,7 @@ __all__ = [
     "GroundingError", "reaches_root", "grounding_gap", "is_unserved",
     "set_status", "transition_refusal", "Refusal", "Invalidation", "Cascade",
     "cascade_suspicion",
-    "ratify", "ratification_obstacle", "invalidate", "withdraw",
+    "ratify", "ratification_obstacle", "agree_to", "invalidate", "withdraw",
     "flag", "clarify", "is_flagged_ambiguous", "ambiguity_report",
     "attribute_owner",
     # what a signature covered, and what has moved since
@@ -220,7 +222,7 @@ __all__ = [
     "worklist", "WorklistEntry", "entry_for", "CONCERNS", "depths_from_roots",
     "is_ratified", "signature_is_stale", "ratification_progress",
     "signatures", "standing", "Standing", "requirement_met", "relevant", "retired",
-    "signs_deletion",
+    "signs_deletion", "counts", "is_draft",
     # who signs
     "default_ratifier", "default_identifier", "git_identity", "normalise_identifier",
     "IdentityError",
