@@ -1,0 +1,29 @@
+uid: SR-0307
+type: system_requirement
+status: proposed
+title: A graph that declares approved keeps it until a person changes it
+text: The Tool shall go on loading, checking and moving items through a project whose
+  configuration declares a status no role binds, such as approved, as it did before.
+  No command, tl migrate included, shall remove such a status from a configuration
+  or move an item out of it unless a person runs a command that names that change.
+rationale: 'Graphs in use declare approved, some with items in it; the presentation
+  manager removed it from its graphs by hand on 7 November 2026, its standard is
+  removing it too. Whether an existing graph keeps the status is its owners'' decision,
+  and an item in it carries a decision the Tool cannot undo on its own, so nothing
+  changes automatically: no new finding, no migrate repair. Who pays: nobody gains
+  an obligation; a graph that wants approved gone removes it through its own configuration
+  and moves its items with tl status or tl ratify. Rejected: a tl migrate repair
+  that drops approved, which would restatus items nobody asked to move; a check warning,
+  which would redden graphs that chose the status deliberately.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0305
+  type: relates
+- target: SR-0131
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai

@@ -1,0 +1,27 @@
+uid: SR-0306
+type: system_requirement
+status: proposed
+title: Only tl ratify puts an item in the ratified status
+text: tl new shall refuse a --status, and tl status a target, that names the status
+  bound to the ratified role, saying that tl ratify is the command that puts an item
+  there, and shall write nothing.
+rationale: 'The ratified status means a person signed. tl new --status ratified and
+  tl status <uid> ratified both put an item there with no record of who, which check
+  catches only for a machine-origin item (SR-0149); a human-origin item would read
+  ratified forever with nobody accountable. tl ratify moves an item from any status
+  that has a route to ratified, so refusing the other two routes removes nothing
+  a person needs. Who pays: a script that creates items already ratified, or restatuses
+  them so, must call tl ratify with a name instead. Rejected: a warning only, which
+  would still write a status the record contradicts.'
+normative: true
+links:
+- target: UR-0023
+  type: implements
+- target: SR-0149
+  type: relates
+- target: SR-0131
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
