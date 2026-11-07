@@ -30,7 +30,14 @@ def _fmt_set(items) -> str:
 
 def _ctx_idd(schema) -> str:
     """The fixed Intent-Driven Development contract, with this project's own
-    root types and grounding links named so it is accurate for the project."""
+    root types and grounding links named so it is accurate for the project.
+    Statuses are named through their roles, so the brief never tells an agent to
+    set a status no signature backs (SR-0305, SR-0088)."""
+    roles = schema.status_roles or {}
+    initial = roles.get("initial", "draft")
+    ratified = roles.get("ratified", "ratified")
+    built = ("move it to `implemented`" if schema.is_status("implemented")
+             else "move it on")
     return (
         "## The contract: Intent-Driven Development\n\n"
         "This project uses **throughline**, a Git-native requirements tool. Each item "
@@ -43,9 +50,9 @@ def _ctx_idd(schema) -> str:
         f"**grounding link** ({_fmt_set(schema.ground_link_types)}). Those links "
         "form a DAG — circular justification is rejected.\n"
         "- **Author the why first.** Create the grounded requirement as a "
-        "`draft` — throughline's version of a *red test*: specified and justified, "
-        "not yet built. Implement it, then flip it to `approved`/`implemented` "
-        "when the thing exists. Ground at birth with "
+        f"`{initial}` — throughline's version of a *red test*: specified and "
+        "justified, not yet built. Implement it once a human has ratified it "
+        f"(`{ratified}`), then {built} when the thing exists. Ground at birth with "
         "`tl new <PREFIX> --type <T> --ground <PARENT_UID>`.\n"
         f"- **AI-origin items are provisional.** An item whose `origin` is one of "
         f"{_fmt_set(schema.ai_origins)} enters `proposed` and must be **ratified** "
@@ -316,7 +323,7 @@ _CTX_FORMAT = (
     "```yaml\n"
     "uid: FR-0022                 # permanent, immutable, never reused\n"
     "type: requirement            # one of the item types above\n"
-    "status: approved             # one of the declared statuses\n"
+    "status: proposed             # one of the declared statuses\n"
     "title: Guided setup wizard\n"
     "text: The system shall walk a new user through setup in 3 steps.\n"
     "normative: true              # set by the type; feeds the fingerprint, and a\n"

@@ -2040,34 +2040,38 @@ def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
     injected before return, so it ships already rendered."""
     # The flag on each seeded item is the type's (SR-0202): the demo and `tl new`
     # read the same declaration, so a fresh project holds one value per kind.
-    normative = load_project(root).schema.is_normative
+    schema = load_project(root).schema
+    normative = schema.is_normative
+    # Seeded in the initial status (SR-0305): nobody has ratified the starter, so
+    # no item may read as agreed.
+    initial = schema.status_role("initial")
     items = [
-        Item(uid="INT-0001", type="intent", status="approved",
+        Item(uid="INT-0001", type="intent", status=initial,
              normative=normative("intent"),
              title=f"Deliver {name}",
              text="Describe the outcome this project exists to create. Every "
                   "requirement below grounds back to this intent."),
-        Item(uid="REQ-0001", type="requirement", status="approved",
+        Item(uid="REQ-0001", type="requirement", status=initial,
              normative=normative("requirement"),
              title="First requirement",
              text="State something the system shall do, then replace this with a "
                   "real requirement.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"priority": "must", "origin": "human"}),
-        Item(uid="NFR-0001", type="nfr", status="approved",
+        Item(uid="NFR-0001", type="nfr", status=initial,
              normative=normative("nfr"),
              title="First quality attribute",
              text="State a quality the system shall have (performance, security, "
                   "usability), then replace this.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"origin": "human"}),
-        Item(uid="TEST-0001", type="test", status="approved",
+        Item(uid="TEST-0001", type="test", status=initial,
              normative=normative("test"),
              title="Verifies the first requirement",
              text="Describe how REQ-0001 is checked. This verifies link satisfies "
                   "the coverage rule declared in throughline.toml.",
              links=[Link(target="REQ-0001", type="verifies")]),
-        Item(uid="NG-0001", type="non_goal", status="approved",
+        Item(uid="NG-0001", type="non_goal", status=initial,
              normative=normative("non_goal"),
              title="First non-goal",
              text="Record something deliberately out of scope, so nobody proposes "
@@ -2145,9 +2149,11 @@ types = ["refines", "verifies", "satisfies", "implements", "relates",
 # verifies  = {{ from = ["test"], to = ["requirement"] }}
 
 [status]
-# draft = actively moving toward approval; deferred = acknowledged and grounded
+# draft = being written, not yet put forward; deferred = acknowledged and grounded
 # but deliberately parked (a backlog wish-list item, not on the active front).
-values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented",
+# There is no 'approved' (SR-0305): an item reads agreed only once `tl ratify` has
+# recorded who accepted it, and who proposed it is its origin, not its status.
+values = ["proposed", "draft", "deferred", "ratified", "implemented",
           "verified", "suspect", "rejected", "deleted"]
 
 # Semantic status roles (SR-0131): which declared status plays each role the
@@ -2167,21 +2173,20 @@ tombstone = "deleted"
 # Allowed status moves (SR-0083). `tl check` compares each item against its
 # status in the previous commit and flags any change these do not permit. Delete
 # this table to leave every status freely reachable.
-# Every live status keeps a route to 'ratified' (SR-0150) — in particular the two
-# statuses below 'proposed' can move back to it, so scope that was authored or
-# parked without ratification can still be put forward for a human to accept.
-# Every live status also keeps a route to 'suspect' (SR-0175), so that an item
-# whose grounding is withdrawn can be flagged wherever it currently sits — the
-# statuses below 'approved' hold the items whose grounding is least settled.
+# Every live status keeps a route to 'ratified' (SR-0150) — the two statuses below
+# 'proposed' reach it through 'proposed', so scope that was authored or parked
+# without ratification can still be put forward for a human to accept. Only
+# `tl ratify` moves an item there (SR-0306). Every live status also keeps a route
+# to 'suspect' (SR-0175), so that an item whose grounding is withdrawn can be
+# flagged wherever it currently sits.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
-draft       = ["proposed", "approved", "deferred", "suspect", "rejected", "deleted"]
-deferred    = ["proposed", "draft", "approved", "suspect", "rejected", "deleted"]
-approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
+proposed    = ["draft", "ratified", "deferred", "suspect", "rejected", "deleted"]
+draft       = ["proposed", "deferred", "suspect", "rejected", "deleted"]
+deferred    = ["proposed", "draft", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
-suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
+suspect     = ["ratified", "implemented", "verified", "rejected", "deleted"]
 rejected    = ["draft", "deleted"]
 
 # Coverage: every live requirement should be verified by a test.

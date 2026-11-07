@@ -66,7 +66,7 @@ register manifest (enforces SR-0003).
 # srs/SR-0034.yml
 uid: SR-0034
 type: requirement            # from project schema
-status: approved             # from project status vocabulary
+status: proposed             # from project status vocabulary
 title: Suspect links
 text: |
   Each link shall store the target's fingerprint at the time the link was
@@ -187,8 +187,8 @@ attrs.verification = {type = "enum", values = ["test","demonstration","inspectio
 types = ["refines", "verifies", "satisfies", "implements", "relates"]
 
 [status]
-values = ["draft","approved","implemented","verified","rejected","deleted"]
-transitions = [["draft","approved"], ["approved","implemented"], ["implemented","verified"]]
+values = ["draft","proposed","ratified","implemented","verified","rejected","deleted"]
+transitions = [["draft","proposed"], ["proposed","ratified"], ["ratified","implemented"], ["implemented","verified"]]
 
 # Semantic status roles (SR-0131). The tool's operations act on statuses BY ROLE,
 # never by a value fixed in code: `tl new` births at 'initial', `tl ratify' writes

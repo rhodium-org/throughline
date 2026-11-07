@@ -2433,14 +2433,14 @@ def test_operation_without_bound_role_fails_fast():
 
 def test_tl_status_verb_moves_through_permitted_transition(tmp_path):
     """`tl status <uid> <status>` is the generic verb that reaches every permitted
-    move, so no state change needs a hand-edited YAML file (SR-0132). It fills the
-    draft -> approved gap that had no dedicated command."""
+    move, so no state change needs a hand-edited YAML file (SR-0132), such as
+    parking a draft, which has no dedicated command."""
     root = _scaffold(tmp_path)  # ships intent INT-0001 at the 'initial' role (draft)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "feature", "--ground", "INT-0001"]) == 0
     assert load_project(root).get("FR-0001").status == "draft"
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
-    assert load_project(root).get("FR-0001").status == "approved"
+    assert _cli(["-C", str(root), "status", "FR-0001", "deferred"]) == 0
+    assert load_project(root).get("FR-0001").status == "deferred"
 
 
 def test_tl_status_verb_refuses_illegal_transition(tmp_path):

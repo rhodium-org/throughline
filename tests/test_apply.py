@@ -387,7 +387,7 @@ def test_a_draft_item_stays_draft_where_the_lifecycle_has_no_move_to_proposed(tm
     config = root / "throughline.toml"
     text = config.read_text(encoding="utf-8")
     config.write_text(text.replace(
-        'draft       = ["proposed", "approved",', 'draft       = ["approved",'), encoding="utf-8")
+        'draft       = ["proposed", ', 'draft       = ['), encoding="utf-8")
     path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
                         "text": "rewritten by an assistant"}])
     assert _cli(["-C", str(root), "apply", str(path)]) == 0
@@ -397,11 +397,11 @@ def test_a_draft_item_stays_draft_where_the_lifecycle_has_no_move_to_proposed(tm
 
 def test_an_item_past_draft_keeps_its_status_when_the_set_changes_it(tmp_path):
     root = _scaffold(tmp_path)
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
+    assert _cli(["-C", str(root), "status", "FR-0001", "deferred"]) == 0
     path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
                         "text": "rewritten by an assistant"}])
     assert _cli(["-C", str(root), "apply", str(path)]) == 0
-    assert _status_of(root, "FR-0001") == "approved"
+    assert _status_of(root, "FR-0001") == "deferred"
 
 
 def test_a_dry_run_puts_nothing_forward(tmp_path):

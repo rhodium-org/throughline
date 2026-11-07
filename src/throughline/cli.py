@@ -41,6 +41,7 @@ from .grounding import (
     ratification_obstacle,
     ratify,
     reaches_root,
+    refuse_ratified_status,
     set_status,
     withdraw,
 )
@@ -1782,6 +1783,7 @@ def cmd_status(args) -> int:
         return _err(f"'{to}' is not a declared status")
     frm = item.status
     try:
+        refuse_ratified_status(project.schema, to)
         set_status(project.schema, item, to)
     except GroundingError as e:
         return _err(str(e))
@@ -2425,9 +2427,12 @@ def _composed_new(args) -> int:
         attrs = parse_attrs(consumer.schema, item_type, args.attr, command="new")
     except (GroundingError, UidError) as e:
         return _err(str(e))
-    item = birth_item(consumer.schema, reg, uid, item_type=item_type,
-                      title=args.title or "", text=args.text or "",
-                      status=args.status, origin=args.origin, attrs=attrs)
+    try:
+        item = birth_item(consumer.schema, reg, uid, item_type=item_type,
+                          title=args.title or "", text=args.text or "",
+                          status=args.status, origin=args.origin, attrs=attrs)
+    except GroundingError as e:
+        return _err(str(e))
 
     # Explicit grounding is always honoured and never silently dropped (SR-0091): a
     # local target must exist locally, a namespace-qualified one in the union.
