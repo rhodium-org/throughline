@@ -118,18 +118,14 @@ def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
     # item.
     origin = origin or attrs.get("origin")
     # Birth status comes from the project's status roles, never a value fixed in
-    # code (SR-0131); ``status`` overrides it explicitly. A machine-origin item is
-    # born 'proposed' — not 'initial' — so the ratification gate (SR-0092)
-    # actually engages and a named human must ratify it before it counts; without
-    # this a machine-authored item would enter the ordinary initial status and
-    # silently escape the gate the tool exists to enforce (SR-0141). If the
-    # project declares no 'proposed' role we fall back to 'initial'.
+    # code (SR-0131); ``status`` overrides it explicitly. Every item is born
+    # 'proposed', whoever or whatever wrote it (SR-0311): it counts only once a
+    # person signs it (UR-0046), and an origin that chose a status the gate did
+    # not watch is how unsigned scope passed as agreed (SR-0141). If the project
+    # declares no 'proposed' role we fall back to 'initial'.
     has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
     if status is None:
-        if origin in schema.ai_origins and has_proposed_role:
-            status = schema.status_role("proposed")
-        else:
-            status = schema.status_role("initial")
+        status = schema.status_role("proposed" if has_proposed_role else "initial")
     # The flag is the kind's, not the command's (SR-0201): an intent or a
     # non-goal is born non-normative because its type says so.
     item = Item(uid=uid, type=item_type, status=status, title=title, text=text,

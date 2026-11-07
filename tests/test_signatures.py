@@ -245,7 +245,7 @@ def test_an_item_counts_as_ratified_only_when_its_kind_s_requirement_is_met(tmp_
     assert "awaiting-signatures" in _rules(root) and "unratified" not in _rules(root)
     assert "signed by Bob (github:bob, as junior)" in _finding(root, "awaiting-signatures")
     assert entry_for(load_project(root), item).concern == "awaiting"
-    assert [e.uid for e in worklist(load_project(root))][0] in ("REQ-0001", "REQ-0002")
+    assert "REQ-0001" in [e.uid for e in worklist(load_project(root))]
 
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada", "--as", "senior",
                  "--by-id", "github:ada"]) == 0
@@ -266,7 +266,8 @@ def test_strict_check_fails_while_an_item_awaits_signatures(tmp_path, capsys):
     capsys.readouterr()
     assert _cli(["-C", root, "check", "--strict"]) == 1
     text = capsys.readouterr().out
-    assert text.count("awaiting-signatures") == 2 and "unratified" not in text
+    assert text.count("awaiting-signatures") == 2
+    assert not any("unratified" in ln and "REQ-" in ln for ln in text.splitlines())
 
 
 def test_each_signature_is_judged_stale_on_its_own(tmp_path):

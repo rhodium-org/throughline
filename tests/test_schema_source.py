@@ -184,7 +184,7 @@ def test_migrate_removes_the_copy_keeps_what_is_added_and_runs_once(tmp_path, ca
     assert _cli(["-C", fol, "migrate"]) == 0
     out = capsys.readouterr().out
     assert "already makes identically" in out
-    assert "item type 'slide' attribute 'layout'" in out and "status 'draft'" in out
+    assert "item type 'slide' attribute 'layout'" in out and "status 'deferred'" in out
     text = (fol / "throughline.toml").read_text(encoding="utf-8")
     for gone in ("[transitions]", "[status.roles]", "[links]", "[grounding]",
                  "attrs.layout", "[types.requirement]"):
@@ -212,7 +212,7 @@ def test_migrate_runs_no_configuration_backfill_for_a_follower(tmp_path):
     migrate_project(fol)
     text = cfg.read_text(encoding="utf-8")
     assert "[status" not in text and "[links]" not in text
-    assert load_project(fol).schema.status_roles["initial"] == "draft"
+    assert load_project(fol).schema.status_roles["initial"] == "proposed"
 
 
 # --------------------------------------------------------------------------- #
@@ -295,9 +295,9 @@ def test_a_schema_operation_on_an_inherited_declaration_is_refused_unwritten(
     fol = _follower(tmp_path)
     cfg = fol / "throughline.toml"
     before = cfg.read_text(encoding="utf-8")
-    for argv in (["status", "remove", "draft"], ["type", "remove", "slide"],
+    for argv in (["status", "remove", "deferred"], ["type", "remove", "slide"],
                  ["attr", "add", "slide", "layout", "--kind", "string"],
-                 ["transition", "deny", "draft", "deleted"]):
+                 ["transition", "deny", "deferred", "deleted"]):
         capsys.readouterr()
         assert _cli(["-C", fol, "schema", *argv, "--because", "x"]) != 0, argv
         err = capsys.readouterr().err

@@ -244,7 +244,7 @@ def test_a_baseline_directory_reads_only_the_projects_own_tree(tmp_path, capsys)
     project = load_project(root)
     assert (read_baseline(project, base_dir=at_base).statuses
             == read_baseline(project, ref="HEAD").statuses
-            == {"INT-0001": "draft", "REQ-0001": "draft"})
+            == {"INT-0001": "proposed", "REQ-0001": "proposed"})
     assert _cli(["-C", root, "check", "--base-dir", at_base]) == 0
     assert "tombstone-deleted" not in capsys.readouterr().out
 
@@ -254,6 +254,6 @@ def test_a_git_baseline_reads_only_the_projects_own_tree(tmp_path, capsys):
     _strays(root)
     _commit(root)
     assert read_baseline(load_project(root), ref="HEAD").statuses == {
-        "INT-0001": "draft", "REQ-0001": "draft"}
+        "INT-0001": "proposed", "REQ-0001": "proposed"}
     assert _cli(["-C", root, "check"]) == 0
     assert "tombstone-deleted" not in capsys.readouterr().out

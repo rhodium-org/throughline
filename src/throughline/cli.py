@@ -312,7 +312,7 @@ def cmd_migrate(args) -> int:
                  or result.cached or result.normative or result.contents
                  or result.unprovable or result.registers or result.lifted
                  or result.tombstones or result.unattributed or result.withdrawn
-                 or result.inherited
+                 or result.inherited or result.moved or result.retired_statuses
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -422,6 +422,17 @@ def cmd_migrate(args) -> int:
               "already makes identically:")
         for what in result.inherited:
             print(f"  {what}")
+    # The statuses retired as an agreement with no signature (SR-0313), and every
+    # item moved, so the keeper sees what now awaits a signature.
+    if result.retired_statuses:
+        print(f"retired {', '.join(result.retired_statuses)}: a status between "
+              "proposal and signature — every item is proposed until a person "
+              "signs it (UR-0046)")
+        if result.moved:
+            print(f"  moved {len(result.moved)} item(s); none was signed for you, "
+                  "so sign each that still awaits a signature:")
+            for uid, move in result.moved.items():
+                print(f"  {uid}: {move}")
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")

@@ -53,7 +53,7 @@ def _repo(root: Path, *, transitions: bool = True) -> Path:
         assert _cli(["-C", root, "new", "REQ", "--title", title, "--text", "t.",
                      "--ground", "INT-0001", "--no-interactive"]) == 0
     if transitions:
-        assert _cli(["-C", root, "status", "REQ-0001", "approved"]) == 0
+        assert _cli(["-C", root, "status", "REQ-0001", "ratified"]) == 0
         assert _cli(["-C", root, "status", "REQ-0001", "implemented"]) == 0
     assert _cli(["-C", root, "delete", "REQ-0002", "--reason", "gone"]) == 0
     _commit(root)
@@ -64,7 +64,7 @@ def _drift(root: Path) -> None:
     """An illegal status move and an erased tombstone, not yet committed."""
     moved = root / "requirements" / "REQ-0001.yml"
     moved.write_text(moved.read_text(encoding="utf-8").replace(
-        "status: implemented", "status: draft"), encoding="utf-8")
+        "status: implemented", "status: proposed"), encoding="utf-8")
     (root / "requirements" / "REQ-0002.yml").unlink()
 
 
@@ -147,7 +147,7 @@ def test_git_and_a_directory_read_the_same_baseline(repo, tmp_path):
     from_git = read_baseline(project, ref="HEAD")
     from_dir = read_baseline(project, base_dir=at_base)
     assert from_git.statuses == from_dir.statuses
-    assert from_git.statuses == {"INT-0001": "draft", "REQ-0001": "implemented",
+    assert from_git.statuses == {"INT-0001": "proposed", "REQ-0001": "implemented",
                                  "REQ-0002": "deleted"}
 
 

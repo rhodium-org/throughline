@@ -42,24 +42,33 @@ def _ctx_idd(schema) -> str:
         "- **Everything else must justify itself** by reaching a root through a "
         f"**grounding link** ({_fmt_set(schema.ground_link_types)}). Those links "
         "form a DAG — circular justification is rejected.\n"
-        "- **Author the why first.** Create the grounded requirement as a "
-        "`draft` — throughline's version of a *red test*: specified and justified, "
-        "not yet built. Implement it, then flip it to `approved`/`implemented` "
-        "when the thing exists. Ground at birth with "
-        "`tl new <PREFIX> --type <T> --ground <PARENT_UID>`.\n"
-        "- **Nothing counts unsigned.** Every item past the draft counts only once "
-        "a person has **signed** it (`tl ratify <UID> --by <who>`), whatever its "
-        "origin; an approved or implemented item with no signature fails "
-        "`tl check --strict`. A draft is neither signed nor counted: it is agreed "
-        "or deleted. `tl ratify` signs an item where it stands when the ratified "
-        "status cannot be reached from there. An item whose `origin` is one of "
-        f"{_fmt_set(schema.ai_origins)} enters `proposed`; if you are that agent, "
-        "you propose, and a person signs.\n"
-        "- **`tl check` is the gate.** It validates the whole graph and "
+        "- **Author the why first.** Create the grounded requirement before the "
+        "code — throughline's version of a *red test*: specified and justified, "
+        "not yet agreed or built. It is born `proposed`; a person signs it; "
+        "implement it, then move it on when the thing exists. Ground at birth "
+        "with `tl new <PREFIX> --type <T> --ground <PARENT_UID>`.\n"
+        "- **Nothing counts unsigned.** Every item is born `proposed`, whatever "
+        "its origin, and counts only once a person has **signed** it "
+        "(`tl ratify <UID> --by <who>`). A signature is the only agreement: an "
+        "implemented or verified item with no signature fails `tl check --strict`, "
+        "and `tl ratify` signs it where it stands. If you are an agent, you "
+        "propose, and a person signs.\n"
+        + (f"- **A draft is agreed or deleted.** This project keeps "
+           f"`{(schema.status_roles or {}).get('initial')}` apart from "
+           "`proposed`: an item there is neither signed nor counted until it is "
+           "agreed or deleted.\n" if _keeps_drafts(schema) else "")
+        + "- **`tl check` is the gate.** It validates the whole graph and "
         "returns a stable exit code (0 ok · 1 error-severity findings · 2 usage "
         "error). An ungrounded, unserved, or otherwise invalid graph **fails the "
         "build**. Keep it green; run it before you commit."
     )
+
+
+def _keeps_drafts(schema) -> bool:
+    """Whether the project keeps an initial status apart from its proposed one
+    (SR-0307, SR-0309)."""
+    roles = schema.status_roles or {}
+    return bool(roles.get("initial")) and roles.get("initial") != roles.get("proposed")
 
 
 def _ctx_working(schema) -> str:
@@ -248,8 +257,8 @@ def _ctx_grounding(schema) -> str:
             "- **Withdrawing link types:** none declared — `tl invalidate` "
             "spreads suspicion along the grounding links above and nothing else.")
     out.append(
-        f"- **AI origins** (items with these origins enter `proposed`; every item "
-        f"past the draft, whatever its origin, needs a person's signature): "
+        f"- **AI origins** (recorded on the item; every item, whatever its "
+        f"origin, is born `proposed` and needs a person's signature): "
         f"{_fmt_set(schema.ai_origins)}")
     if schema.signed_link_types:
         out.append(
@@ -321,7 +330,7 @@ _CTX_FORMAT = (
     "```yaml\n"
     "uid: FR-0022                 # permanent, immutable, never reused\n"
     "type: requirement            # one of the item types above\n"
-    "status: approved             # one of the declared statuses\n"
+    "status: ratified             # one of the declared statuses\n"
     "title: Guided setup wizard\n"
     "text: The system shall walk a new user through setup in 3 steps.\n"
     "normative: true              # set by the type; feeds the fingerprint, and a\n"
@@ -381,7 +390,7 @@ _CTX_COMMAND_USAGE = {
 # an agent that had read only the rest of the brief would be surprised by.
 _CTX_COMMAND_EMPHASIS = {
     "check": "THE GATE — run before committing",
-    "ratify": "a human signs an item past the draft, where it stands, or a "
+    "ratify": "a human signs an item, where it stands, or a "
               "proposed deletion — signing a "
               "tombstone retires it and marks its dependents suspect; never run "
               "this for a human",

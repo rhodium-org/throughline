@@ -354,8 +354,52 @@ def _status_of(root: Path, uid: str) -> str:
     return _item(root, uid).status
 
 
-def test_an_amended_draft_item_is_put_forward_as_proposed(tmp_path, capsys):
+# The lifecycle throughline shipped before 5.0, which keeps a draft status apart
+# from proposal (SR-0307): a project may still declare one.
+_DRAFT_LIFECYCLE = """
+[status]
+values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented",
+          "verified", "suspect", "rejected", "deleted"]
+
+[status.roles]
+initial = "draft"
+proposed = "proposed"
+ratified = "ratified"
+invalidated = "rejected"
+suspect = "suspect"
+tombstone = "deleted"
+
+[transitions]
+proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
+draft       = ["proposed", "approved", "deferred", "suspect", "rejected", "deleted"]
+deferred    = ["proposed", "draft", "approved", "suspect", "rejected", "deleted"]
+approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
+ratified    = ["implemented", "suspect", "rejected", "deleted"]
+implemented = ["verified", "suspect", "rejected", "deleted"]
+verified    = ["implemented", "suspect", "deleted"]
+suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
+rejected    = ["draft", "deleted"]
+"""
+
+
+def _keeping_drafts(tmp_path) -> Path:
+    """The scaffold under a lifecycle that keeps drafts, with FR-0001 a draft."""
     root = _scaffold(tmp_path)
+    config = root / "throughline.toml"
+    text = config.read_text(encoding="utf-8")
+    head = text[:text.index("[status]")]
+    tail = text[text.index("[transitions]"):]
+    tail = tail[tail.index("\n[", 1):] if "\n[" in tail[1:] else ""
+    config.write_text(head + _DRAFT_LIFECYCLE + tail, encoding="utf-8")
+    for uid in ("INT-0001", "FR-0001"):
+        path = next(root.rglob(f"{uid}.yml"))
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "status: proposed", "status: draft"), encoding="utf-8")
+    return root
+
+
+def test_an_amended_draft_item_is_put_forward_as_proposed(tmp_path, capsys):
+    root = _keeping_drafts(tmp_path)
     assert _status_of(root, "FR-0001") == "draft"
     path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
                         "text": "rewritten by an assistant"}])
@@ -369,7 +413,7 @@ def test_an_amended_draft_item_is_put_forward_as_proposed(tmp_path, capsys):
 
 
 def test_a_draft_item_given_a_link_or_losing_one_is_put_forward_as_proposed(tmp_path):
-    root = _scaffold(tmp_path)
+    root = _keeping_drafts(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement", "--title", "other",
                  "--ground", "INT-0001"]) == 0
     assert _cli(["-C", str(root), "link", "FR-0002", "INT-0001", "--type", "relates"]) == 0
@@ -383,7 +427,7 @@ def test_a_draft_item_given_a_link_or_losing_one_is_put_forward_as_proposed(tmp_
 
 
 def test_a_draft_item_stays_draft_where_the_lifecycle_has_no_move_to_proposed(tmp_path):
-    root = _scaffold(tmp_path)
+    root = _keeping_drafts(tmp_path)
     config = root / "throughline.toml"
     text = config.read_text(encoding="utf-8")
     config.write_text(text.replace(
@@ -396,7 +440,7 @@ def test_a_draft_item_stays_draft_where_the_lifecycle_has_no_move_to_proposed(tm
 
 
 def test_an_item_past_draft_keeps_its_status_when_the_set_changes_it(tmp_path):
-    root = _scaffold(tmp_path)
+    root = _keeping_drafts(tmp_path)
     assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
     path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
                         "text": "rewritten by an assistant"}])
@@ -405,7 +449,7 @@ def test_an_item_past_draft_keeps_its_status_when_the_set_changes_it(tmp_path):
 
 
 def test_a_dry_run_puts_nothing_forward(tmp_path):
-    root = _scaffold(tmp_path)
+    root = _keeping_drafts(tmp_path)
     path = _set(root, [{"op": "amend", "uid": "FR-0001", "revision": _rev(root, "FR-0001"),
                         "text": "rewritten by an assistant"}])
     assert _cli(["-C", str(root), "apply", str(path), "--dry-run"]) == 0

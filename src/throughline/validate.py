@@ -282,7 +282,10 @@ def validate(project, strict: bool = False,
             # item is back where the lifecycle last left it.
             restored = (prev == tombstone_status and item.uid in restorable
                         and not item.is_deleted)
+            # A status the project no longer declares was retired from the
+            # vocabulary, in the configuration, not left by a move (SR-0314).
             if (prev is not None and prev != item.status and not restored
+                    and schema.is_status(prev)
                     and not schema.allows_transition(prev, item.status)):
                 add("bad-transition", item.uid, f,
                     f"status change '{prev}' -> '{item.status}' is not an "

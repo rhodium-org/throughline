@@ -32,9 +32,9 @@ def _bytes(root: Path) -> dict[Path, bytes]:
 
 @pytest.fixture
 def graph(tmp_path) -> Path:
-    """An intent, a machine-authored requirement born proposed (ratifiable), and a
-    human-authored one born draft, a status the shipped transitions do not let move
-    straight to ratified."""
+    """An intent, a requirement born proposed (ratifiable), and one left in a draft
+    status the project keeps apart from proposal (SR-0307), which the shipped
+    lifecycle no longer has, so the project declares it."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--no-demo"]) == 0
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Why",
@@ -45,6 +45,18 @@ def graph(tmp_path) -> Path:
     assert _cli(["-C", root, "new", "REQ", "--title", "Drafted", "--text",
                  "The Tool shall do B.", "--ground", "INT-0001",
                  "--no-interactive"]) == 0
+    config = root / "throughline.toml"
+    text = config.read_text(encoding="utf-8")
+    text = text.replace('values = ["proposed", "deferred",',
+                        'values = ["proposed", "draft", "deferred",')
+    text = text.replace('initial = "proposed"', 'initial = "draft"')
+    text = text.replace('[transitions]\n', '[transitions]\ndraft = ["proposed", "deleted"]\n')
+    config.write_text(text, encoding="utf-8")
+    req = root / "requirements" / "REQ-0002.yml"
+    if not req.exists():
+        req = next(root.rglob("REQ-0002.yml"))
+    req.write_text(req.read_text(encoding="utf-8").replace(
+        "status: proposed", "status: draft"), encoding="utf-8")
     project = load_project(root)
     assert project.get("REQ-0001").status == "proposed"
     assert project.get("REQ-0002").status == "draft"
