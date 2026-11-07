@@ -470,91 +470,6 @@ def _backfill_ratification_stamps(root: Path, *,
     return bound
 
 
-def _backfill_tombstone_signatures(root: Path) -> tuple[dict[str, str], dict[str, str]]:
-    """Backfill every tombstone that stands unsigned as ratified by history
-    (SR-0273). Returns ``(attributed, unattributed)``: ``uid -> who`` for each
-    tombstone given a signature, ``uid -> why`` for each left proposed.
-
-    Every tombstone in the estate was written when deletion took effect unsigned,
-    so without this, upgrading would report each as `unratified`. History is the
-    evidence of who deleted it and when: the signature names the author of the
-    commit that wrote the tombstone, at that commit's date, over the deletion
-    record as it stands, and is marked ``backfilled`` as SR-0152 marks a bound
-    record — so it stays forever distinguishable from a signature a person gave
-    at the time. A tombstone no commit holds — never committed, or outside a git
-    work tree — is left proposed and reported: no identity is ever invented.
-
-    Idempotent: a tombstone that stands never matches again.
-    """
-    from .ratification import _git, _item_at, _relative, repo_top
-
-    project = load_project(root)
-    schema = project.schema
-    attributed: dict[str, str] = {}
-    unattributed: dict[str, str] = {}
-    for item in project.items():
-        if not item.is_deleted or retired(item, schema):
-            continue
-        if item._path is None:
-            unattributed[item.uid] = "the item has no file on disk"
-            continue
-        top = repo_top(Path(item._path).parent)
-        if top is None:
-            unattributed[item.uid] = "the project is not inside a git work tree"
-            continue
-        rel = _relative(top, Path(item._path))
-        if rel is None:
-            unattributed[item.uid] = "the item's file is outside the git work tree"
-            continue
-        # Oldest first, so the first revision holding the tombstone is the commit
-        # that wrote it; --follow so a register move does not truncate history.
-        log = _git(top, "log", "--follow", "--reverse",
-                   "--format=%H%x1f%an%x1f%ae%x1f%aI", "--", rel)
-        if log is None:
-            unattributed[item.uid] = "git could not read this item's history"
-            continue
-        found = None
-        for line in log.splitlines():
-            parts = line.strip().split("\x1f")
-            if len(parts) != 4:
-                continue
-            past = _item_at(top, parts[0], rel)
-            if past is not None and past.is_deleted:
-                found = parts
-                break
-        if found is None:
-            unattributed[item.uid] = ("no commit holds this tombstone — it has not "
-                                      "been committed, so history names nobody")
-            continue
-        sha, name, email, when = found
-        entry: dict = {BY: name}
-        if email:
-            entry[ID] = f"email:{email}"
-        entry[AT] = _utc_second(when)
-        entry[STAMP] = deletion_fingerprint(item)
-        entry[CONTENT] = deletion_content(item)
-        entry[BACKFILLED] = True
-        entry[REVISION] = sha
-        item.ratifications.append(entry)
-        write_item(item)
-        attributed[item.uid] = name
-    return attributed, unattributed
-
-
-def _utc_second(when: str) -> str:
-    """A git author date (ISO 8601 with offset) as a signature records it
-    (SR-0256): UTC, to the second."""
-    from datetime import datetime, timezone
-
-    try:
-        parsed = datetime.fromisoformat(when.strip())
-    except ValueError:
-        return when.strip()
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc)
-    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
 def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
     """Cache, on each ratification record, the revision whose content reproduces
     its stamp (SR-0166). Returns ``uid -> sha`` for every record populated.
@@ -792,10 +707,6 @@ class RepairResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
-    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
-    # that could not be was left proposed.
-    tombstones: Mapping[str, str] = _NO_STRINGS
-    unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
     # The declarations removed because the schema source makes them (SR-0277).
@@ -1197,10 +1108,8 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # flag has been put right, not a stamp that goes stale a line later.
     normative, restamped, stale = _repair_normative_flags(root)
     stamps = _backfill_ratification_stamps(root, index=index)
-    # Tombstones written when deletion took effect unsigned are signed from
-    # history (SR-0273), after the stamps so a content record a tombstone keeps
-    # is complete before its deletion signature is written beside it.
-    tombstones, unattributed = _backfill_tombstone_signatures(root)
+    # No tombstone is signed here (SR-0315): a commit author is not a signer, and
+    # a tombstone nobody signed stays a proposed deletion until a person does.
     # Last, and after the stamps: a record bound a moment ago has a stamp to
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
@@ -1209,7 +1118,7 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers, lifted, tombstones, unattributed, withdrawn,
+                        registers, lifted, withdrawn,
                         inherited, retired_statuses, moved)
 
 
@@ -1293,10 +1202,6 @@ class MigrationResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
-    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
-    # that could not be was left proposed.
-    tombstones: Mapping[str, str] = _NO_STRINGS
-    unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
     # The declarations removed because the schema source makes them (SR-0277).
@@ -1357,7 +1262,7 @@ def migrate_project(path: str | Path, *,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
                            result.contents, result.unprovable, result.registers,
-                           result.lifted, result.tombstones, result.unattributed,
+                           result.lifted,
                            result.withdrawn, result.inherited,
                            result.retired_statuses, result.moved)
 

@@ -136,9 +136,8 @@ Rules:
   returns it to the status in `from` (SR-0268). An item nobody signed, with no
   signed dependent, is retired outright and its record carries `outright: true`
   (SR-0272). A tombstone that stands is never rewritten (SR-0093), so one written
-  before `date` and `fingerprint` were recorded keeps only its `reason`; `tl
-  migrate` signs such a tombstone from the commit that wrote it, marked
-  `backfilled` (SR-0273).
+  before `date` and `fingerprint` were recorded keeps only its `reason`. `tl
+  migrate` signs no tombstone (SR-0315): one nobody signed awaits a person.
 
 ## 5. Fingerprint (normative content hash)
 
