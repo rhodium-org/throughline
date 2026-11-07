@@ -19,8 +19,8 @@ from .graph import Index
 from .schema import kind_accepts
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
-    CONTENT, STAMP, W_BY, W_OF, W_REASON, describe, relevant, retired, signatures,
-    signs_deletion, stale_entries, standing,
+    CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, relevant, retired,
+    signatures, signs_deletion, stale_entries, standing,
 )
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -282,7 +282,10 @@ def validate(project, strict: bool = False,
             # item is back where the lifecycle last left it.
             restored = (prev == tombstone_status and item.uid in restorable
                         and not item.is_deleted)
+            # A status the project no longer declares was retired from the
+            # vocabulary, in the configuration, not left by a move (SR-0314).
             if (prev is not None and prev != item.status and not restored
+                    and schema.is_status(prev)
                     and not schema.allows_transition(prev, item.status)):
                 add("bad-transition", item.uid, f,
                     f"status change '{prev}' -> '{item.status}' is not an "
@@ -347,12 +350,13 @@ def validate(project, strict: bool = False,
             add("unserved-root", item.uid, f,
                 f"{item.type} has nothing deriving from / mitigating it — unserved")
 
-        # Provenance — generated volume must not masquerade as ratified (SR-0020 attr).
-        # Keyed on the ratification RECORD rather than the status (SR-0149): a status
-        # says where an item sits, not that a person accepted it. Leaving `proposed`
-        # by any route other than `tl ratify` skips the gate entirely, and setting the
-        # ratified status directly names nobody — only the record `tl ratify` writes
-        # is evidence. A terminal-status item is dead scope and needs no ratifier.
+        # Provenance — nothing counts unsigned (UR-0046). Keyed on the ratification
+        # RECORD rather than the status (SR-0149): a status says where an item sits,
+        # not that a person accepted it, and setting the ratified status directly
+        # names nobody — only the record `tl ratify` writes is evidence. Every item
+        # past the draft is held to it whatever its origin (SR-0305); a draft is not
+        # counted, except that a machine-authored one is reported for never having
+        # been proposed. A terminal-status item is dead scope and needs no ratifier.
         origin = item.attrs.get("origin")
         if item.is_deleted:
             # A proposed deletion, whoever ran the command (SR-0267): the gate has
@@ -371,8 +375,8 @@ def validate(project, strict: bool = False,
                 add("awaiting-signatures", item.uid, f,
                     f"deletion {where.describe()} — the signatures are recorded, "
                     "but the item does not yet count as retired")
-        elif (origin in schema.ai_origins and not signatures(item)
-                and item.status not in schema.dead_statuses()):
+        elif (not signatures(item) and item.status not in schema.dead_statuses()
+                and (counts(item, schema) or origin in schema.ai_origins)):
             roles = schema.status_roles or {}
             if item.withdrawals:
                 # A withdrawn signature (SR-0197) is the one route out of the
@@ -392,10 +396,15 @@ def validate(project, strict: bool = False,
             elif item.status == roles.get("initial"):
                 why = (f"is still '{item.status}' and was never proposed for "
                        "ratification — a machine-authored item is born proposed")
-            else:
+            elif origin in schema.ai_origins:
                 why = (f"is '{item.status}', yet no human ever ratified it — it left "
                        "the proposed status without passing the gate")
-            add("unratified", item.uid, f, f"{origin}-origin item {why}")
+            else:
+                why = (f"is '{item.status}' and no person has signed it — every item "
+                       "past the draft counts only once signed; `tl ratify` signs it "
+                       "where it stands")
+            who = f"{origin}-origin item" if origin else "item"
+            add("unratified", item.uid, f, f"{who} {why}")
 
         # Signatures that do not yet meet what the item's kind requires (SR-0260):
         # each is recorded, the status has not moved, and the item is reported

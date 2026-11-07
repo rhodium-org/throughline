@@ -48,7 +48,7 @@ from .model import Item, Link, Project, Register
 from .schema import SchemaError
 from .signatures import (
     AT, BACKFILLED, BY, CONTENT, ID, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION,
-    STAMP, retired, signs_deletion,
+    STAMP, requirement_met, retired, signs_deletion,
 )
 from .tomledit import TomlDocument, TomlEditError
 from .version import distribution_version
@@ -470,91 +470,6 @@ def _backfill_ratification_stamps(root: Path, *,
     return bound
 
 
-def _backfill_tombstone_signatures(root: Path) -> tuple[dict[str, str], dict[str, str]]:
-    """Backfill every tombstone that stands unsigned as ratified by history
-    (SR-0273). Returns ``(attributed, unattributed)``: ``uid -> who`` for each
-    tombstone given a signature, ``uid -> why`` for each left proposed.
-
-    Every tombstone in the estate was written when deletion took effect unsigned,
-    so without this, upgrading would report each as `unratified`. History is the
-    evidence of who deleted it and when: the signature names the author of the
-    commit that wrote the tombstone, at that commit's date, over the deletion
-    record as it stands, and is marked ``backfilled`` as SR-0152 marks a bound
-    record — so it stays forever distinguishable from a signature a person gave
-    at the time. A tombstone no commit holds — never committed, or outside a git
-    work tree — is left proposed and reported: no identity is ever invented.
-
-    Idempotent: a tombstone that stands never matches again.
-    """
-    from .ratification import _git, _item_at, _relative, repo_top
-
-    project = load_project(root)
-    schema = project.schema
-    attributed: dict[str, str] = {}
-    unattributed: dict[str, str] = {}
-    for item in project.items():
-        if not item.is_deleted or retired(item, schema):
-            continue
-        if item._path is None:
-            unattributed[item.uid] = "the item has no file on disk"
-            continue
-        top = repo_top(Path(item._path).parent)
-        if top is None:
-            unattributed[item.uid] = "the project is not inside a git work tree"
-            continue
-        rel = _relative(top, Path(item._path))
-        if rel is None:
-            unattributed[item.uid] = "the item's file is outside the git work tree"
-            continue
-        # Oldest first, so the first revision holding the tombstone is the commit
-        # that wrote it; --follow so a register move does not truncate history.
-        log = _git(top, "log", "--follow", "--reverse",
-                   "--format=%H%x1f%an%x1f%ae%x1f%aI", "--", rel)
-        if log is None:
-            unattributed[item.uid] = "git could not read this item's history"
-            continue
-        found = None
-        for line in log.splitlines():
-            parts = line.strip().split("\x1f")
-            if len(parts) != 4:
-                continue
-            past = _item_at(top, parts[0], rel)
-            if past is not None and past.is_deleted:
-                found = parts
-                break
-        if found is None:
-            unattributed[item.uid] = ("no commit holds this tombstone — it has not "
-                                      "been committed, so history names nobody")
-            continue
-        sha, name, email, when = found
-        entry: dict = {BY: name}
-        if email:
-            entry[ID] = f"email:{email}"
-        entry[AT] = _utc_second(when)
-        entry[STAMP] = deletion_fingerprint(item)
-        entry[CONTENT] = deletion_content(item)
-        entry[BACKFILLED] = True
-        entry[REVISION] = sha
-        item.ratifications.append(entry)
-        write_item(item)
-        attributed[item.uid] = name
-    return attributed, unattributed
-
-
-def _utc_second(when: str) -> str:
-    """A git author date (ISO 8601 with offset) as a signature records it
-    (SR-0256): UTC, to the second."""
-    from datetime import datetime, timezone
-
-    try:
-        parsed = datetime.fromisoformat(when.strip())
-    except ValueError:
-        return when.strip()
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc)
-    return parsed.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
 def _backfill_ratification_revisions(root: Path) -> dict[str, str]:
     """Cache, on each ratification record, the revision whose content reproduces
     its stamp (SR-0166). Returns ``uid -> sha`` for every record populated.
@@ -792,14 +707,14 @@ class RepairResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
-    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
-    # that could not be was left proposed.
-    tombstones: Mapping[str, str] = _NO_STRINGS
-    unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
     # The declarations removed because the schema source makes them (SR-0277).
     inherited: tuple[str, ...] = ()
+    # The statuses retired as an agreement with no signature, and each item moved
+    # out of them, ``uid -> "from -> to"`` (SR-0313).
+    retired_statuses: tuple[str, ...] = ()
+    moved: Mapping[str, str] = _NO_STRINGS
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -1058,6 +973,89 @@ def _remove_inherited_declarations(root: Path) -> tuple[str, ...]:
     return tuple(removed)
 
 
+def _retire_unsigned_agreement(root: Path) -> tuple[tuple[str, ...], dict[str, str]]:
+    """Retire the statuses that stood between proposal and signature (SR-0313).
+
+    Found by their place in the lifecycle, never by name (SR-0131): every status
+    bound to no role that the proposed status may move to and that may move to the
+    ratified status — an agreement with no signature — and the initial status
+    where it is not the proposed one, which nothing is born in once every item is
+    born proposed (SR-0311). Each item in one moves to the ratified status where its
+    signatures already meet what its kind requires and ratification moves the
+    status, where ratify would have put it, and to the proposed status otherwise.
+    No signature is added or removed. Returns the statuses retired and
+    ``uid -> "from -> to"`` for each item moved; both are empty once nothing is
+    left to retire, which is what makes it idempotent."""
+    cfg_file = root / CONFIG_NAME
+    text = cfg_file.read_text(encoding="utf-8")
+    config = tomllib.loads(text)
+    status_cfg = config.get("status") or {}
+    roles = status_cfg.get("roles") or {}
+    values = status_cfg.get("values")
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if not proposed or not ratified or values is None:
+        return (), {}
+    transitions = config.get("transitions")
+    bound = set(roles.values())
+    retiring = []
+    initial = roles.get("initial")
+    if initial and initial != proposed and initial in values:
+        retiring.append(initial)
+    if transitions is not None:
+        for status in values:
+            if (status not in bound and status != proposed
+                    and status in transitions.get(proposed, ())
+                    and ratified in transitions.get(status, ())):
+                retiring.append(status)
+    if not retiring:
+        # Nothing to retire; a project whose initial role is unbound still has it
+        # bound to proposal, where every item is born (SR-0311).
+        if not initial:
+            doc = TomlDocument(text)
+            doc.set_key(("status", "roles"), "initial", proposed)
+            cfg_file.write_text(doc.text(), encoding="utf-8")
+        return (), {}
+    gone = set(retiring)
+
+    project = load_project(root)
+    schema = project.schema
+    moved: dict[str, str] = {}
+    for item in project.items():
+        if item.is_deleted or item.status not in gone:
+            continue
+        to = (ratified if schema.ratify_moves_status and requirement_met(item, schema)
+              else proposed)
+        moved[item.uid] = f"{item.status} -> {to}"
+        item.status = to
+        write_item(item, project.register_of(item.uid))
+
+    doc = TomlDocument(text)
+    because = (f"Retired by `tl migrate` (SR-0313): {', '.join(retiring)} stood "
+               "between proposal and signature. Every item is born proposed and "
+               "counts only once a person signs it (UR-0046).")
+    doc.set_key("status", "values", [v for v in values if v not in gone],
+                because=because)
+    if initial in gone or not initial:
+        doc.set_key(("status", "roles"), "initial", proposed)
+    if transitions is not None:
+        for frm in list(transitions):
+            if frm in gone:
+                doc.remove_key("transitions", frm)
+                continue
+            targets = list(transitions[frm])
+            if not gone & set(targets):
+                continue
+            # A move into a retired status becomes a move into proposal.
+            kept = []
+            for to in targets:
+                to = proposed if to in gone else to
+                if to != frm and to not in kept:
+                    kept.append(to)
+            doc.set_key("transitions", frm, kept)
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return tuple(retiring), moved
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -1093,10 +1091,14 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     lifted = _lift_ratification_records(root)
     if inherited or _schema_source_config_declared(root):
         roles, routes, vocabularies = None, {}, {}
+        retired_statuses, moved = (), {}
     else:
         roles = _backfill_status_roles(root)
         routes = _backfill_suspect_routes(root)
         vocabularies = _backfill_vocabularies(root)
+        # After the vocabulary is declared, which it reads; before the records,
+        # which read nothing of status (SR-0313).
+        retired_statuses, moved = _retire_unsigned_agreement(root)
     # Signed content before the flags (SR-0218): a record whose item reproduces its
     # stamp now is proved by the item as it stands, and the flag repair below may
     # change a fingerprint input and leave only history to prove it from.
@@ -1106,10 +1108,8 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     # flag has been put right, not a stamp that goes stale a line later.
     normative, restamped, stale = _repair_normative_flags(root)
     stamps = _backfill_ratification_stamps(root, index=index)
-    # Tombstones written when deletion took effect unsigned are signed from
-    # history (SR-0273), after the stamps so a content record a tombstone keeps
-    # is complete before its deletion signature is written beside it.
-    tombstones, unattributed = _backfill_tombstone_signatures(root)
+    # No tombstone is signed here (SR-0315): a commit author is not a signer, and
+    # a tombstone nobody signed stays a proposed deletion until a person does.
     # Last, and after the stamps: a record bound a moment ago has a stamp to
     # resolve against, so binding first is what lets one `tl migrate` both
     # complete a record and cache its revision.
@@ -1118,8 +1118,8 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     registers = _backfill_register_types(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
-                        registers, lifted, tombstones, unattributed, withdrawn,
-                        inherited)
+                        registers, lifted, withdrawn,
+                        inherited, retired_statuses, moved)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -1202,14 +1202,14 @@ class MigrationResult(NamedTuple):
     registers: Mapping[str, str] = _NO_STRINGS
     # Flat ratification records lifted into the `ratifications` list (SR-0255).
     lifted: int = 0
-    # Tombstones backfilled as ratified by history (SR-0273), and the reason each
-    # that could not be was left proposed.
-    tombstones: Mapping[str, str] = _NO_STRINGS
-    unattributed: Mapping[str, str] = _NO_STRINGS
     # The sources whose withdrawn `reexport` key was removed (SR-0274).
     withdrawn: tuple[str, ...] = ()
     # The declarations removed because the schema source makes them (SR-0277).
     inherited: tuple[str, ...] = ()
+    # The statuses retired as an agreement with no signature, and each item moved
+    # out of them (SR-0313).
+    retired_statuses: tuple[str, ...] = ()
+    moved: Mapping[str, str] = _NO_STRINGS
 
 
 def migrate_project(path: str | Path, *,
@@ -1262,8 +1262,9 @@ def migrate_project(path: str | Path, *,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
                            result.contents, result.unprovable, result.registers,
-                           result.lifted, result.tombstones, result.unattributed,
-                           result.withdrawn, result.inherited)
+                           result.lifted,
+                           result.withdrawn, result.inherited,
+                           result.retired_statuses, result.moved)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -2029,7 +2030,8 @@ def _seed_registers(root: Path) -> dict[str, Register]:
 
 def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
     """Seed a small, self-consistent example graph and one published document so a
-    fresh project passes ``tl check`` and renders content immediately, instead of
+    fresh project passes ``tl check`` (strict asks a person to sign or delete each
+    placeholder, SR-0310) and renders content immediately, instead of
     forcing the newcomer to reverse-engineer the schema (SR-0100). Everything
     written here is ordinary project content the user may edit, move, or delete.
 
@@ -2040,34 +2042,38 @@ def _seed_demo(root: Path, name: str, by_prefix: dict[str, Register]) -> None:
     injected before return, so it ships already rendered."""
     # The flag on each seeded item is the type's (SR-0202): the demo and `tl new`
     # read the same declaration, so a fresh project holds one value per kind.
-    normative = load_project(root).schema.is_normative
+    # Each is born proposed, as every item is (SR-0310, SR-0311): a placeholder
+    # nobody has signed, which counts only once a person signs it (UR-0046).
+    schema = load_project(root).schema
+    normative = schema.is_normative
+    proposed = schema.status_role("proposed")
     items = [
-        Item(uid="INT-0001", type="intent", status="approved",
+        Item(uid="INT-0001", type="intent", status=proposed,
              normative=normative("intent"),
              title=f"Deliver {name}",
              text="Describe the outcome this project exists to create. Every "
                   "requirement below grounds back to this intent."),
-        Item(uid="REQ-0001", type="requirement", status="approved",
+        Item(uid="REQ-0001", type="requirement", status=proposed,
              normative=normative("requirement"),
              title="First requirement",
              text="State something the system shall do, then replace this with a "
                   "real requirement.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"priority": "must", "origin": "human"}),
-        Item(uid="NFR-0001", type="nfr", status="approved",
+        Item(uid="NFR-0001", type="nfr", status=proposed,
              normative=normative("nfr"),
              title="First quality attribute",
              text="State a quality the system shall have (performance, security, "
                   "usability), then replace this.",
              links=[Link(target="INT-0001", type="implements")],
              attrs={"origin": "human"}),
-        Item(uid="TEST-0001", type="test", status="approved",
+        Item(uid="TEST-0001", type="test", status=proposed,
              normative=normative("test"),
              title="Verifies the first requirement",
              text="Describe how REQ-0001 is checked. This verifies link satisfies "
                   "the coverage rule declared in throughline.toml.",
              links=[Link(target="REQ-0001", type="verifies")]),
-        Item(uid="NG-0001", type="non_goal", status="approved",
+        Item(uid="NG-0001", type="non_goal", status=proposed,
              normative=normative("non_goal"),
              title="First non-goal",
              text="Record something deliberately out of scope, so nobody proposes "
@@ -2145,19 +2151,20 @@ types = ["refines", "verifies", "satisfies", "implements", "relates",
 # verifies  = {{ from = ["test"], to = ["requirement"] }}
 
 [status]
-# draft = actively moving toward approval; deferred = acknowledged and grounded
-# but deliberately parked (a backlog wish-list item, not on the active front).
-values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented",
-          "verified", "suspect", "rejected", "deleted"]
+# Every item is born proposed, whoever wrote it, and counts only once a person
+# signs it (ratified). There is no agreement without a signature. deferred =
+# acknowledged and grounded but deliberately parked (a backlog wish-list item).
+values = ["proposed", "deferred", "ratified", "implemented", "verified",
+          "suspect", "rejected", "deleted"]
 
 # Semantic status roles (SR-0131): which declared status plays each role the
-# tool's operations act on — `tl new` births at 'initial', `tl ratify` writes
+# tool's operations act on — `tl new` births at 'proposed', `tl ratify` writes
 # 'ratified', `tl invalidate` writes 'invalidated' and reads 'invalidated' +
 # 'tombstone' as dead, `tl delete` writes 'tombstone'. Operations resolve status
 # through these roles, never a literal, so a project renames a status freely by
 # editing here. Delete this table only if you drive every status move by hand.
 [status.roles]
-initial = "draft"
+initial = "proposed"
 proposed = "proposed"
 ratified = "ratified"
 invalidated = "rejected"
@@ -2167,22 +2174,19 @@ tombstone = "deleted"
 # Allowed status moves (SR-0083). `tl check` compares each item against its
 # status in the previous commit and flags any change these do not permit. Delete
 # this table to leave every status freely reachable.
-# Every live status keeps a route to 'ratified' (SR-0150) — in particular the two
-# statuses below 'proposed' can move back to it, so scope that was authored or
-# parked without ratification can still be put forward for a human to accept.
-# Every live status also keeps a route to 'suspect' (SR-0175), so that an item
-# whose grounding is withdrawn can be flagged wherever it currently sits — the
-# statuses below 'approved' hold the items whose grounding is least settled.
+# Every live status keeps a route to 'ratified' (SR-0150), so parked scope can
+# still be put forward for a person to sign, and to 'suspect' (SR-0175), so that
+# an item whose grounding is withdrawn can be flagged wherever it sits. Nothing
+# reaches 'implemented' without passing 'ratified' (SR-0312); an item carried
+# past it unsigned is still signed where it stands.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
-draft       = ["proposed", "approved", "deferred", "suspect", "rejected", "deleted"]
-deferred    = ["proposed", "draft", "approved", "suspect", "rejected", "deleted"]
-approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
+proposed    = ["ratified", "deferred", "suspect", "rejected", "deleted"]
+deferred    = ["proposed", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
-suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
-rejected    = ["draft", "deleted"]
+suspect     = ["proposed", "ratified", "implemented", "verified", "rejected", "deleted"]
+rejected    = ["proposed", "deleted"]
 
 # Coverage: every live requirement should be verified by a test.
 [[rules.coverage]]

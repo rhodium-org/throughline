@@ -17,20 +17,23 @@ from dataclasses import dataclass
 
 from .graph import Index
 from .grounding import (
+    agree_to,
     is_flagged_ambiguous,
     ratification_obstacle,
     reaches_root,
-    transition_refusal,
 )
-from .signatures import relevant, requirement_met, retired, stale_entries, standing
+from .signatures import (
+    counts, is_draft, relevant, requirement_met, retired, stale_entries, standing,
+)
 
 #: The states a reviewer sorts by, most actionable first. `proposed` and `ready`
 #: can be signed now; `awaiting` holds signatures that do not yet meet what its
-#: kind requires (SR-0260) and can take the rest; `ambiguous`, `ungrounded` and
-#: `blocked` must be fixed first; `stale` was signed and then rewritten; the rest
-#: are settled or dead.
-CONCERNS = ("proposed", "ready", "awaiting", "stale", "blocked", "ungrounded",
-            "ambiguous", "ratified", "rejected", "deleted")
+#: kind requires (SR-0260) and can take the rest; `ambiguous` and `ungrounded`
+#: must be fixed first; `stale` was signed and then rewritten; a `draft` is not
+#: signed but agreed or deleted (SR-0307); the rest are settled or dead. Nothing
+#: is blocked: a signature is taken where an item stands (SR-0306, SR-0308).
+CONCERNS = ("proposed", "ready", "awaiting", "stale", "ungrounded",
+            "ambiguous", "draft", "ratified", "rejected", "deleted")
 
 
 @dataclass(frozen=True)
@@ -53,23 +56,21 @@ class WorklistEntry:
     #: Where the item stands against what its kind requires, in words (SR-0260):
     #: who has signed and what is still required. Empty for an unsigned item.
     standing: str = ""
+    #: For a draft: the status it is agreed to (SR-0307), or None when the
+    #: transitions offer none and it can only be deleted. None for any other item.
+    agree_to: str | None = None
 
 
 def is_ratified(schema, item) -> bool:
-    """Whether ``item`` carries a human's acceptance that still stands. Where
-    ratification advances the status (SR-0172) either the status or the record
-    says so; where a project has declared it does not, the record is the only
-    witness. An item in the suspect role is not settled whatever its record says:
-    something it rested on was withdrawn (SR-0175), ratify would accept a signature
-    on it again, and a worklist that called it settled would disagree with the
-    gate about the one question both answer (SR-0195, SR-0229)."""
+    """Whether ``item`` carries a human's acceptance that still stands: the record
+    is the only witness, never the status, which can be set directly and names
+    nobody (SR-0308). An item in the suspect role is not settled whatever its
+    record says: something it rested on was withdrawn (SR-0175), ratify would
+    accept a signature on it again, and a worklist that called it settled would
+    disagree with the gate about the one question both answer (SR-0195, SR-0229)."""
     if _is_suspect(schema, item):
         return False
-    if requirement_met(item, schema):
-        return True
-    if not schema.ratify_moves_status:
-        return False
-    return item.status == schema.status_role("ratified")
+    return requirement_met(item, schema)
 
 
 def _is_suspect(schema, item) -> bool:
@@ -128,11 +129,7 @@ def entry_for(project, item, *, index: Index | None = None,
     grounded = schema.is_root(item) or reaches_root(idx, schema, item.uid)
     ratified = is_ratified(schema, item)
     stale = signature_is_stale(schema, item)
-    # Whether a signature can be taken from where the item stands. Where
-    # ratification advances the status, that is a transition question; where a
-    # project has declared it does not (SR-0172), no transition is involved.
-    directly = (transition_refusal(schema, item, schema.status_role("ratified")) is None
-                if schema.ratify_moves_status and not item.is_deleted else True)
+    draft = is_draft(item, schema)
     obstacle = None if dead else ratification_obstacle(schema, idx, item)
     settled = ratified and not stale
     ratifiable = not dead and obstacle is None
@@ -152,12 +149,13 @@ def entry_for(project, item, *, index: Index | None = None,
         # A proposed deletion (SR-0267): grounding and ambiguity are no bar to
         # retiring an item, so it is simply proposed.
         concern = "proposed"
+    elif draft:
+        # Agreed or deleted, never signed (SR-0307): a decision, not a signature.
+        concern = "draft"
     elif ambiguous:
         concern = "ambiguous"
     elif not grounded:
         concern = "ungrounded"
-    elif not directly:
-        concern = "blocked"
     elif item.status == schema.status_role("proposed"):
         concern = "proposed"
     else:
@@ -169,6 +167,7 @@ def entry_for(project, item, *, index: Index | None = None,
         grounded=grounded, ambiguous=ambiguous, ratified=ratified, stale=stale,
         dead=dead, depth=depths.get(item.uid),
         standing=standing(item, schema).describe() if relevant(item) else "",
+        agree_to=agree_to(schema, item) if draft else None,
     )
 
 
@@ -194,16 +193,16 @@ def worklist(project, *, index: Index | None = None,
 
 
 def ratification_progress(project, *, index: Index | None = None) -> tuple[int, int]:
-    """``(accepted, gradable)`` over the live items — the figure a reviewer watches
-    climb. An item whose content has moved since it was signed counts as
+    """``(accepted, gradable)`` over the items that count — the figure a reviewer
+    watches climb. An item whose content has moved since it was signed counts as
     outstanding: its signature no longer covers it, and reporting full marks over
-    what the gate calls an error stops the reviewer looking."""
+    what the gate calls an error stops the reviewer looking. A draft is not
+    counted (SR-0308); a proposed deletion is, until it is signed."""
     schema = project.schema
-    idx = index if index is not None else Index.build(project)
-    dead = schema.dead_statuses()
     accepted = gradable = 0
     for item in project.items():
-        if retired(item, schema) or (item.status in dead and not item.is_deleted):
+        if not (counts(item, schema) or (item.is_deleted
+                                         and not retired(item, schema))):
             continue
         gradable += 1
         if is_ratified(schema, item) and not signature_is_stale(schema, item):

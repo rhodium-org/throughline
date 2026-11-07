@@ -116,6 +116,11 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+
+# The consumer models composition, not sign-off: its items carry no signature,
+# so the rule that asks for one (SR-0305) is declared off.
+[rules]
+unratified = "off"
 """,
     "intents/.register.yml": "prefix: INT\ndigits: 4\n",
     "system-requirements/.register.yml": "prefix: SR\ndigits: 4\n",

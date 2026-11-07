@@ -10,8 +10,8 @@ is taken over the deletion record, not the content (SR-0269); ratifying it marks
 the dependents suspect by the walk `invalidate` makes (SR-0270); links into a
 retired tombstone stay and are reported (SR-0271); an unsigned tombstone can be
 restored (SR-0268); an item nobody signed, with no signed dependent, is retired
-outright (SR-0272); and `tl migrate` signs existing tombstones from history
-(SR-0273).
+outright (SR-0272); and `tl migrate` signs no tombstone (SR-0315, which
+withdraws SR-0273).
 """
 from __future__ import annotations
 
@@ -387,41 +387,19 @@ def test_a_signed_dependent_keeps_an_unsigned_item_from_outright_retirement(tmp_
     assert "outright" not in project.get("REQ-0001").deleted
 
 
-# --------------------------------------------------- SR-0273: ratified by history
+# --------------------------------------------------- SR-0315: migrate signs nothing
 
-def test_migrate_signs_an_existing_tombstone_from_the_commit_that_wrote_it(graph, capsys):
-    """SR-0273: the author and date of the deletion commit, over the record as it
-    stands, marked backfilled; idempotent."""
+def test_migrate_leaves_a_committed_proposed_deletion_unsigned(graph, capsys):
+    """SR-0315: a deletion proposed with tl delete and committed is still awaiting
+    a person after tl migrate; the commit's author is not a signer."""
     assert _cli(["-C", graph, "delete", "REQ-0001", "--reason", "superseded"]) == 0
     _repo(graph)
-    sha = _git(graph, "rev-parse", "HEAD").strip()
-    result = migrate_project(graph)
-    assert result.tombstones == {"REQ-0001": "Grace"}
-    assert result.unattributed == {}
+    migrate_project(graph)
     project = load_project(graph)
     item = project.get("REQ-0001")
-    assert retired(item, project.schema)
-    entry = relevant(item)[-1]
-    assert entry[BY] == "Grace" and entry["id"] == "email:grace@example.com"
-    assert entry[BACKFILLED] is True and entry[REVISION] == sha
-    assert entry[STAMP] == deletion_fingerprint(item)
-    assert entry["at"].endswith("Z")
-    assert _rules(validate(project), "REQ-0001") == set()
-    before = _file(graph, "REQ-0001").read_bytes()
-    assert migrate_project(graph).tombstones == {}
-    assert _file(graph, "REQ-0001").read_bytes() == before
-    assert _cli(["-C", graph, "migrate"]) == 0
-    assert "already at format version" in capsys.readouterr().out
-
-
-def test_migrate_leaves_a_tombstone_no_commit_holds_proposed_and_says_so(graph, capsys):
-    """SR-0273: an uncommitted tombstone names nobody; no identity is invented."""
-    _repo(graph)
-    assert _cli(["-C", graph, "delete", "REQ-0001", "--reason", "superseded"]) == 0
-    result = migrate_project(graph)
-    assert result.tombstones == {}
-    assert "REQ-0001" in result.unattributed
-    assert not signatures(load_project(graph).get("REQ-0001"))[1:]
+    assert not retired(item, project.schema)
+    assert not relevant(item)                    # no signature over the deletion
+    assert ("unratified" in {f.rule for f in validate(project) if f.uid == "REQ-0001"})
     capsys.readouterr()
     assert _cli(["-C", graph, "migrate"]) == 0
-    assert "left 1 tombstone(s) proposed" in capsys.readouterr().out
+    assert "tombstone" not in capsys.readouterr().out

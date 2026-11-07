@@ -1,0 +1,43 @@
+uid: UR-0046
+type: user_requirement
+status: ratified
+title: Proposed until a person signs it
+text: 'Every item shall enter the graph proposed, whoever or whatever wrote it, and
+  shall count as agreed only once a person has signed it. A signature is the only
+  agreement: there shall be no status meaning agreed without one, and an item carried
+  on to implemented or verified shall still need a signature.'
+rationale: 'An item a human authored and moved to approved or implemented passed
+  check --strict with no one''s name on it, while tl-ratify listed it as ready, and
+  one implemented with no route to ratified as blocked (hitl-hci, 2026-11-07). The
+  operator''s ruling: ''What value is approved if it isn''t ratified!'' Proposed
+  is the case whether a human, a machine or both proposed it. Draft goes for the
+  same reason: it was the status before proposal, and nothing is born there once
+  everything is born proposed; read as agreed-but-not-built it is ratified-and-not-implemented.
+  Rejected: keeping approved and gating it, which keeps a status whose only meaning
+  is a signature''s without one. Who pays: every adopter. tl migrate moves their
+  approved and draft items to proposed, and their strict gate goes red until a person
+  signs the backlog once. Nothing is signed for them.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+- target: UR-0023
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:32:59Z'
+  fingerprint: sha256:ee7dcd0c0e417b895c8f8a1e48ab7c7398cc33d3bbc070bf2236bc50bdf411d9
+  content:
+    type: user_requirement
+    text: 'Every item shall enter the graph proposed, whoever or whatever wrote it,
+      and shall count as agreed only once a person has signed it. A signature is
+      the only agreement: there shall be no status meaning agreed without one, and
+      an item carried on to implemented or verified shall still need a signature.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

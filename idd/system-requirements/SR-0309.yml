@@ -1,0 +1,38 @@
+uid: SR-0309
+type: system_requirement
+status: ratified
+title: The brief says every item is proposed until a person signs it
+text: The brief tl context generates shall state that every item is born proposed
+  whatever its origin; that it counts only once a person has signed it, implemented
+  and verified items included; that a signature is the only agreement; and that tl
+  ratify signs an item where it stands when the ratified status is out of reach.
+  It shall describe drafts only for a project that keeps an initial status apart
+  from the proposed one.
+rationale: 'The brief told agents only that machine-origin items are provisional,
+  so an agent moving its own human-labelled work to implemented had no reason to
+  expect the gate to want a signature. Who pays: nobody; it is the brief agreeing
+  with the gate.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:81bb8b3c7f8d0cb324837ad672985dcad8fc1a20794d8721afd7d4d36a12a1d2
+  content:
+    type: system_requirement
+    text: The brief tl context generates shall state that every item is born proposed
+      whatever its origin; that it counts only once a person has signed it, implemented
+      and verified items included; that a signature is the only agreement; and that
+      tl ratify signs an item where it stands when the ratified status is out of
+      reach. It shall describe drafts only for a project that keeps an initial status
+      apart from the proposed one.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

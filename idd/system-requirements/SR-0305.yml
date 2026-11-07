@@ -1,0 +1,43 @@
+uid: SR-0305
+type: system_requirement
+status: ratified
+title: The gate reports every counted item no person has signed
+text: 'Check shall report the unratified finding for every live item outside the
+  initial status that carries no signature, whatever its origin: proposed, approved,
+  ratified, implemented, verified, deferred and suspect alike. It is a warning, which
+  --strict raises to an error. A machine-origin item still in the initial status
+  is reported as before (SR-0149). A dead item, a tombstone that stands and a borrowed
+  item are not reported.'
+rationale: 'SR-0149 keyed the finding on machine origin, so a human-origin item moved
+  to approved by tl status was accepted with no record of who accepted it, which
+  is the limbo UR-0046 ends. The draft stays outside: it is the red test, specified
+  but not agreed. Rejected: a separate rule name for human items. It is the same
+  finding, and one name per concept keeps a project''s severity override meaning
+  one thing. Who pays: adopters with unsigned human items, whose strict gate fails
+  until they sign them.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0149
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:02Z'
+  fingerprint: sha256:1d7bda83f373e8c6e0229c8fe2534e41f058be952a6f35f0f4697996a21d753d
+  content:
+    type: system_requirement
+    text: 'Check shall report the unratified finding for every live item outside
+      the initial status that carries no signature, whatever its origin: proposed,
+      approved, ratified, implemented, verified, deferred and suspect alike. It is
+      a warning, which --strict raises to an error. A machine-origin item still in
+      the initial status is reported as before (SR-0149). A dead item, a tombstone
+      that stands and a borrowed item are not reported.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

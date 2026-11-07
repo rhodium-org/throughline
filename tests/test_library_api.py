@@ -262,7 +262,7 @@ def test_delete_review_and_query_are_operations_a_caller_can_use(tmp_path):
     # Nothing here was signed, so the item is retired outright (SR-0272).
     project = load_project(root)
     done = delete_item(project, "REQ-0002", reason="superseded")
-    assert done.outright and done.was == "draft"
+    assert done.outright and done.was == "proposed"
     write_item(project.get("REQ-0002"), project.register_of("REQ-0002"))
     project = load_project(root)
     item = project.get("REQ-0002")

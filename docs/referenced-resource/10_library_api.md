@@ -41,7 +41,7 @@ An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [r
 
 ### The grounding layer
 
-`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `Refusal` · `Invalidation` · `Cascade` · `cascade_suspicion`
+`GroundingError` · `reaches_root` · `grounding_gap` · `is_unserved` · `set_status` · `transition_refusal` · `ratify` · `ratification_obstacle` · `agree_to` · `invalidate` · `withdraw` · `flag` · `clarify` · `is_flagged_ambiguous` · `ambiguity_report` · `attribute_owner` · `Refusal` · `Invalidation` · `Cascade` · `cascade_suspicion`
 
 ### What a signature covered, and what has moved since
 
@@ -49,7 +49,7 @@ An assistant or agent that cannot run the Tool (Microsoft 365 Copilot is one; [r
 
 ### What awaits a signature
 
-`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress` · `signatures` · `relevant` · `signs_deletion` · `retired` · `standing` · `Standing` · `requirement_met`
+`worklist` · `WorklistEntry` · `entry_for` · `CONCERNS` · `depths_from_roots` · `is_ratified` · `signature_is_stale` · `ratification_progress` · `signatures` · `relevant` · `signs_deletion` · `retired` · `standing` · `Standing` · `requirement_met` · `counts` · `is_draft`
 
 ### Who signs
 

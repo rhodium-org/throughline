@@ -246,10 +246,10 @@ def test_the_suggested_check_does_not_mistake_the_kept_item_for_a_status_move(
         repo, capsys):
     _git(repo, "checkout", "-q", "feat")
     _new(repo, "Feat item")
-    assert _cli(["-C", repo, "status", "REQ-0002", "approved"]) == 0
+    assert _cli(["-C", repo, "status", "REQ-0002", "deferred"]) == 0
     _commit(repo, "feat")
     _git(repo, "checkout", "-q", "main")
-    _new(repo, "Main item")                                  # still draft
+    _new(repo, "Main item")                                  # still proposed
     _commit(repo, "main")
     _git(repo, "checkout", "-q", "feat")
     _merge(repo, "main")

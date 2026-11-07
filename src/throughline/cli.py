@@ -311,8 +311,8 @@ def cmd_migrate(args) -> int:
               + ("" if result.bound or result.declared or result.routed
                  or result.cached or result.normative or result.contents
                  or result.unprovable or result.registers or result.lifted
-                 or result.tombstones or result.unattributed or result.withdrawn
-                 or result.inherited
+                 or result.withdrawn
+                 or result.inherited or result.moved or result.retired_statuses
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -391,20 +391,6 @@ def cmd_migrate(args) -> int:
     # the graph will hold someone to. The ratification records are left alone —
     # only ratification writes them (SR-0170) — so the stale ones are counted here
     # and each is re-ratified by a person who sees that only the flag moved.
-    # Tombstones signed from history (SR-0273). Named in full: each writes an
-    # accountability record naming a person, so an operator who disagrees with an
-    # attribution must be able to see which item carries it.
-    if result.tombstones:
-        print(f"signed {len(result.tombstones)} tombstone(s) as ratified by history "
-              "— each names the author of the commit that wrote it, at that "
-              "commit's date, marked `backfilled`:")
-        for uid, who in result.tombstones.items():
-            print(f"  {uid} = {who}")
-    if result.unattributed:
-        print(f"left {len(result.unattributed)} tombstone(s) proposed — history "
-              "names nobody, so a person signs each with `tl ratify`:")
-        for uid, why in result.unattributed.items():
-            print(f"  {uid} — {why}")
     # The withdrawn `reexport` key removed from the project's own sources
     # (SR-0274). Named per source: this one key is what stopped the project
     # composing at all, so the lever that replaced it is said beside it.
@@ -422,6 +408,17 @@ def cmd_migrate(args) -> int:
               "already makes identically:")
         for what in result.inherited:
             print(f"  {what}")
+    # The statuses retired as an agreement with no signature (SR-0313), and every
+    # item moved, so the keeper sees what now awaits a signature.
+    if result.retired_statuses:
+        print(f"retired {', '.join(result.retired_statuses)}: a status between "
+              "proposal and signature — every item is proposed until a person "
+              "signs it (UR-0046)")
+        if result.moved:
+            print(f"  moved {len(result.moved)} item(s); none was signed for you, "
+                  "so sign each that still awaits a signature:")
+            for uid, move in result.moved.items():
+                print(f"  {uid}: {move}")
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")

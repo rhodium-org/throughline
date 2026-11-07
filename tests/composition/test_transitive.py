@@ -36,7 +36,10 @@ _CONSUMER_TAIL = (
     '[status]\nvalues = ["draft", "approved", "ratified", "rejected", "suspect", '
     '"deleted"]\n\n'
     '[status.roles]\ninitial = "draft"\nratified = "ratified"\ninvalidated = "rejected"\n'
-    'suspect = "suspect"\ntombstone = "deleted"\n')
+    'suspect = "suspect"\ntombstone = "deleted"\n\n'
+    # These consumers model composition, not sign-off: their items carry no
+    # signature, so the rule that asks for one (SR-0305) is declared off.
+    '[rules]\nunratified = "off"\n')
 
 
 def _write(root: Path, files: dict[str, str]) -> Path:

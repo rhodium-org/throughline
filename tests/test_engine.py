@@ -532,7 +532,8 @@ def test_ai_origin_item_with_a_ratifier_is_accepted_in_any_status():
 def test_initial_status_item_is_not_accused_of_leaving_proposed():
     """SR-0149 — an item still in the initial status was never proposed, so the
     finding must say that rather than claim it escaped the proposed status."""
-    msg = next(f.message for f in _ai_findings("draft") if f.rule == "unratified")
+    msg = next(f.message for f in _ai_findings("draft")
+               if f.rule == "unratified" and f.uid == "FR-1")
     assert "never proposed" in msg and "left the proposed status" not in msg
 
 def test_terminal_status_ai_item_needs_no_ratifier():
@@ -542,13 +543,48 @@ def test_terminal_status_ai_item_needs_no_ratifier():
     assert ("FR-1", "unratified") not in _ai_item("rejected")
     assert ("FR-1", "unratified") in _ai_item("deleted")
 
-def test_human_origin_item_is_never_chased_for_ratification():
-    intent = Item(uid="INT-1", type="intent", status="ratified")
-    fr = Item(uid="FR-1", type="requirement", status="approved",
+@pytest.mark.parametrize("status", ["proposed", "approved", "ratified",
+                                    "implemented", "verified"])
+def test_a_human_origin_item_past_the_draft_is_chased_for_its_signature(status):
+    """SR-0305 — nothing counts unsigned, whatever its origin: a human-origin item
+    past the draft that no person signed is unratified, an error under --strict."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    fr = Item(uid="FR-1", type="requirement", status=status,
               attrs={"origin": "human"},
               links=[Link(target="INT-1", type="derives_from")])
-    assert ("FR-1", "unratified") not in _rules(validate(
-        _project(_doc("INT", intent), _doc("FR", fr), config=_ROLES)))
+    findings = validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES),
+                        strict=True)
+    hit = [f for f in findings if f.uid == "FR-1" and f.rule == "unratified"]
+    assert hit and hit[0].severity == "error"
+    assert "human-origin item" in hit[0].message
+
+
+def test_an_unsigned_counted_item_is_a_warning_without_strict():
+    """SR-0305 — the finding is a warning, which only --strict raises to an error,
+    so an adopter's ordinary `tl check` names the backlog without failing."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    fr = Item(uid="FR-1", type="requirement", status="implemented",
+              attrs={"origin": "human"},
+              links=[Link(target="INT-1", type="derives_from")])
+    findings = validate(_project(_doc("INT", intent), _doc("FR", fr), config=_ROLES))
+    hit = [f for f in findings if f.uid == "FR-1" and f.rule == "unratified"]
+    assert hit and hit[0].severity == "warning"
+
+
+def test_a_human_origin_draft_is_not_counted():
+    """SR-0305 — a draft is neither signed nor counted, so the gate asks nothing of
+    it; an item with no origin at all is held to the rule like any other."""
+    intent = Item(uid="INT-1", type="intent", status="draft")
+    draft = Item(uid="FR-1", type="requirement", status="draft",
+                 attrs={"origin": "human"},
+                 links=[Link(target="INT-1", type="derives_from")])
+    bare = Item(uid="FR-2", type="requirement", status="implemented",
+                links=[Link(target="INT-1", type="derives_from")])
+    rules = _rules(validate(_project(_doc("INT", intent), _doc("FR", draft, bare),
+                                     config=_ROLES), strict=True))
+    assert ("FR-1", "unratified") not in rules
+    assert ("INT-1", "unratified") not in rules
+    assert ("FR-2", "unratified") in rules
 
 def test_bad_status_flagged_against_declared_vocabulary():
     cfg = {"status": {"values": ["draft", "approved"]}}
@@ -758,13 +794,13 @@ def test_baseline_statuses_reads_git_and_gates_check(tmp_path):
     """End-to-end: the committed status is the baseline the working tree is
     measured against (SR-0083)."""
     import subprocess
-    # the scaffold ships a [transitions] table where draft may only go to
-    # approved/deferred/rejected/deleted, so draft -> verified is illegal.
+    # the scaffold ships a [transitions] table where proposed may not go straight
+    # to verified, so proposed -> verified is illegal.
     init_project(tmp_path, name="TX")
     doc = Register(prefix="SR", path=tmp_path / "sr")
     doc.path.mkdir()
     write_manifest(doc)
-    it = Item(uid="SR-0001", type="requirement", status="draft", text="x")
+    it = Item(uid="SR-0001", type="requirement", status="proposed", text="x")
     it._register_prefix = "SR"
     it._path = doc.path / "SR-0001.yml"
     write_item(it, doc)
@@ -773,13 +809,13 @@ def test_baseline_statuses_reads_git_and_gates_check(tmp_path):
                                     capture_output=True, check=True)
     git("init")
     git("config", "user.email", "t@t"); git("config", "user.name", "t")
-    git("add", "-A"); git("commit", "-m", "seed draft")
+    git("add", "-A"); git("commit", "-m", "seed proposed")
 
     project = load_project(tmp_path)
     base = baseline_statuses(project, "HEAD")
-    assert base["SR-0001"] == "draft"
+    assert base["SR-0001"] == "proposed"
 
-    # jump draft -> verified in the working tree: illegal
+    # jump proposed -> verified in the working tree: illegal
     it.status = "verified"
     write_item(it, doc)
     p2 = load_project(tmp_path)
@@ -989,6 +1025,12 @@ def _ctx(config=_CTX_CFG):
     return _context_markdown(_project(_doc("INT", intent), _doc("FR", fr),
                                       config=config))
 
+_ROLES_NO_DRAFT = {"status": {"roles": {"initial": "proposed", "proposed": "proposed",
+                                       "ratified": "ratified",
+                                       "invalidated": "rejected",
+                                       "tombstone": "deleted"}}}
+
+
 def test_context_states_the_idd_contract():
     doc = _ctx()
     # the fixed conceptual contract is present, in agent-directed language
@@ -996,6 +1038,20 @@ def test_context_states_the_idd_contract():
     assert "red test" in doc
     assert "ratif" in doc.lower()          # AI-origin items need human ratification
     assert "tl check" in doc          # the gate
+
+
+def test_context_says_nothing_counts_unsigned():
+    """SR-0309 — the brief agrees with the gate: every item is born proposed
+    whatever its origin, a signature is the only agreement, ratify signs where the
+    item stands, and drafts are described only where a project keeps them."""
+    doc = _ctx(_ROLES_NO_DRAFT)
+    assert "Nothing counts unsigned" in doc
+    assert "born `proposed`, whatever its origin" in doc
+    assert "A signature is the only agreement" in doc
+    assert "signs it where it stands" in doc
+    assert "A draft is agreed or deleted" not in doc
+    assert "AI-origin items are provisional" not in doc
+    assert "A draft is agreed or deleted" in _ctx(_ROLES)
 
 def test_context_renders_types_and_normative_attrs_from_schema():
     doc = _ctx()
@@ -1973,15 +2029,17 @@ def test_a_supplied_index_is_only_a_grounding_view_not_a_way_past_the_gates():
 
 def test_a_supplied_index_still_obeys_the_projects_transitions():
     """Grounding is the only thing handed in; the status move remains the config's
-    to permit or refuse (SR-0130)."""
+    to permit (SR-0130). Where it does not, the signature is taken where the item
+    stands (SR-0306)."""
     borrowed = Item(uid="INT-1", type="intent", status="ratified")
-    fr = Item(uid="FR-1", type="requirement", status="draft",
+    fr = Item(uid="FR-1", type="requirement", status="implemented",
               links=[Link(target="INT-1", type="derives_from")])
-    cfg = {"transitions": {"draft": ["proposed"], "proposed": ["ratified"]}}
+    cfg = {"transitions": {"draft": ["proposed"], "proposed": ["ratified"],
+                           "implemented": ["verified"]}}
     consumer = _project(_doc("FR", fr), config=cfg)
     union = _project(_doc("INT", borrowed), _doc("FR", fr), config=cfg)
-    with pytest.raises(GroundingError, match="not an allowed transition"):
-        ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+    ratify(consumer, "FR-1", by="j.doe", index=Index.build(union))
+    assert fr.status == "implemented" and fr.ratifications[-1]["by"] == "j.doe"
 
 
 def test_rewritten_content_after_ratification_is_reported():
@@ -2401,9 +2459,9 @@ def test_set_status_refuses_illegal_transition():
 
 
 def test_ratify_refuses_draft_when_transitions_forbid_it():
-    """The regression: ratify must not emit a state `check --strict` would reject.
-    With a transitions table that forbids draft -> ratified, ratify is refused
-    rather than writing an illegal status (SR-0130)."""
+    """The regression: ratify must not emit a state `check --strict` would reject,
+    and a draft is agreed or deleted, never signed (SR-0307): the refusal names
+    the status it is agreed to and `tl delete`."""
     intent = Item(uid="INT-1", type="intent", status="ratified")
     fr = Item(uid="FR-1", type="requirement", status="draft",
               links=[Link(target="INT-1", type="derives_from")])
@@ -2411,9 +2469,11 @@ def test_ratify_refuses_draft_when_transitions_forbid_it():
                       "roles": {"initial": "draft", "ratified": "ratified"}},
            "transitions": {"draft": ["approved"], "approved": ["ratified"]}}
     p = _project(_doc("INT", intent), _doc("FR", fr), config=cfg)
-    with pytest.raises(GroundingError, match="not an allowed transition"):
+    with pytest.raises(GroundingError, match="is a draft") as refused:
         ratify(p, "FR-1", by="j.doe")
-    assert fr.status == "draft"
+    assert "tl status FR-1 approved" in str(refused.value)
+    assert "tl delete FR-1" in str(refused.value)
+    assert fr.status == "draft" and not fr.ratifications
 
 
 def test_operation_without_bound_role_fails_fast():
@@ -2433,14 +2493,13 @@ def test_operation_without_bound_role_fails_fast():
 
 def test_tl_status_verb_moves_through_permitted_transition(tmp_path):
     """`tl status <uid> <status>` is the generic verb that reaches every permitted
-    move, so no state change needs a hand-edited YAML file (SR-0132). It fills the
-    draft -> approved gap that had no dedicated command."""
-    root = _scaffold(tmp_path)  # ships intent INT-0001 at the 'initial' role (draft)
+    move, so no state change needs a hand-edited YAML file (SR-0132)."""
+    root = _scaffold(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "feature", "--ground", "INT-0001"]) == 0
-    assert load_project(root).get("FR-0001").status == "draft"
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
-    assert load_project(root).get("FR-0001").status == "approved"
+    assert load_project(root).get("FR-0001").status == "proposed"
+    assert _cli(["-C", str(root), "status", "FR-0001", "deferred"]) == 0
+    assert load_project(root).get("FR-0001").status == "deferred"
 
 
 def test_tl_status_verb_refuses_illegal_transition(tmp_path):
@@ -2449,9 +2508,9 @@ def test_tl_status_verb_refuses_illegal_transition(tmp_path):
     root = _scaffold(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "feature", "--ground", "INT-0001"]) == 0
-    # draft -> verified is not a permitted first hop in the seeded transitions
+    # proposed -> verified is not a permitted first hop in the seeded transitions
     assert _cli(["-C", str(root), "status", "FR-0001", "verified"]) != 0
-    assert load_project(root).get("FR-0001").status == "draft"
+    assert load_project(root).get("FR-0001").status == "proposed"
 
 
 def test_tl_status_verb_rejects_undeclared_status(tmp_path):
@@ -2460,18 +2519,18 @@ def test_tl_status_verb_rejects_undeclared_status(tmp_path):
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "feature", "--ground", "INT-0001"]) == 0
     assert _cli(["-C", str(root), "status", "FR-0001", "nonsense"]) in (1, 2)
-    assert load_project(root).get("FR-0001").status == "draft"
+    assert load_project(root).get("FR-0001").status == "proposed"
 
 
-def test_new_item_is_born_at_the_initial_role(tmp_path):
-    """`tl new` gives a fresh item the project's 'initial' status, resolved from the
-    role table rather than a literal 'draft' baked in code (SR-0131)."""
+def test_new_item_is_born_at_the_proposed_role(tmp_path):
+    """`tl new` gives a fresh item the project's 'proposed' status, resolved from
+    the role table rather than a literal baked in code (SR-0131, SR-0311)."""
     root = _scaffold(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "feature", "--ground", "INT-0001"]) == 0
     born = load_project(root).get("FR-0001")
-    initial = load_project(root).schema.status_role("initial")
-    assert born.status == initial == "draft"
+    proposed = load_project(root).schema.status_role("proposed")
+    assert born.status == proposed == "proposed"
 
 
 def test_delete_writes_the_tombstone_role(tmp_path):
@@ -2503,7 +2562,8 @@ def test_migrate_v2_to_v3_backfills_status_roles(tmp_path):
     assert migrate_project(root)[:2] == (2, FORMAT_VERSION)
     schema = load_project(root).schema
     assert schema.status_role("ratified") == "ratified"
-    assert schema.status_role("initial") == "draft"
+    # no draft is declared, so the repair binds initial to proposal (SR-0313)
+    assert schema.status_role("initial") == "proposed"
     assert schema.dead_statuses() == frozenset({"rejected", "deleted"})
 
 
@@ -2548,7 +2608,7 @@ def test_read_project_tolerates_older_major_without_touching_disk(tmp_path):
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
     schema = read_project(root).schema  # tolerant read: roles backfilled in memory
-    assert schema.status_role("initial") == "draft"
+    assert schema.status_role("proposed") == "proposed"
     assert schema.status_role("ratified") == "ratified"
     assert cfg.read_text(encoding="utf-8") == before  # disk untouched — still v2
     assert "format_version = 2" in before and "[status.roles]" not in before
@@ -2796,8 +2856,14 @@ def test_init_seeds_a_check_clean_starter_graph(tmp_path):
     proj = load_project(root)
     assert {it.uid for it in proj.items()} == {
         "INT-0001", "REQ-0001", "NFR-0001", "TEST-0001", "NG-0001"}
-    # sound under the strictest gate, with no hand-fixing required
-    assert _cli(["-C", str(root), "check", "--strict", "--quiet"]) == 0
+    # sound, with nothing signed for the user: every placeholder is proposed, and
+    # the strict gate asks a person to sign or delete each one (SR-0310)
+    assert {it.status for it in proj.items()} == {"proposed"}
+    assert not any(it.ratifications for it in proj.items())
+    assert _cli(["-C", str(root), "check", "--quiet"]) == 0
+    assert _cli(["-C", str(root), "check", "--strict", "--quiet"]) == 1
+    assert {f.uid for f in validate(proj, strict=True) if f.rule == "unratified"} \
+        == {"INT-0001", "REQ-0001", "NFR-0001", "TEST-0001", "NG-0001"}
     # and the published document ships already rendered, not as empty markers
     overview = (root / "docs" / "overview.md").read_text(encoding="utf-8")
     assert "**INT-0001 — Deliver Widget**" in overview
@@ -3298,7 +3364,7 @@ def test_migrate_repairs_current_major_missing_status_roles(tmp_path):
     assert result.repaired and result.repaired["ratified"] == "ratified"
 
     schema = load_project(root).schema  # now loads and operates
-    assert schema.status_role("initial") == "draft"
+    assert schema.status_role("initial") == "proposed"
     # idempotent: a second migrate finds the table present and writes nothing
     assert migrate_project(root).repaired is None
 
@@ -3703,7 +3769,7 @@ def test_migrate_declares_the_vocabularies_a_project_left_open(tmp_path):
     result = migrate_project(root)
 
     assert set(result.declared) == {"[status] values", "[links] types"}
-    assert "draft" in result.declared["[status] values"]
+    assert "proposed" in result.declared["[status] values"]
     assert not [f for f in validate(load_project(root))
                 if f.rule == "undeclared-vocabulary"]
     # idempotent, and a declared vocabulary is never rewritten
@@ -3778,7 +3844,7 @@ def _pre_sr0175_lifecycle(root: Path) -> None:
     'suspect', so suspicion propagation is inert for exactly them."""
     cfg = root / "throughline.toml"
     doc = TomlDocument(cfg.read_text(encoding="utf-8"))
-    for status in ("proposed", "draft", "deferred"):
+    for status in ("proposed", "deferred"):
         targets = tomllib.loads(cfg.read_text(encoding="utf-8"))["transitions"][status]
         doc.set_key("transitions", status, [t for t in targets if t != "suspect"])
         cfg.write_text(doc.text(), encoding="utf-8")
@@ -3792,7 +3858,7 @@ def test_migrate_restores_a_route_to_suspicion_a_lifecycle_never_had(tmp_path):
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
     _pre_sr0175_lifecycle(root)
-    stranded = {"proposed", "draft", "deferred"}
+    stranded = {"proposed", "deferred"}
     assert set(load_project(root).suspect_unreachable_statuses()) == stranded
 
     result = migrate_project(root)
@@ -3920,7 +3986,7 @@ def test_migrate_names_the_routes_it_restored_on_the_cli(tmp_path, capsys):
     assert _cli(["-C", str(root), "migrate"]) == 0
     out = capsys.readouterr().out
 
-    assert "draft -> suspect" in out
+    assert "deferred -> suspect" in out
     assert "nothing to migrate" not in out
 
 
@@ -3961,14 +4027,14 @@ def test_migrate_keeps_a_comment_an_author_left_beside_one_move(tmp_path):
     doc.remove_key("transitions", "deferred")
     cfg.write_text(doc.text().replace(
         "[transitions]",
-        '[transitions]\ndeferred = [\n    "draft",  # back onto the active front\n]'),
+        '[transitions]\ndeferred = [\n    "proposed",  # back onto the active front\n]'),
         encoding="utf-8")
 
     assert migrate_project(root).routed == {"deferred": "suspect"}
     out = cfg.read_text(encoding="utf-8")
 
     assert "# back onto the active front" in out
-    assert tomllib.loads(out)["transitions"]["deferred"] == ["draft", "suspect"]
+    assert tomllib.loads(out)["transitions"]["deferred"] == ["proposed", "suspect"]
 
 
 def test_migrate_refuses_newer_project(tmp_path):
@@ -4046,12 +4112,16 @@ def test_init_force_allows_wrapping_child(tmp_path):
 
 def test_default_status_set_includes_deferred(tmp_path):
     """A fresh project ships a 'deferred' status so a parked backlog item is
-    distinct from an active 'draft' (SR-0080). Ordered right after 'draft'."""
+    distinct from an active proposal (SR-0080), and no 'approved' or 'draft'
+    (SR-0312). Ordered right after 'proposed'."""
     init_project(tmp_path, name="DS")
     cfg = load_project(tmp_path).config
     values = cfg["status"]["values"]
     assert "deferred" in values
-    assert values.index("deferred") == values.index("draft") + 1
+    assert values.index("deferred") == values.index("proposed") + 1
+    assert "approved" not in values and "draft" not in values
+    assert cfg["status"]["roles"]["initial"] == cfg["status"]["roles"]["proposed"]
+    assert "implemented" not in cfg["transitions"]["proposed"]
 
 
 def test_find_nested_project_reports_progress(tmp_path):
@@ -4114,10 +4184,10 @@ def _seed_query_project(tmp_path) -> Path:
     root = _scaffold(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "alpha", "--ground", "INT-0001",
-                 "--no-interactive"]) == 0            # FR-0001, status draft
+                 "--no-interactive"]) == 0            # FR-0001, status proposed
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
-                 "--title", "beta", "--status", "approved", "--ground",
-                 "INT-0001", "--no-interactive"]) == 0  # FR-0002, approved
+                 "--title", "beta", "--status", "deferred", "--ground",
+                 "INT-0001", "--no-interactive"]) == 0  # FR-0002, deferred
     return root
 
 
@@ -4125,10 +4195,10 @@ def test_query_filters_by_status(tmp_path, capsys):
     """query lists items matching an SR-0045 expression (SR-0079)."""
     root = _seed_query_project(tmp_path)
     capsys.readouterr()
-    assert _cli(["-C", str(root), "query", "status == 'draft'"]) == 0
+    assert _cli(["-C", str(root), "query", "status == 'proposed'"]) == 0
     out = capsys.readouterr().out
     assert "FR-0001" in out and "alpha" in out
-    assert "FR-0002" not in out  # approved item excluded
+    assert "FR-0002" not in out  # deferred item excluded
 
 
 def test_query_no_expr_lists_all_live_items(tmp_path, capsys):
@@ -4304,15 +4374,16 @@ def test_new_machine_origin_is_born_proposed(tmp_path):
     assert born.status == project.schema.status_role("proposed") == "proposed"
 
 
-def test_new_human_origin_is_born_initial(tmp_path):
-    """A human-origin item keeps the ordinary 'initial' birth status (SR-0141)."""
+def test_new_human_origin_is_born_proposed(tmp_path):
+    """SR-0311 — a human-origin item is born proposed like any other, so it waits
+    for a signature as any other does."""
     root = _scaffold(tmp_path)
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "h", "--ground", "INT-0001", "--origin", "human",
                  "--no-interactive"]) == 0
     project = load_project(str(root))
     assert project.get("FR-0001").status \
-        == project.schema.status_role("initial") == "draft"
+        == project.schema.status_role("proposed") == "proposed"
 
 
 def test_new_attr_sets_declared_enum_attribute(tmp_path):

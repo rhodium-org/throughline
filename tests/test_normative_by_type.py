@@ -161,7 +161,8 @@ def test_the_demo_seeds_each_item_with_its_types_flag(tmp_path):
     project = load_project(root)
     for item in project.items():
         assert item.normative == project.schema.is_normative(item.type), item.uid
-    assert {(f.uid, f.rule) for f in validate(project, strict=True)} == set()
+    # Nothing but the five placeholders awaiting a person's signature (SR-0310).
+    assert {f.rule for f in validate(project, strict=True)} == {"unratified"}
 
 
 # ------------------------------- SR-0203: disagreement is reported and repaired
@@ -290,7 +291,7 @@ def test_birth_item_is_the_single_birth_tl_new_uses(tmp_path):
     assert born.normative is True
     root_item = birth_item(project.schema, project.registers["NG"], "NG-0001",
                            item_type="non_goal", title="N")
-    assert root_item.status == "draft" and root_item.normative is False
+    assert root_item.status == "proposed" and root_item.normative is False
     # And `tl new` produces the same item through the same function.
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.",
                  "--origin", "ai", "--attr", "priority=must", "--ground", "REQ-0001",

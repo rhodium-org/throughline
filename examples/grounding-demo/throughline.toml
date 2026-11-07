@@ -31,21 +31,23 @@ assumes      = { from = ["requirement"], to = ["assumption"] }
 derives_from = { from = ["requirement", "nfr"], to = ["intent", "business_need", "constraint"] }
 
 [status]
-values = ["proposed", "draft", "approved", "ratified", "implemented",
-          "verified", "suspect", "rejected", "deleted"]
+# Retired by `tl migrate` (SR-0313): draft, approved stood between proposal and
+# signature. Every item is born proposed and counts only once a person signs it
+# (UR-0046).
+values = ["proposed", "ratified", "implemented", "verified", "suspect",
+          "rejected", "deleted"]
 
 # Allowed status moves (SR-0083); `tl diagram transitions` renders these.
 # Every live status keeps a route to 'suspect' (SR-0175) — this demo exists to
 # show suspicion travelling, so no status may sit outside the cascade.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "suspect", "rejected", "deleted"]
-draft       = ["approved", "suspect", "rejected", "deleted"]
-approved    = ["ratified", "implemented", "suspect", "rejected", "deleted"]
+proposed = ["ratified", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
-suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
-rejected    = ["draft", "deleted"]
+suspect = ["proposed", "ratified", "implemented", "verified", "rejected",
+           "deleted"]
+rejected = ["proposed", "deleted"]
 
 # Coverage: every live requirement should be verified by a test.
 [[rules.coverage]]
@@ -57,7 +59,7 @@ severity = "warning"
 # plays each role the tool's operations act on. Backfilled by
 # `tl migrate`; edit to match your own status vocabulary.
 [status.roles]
-initial = "draft"
+initial = "proposed"
 proposed = "proposed"
 ratified = "ratified"
 invalidated = "rejected"

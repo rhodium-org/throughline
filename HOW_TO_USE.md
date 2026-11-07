@@ -98,8 +98,8 @@ tl trace REQ-0001
 ```
 
 ```
-REQ-0001  [requirement/approved] First requirement
-└─(implements) INT-0001  [intent/approved] Deliver acme-app
+REQ-0001  [requirement/proposed] First requirement
+└─(implements) INT-0001  [intent/proposed] Deliver acme-app
 ```
 
 Open `docs/overview.md`: your prose surrounds generated regions — a vision block,
@@ -218,9 +218,9 @@ tl trace FR-0001         # walk the feature up to its "why"
 ```
 
 ```
-FR-0001  [requirement/draft] Guided 3-step setup wizard
-└─(derives_from) BN-0001  [business_need/draft] Cut new-user onboarding time in half
-└─(derives_from) INT-0001  [intent/draft] Ship value to users every week
+FR-0001  [requirement/proposed] Guided 3-step setup wizard
+└─(derives_from) BN-0001  [business_need/proposed] Cut new-user onboarding time in half
+└─(derives_from) INT-0001  [intent/proposed] Ship value to users every week
 ```
 
 ```bash
@@ -241,7 +241,7 @@ A project is a directory containing `throughline.toml` plus per-register folders
 ```yaml
 uid: FR-0022                 # permanent, immutable, never reused
 type: requirement
-status: approved
+status: ratified
 title: Guided setup wizard
 text: The system shall walk new users through a 3-step setup.
 normative: true              # content changes to a normative item mark dependents suspect
@@ -333,7 +333,7 @@ replaced by anyone — withdraw it and sign again.
 | `schema` | missing required attribute or out-of-enum value |
 | `suspect-link` | a link's target changed since it was last confirmed |
 | `unreviewed` | item content changed since last review |
-| `unratified` | an AI-origin item is still `proposed` |
+| `unratified` | an item no person has signed, whatever its origin and whatever status it has been carried to |
 | `ratified-stale` | a ratified item's normative content, or one of its signed links, changed since it was signed |
 | `ambiguous` | flagged ambiguous — blocked from ratification |
 | `coverage` | a declared `[[rules.coverage]]` link requirement is unmet |
@@ -405,6 +405,18 @@ See this repository's own [`.pre-commit-config.yaml`](.pre-commit-config.yaml)
 and [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — throughline gates both
 the [demo project](examples/grounding-demo) and [its own
 requirements](requirements) exactly this way.
+
+**Upgrading to 5.0: proposed until a person signs it.** From 5.0.0 every item is
+born `proposed`, whatever its `origin`, and a signature is the only agreement:
+the shipped lifecycle has no `approved` and no `draft`. Run `tl migrate` once. It
+moves every item in `approved` or `draft` (or in any status of yours that sat
+between proposal and signature) to `proposed`, or to `ratified` where its
+signature already stands, removes those statuses from your configuration, and
+signs nothing. Then run `tl check`: every item nobody has signed, `implemented`
+and `verified` ones included, is reported `unratified` (an error under
+`--strict`). Sign that backlog once, with `tl-ratify` (which shows each item
+before it is signed) or `tl ratify <UID> --by <name>`. An item past `ratified` is
+signed where it stands; its status does not move.
 
 ---
 

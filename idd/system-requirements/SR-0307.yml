@@ -1,0 +1,44 @@
+uid: SR-0307
+type: system_requirement
+status: ratified
+title: An item in a separate initial status is agreed or deleted, never signed
+text: 'Where a project keeps an initial status apart from its proposed status, ratify
+  shall refuse an item in it, saying that a draft is not signed and naming the two
+  ways out: agree it, moving it to the status it would be agreed to, or delete it
+  with tl delete. The status a draft is agreed to is the proposed status where the
+  transitions allow the move, and otherwise the first status the transitions allow
+  from the draft from which the ratified status can be reached, neither dead nor
+  suspect.'
+rationale: 'Signing in place everywhere would let a draft be signed and counted while
+  the lifecycle still says nobody agreed to build it, and the queue showed such an
+  item as blocked with no way out. A draft has two honest ends: it is agreed, then
+  signed, or it is deleted. Naming the status it is agreed to is the Tool''s judgement,
+  so every interface offers the same move. Who pays: a project whose transitions
+  let a draft reach ratified directly loses that shortcut, and agrees the draft first.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0306
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:03Z'
+  fingerprint: sha256:e175a9e195f93cfec74b4915e665d4315d537cdfcfa34f6dd935360b2c5aadd4
+  content:
+    type: system_requirement
+    text: 'Where a project keeps an initial status apart from its proposed status,
+      ratify shall refuse an item in it, saying that a draft is not signed and naming
+      the two ways out: agree it, moving it to the status it would be agreed to,
+      or delete it with tl delete. The status a draft is agreed to is the proposed
+      status where the transitions allow the move, and otherwise the first status
+      the transitions allow from the draft from which the ratified status can be
+      reached, neither dead nor suspect.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

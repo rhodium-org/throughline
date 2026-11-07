@@ -52,10 +52,13 @@ implements   = { from = ["system_requirement", "nfr"], to = ["user_requirement"]
 derives_from = { from = ["business_need", "user_requirement", "nfr"], to = ["intent", "business_need"] }
 
 [status]
-# draft = actively moving toward approval; deferred = acknowledged and grounded
-# but deliberately parked (a backlog wish-list item, not on the active front).
-values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented",
-          "verified", "suspect", "rejected", "deleted"]
+# deferred = acknowledged and grounded but deliberately parked (a backlog
+# wish-list item, not on the active front).
+# Retired by `tl migrate` (SR-0313): draft, approved stood between proposal and
+# signature. Every item is born proposed and counts only once a person signs it
+# (UR-0046).
+values = ["proposed", "deferred", "ratified", "implemented", "verified",
+          "suspect", "rejected", "deleted"]
 
 # Allowed status moves (SR-0083). `tl check` measures each item against its
 # status in the previous commit and flags any change these do not permit, so the
@@ -63,18 +66,16 @@ values = ["proposed", "draft", "deferred", "approved", "ratified", "implemented"
 # merely documented. Anything may be parked, rejected, or deleted; a suspect
 # item must be re-triaged before it can advance again. Every live status keeps a
 # route to 'suspect' (SR-0175): an item whose grounding is withdrawn must be
-# flaggable wherever it sits, and the statuses below 'approved' hold the items
-# whose grounding is least settled.
+# flaggable wherever it sits.
 [transitions]
-proposed    = ["draft", "approved", "ratified", "deferred", "suspect", "rejected", "deleted"]
-draft       = ["approved", "deferred", "suspect", "rejected", "deleted"]
-deferred    = ["draft", "approved", "suspect", "rejected", "deleted"]
-approved    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
+proposed = ["ratified", "deferred", "suspect", "rejected", "deleted"]
+deferred = ["proposed", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
-suspect     = ["approved", "ratified", "implemented", "verified", "rejected", "deleted"]
-rejected    = ["draft", "deleted"]
+suspect = ["proposed", "ratified", "implemented", "verified", "rejected",
+           "deleted"]
+rejected = ["proposed", "deleted"]
 
 # Published documents (SR-0094/0096): the Markdown files that render graph
 # content through tl: injection markers. `tl docs` regenerates these in place
@@ -90,7 +91,7 @@ paths = ["../docs/referenced-resource/*.md", "../README.md"]
 # plays each role the tool's operations act on. Backfilled by
 # `tl migrate`; edit to match your own status vocabulary.
 [status.roles]
-initial = "draft"
+initial = "proposed"
 proposed = "proposed"
 ratified = "ratified"
 invalidated = "rejected"

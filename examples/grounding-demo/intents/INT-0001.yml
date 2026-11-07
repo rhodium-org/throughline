@@ -4,3 +4,13 @@ status: ratified
 title: Frictionless onboarding
 text: New users reach first value within 15 minutes.
 normative: true
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:33:17Z'
+  fingerprint: sha256:ff76286c938538261088d60470c27da3b4b70932631b1e521585bdb308f862b0
+  content:
+    type: intent
+    text: New users reach first value within 15 minutes.
+    normative: true
+    derived: false
+    attrs: {}
