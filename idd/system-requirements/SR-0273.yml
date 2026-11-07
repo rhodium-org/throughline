@@ -1,6 +1,6 @@
 uid: SR-0273
 type: system_requirement
-status: ratified
+status: deleted
 title: Migration backfills an existing tombstone as ratified by history
 text: 'tl migrate shall backfill every tombstone that stands unsigned as ratified
   by history: one signature naming the author of the commit that wrote the tombstone,
@@ -40,3 +40,10 @@ ratifications:
     derived: false
     attrs:
       priority: must
+deleted:
+  date: '2026-11-07'
+  reason: 'Superseded by SR-0315: a commit author is not a signer, and the repair
+    signed deletions proposed with tl delete since SR-0267 as well as the ones before
+    it'
+  fingerprint: sha256:4ee4eecaf0c15470592ce181a27cd026297cfe81994817b24409367093f0c221
+  from: ratified

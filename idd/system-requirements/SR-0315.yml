@@ -1,0 +1,25 @@
+uid: SR-0315
+type: system_requirement
+status: proposed
+title: tl migrate signs nothing
+text: tl migrate shall add no signature to any item or tombstone. A tombstone nobody
+  has signed stays a proposed deletion after migration, whoever committed it, until
+  a person signs it.
+rationale: 'SR-0273 signed every committed unsigned tombstone in the name of the
+  commit''s author, so it could not tell a deletion from before SR-0267 from one
+  proposed with tl delete today: commit a proposed deletion, run tl migrate, and
+  it was signed for you. This release tells every adopter to run tl migrate, so that
+  would sign their pending deletions wholesale. A signature names a person who decided;
+  a commit author did not decide to retire anything by committing. Who pays: an adopter
+  with tombstones from before 4.1 that were never backfilled, who signs them once
+  with the rest of the backlog.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0273
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
