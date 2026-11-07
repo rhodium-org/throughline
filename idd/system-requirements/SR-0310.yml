@@ -1,15 +1,15 @@
 uid: SR-0310
 type: system_requirement
 status: proposed
-title: The starter graph is seeded as drafts
-text: The example items tl init writes shall be seeded in the initial status, so
-  a new project passes check --strict with nothing signed and nothing counted until
-  a person agrees and signs each item, or deletes it.
-rationale: 'The starter items were seeded approved, so under UR-0046 every new project
-  would fail its strict gate on placeholders nobody agreed to. Signing them for the
-  user would put a name on words that say ''replace this''. Rejected: leaving them
-  approved and red, which teaches a new user that a red gate is normal. Who pays:
-  nobody; a user who keeps an example item agrees and signs it as any other.'
+title: The starter graph is seeded proposed
+text: The example items tl init writes shall be born proposed, as every item is.
+  tl check passes over them with a warning for each; check --strict fails until a
+  person signs or deletes each placeholder.
+rationale: 'Seeded approved, the placeholders claimed an agreement nobody gave. Signing
+  them for the user would put a name on words that say ''replace this''. Rejected:
+  seeding no example, which leaves the newcomer an empty project to reverse-engineer
+  (SR-0100). Who pays: a new user, whose strict gate is red until they sign or delete
+  five placeholders, which is the first thing the tool teaches them.'
 normative: true
 links:
 - target: UR-0046

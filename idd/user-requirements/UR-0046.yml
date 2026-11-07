@@ -1,20 +1,22 @@
 uid: UR-0046
 type: user_requirement
 status: proposed
-title: Every item that counts carries a person's signature
-text: 'Every live item outside the draft status shall count as accepted only while
-  it carries a person''s signature, whatever its origin and whatever status the lifecycle
-  has carried it to. A draft is neither signed nor counted: it is agreed or deleted.
-  No item shall sit approved, implemented or verified with no one named for it.'
+title: Proposed until a person signs it
+text: 'Every item shall enter the graph proposed, whoever or whatever wrote it, and
+  shall count as agreed only once a person has signed it. A signature is the only
+  agreement: there shall be no status meaning agreed without one, and an item carried
+  on to implemented or verified shall still need a signature.'
 rationale: 'An item a human authored and moved to approved or implemented passed
   check --strict with no one''s name on it, while tl-ratify listed it as ready, and
   one implemented with no route to ratified as blocked (hitl-hci, 2026-11-07). The
-  operator''s ruling: an item is signed or tombstoned, with nothing between. Rejected:
-  keeping the gate on machine origin alone, which leaves human items unsigned for
-  ever and a queue that offers signatures the gate does not need. Who pays: every
-  adopter whose graph holds human items that were never signed. Their strict gate
-  goes red until a person signs that backlog once with tl ratify or tl-ratify. Nothing
-  is signed for them.'
+  operator''s ruling: ''What value is approved if it isn''t ratified!'' Proposed
+  is the case whether a human, a machine or both proposed it. Draft goes for the
+  same reason: it was the status before proposal, and nothing is born there once
+  everything is born proposed; read as agreed-but-not-built it is ratified-and-not-implemented.
+  Rejected: keeping approved and gating it, which keeps a status whose only meaning
+  is a signature''s without one. Who pays: every adopter. tl migrate moves their
+  approved and draft items to proposed, and their strict gate goes red until a person
+  signs the backlog once. Nothing is signed for them.'
 normative: true
 links:
 - target: BN-0009

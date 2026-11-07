@@ -1,0 +1,20 @@
+uid: SR-0312
+type: system_requirement
+status: proposed
+title: The shipped lifecycle has no approved and no draft
+text: The configuration tl init writes shall declare the statuses proposed, deferred,
+  ratified, implemented, verified, suspect, rejected and deleted, bind the initial
+  and proposed roles both to proposed, and allow proposed to move to ratified, deferred,
+  suspect, rejected or deleted, never straight to implemented.
+rationale: 'Approved meant agreed without a signature, and draft the status before
+  proposal, which nothing enters once every item is born proposed (UR-0046). Deferred
+  stays: parking is about when, not whether anyone agreed. Who pays: nobody new;
+  a project that wants other statuses declares them.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+attrs:
+  priority: must
+  verification: test
+  origin: ai

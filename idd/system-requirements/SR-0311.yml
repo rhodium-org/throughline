@@ -1,0 +1,21 @@
+uid: SR-0311
+type: system_requirement
+status: proposed
+title: Every item is born proposed
+text: tl new shall create every item in the proposed status, whatever its origin,
+  where the project declares a proposed status; an explicit --status still names
+  another. Where no proposed status is declared the item is born in the initial status.
+rationale: 'Origin chose the birth status, so a human''s item started in draft and
+  a machine''s in proposed, and the human''s could be moved to approved without anyone
+  signing. Proposed is the case whoever proposed it. Who pays: a human author, whose
+  new item now waits for a signature like any other.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0141
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai

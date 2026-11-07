@@ -1,0 +1,21 @@
+uid: SR-0314
+type: system_requirement
+status: proposed
+title: A status the project no longer declares is not judged as a move
+text: 'Check shall not report a bad transition for an item whose status in the baseline
+  is one the project no longer declares: retiring a status is a change to the vocabulary,
+  made in the configuration, not a lifecycle move.'
+rationale: 'Without this the commit that retires a status fails its own check, because
+  every item that left it reads as an illegal move from a status the transitions
+  no longer mention. The change is visible where it is made, in the configuration.
+  Who pays: nobody; a status still declared is judged as before.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0083
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
