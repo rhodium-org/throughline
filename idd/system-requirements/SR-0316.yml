@@ -1,0 +1,42 @@
+uid: SR-0316
+type: system_requirement
+status: ratified
+title: tl migrate --beneath finds graphs at the current format that hold a status
+  to retire
+text: tl migrate --beneath shall list, and with --apply migrate, every graph at the
+  current format version that still declares a status SR-0313 retires, naming those
+  statuses, as it does a graph below that format; such a graph shall not be counted
+  among those with nothing to migrate. Whether a graph holds one shall be read from
+  its configuration by the same rule the repair applies, writing nothing.
+rationale: '5.0 retired approved and draft without a new format version, so a graph
+  at format 4 holding them was not behind, and tl migrate --beneath --apply across
+  an estate reported it as already current and changed nothing (found 2026-11-07,
+  before 5.0.1). An adopter told to run the sweep would have kept every approved
+  item and been told nothing was wrong. Rejected: a format 5, which would make every
+  graph refuse to load under an older tl for a change only the lifecycle needs.'
+normative: true
+links:
+- target: UR-0045
+  type: implements
+- target: SR-0313
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T19:25:05Z'
+  fingerprint: sha256:4386193c782991455620297d1031233e459a7684daa4a2b3ab204f38e3b867af
+  content:
+    type: system_requirement
+    text: tl migrate --beneath shall list, and with --apply migrate, every graph
+      at the current format version that still declares a status SR-0313 retires,
+      naming those statuses, as it does a graph below that format; such a graph shall
+      not be counted among those with nothing to migrate. Whether a graph holds one
+      shall be read from its configuration by the same rule the repair applies, writing
+      nothing.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

@@ -1,0 +1,43 @@
+uid: SR-0317
+type: system_requirement
+status: ratified
+title: tl migrate says what awaits a signature and how to sign it
+text: After a migration that succeeds, tl migrate shall count the local items tl
+  check --strict reports unsigned and, where there are any, say that none was signed
+  for the keeper, that the strict check fails until each is signed, and give the
+  commands that list them, sign each after showing it (tl-ratify) and sign one by
+  its UID. With --beneath --apply it shall give the count for each graph it migrated.
+  It shall say nothing of signing when nothing awaits a signature.
+rationale: '5.0 makes tl check --strict fail on every unsigned item, implemented
+  ones included, and tl migrate only listed the items it moved, without saying that
+  the others wait too or how to sign them; the operator asked that migrating from
+  the previous version advise what to do (2026-11-07). The count is the strict check''s
+  own finding, so the advice cannot disagree with the gate. Who pays: nobody; it
+  is output.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0315
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T19:25:06Z'
+  fingerprint: sha256:d87c884a6390706131065460ccde94266ab3751207554220288295b988cd1ad9
+  content:
+    type: system_requirement
+    text: After a migration that succeeds, tl migrate shall count the local items
+      tl check --strict reports unsigned and, where there are any, say that none
+      was signed for the keeper, that the strict check fails until each is signed,
+      and give the commands that list them, sign each after showing it (tl-ratify)
+      and sign one by its UID. With --beneath --apply it shall give the count for
+      each graph it migrated. It shall say nothing of signing when nothing awaits
+      a signature.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

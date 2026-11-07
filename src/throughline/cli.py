@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import sys
 import time
@@ -295,6 +296,42 @@ def cmd_init(args) -> int:
 
 
 def cmd_migrate(args) -> int:
+    rc = _migrate_alone(args)
+    if rc == OK and not getattr(args, "beneath", None):
+        _advise_signing(args.path)
+    return rc
+
+
+def _advise_signing(path) -> None:
+    """What to do after the migration (SR-0317): every item still awaiting a
+    person's signature counted, and the commands that list and sign them, so a
+    keeper upgrading from a release that let an item count unsigned is told why
+    `tl check --strict` now fails and how to clear it. Silent when nothing waits."""
+    waiting = _awaiting_signature(path)
+    if not waiting:
+        return
+    where = shlex.quote(str(path))
+    print(f"next: {len(waiting)} item(s) await a person's signature, and "
+          "`tl check --strict` fails until each is signed — none was signed for you:")
+    print(f"  tl -C {where} check                        lists them")
+    print(f'  tl-ratify -C {where} --by "<your name>"    shows each item, then '
+          "signs it (pip install throughline-ratify)")
+    print(f'  tl -C {where} ratify <UID> --by "<your name>"   signs one you have read')
+    print("  then commit the signatures")
+
+
+def _awaiting_signature(path) -> list[str]:
+    """The local items `tl check --strict` reports unsigned (UR-0046): the
+    finding itself, never a second reading of what counts."""
+    try:
+        project = load_project(path)
+    except ProjectError:
+        return []
+    return sorted({f.uid for f in validate(project, strict=True)
+                   if f.rule == "unratified"})
+
+
+def _migrate_alone(args) -> int:
     if getattr(args, "beneath", None):
         return _migrate_beneath(args)
     if getattr(args, "apply", False):
@@ -2182,11 +2219,15 @@ def _migrate_beneath(args) -> int:
     is safe to rewrite (SR-0302..SR-0304). Nothing is ever committed."""
     found = migrate_beneath.survey(args.beneath)
     behind = [f for f in found if f.behind]
+    holding = [f for f in found if f.due and not f.behind]
     if not args.apply:
         _print_behind(behind)
+        _print_holding(holding)
     _print_unmigratable(found)
-    current = sum(1 for f in found if f.declared == FORMAT_VERSION)
-    print(f"{current} graph(s) already at format version {FORMAT_VERSION}")
+    current = sum(1 for f in found if f.declared == FORMAT_VERSION and not f.due)
+    print(f"{current} graph(s) already at format version {FORMAT_VERSION}"
+          + (" with nothing to migrate" if holding else ""))
+    behind = behind + holding
     if not args.apply:
         if behind:
             print("nothing was written — run again with --apply to migrate those "
@@ -2213,7 +2254,33 @@ def _migrate_beneath(args) -> int:
               "— review with `git diff` and commit them there")
     if not by_repo:
         print("migrated nothing")
+    # What each migrated graph now awaits (SR-0317): migrating signs nothing, so
+    # the keeper is told where the signing is and how to do it.
+    waiting = [(o.found.root, _awaiting_signature(o.found.root))
+               for o in outcomes if o.migrated]
+    waiting = [(root, uids) for root, uids in waiting if uids]
+    if waiting:
+        print(f"next: {sum(len(u) for _, u in waiting)} item(s) in "
+              f"{len(waiting)} graph(s) await a person's signature, and "
+              "`tl check --strict` fails there until each is signed — none was "
+              "signed for you. In each graph, run")
+        print('  tl-ratify -C <graph> --by "<your name>"   (pip install '
+              "throughline-ratify), or `tl -C <graph> check` to list them:")
+        for root, uids in waiting:
+            print(f"  {root}  {len(uids)} item(s)")
     return FINDINGS if failed else OK
+
+
+def _print_holding(holding) -> None:
+    """Graphs at the current format that still declare a status between proposal
+    and signature (SR-0316): 5.0 retired them without a new format."""
+    if not holding:
+        return
+    print(f"{len(holding)} graph(s) at format version {FORMAT_VERSION} that still "
+          "hold a status between proposal and signature, which `tl migrate` retires "
+          "(UR-0046):")
+    for f in holding:
+        print(f"  {f.root}  {', '.join(f.retires)}")
 
 
 def _print_behind(behind) -> None:
@@ -2259,7 +2326,7 @@ def _composed_migrate(args) -> int:
     declined. The second pass is safe because the repair is idempotent (SR-0137): a
     bound record carries a fingerprint and never matches again, so the union pass
     can only add."""
-    rc = cmd_migrate(args)
+    rc = _migrate_alone(args)
     if rc != OK or getattr(args, "beneath", None):
         # Over many graphs each is migrated alone (SR-0304): the -C project's
         # sources have nothing to say about them.
@@ -2270,6 +2337,7 @@ def _composed_migrate(args) -> int:
     if consumer is None:  # pragma: no cover - cmd_migrate would have failed first
         return sources
     if not sources:
+        _advise_signing(args.path)
         return OK
 
     res, union, rc = _resolve_union(consumer, sources, args.path)
@@ -2291,6 +2359,7 @@ def _composed_migrate(args) -> int:
               "by this graph alone:")
         for uid, stamp in bound.items():
             print(f"  {uid} = {stamp}")
+    _advise_signing(args.path)
     return OK
 
 

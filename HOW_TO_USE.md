@@ -412,7 +412,10 @@ the shipped lifecycle has no `approved` and no `draft`. Run `tl migrate` once. I
 moves every item in `approved` or `draft` (or in any status of yours that sat
 between proposal and signature) to `proposed`, or to `ratified` where its
 signature already stands, removes those statuses from your configuration, and
-signs nothing. Then run `tl check`: every item nobody has signed, `implemented`
+signs nothing, then says how many items await a signature and the commands that
+list and sign them. `tl migrate --beneath PATH` lists a graph at format 4 that still
+holds `approved` or `draft` as one to migrate, and `--apply` migrates it (5.0.1).
+Then run `tl check`: every item nobody has signed, `implemented`
 and `verified` ones included, is reported `unratified` (an error under
 `--strict`). Sign that backlog once, with `tl-ratify` (which shows each item
 before it is signed) or `tl ratify <UID> --by <name>`. An item past `ratified` is
