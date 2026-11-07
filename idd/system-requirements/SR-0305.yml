@@ -1,6 +1,6 @@
 uid: SR-0305
 type: system_requirement
-status: proposed
+status: ratified
 title: The lifecycle tl init writes has no status that claims agreement without a
   signature
 text: The configuration tl init writes shall declare no status that says an item
@@ -37,3 +37,20 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:58:16Z'
+  fingerprint: sha256:ab4c7184604f7d3b0149ca7b9fcdbb1d5cb59b6b598a5f2da676abac862aa556
+  content:
+    type: system_requirement
+    text: The configuration tl init writes shall declare no status that says an item
+      is agreed except the one bound to the ratified role, so an item reads agreed
+      only where tl ratify has recorded who accepted it. Every live status shall
+      keep a route to the ratified status, the initial and parked statuses through
+      the proposed one, and a route to the suspect status. The starter graph shall
+      seed every item in the status bound to the initial role, since no person has
+      signed it.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

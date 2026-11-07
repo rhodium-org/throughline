@@ -1,6 +1,6 @@
 uid: SR-0307
 type: system_requirement
-status: proposed
+status: ratified
 title: A graph that declares approved keeps it until a person changes it
 text: The Tool shall go on loading, checking and moving items through a project whose
   configuration declares a status no role binds, such as approved, as it did before.
@@ -27,3 +27,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:58:28Z'
+  fingerprint: sha256:44178e93bebdd08ec7a536ecd83b41fe3f356391e101147a41ed687ea3489d2a
+  content:
+    type: system_requirement
+    text: The Tool shall go on loading, checking and moving items through a project
+      whose configuration declares a status no role binds, such as approved, as it
+      did before. No command, tl migrate included, shall remove such a status from
+      a configuration or move an item out of it unless a person runs a command that
+      names that change.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

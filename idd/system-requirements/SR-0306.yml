@@ -1,6 +1,6 @@
 uid: SR-0306
 type: system_requirement
-status: proposed
+status: ratified
 title: Only tl ratify puts an item in the ratified status
 text: tl new shall refuse a --status, and tl status a target, that names the status
   bound to the ratified role, saying that tl ratify is the command that puts an item
@@ -25,3 +25,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-07T18:58:20Z'
+  fingerprint: sha256:c6b970eed0e8c648c6b8f24bf01569be774786f47215267cb17953bb2a069c3e
+  content:
+    type: system_requirement
+    text: tl new shall refuse a --status, and tl status a target, that names the
+      status bound to the ratified role, saying that tl ratify is the command that
+      puts an item there, and shall write nothing.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
