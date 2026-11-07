@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-268
+271
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 42
@@ -107,7 +107,7 @@ with a `.register.yml` manifest and one `<UID>.yml` per item.
 ```yaml
 uid: FR-0022                 # permanent, immutable, never reused
 type: requirement
-status: approved
+status: proposed
 title: Guided setup wizard
 text: The system shall walk new users through a 3-step setup.
 normative: true

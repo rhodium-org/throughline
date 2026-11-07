@@ -25,6 +25,7 @@ from .grounding import (
     attribute_owner,
     attribute_removal_refusal,
     origin_change_refusal,
+    refuse_ratified_status,
 )
 from .graph import Index
 from .model import Item, Link
@@ -125,6 +126,7 @@ def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
     # silently escape the gate the tool exists to enforce (SR-0141). If the
     # project declares no 'proposed' role we fall back to 'initial'.
     has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
+    refuse_ratified_status(schema, status)
     if status is None:
         if origin in schema.ai_origins and has_proposed_role:
             status = schema.status_role("proposed")

@@ -217,7 +217,7 @@ def test_amend_reports_that_a_ratification_no_longer_matches(tmp_path, capsys):
     machinery detect the drift — but says so, rather than letting the author find
     out at the next gate (SR-0169)."""
     root = _scaffold(tmp_path)
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
+    assert _cli(["-C", str(root), "status", "FR-0001", "proposed"]) == 0
     assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "Ada Lovelace"]) == 0
     capsys.readouterr()
     assert _cli(["-C", str(root), "amend", "FR-0001", "--text", "rewritten"]) == 0
@@ -235,7 +235,7 @@ def test_amend_never_refuses_on_account_of_how_much_it_affects(tmp_path):
     without confirmation."""
     root = _scaffold(tmp_path)
     _stamped_dependent(root)
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
+    assert _cli(["-C", str(root), "status", "FR-0001", "proposed"]) == 0
     assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "Ada Lovelace"]) == 0
     assert _cli(["-C", str(root), "amend", "FR-0001", "--text", "rewritten"]) == 0
 
@@ -271,7 +271,7 @@ def test_creation_refuses_to_write_the_ratification_record_too(tmp_path, attr):
 def test_a_genuine_ratification_still_writes_the_record(tmp_path):
     """The refusal must cost a real ratifier nothing."""
     root = _scaffold(tmp_path)
-    assert _cli(["-C", str(root), "status", "FR-0001", "approved"]) == 0
+    assert _cli(["-C", str(root), "status", "FR-0001", "proposed"]) == 0
     assert _cli(["-C", str(root), "ratify", "FR-0001", "--by", "Ada Lovelace"]) == 0
     it = _item(root, "FR-0001")
     assert it.ratifications[-1]["by"] == "Ada Lovelace"

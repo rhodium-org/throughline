@@ -105,6 +105,17 @@ def set_status(schema, item: Item, to: str) -> None:
     item.status = to
 
 
+def refuse_ratified_status(schema, status: str | None) -> None:
+    """Refuse to write the status bound to the ratified role by any route but
+    `tl ratify` (SR-0306): that status says a person signed, and only ratify
+    records who did. Inert where the project binds no ratified role."""
+    ratified = (schema.status_roles or {}).get("ratified")
+    if status is not None and status == ratified:
+        raise GroundingError(
+            f"'{status}' says a person ratified the item, and only `tl ratify "
+            "<UID> --by <who>` puts an item there, recording who")
+
+
 # The attribute the Tool reads as "this item's wording is in doubt" (SR-0221,
 # SR-0222). Named once, because the gate, ratify, flag and clarify must all mean
 # the same attribute by it.

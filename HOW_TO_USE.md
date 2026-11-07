@@ -98,8 +98,8 @@ tl trace REQ-0001
 ```
 
 ```
-REQ-0001  [requirement/approved] First requirement
-└─(implements) INT-0001  [intent/approved] Deliver acme-app
+REQ-0001  [requirement/draft] First requirement
+└─(implements) INT-0001  [intent/draft] Deliver acme-app
 ```
 
 Open `docs/overview.md`: your prose surrounds generated regions — a vision block,
@@ -241,7 +241,7 @@ A project is a directory containing `throughline.toml` plus per-register folders
 ```yaml
 uid: FR-0022                 # permanent, immutable, never reused
 type: requirement
-status: approved
+status: proposed
 title: Guided setup wizard
 text: The system shall walk new users through a 3-step setup.
 normative: true              # content changes to a normative item mark dependents suspect

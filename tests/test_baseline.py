@@ -53,7 +53,8 @@ def _repo(root: Path, *, transitions: bool = True) -> Path:
         assert _cli(["-C", root, "new", "REQ", "--title", title, "--text", "t.",
                      "--ground", "INT-0001", "--no-interactive"]) == 0
     if transitions:
-        assert _cli(["-C", root, "status", "REQ-0001", "approved"]) == 0
+        assert _cli(["-C", root, "status", "REQ-0001", "proposed"]) == 0
+        assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "t"]) == 0
         assert _cli(["-C", root, "status", "REQ-0001", "implemented"]) == 0
     assert _cli(["-C", root, "delete", "REQ-0002", "--reason", "gone"]) == 0
     _commit(root)
