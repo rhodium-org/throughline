@@ -13,7 +13,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 
-from tests.test_retire_unsigned_agreement import _old_graph
+from test_retire_unsigned_agreement import _old_graph
 from throughline.cli import main as cli_main
 from throughline.migrate_beneath import survey
 
