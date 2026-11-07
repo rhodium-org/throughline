@@ -1,0 +1,23 @@
+uid: SR-0318
+type: system_requirement
+status: proposed
+title: Only tl ratify puts an item in the ratified status
+text: tl new and tl status shall refuse the status bound to the ratified role, naming
+  tl ratify, and write nothing; the refusal shall follow the role, not the word.
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0305
+  type: relates
+- target: SR-0131
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  rationale: 'That status says a person signed, and only tl ratify records who. Written
+    another way it names nobody, and tl check catches it only later and only under
+    --strict (SR-0305). Rejected: leaving it to the gate, which lets an unsigned
+    ratified item be committed and pushed. Who pays: a script that set ratified directly;
+    it now runs tl ratify --by <who>, the only honest route.'
+  origin: ai
