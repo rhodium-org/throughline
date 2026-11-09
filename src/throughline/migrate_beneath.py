@@ -15,8 +15,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import discovery
+from .sources import schema_source
 from .storage import (CONFIG_NAME, FORMAT_VERSION, ProjectError,
-                      _read_format_version, migrate_project,
+                      _read_format_version, borrowed_statuses_to_retire,
+                      load_project, migrate_project,
                       unsigned_agreement_statuses)
 
 
@@ -57,10 +59,28 @@ def _found(root: Path) -> Found:
     repository = discovery.repository_of(root)
     try:
         config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
-        return Found(root, repository, _read_format_version(config, root),
-                     retires=unsigned_agreement_statuses(config))
+        declared = _read_format_version(config, root)
+        return Found(root, repository, declared,
+                     retires=_retires(root, config, declared))
     except (OSError, ValueError, ProjectError) as e:
         return Found(root, repository, None, str(e).splitlines()[0])
+
+
+def _retires(root: Path, config: dict, declared: int) -> tuple[str, ...]:
+    """The statuses the repair would retire here, by the rule it applies: read
+    from the graph's own configuration (SR-0316), or, for a graph whose statuses
+    come from a schema source, from the schema it borrows and the statuses its
+    items hold (SR-0319). Writes nothing."""
+    if schema_source(config) is None:
+        return unsigned_agreement_statuses(config)
+    if declared != FORMAT_VERSION:
+        return ()   # behind already, so due; only the current format loads
+    try:
+        return borrowed_statuses_to_retire(load_project(root))
+    except ProjectError:
+        # A graph that cannot be formed is `tl check`'s to report, as it is for a
+        # graph that declares its own statuses, whose items the survey never reads.
+        return ()
 
 
 def skip_reason(found: Found) -> str | None:
