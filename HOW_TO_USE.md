@@ -415,7 +415,9 @@ signature already stands, removes those statuses from your configuration, and
 signs nothing, then says how many items await a signature and the commands that
 list and sign them. `tl migrate --beneath PATH` lists a graph at format 4 that still
 holds `approved` or `draft` as one to migrate, and `--apply` migrates it (5.0.1).
-Then run `tl check`: every item nobody has signed, `implemented`
+A graph that takes its statuses from a schema source has its items moved the same
+way, whether its source was migrated first or not, and its configuration is left
+to the source (5.1.1). Then run `tl check`: every item nobody has signed, `implemented`
 and `verified` ones included, is reported `unratified` (an error under
 `--strict`). Sign that backlog once, with `tl-ratify` (which shows each item
 before it is signed) or `tl ratify <UID> --by <name>`. An item past `ratified` is

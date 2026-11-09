@@ -1035,17 +1035,7 @@ def _retire_unsigned_agreement(root: Path) -> tuple[tuple[str, ...], dict[str, s
         return (), {}
     gone = set(retiring)
 
-    project = load_project(root)
-    schema = project.schema
-    moved: dict[str, str] = {}
-    for item in project.items():
-        if item.is_deleted or item.status not in gone:
-            continue
-        to = (ratified if schema.ratify_moves_status and requirement_met(item, schema)
-              else proposed)
-        moved[item.uid] = f"{item.status} -> {to}"
-        item.status = to
-        write_item(item, project.register_of(item.uid))
+    moved = _move_out_of(load_project(root), gone, proposed, ratified)
 
     doc = TomlDocument(text)
     because = (f"Retired by `tl migrate` (SR-0313): {', '.join(retiring)} stood "
@@ -1072,6 +1062,61 @@ def _retire_unsigned_agreement(root: Path) -> tuple[tuple[str, ...], dict[str, s
             doc.set_key("transitions", frm, kept)
     cfg_file.write_text(doc.text(), encoding="utf-8")
     return tuple(retiring), moved
+
+
+def _move_out_of(project: Project, gone: set[str], proposed: str,
+                 ratified: str) -> dict[str, str]:
+    """Move each live item in a ``gone`` status to the ratified status where its
+    signatures meet what its kind requires and ratification moves the status, and
+    to the proposed status otherwise (SR-0313). Signs nothing; returns
+    ``uid -> "from -> to"`` for each item moved."""
+    schema = project.schema
+    moved: dict[str, str] = {}
+    for item in project.items():
+        if item.is_deleted or item.status not in gone:
+            continue
+        to = (ratified if schema.ratify_moves_status and requirement_met(item, schema)
+              else proposed)
+        moved[item.uid] = f"{item.status} -> {to}"
+        item.status = to
+        write_item(item, project.register_of(item.uid))
+    return moved
+
+
+def borrowed_statuses_to_retire(project: Project) -> tuple[str, ...]:
+    """The statuses SR-0319 moves the items of a project that takes its statuses
+    from a schema source out of, writing nothing: those the borrowed lifecycle
+    places between proposal and signature (SR-0313's rule, read from the schema as
+    formed), and those the project's items hold that the borrowed schema no longer
+    declares — a project with no lifecycle of its own can only hold one because its
+    source retired it, whichever of the two was migrated first. Empty where there is
+    nothing to move."""
+    retiring = list(unsigned_agreement_statuses(project.formed_config))
+    for item in project.items():
+        if (not item.is_deleted and item.status not in retiring
+                and not project.schema.is_status(item.status)):
+            retiring.append(item.status)
+    # Only what an item holds: the source keeps its own, and a status no item here
+    # holds leaves nothing to move.
+    held = {i.status for i in project.items() if not i.is_deleted}
+    return tuple(s for s in retiring if s in held)
+
+
+def _retire_borrowed_unsigned_agreement(root: Path) -> tuple[tuple[str, ...],
+                                                              dict[str, str]]:
+    """Move the items of a project whose statuses come from a schema source out of
+    the statuses SR-0313 retires there (SR-0319), by SR-0313's rule for items. The
+    configuration is the source's, so neither it nor the project's own is written.
+    Idempotent: once no item holds such a status, both results are empty."""
+    project = load_project(root)
+    retiring = borrowed_statuses_to_retire(project)
+    if not retiring:
+        return (), {}
+    roles = project.schema.status_roles or {}
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if not proposed or not ratified:
+        return (), {}
+    return retiring, _move_out_of(project, set(retiring), proposed, ratified)
 
 
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
@@ -1109,7 +1154,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     lifted = _lift_ratification_records(root)
     if inherited or _schema_source_config_declared(root):
         roles, routes, vocabularies = None, {}, {}
-        retired_statuses, moved = (), {}
+        # The lifecycle is the source's, but the items are this project's: they
+        # leave what the source retires or has retired (SR-0319), after the lift,
+        # whose records decide where a signed item goes.
+        retired_statuses, moved = _retire_borrowed_unsigned_agreement(root)
     else:
         roles = _backfill_status_roles(root)
         routes = _backfill_suspect_routes(root)

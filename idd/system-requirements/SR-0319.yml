@@ -1,0 +1,40 @@
+uid: SR-0319
+type: system_requirement
+status: proposed
+title: tl migrate moves a schema-borrowing graph's items out of the statuses its
+  source retires
+text: For a project whose statuses come from a schema source, tl migrate shall move
+  each item whose status the borrowed lifecycle places between proposal and signature
+  by SR-0313's rule, or whose status the borrowed schema no longer declares, to the
+  ratified status where its signatures meet what its kind requires and ratification
+  moves the status, and to the proposed status otherwise, adding or removing no signature
+  and writing neither the project's configuration nor its source's. tl migrate --beneath
+  shall list, and with --apply migrate, such a project at the current format version,
+  naming those statuses, whether or not its source has been migrated first. It is
+  idempotent and reports each item moved.
+rationale: 'A conformance example that takes its schema from the standard beside
+  it (path = ''../..'', schema = true) declares no lifecycle, so SR-0313 left it
+  to its source and SR-0316 read nothing to retire from its configuration: once the
+  source was migrated, every draft item in the example failed tl check with bad-status
+  (rhodium-org/standards-iddn-uk, found 9 November 2026). The lifecycle is the source''s,
+  but the items are the project''s, so the repair moves them and writes no configuration.
+  A project with no lifecycle of its own can hold a status its borrowed schema no
+  longer declares only because the source retired it, so such a status is moved too:
+  that is what lets the order --beneath takes, source first, and a source pinned
+  later at a migrated revision, come out the same. Rejected: reading the retirement
+  from the source''s history, which a pinned or remote source may not offer; leaving
+  the items for hand repair, which is the script beside the tool that the repair
+  exists to replace. Who pays: a project whose item holds a status mistyped is moved
+  to proposed rather than left failing, which tl migrate reports by item.'
+normative: true
+links:
+- target: UR-0046
+  type: implements
+- target: SR-0313
+  type: relates
+- target: SR-0316
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
