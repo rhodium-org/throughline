@@ -1,6 +1,6 @@
 uid: SR-0319
 type: system_requirement
-status: proposed
+status: ratified
 title: tl migrate moves a schema-borrowing graph's items out of the statuses its
   source retires
 text: For a project whose statuses come from a schema source, tl migrate shall move
@@ -38,3 +38,23 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-09T12:28:34Z'
+  fingerprint: sha256:fd52110d320e3493bd1b359b9eb7699d9116a93554163189986d0e8940d7a0a8
+  content:
+    type: system_requirement
+    text: For a project whose statuses come from a schema source, tl migrate shall
+      move each item whose status the borrowed lifecycle places between proposal
+      and signature by SR-0313's rule, or whose status the borrowed schema no longer
+      declares, to the ratified status where its signatures meet what its kind requires
+      and ratification moves the status, and to the proposed status otherwise, adding
+      or removing no signature and writing neither the project's configuration nor
+      its source's. tl migrate --beneath shall list, and with --apply migrate, such
+      a project at the current format version, naming those statuses, whether or
+      not its source has been migrated first. It is idempotent and reports each item
+      moved.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
