@@ -1,0 +1,46 @@
+uid: SR-0320
+type: system_requirement
+status: ratified
+title: A link declaration may run outside the follower
+text: A link declaration whose outside attribute is true names no register it runs
+  to and no per_target_min, and the Tool refuses one that names either when it reads
+  it. tl check shall count, against its min and max and for the rule undeclared,
+  each link of its type from an item of its from register to an item the follower
+  borrows from a source it composes other than its schema source and the sources
+  composed through that, whatever the target's register; a link of that type to the
+  follower's own item or to an item of its schema source is counted by no such declaration.
+  The dump marks each such link with the declaration.
+rationale: 'A glossary''s term is defined from items of the graph it explains, which
+  the glossary composes, and a standard for glossaries cannot know that graph''s
+  registers: every link declaration had to name them, so tl check refused every such
+  link as undeclared (throughline-glossary-standard, 10 November 2026). Leaving the
+  link undeclared would lose the rule that every term is defined from something;
+  declaring the explained graph''s registers in each glossary would declare registers
+  it does not hold.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0291
+  type: relates
+attrs:
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-10T17:47:50Z'
+  fingerprint: sha256:bdecd6bec182357f1d77978ea89848a06985990985fbb3fa1dcffa576053e3d5
+  content:
+    type: system_requirement
+    text: A link declaration whose outside attribute is true names no register it
+      runs to and no per_target_min, and the Tool refuses one that names either when
+      it reads it. tl check shall count, against its min and max and for the rule
+      undeclared, each link of its type from an item of its from register to an item
+      the follower borrows from a source it composes other than its schema source
+      and the sources composed through that, whatever the target's register; a link
+      of that type to the follower's own item or to an item of its schema source
+      is counted by no such declaration. The dump marks each such link with the declaration.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''
+key: b8e2f4a1-3c5d-4e6f-9a7b-1c2d3e4f5a6b

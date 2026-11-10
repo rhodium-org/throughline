@@ -145,6 +145,7 @@ class AttrSpec:
     normative: bool = False            # feeds the content fingerprint (SR-0033)
     values: tuple[str, ...] = ()       # allowed members when kind == 'enum'
     default: object = None             # declared default applied at creation (SR-0138)
+    list: bool = False                 # a list of values, each written by its own --attr (SR-0321)
 
 
 @dataclass(frozen=True)
@@ -344,11 +345,16 @@ class Schema:
                     raise SchemaError(
                         f"type '{tname}' attribute '{aname}' is an enum "
                         "with no 'values'")
+                many = meta.get("list", False)
+                if not isinstance(many, bool):
+                    raise SchemaError(
+                        f"type '{tname}' attribute '{aname}' list must be true or "
+                        f"false, not {many!r}")
                 specs[aname] = AttrSpec(
                     name=aname, kind=kind,
                     required=bool(meta.get("required", False)),
                     normative=bool(meta.get("normative", False)),
-                    values=values, default=meta.get("default"))
+                    values=values, default=meta.get("default"), list=many)
             types[tname] = specs
 
         link_types = frozenset((config.get("links") or {}).get("types", [])) or None
