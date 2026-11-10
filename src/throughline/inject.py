@@ -376,7 +376,7 @@ def render_item(project, uid: str, resolver: "TargetResolver | None" = None) -> 
         lines += link_lines
         lines.append("")
     if item.attrs:
-        lines.append(" · ".join(f"**{k}**: {v}" for k, v in item.attrs.items()))
+        lines.append(" · ".join(f"**{k}**: {_attr_value(v)}" for k, v in item.attrs.items()))
         lines.append("")
     # Who signed, in a role where one was given (SR-0254). The rest of each
     # signature — its stamp, recorded content and recorded links — is a copy of
@@ -420,6 +420,12 @@ def _is_live(project, uid: str) -> bool:
     it = project.get(uid)
     return (it is not None and not it.is_deleted
             and it.status not in project.schema.dead_statuses())
+
+
+def _attr_value(value) -> str:
+    """An attribute as a reader writes it: a list's values joined, never its Python
+    form (SR-0321)."""
+    return ", ".join(str(v) for v in value) if isinstance(value, list) else str(value)
 
 
 def _cell(value: str) -> str:

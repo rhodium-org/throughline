@@ -1,0 +1,24 @@
+uid: SR-0321
+type: system_requirement
+status: proposed
+title: A list attribute is written one value at a time
+text: For an attribute declared a list, by an attribute declaration with list true
+  or by list = true in the configuration, tl new and tl amend shall write the values
+  of every --attr naming it, in the order given, as one list, and tl apply shall
+  accept a list of strings as its value and write it the same way. A value the configuration
+  gives for list that is not true or false is refused when the configuration is read.
+  tl docs renders its values joined by commas, never as the list's code form.
+rationale: 'The meta-standard lets a standard declare an attribute a list (ATTR-0021),
+  and tl check refuses a list attribute that is not a non-empty list, but no command
+  could write one: tl amend --attr stored one string and tl apply refused any list
+  (throughline-glossary-standard''s aliases, 10 November 2026). A list attribute
+  could then be set only by editing the item''s file.'
+normative: true
+links:
+- target: UR-0044
+  type: implements
+- target: SR-0142
+  type: relates
+attrs:
+  origin: ai
+key: c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f

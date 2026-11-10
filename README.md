@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-282
+284
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 43
@@ -254,8 +254,13 @@ the meta-standard this Tool implements, say everything a follower must hold:
 | `type` | a named type: one base type plus `min`, `max`, `pattern` | `has_type` → one base type |
 | `enum` | a value set: `values` | `has_type` → the base type enum |
 | `attribute` | an attribute: `name`, `required`, `required_when`, `absent_when`, `list` | `belongs_to` → one register, `has_type` → one type or value set |
-| `link` | the links between registers: `min`, `max`, `per_target_min`, `when`, `from_when` | `from` → a register, `to` → registers, `via` → a link type |
+| `link` | the links between registers: `min`, `max`, `per_target_min`, `when`, `from_when`, `outside` | `from` → a register, `to` → registers (none when `outside`), `via` → a link type |
 | `link_type` | a link type: `name`, `grounds` | |
+
+A link declaration with `outside: true` names no register it runs to: its links run
+to items of any register in a graph the follower composes and does not take its schema
+from, and its `min` and `max` count them (SR-0320). A glossary's term is defined from
+items of the graph it explains, whose registers the glossary's standard cannot know.
 
 The base types are string, text, int, float, bool, date, enum and file; a pattern
 uses only the subset that reads the same in Python and JavaScript, and `tl` names

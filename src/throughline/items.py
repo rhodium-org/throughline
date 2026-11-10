@@ -101,6 +101,11 @@ def parse_attrs(schema, item_type: str, pairs: list[str] | None,
         if declared_only and schema.attr(item_type, key) is None:
             raise UidError(
                 f"--attr {key}: '{item_type}' declares no attribute '{key}'")
+        spec = schema.attr(item_type, key)
+        if spec is not None and spec.list:
+            # A list is written one value to an --attr (SR-0321).
+            attrs.setdefault(key, []).append(raw)
+            continue
         attrs[key] = coerce_attr(schema, item_type, key, raw)
     return attrs
 

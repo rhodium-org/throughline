@@ -79,6 +79,7 @@ attrs.per_target_min = {{ type = "int" }}
 attrs.when = {{ type = "string" }}
 attrs.from_when = {{ type = "string" }}
 attrs.scope = {{ type = "string" }}
+attrs.outside = {{ type = "bool" }}
 [types.intent]
 '''
 BASES = ["string", "text", "int", "float", "bool", "date", "enum", "file"]
@@ -551,3 +552,138 @@ def test_a_follower_may_still_say_a_declared_type_is_not_normative(tmp_path):
     standard(tmp_path)
     toml = FOLLOWER_TOML + '\n[types.slide]\nnormative = false\n'
     assert not load_project(follower(tmp_path, toml=toml)).schema.is_normative("slide")
+
+
+# ------------------------------------------------- links that run outside (SR-0320)
+
+PM_TOML = '''[project]
+name = "pm"
+format_version = 4
+[grounding]
+root_types = ["requirement"]
+delivery_roots = []
+''' + STATUS
+
+OUTSIDE_TOML = FOLLOWER_TOML + '''
+[[sources]]
+namespace = "pm"
+path = "../pm"
+'''
+
+
+def outside_standard(tmp: Path, **link_attrs) -> Path:
+    """A standard whose slides are each defined from at least one item outside the
+    follower: of a graph it composes and does not take its schema from."""
+    write(tmp / "pm", PM_TOML, {"requirements": ("REQ", "requirement", [
+        item("REQ-0001", "requirement"), item("REQ-0002", "requirement")])})
+    links = [
+        item("LINK-0001", "link", [("from", "REG-0002"), ("to", "REG-0001"), ("via", "meta:LT-0001")]),
+        item("LINK-0002", "link", [("from", "REG-0003"), ("to", "REG-0002"), ("via", "meta:LT-0001")]),
+        item("LINK-0003", "link", [("from", "REG-0003"), ("via", "LT-0001")],
+             **({"outside": True, "min": 1} | link_attrs)),
+    ]
+    lts = [item("LT-0001", "link_type", name="defined_from", grounds=False)]
+    return standard(tmp, links=links, lts=lts)
+
+
+def slide(*targets):
+    return [item("SLD-0001", "slide", [("derives_from", "ED-0001")]
+                 + [("defined_from", t) for t in targets], order=1, layout="cards")]
+
+
+def test_a_link_declared_outside_runs_to_any_item_of_a_composed_graph(tmp_path):
+    outside_standard(tmp_path)
+    root = follower(tmp_path, slds=slide("pm:REQ-0001", "pm:REQ-0002"), toml=OUTSIDE_TOML)
+    assert findings(root) == []
+
+
+def test_a_link_declared_outside_counts_only_links_that_leave_the_graph(tmp_path):
+    outside_standard(tmp_path)
+    root = follower(tmp_path, slds=slide("ED-0001", "presentation:REG-0001"), toml=OUTSIDE_TOML)
+    found = {(f.rule, f.message.split(" (")[0]) for f in findings(root) if f.uid == "SLD-0001"}
+    assert ("link-declared", "has 0 defined_from link(s) to items outside the graph, and "
+            "presentation:LINK-0003 requires at least 1") in found
+    assert ("undeclared", "link defined_from -> ED-0001") in found
+    assert ("undeclared", "link defined_from -> presentation:REG-0001") in found
+
+
+def test_a_link_declared_outside_keeps_its_max(tmp_path):
+    outside_standard(tmp_path, max=1)
+    root = follower(tmp_path, slds=slide("pm:REQ-0001", "pm:REQ-0002"), toml=OUTSIDE_TOML)
+    assert [f.rule for f in findings(root)] == ["link-declared"]
+
+
+@pytest.mark.parametrize("extra,why", [
+    ({"to_reg": True}, "names no register it runs to"),
+    ({"per_target_min": 1}, "cannot count the links into each target"),
+])
+def test_a_link_declared_outside_naming_registers_or_targets_is_refused(tmp_path, extra, why):
+    if extra.pop("to_reg", False):
+        outside_standard(tmp_path)
+        f = tmp_path / "std" / "links" / "LINK-0003.yml"
+        d = yaml.safe_load(f.read_text())
+        d["links"].append({"target": "REG-0001", "type": "to"})
+        f.write_text(yaml.safe_dump(d, sort_keys=False))
+    else:
+        outside_standard(tmp_path, **extra)
+    with pytest.raises(ProjectError, match=why):
+        load_project(follower(tmp_path, slds=slide("pm:REQ-0001"), toml=OUTSIDE_TOML))
+
+
+def test_the_dump_marks_a_link_that_runs_outside(tmp_path):
+    outside_standard(tmp_path)
+    data = json.loads(_dump(follower(tmp_path, slds=slide("pm:REQ-0001"), toml=OUTSIDE_TOML)))
+    links = {l["target"]: l["declaration"] for l in data["declared"]["SLD-0001"]["links"]}
+    assert links["pm:REQ-0001"] == "presentation:LINK-0003"
+
+
+# ----------------------------------------------- a list attribute is written (SR-0321)
+
+def list_standard(tmp: Path) -> Path:
+    attrs = [
+        item("ATTR-0001", "attribute", [("belongs_to", "REG-0001"), ("has_type", "ENUM-0001")],
+             name="kind", required=True),
+        item("ATTR-0002", "attribute", [("belongs_to", "REG-0003"), ("has_type", "TYPE-0003")],
+             name="order", required=True),
+        item("ATTR-0003", "attribute", [("belongs_to", "REG-0003"), ("has_type", "ENUM-0002")],
+             name="layout", required=True),
+        item("ATTR-0004", "attribute", [("belongs_to", "REG-0003"), ("has_type", "TYPE-0001")],
+             name="aliases", list=True),
+    ]
+    return standard(tmp, attrs=attrs)
+
+
+def test_a_list_attribute_is_written_one_value_to_an_attr(tmp_path):
+    list_standard(tmp_path)
+    root = follower(tmp_path)
+    main(["-C", str(root), "amend", "SLD-0001", "--attr", "aliases=opening",
+          "--attr", "aliases=cover"])
+    sld = yaml.safe_load((root / "slides" / "SLD-0001.yml").read_text())
+    assert sld["attrs"]["aliases"] == ["opening", "cover"]
+    assert [f for f in findings(root) if f.uid.startswith("SLD")] == []
+
+
+def test_a_change_set_writes_a_list_attribute(tmp_path):
+    list_standard(tmp_path)
+    root = follower(tmp_path)
+    ops = {"change_set_format": 2, "operations": [
+        {"op": "new", "register": "SLD", "title": "s", "text": "s",
+         "attrs": {"order": 2, "layout": "cards", "aliases": ["first", "second"]},
+         "links": [{"target": "ED-0001", "type": "derives_from"}]}]}
+    f = tmp_path / "set.json"
+    f.write_text(json.dumps(ops))
+    assert main(["-C", str(root), "apply", str(f)]) in (0, None)
+    sld = yaml.safe_load((root / "slides" / "SLD-0002.yml").read_text())
+    assert sld["attrs"]["aliases"] == ["first", "second"]
+    assert [f for f in findings(root) if f.uid.startswith("SLD")] == []
+
+
+def test_a_list_attribute_renders_as_its_values(tmp_path):
+    list_standard(tmp_path)
+    root = follower(tmp_path)
+    main(["-C", str(root), "amend", "SLD-0001", "--attr", "aliases=opening",
+          "--attr", "aliases=cover"])
+    doc = root / "doc.md"
+    doc.write_text("<!-- tl:item SLD-0001 -->\n<!-- tl:end -->\n")
+    main(["-C", str(root), "docs", str(doc)])
+    assert "**aliases**: opening, cover" in doc.read_text()

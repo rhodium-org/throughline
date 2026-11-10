@@ -234,6 +234,7 @@ class LinkDecl:
     when: Condition | None = None
     from_when: Condition | None = None
     scope: str = FOLLOWERS
+    outside: bool = False                     # runs to any item of a graph composed without its schema
 
 
 @dataclass(frozen=True)
@@ -414,7 +415,19 @@ def build(items, *, dead: frozenset[str], source: "Declarations | None",
         elif it.type == "link":
             frm = reg_of(it, "from", "register it runs from")
             tos = [resolve(t) for t in _targets(it, "to")]
-            if not tos or not all(isinstance(t, RegDecl) for t in tos):
+            outside = _flag(it, "outside", False)
+            if outside:
+                # SR-0320: its targets lie in a graph the follower composes, whose
+                # registers no standard can name.
+                if tos:
+                    raise DeclarationError(
+                        f"{it.uid}: a link declaration that runs outside names no register "
+                        "it runs to")
+                if _int(it, "per_target_min") is not None:
+                    raise DeclarationError(
+                        f"{it.uid}: a link declaration that runs outside cannot count the "
+                        "links into each target (per_target_min)")
+            elif not tos or not all(isinstance(t, RegDecl) for t in tos):
                 raise DeclarationError(f"{it.uid}: 'to' must name at least one register declaration")
             lt = resolve(_one(it, "via", "link type"))
             if not isinstance(lt, LTDecl):
@@ -425,7 +438,7 @@ def build(items, *, dead: frozenset[str], source: "Declarations | None",
                 it.uid, frm.prefix, tuple(t.prefix for t in tos), lt.name,
                 _int(it, "min"), _int(it, "max"), _int(it, "per_target_min"),
                 conds.get("when"), conds.get("from_when"),
-                _scope(it) if "scope" in it.attrs else frm.scope)
+                _scope(it) if "scope" in it.attrs else frm.scope, outside)
 
     # Aliases (SR-0299): a declaration that names one its standard makes.
     for it in live:
@@ -758,7 +771,9 @@ def _extend_schema_config(project, decls: Declarations) -> None:
         attrs = {"origin": dict(_ORIGIN_SPEC)}
         for a in decls.attrs_of(reg.prefix):
             spec: dict = {}
-            if not a.list:
+            if a.list:
+                spec["list"] = True
+            else:
                 spec["type"] = {"file": "string"}.get(a.type.base, a.type.base)
                 if a.type.base == "enum":
                     spec["values"] = list(a.type.values or ())
@@ -893,6 +908,13 @@ def check(project, items=None) -> list[Found]:
         p = _prefix(target)
         return owners[p][1] if p in owners else p
 
+    schema_ns = getattr(getattr(project, "inheritance", None), "namespace", None)
+
+    def runs(l: LinkDecl, target: str) -> bool:
+        if l.outside:
+            return _outside(target, owners, schema_ns)
+        return target_prefix(target) in l.to
+
     def file_of(it) -> str:
         return str(it._path) if getattr(it, "_path", None) else ""
 
@@ -969,7 +991,8 @@ def check(project, items=None) -> list[Found]:
             continue
         for link in it.links:
             tp = target_prefix(link.target)
-            if not any(l.frm == p and l.via == link.type and tp in l.to for l in decls.links):
+            if not any(l.frm == p and l.via == link.type and runs(l, link.target)
+                       for l in decls.links):
                 near = _near(link.type, decls.link_types) if link.type not in decls.link_types else None
                 out.append(Found("undeclared", it.uid, file_of(it),
                                  f"link {link.type} -> {link.target} ({p} to {tp}) is declared by "
@@ -984,16 +1007,16 @@ def check(project, items=None) -> list[Found]:
         for it in sources:
             n = 0
             for link in it.links:
-                if link.type == l.via and target_prefix(link.target) in l.to:
+                if link.type == l.via and runs(l, link.target):
                     n += 1
                     incoming[link.target] = incoming.get(link.target, 0) + 1
             if l.min is not None and n < l.min:
                 out.append(Found("link-declared", it.uid, file_of(it),
-                                 f"has {n} {l.via} link(s) to {'/'.join(l.to)}, and {l.uid} "
+                                 f"has {n} {l.via} link(s) to {_ends(l)}, and {l.uid} "
                                  f"requires at least {l.min}"))
             if l.max is not None and n > l.max:
                 out.append(Found("link-declared", it.uid, file_of(it),
-                                 f"has {n} {l.via} link(s) to {'/'.join(l.to)}, and {l.uid} "
+                                 f"has {n} {l.via} link(s) to {_ends(l)}, and {l.uid} "
                                  f"allows at most {l.max}"))
         if l.per_target_min:
             for tp in l.to:
@@ -1010,6 +1033,33 @@ def check(project, items=None) -> list[Found]:
 def _prefix(uid: str) -> str:
     uid = uid.rsplit(":", 1)[-1]
     return uid.rsplit("-", 1)[0]
+
+
+def _namespace(target: str, owners: dict) -> str | None:
+    """The namespace ``target`` is borrowed from, or None for the graph's own item.
+    In a union a borrowed target's prefix is mangled; otherwise it is written
+    ``<namespace>:<UID>``."""
+    p = _prefix(target)
+    if p in owners:
+        return owners[p][0]
+    return target.rsplit(":", 1)[0] if ":" in target else None
+
+
+def _outside(target: str, owners: dict, schema_ns: str | None) -> bool:
+    """Whether ``target`` lies in a graph the follower composes without taking its
+    schema from it (SR-0320): borrowed, and from neither the schema source nor a
+    source composed through it."""
+    ns = _namespace(target, owners)
+    if ns is None:
+        return False
+    if schema_ns is None:
+        return True
+    return ns != schema_ns and not ns.startswith(schema_ns + ":") \
+        and not ns.startswith(schema_ns + ".")
+
+
+def _ends(l: LinkDecl) -> str:
+    return "items outside the graph" if l.outside else "/".join(l.to)
 
 
 def _rel(path, root) -> str | None:
@@ -1030,6 +1080,8 @@ def marks(project) -> dict:
     decls = getattr(project, "declarations", None)
     if not decls:
         return {}
+    owners = getattr(project, "prefix_owners", None) or {}
+    schema_ns = getattr(getattr(project, "inheritance", None), "namespace", None)
     out: dict = {}
     for it in project.items():
         p = _prefix(it.uid)
@@ -1047,7 +1099,8 @@ def marks(project) -> dict:
         for link in it.links:
             for l in decls.links:
                 if l.scope == FOLLOWERS and l.frm == p and l.via == link.type \
-                        and _prefix(link.target) in l.to:
+                        and (_outside(link.target, owners, schema_ns) if l.outside
+                             else _prefix(link.target) in l.to):
                     links.append({"target": link.target, "type": link.type, "declaration": l.uid})
                     break
         if links:

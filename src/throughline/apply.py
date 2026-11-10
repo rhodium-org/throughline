@@ -155,7 +155,8 @@ graph already holds (a link already there, an amend whose fields already read
 so, a delete of a deleted item) is skipped and reported as already applied.
 
 Rules: no other keys; a "uid", "target" or "label" is written exactly; every
-value is a string except "attrs" (strings, numbers or booleans), "stamp"
+value is a string except "attrs" (strings, numbers, booleans, or a list of strings
+for an attribute declared a list), "stamp"
 (boolean), and "unset" and "links" (lists). The list may also be sent as
 {{"change_set_format": {CHANGE_SET_FORMAT_VERSION}, "operations": [...]}}, which is the safer form. Never send rewritten
 item files: send this change set, and nothing else.
@@ -203,6 +204,21 @@ def _is_label(value: object) -> bool:
 def _scalar(value: object) -> bool:
     return isinstance(value, (str, int, float, bool)) and not isinstance(value, bool) \
         or isinstance(value, bool)
+
+
+def _strings(value: object) -> bool:
+    """A list attribute's value in a change set: one string a value (SR-0321)."""
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+
+def _pairs(op: dict) -> list[str]:
+    """An operation's attrs as the ``KEY=VALUE`` pairs ``parse_attrs`` reads: a
+    list gives one pair a value."""
+    out = []
+    for k, v in (op.get("attrs") or {}).items():
+        for x in v if isinstance(v, list) else [v]:
+            out.append(f"{k}={x}")
+    return out
 
 
 def _inferred_format(data: list) -> int:
@@ -280,9 +296,10 @@ def parse_change_set(text: str) -> list[dict]:
         if "attrs" in op:
             attrs = op["attrs"]
             if not isinstance(attrs, dict) or not all(
-                    isinstance(k, str) and _scalar(v) for k, v in attrs.items()):
+                    isinstance(k, str) and (_scalar(v) or _strings(v))
+                    for k, v in attrs.items()):
                 problems.append(f"{name}: \"attrs\" must be an object of strings, "
-                                "numbers or booleans")
+                                "numbers, booleans or lists of strings")
         if "unset" in op and not (isinstance(op["unset"], list) and all(
                 isinstance(v, str) and v for v in op["unset"])):
             problems.append(f"{name}: \"unset\" must be a list of attribute names")
@@ -453,7 +470,7 @@ def apply_change_set(project, operations: list[dict], *,
                 if field_name in op and getattr(item, field_name) != op[field_name]:
                     return False
             try:
-                pairs = [f"{k}={v}" for k, v in (op.get("attrs") or {}).items()]
+                pairs = _pairs(op)
                 wanted = parse_attrs(schema, item.type, pairs, command="apply",
                                      declared_only=True)
             except (SchemaError, ValueError):
@@ -573,7 +590,7 @@ def apply_change_set(project, operations: list[dict], *,
             if kind == "new":
                 prefix = op["register"]
                 item_type = item_type_for(project, prefix, op.get("type"))
-                pairs = [f"{k}={v}" for k, v in (op.get("attrs") or {}).items()]
+                pairs = _pairs(op)
                 attrs = parse_attrs(schema, item_type, pairs, command="apply")
                 item = new_item(project, prefix, item_type=item_type,
                                 title=op.get("title", ""), text=op.get("text", ""),
@@ -592,7 +609,7 @@ def apply_change_set(project, operations: list[dict], *,
             uid = resolve(op["uid"])
             if kind == "amend":
                 item = project.get(uid)
-                pairs = [f"{k}={v}" for k, v in (op.get("attrs") or {}).items()]
+                pairs = _pairs(op)
                 attrs = parse_attrs(schema, item.type, pairs, command="apply",
                                     declared_only=True)
                 attrs["origin"] = ai
