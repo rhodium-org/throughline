@@ -24,17 +24,18 @@ attrs:
   origin: ai
 ratifications:
 - by: Henry Grech-Cini
-  at: '2026-11-01T16:46:38Z'
-  fingerprint: sha256:9a356a3d4e2d80f0b8999f51fc72ed26655b61a31d83627e5c5d8c0e95ff546a
+  at: '2026-11-10T17:47:52Z'
+  fingerprint: sha256:0f9af9bffbb38b42d1c8e157152b9aaa039d36f04912f3277fc9fbe83b7011ae
   content:
     type: system_requirement
     text: A link declaration names the register links run from by a from link, each
-      register they run to by a to link, and its link type by a via link, and carries
-      only min, max, per_target_min, when and from_when. tl check shall report, under
-      the rule link-declared, every item whose links of that type to items of those
-      registers number fewer than min or more than max, where when holds for the
-      graph and from_when for the item, and every item of a target register with
-      fewer than per_target_min such links pointing to it.
+      register they run to by a to link (none when it runs outside, SR-0320), and
+      its link type by a via link, and carries only min, max, per_target_min, when,
+      from_when and outside. tl check shall report, under the rule link-declared,
+      every item whose links of that type to items of those registers number fewer
+      than min or more than max, where when holds for the graph and from_when for
+      the item, and every item of a target register with fewer than per_target_min
+      such links pointing to it.
     normative: true
     derived: false
     attrs:

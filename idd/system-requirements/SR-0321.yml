@@ -1,6 +1,6 @@
 uid: SR-0321
 type: system_requirement
-status: proposed
+status: ratified
 title: A list attribute is written one value at a time
 text: For an attribute declared a list, by an attribute declaration with list true
   or by list = true in the configuration, tl new and tl amend shall write the values
@@ -21,4 +21,21 @@ links:
   type: relates
 attrs:
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-10T17:47:51Z'
+  fingerprint: sha256:154ec6d1979b5cc85a1279e45bc02c58229ab1bef49794336e4e49d643e71ab2
+  content:
+    type: system_requirement
+    text: For an attribute declared a list, by an attribute declaration with list
+      true or by list = true in the configuration, tl new and tl amend shall write
+      the values of every --attr naming it, in the order given, as one list, and
+      tl apply shall accept a list of strings as its value and write it the same
+      way. A value the configuration gives for list that is not true or false is
+      refused when the configuration is read. tl docs renders its values joined by
+      commas, never as the list's code form.
+    normative: true
+    derived: false
+    attrs:
+      priority: ''
 key: c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f
