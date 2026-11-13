@@ -1,6 +1,6 @@
 uid: UR-0047
 type: user_requirement
-status: proposed
+status: ratified
 title: A standard's guidance for AI agents arrives with every graph that follows
   it
 text: As someone starting a graph that follows a standard, I want the guidance the
@@ -29,3 +29,20 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-13T09:03:18Z'
+  fingerprint: sha256:8788b465d2ea7bca8fc95b7bf17f860d661829029ad4c42cad43f9106246cc1d
+  content:
+    type: user_requirement
+    text: As someone starting a graph that follows a standard, I want the guidance
+      the standard's keeper writes for AI agents (how its items are written, what
+      its consumers check beyond the declarations) to arrive in my graph when I start
+      it from the standard, and to be read by the agent without my pointing at it,
+      so that an agent writes items those consumers accept the first time, without
+      a template repository to copy and keep current.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
