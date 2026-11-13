@@ -44,13 +44,12 @@ MIN_PYTHON = (3, 11)
 # The packages that install one another. A checkout sitting beside this repo is the
 # signal that the contributor is working on it, so each of these is expected to be
 # the working tree rather than a published release standing in for it (UR-0021).
-TOOLCHAIN = ("throughline", "throughline-compose", "throughline-ratify")
+TOOLCHAIN = ("throughline", "throughline-ratify")
 
 # The console script each package puts on PATH. Under pipx these live in a venv per
 # application, so the build behind a CLI need not be the one this script can see.
 CLI_FOR = {
     "throughline": "tl",
-    "throughline-compose": "tl-compose",
     "throughline-ratify": "tl-ratify",
 }
 
@@ -310,10 +309,7 @@ def _cli_source_remediation(missing: list[str]) -> str:
         "and the core is injected LAST, because injecting a dependent afterwards "
         "silently pulls the published core back over it:"
         "\n      pipx install --editable ./throughline"
-        "\n      pipx install --editable ./throughline-compose"
-        "\n      pipx inject --force --editable throughline-compose ./throughline"
         "\n      pipx install --editable ./throughline-ratify"
-        "\n      pipx inject --force --editable throughline-ratify ./throughline-compose"
         "\n      pipx inject --force --editable throughline-ratify ./throughline"
         "\nTo keep a published build alongside it, install that one under any "
         "'pipx --suffix' you like; the extra names are discovered, not assumed."
@@ -328,7 +324,7 @@ def check_cli_toolchain_chained() -> Result:
 
     Every other check here inspects the environment the doctor happens to run in.
     pipx — the documented way to install these CLIs, and how they are used day to
-    day — gives each application its own venv, so ``tl``, ``tl-compose`` and
+    day — gives each application its own venv, so ``tl`` and
     ``tl-ratify`` can each resolve a different build, and none of them need be the
     one the doctor can see. That is not a corner case; it is the configuration that
     produced the failure UR-0021 was written from, where a cockpit and a validator
