@@ -1,6 +1,6 @@
 uid: SR-0323
 type: system_requirement
-status: proposed
+status: ratified
 title: tl init --from-schema copies the standard's signed guidance and refers to
   it from AGENTS.md and CLAUDE.md
 text: 'When tl init --from-schema names a standard that holds guidance items (meta-standard
@@ -46,3 +46,28 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-13T09:03:18Z'
+  fingerprint: sha256:1bf93052eabf95a9ed143db5baf76d7382708f055246d2b31f182040b93bd329
+  content:
+    type: system_requirement
+    text: 'When tl init --from-schema names a standard that holds guidance items
+      (meta-standard REG-0010), init shall copy each guidance item''s file, as it
+      is at the source''s --ref, to that item''s copy_to path in the new project,
+      where the item is ratified and its signature still holds over the file (SR-0322).
+      A guidance item that is unsigned, or whose file changed after it was signed,
+      is not copied, and init warns, naming it. Init shall then make AGENTS.md refer
+      to each file it copied, by its path from that AGENTS.md, and CLAUDE.md beside
+      it import AGENTS.md. These two are the ones at the root of the git working
+      tree that holds the new project, or at the project''s root where it is in none.
+      Init creates either file where there is none, and adds to the end of one that
+      exists only the lines it lacks. Init shall not replace or remove anything in
+      a file that exists: where a copy_to path already holds other content, init
+      keeps that file, warns naming it, and carries on. Init shall name every file
+      it created or added to.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
