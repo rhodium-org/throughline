@@ -19,8 +19,8 @@ from .graph import Index
 from .schema import kind_accepts
 from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
-    CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, relevant, retired,
-    signatures, signs_deletion, stale_entries, standing,
+    CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, files_moved, relevant,
+    retired, signatures, signs_deletion, stale_entries, standing,
 )
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -509,6 +509,14 @@ def validate(project, strict: bool = False,
                 add("ratified-stale", item.uid, f,
                     f"normative content changed since {who} ratified it — re-ratify "
                     "to accept the new wording, or revert it")
+            # Named files (SR-0322): a file the item names no longer holds what
+            # the signature was taken over. Silent for a signature that records
+            # no files, which was taken before files were covered.
+            if not item.is_deleted:
+                for rel in files_moved(item, schema, entry):
+                    add("ratified-stale", item.uid, f,
+                        f"the file {rel} changed since {who} ratified it — "
+                        "re-ratify to accept the file as it stands, or put it back")
             if stamp and recorded_links(entry) is None:
                 add("ratified-content-mismatch", item.uid, f,
                     f"the links recorded on the signature by {who} are not a list "

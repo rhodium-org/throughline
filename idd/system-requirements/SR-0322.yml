@@ -1,6 +1,6 @@
 uid: SR-0322
 type: system_requirement
-status: ratified
+status: implemented
 title: A signature covers the content of the files an item names
 text: When an item holds an attribute whose type is built on the base type file,
   its ratification shall record a sha256 of each named file's content beside the

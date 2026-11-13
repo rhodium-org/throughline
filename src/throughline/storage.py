@@ -2067,7 +2067,14 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
                        title=starter.label or starter.dir, path=root / starter.dir)
         reg.path.mkdir(parents=True, exist_ok=True)
         write_manifest(reg)
-    return load_project(root)
+    # The standard's signed guidance, and the agent files that refer to it
+    # (SR-0323): those a session loads by itself, at the root of the working tree.
+    from .guidance import copy_guidance
+    from .ratification import repo_top
+    report = copy_guidance(standard, root, agents_root=repo_top(root))
+    project = load_project(root)
+    project.guidance_report = report
+    return project
 
 
 def _toml_string(value: str) -> str:

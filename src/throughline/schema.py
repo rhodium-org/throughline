@@ -146,6 +146,7 @@ class AttrSpec:
     values: tuple[str, ...] = ()       # allowed members when kind == 'enum'
     default: object = None             # declared default applied at creation (SR-0138)
     list: bool = False                 # a list of values, each written by its own --attr (SR-0321)
+    file: bool = False                 # names a file of the graph, which a signature covers (SR-0322)
 
 
 @dataclass(frozen=True)
@@ -354,7 +355,8 @@ class Schema:
                     name=aname, kind=kind,
                     required=bool(meta.get("required", False)),
                     normative=bool(meta.get("normative", False)),
-                    values=values, default=meta.get("default"), list=many)
+                    values=values, default=meta.get("default"), list=many,
+                    file=meta.get("file") is True)
             types[tname] = specs
 
         link_types = frozenset((config.get("links") or {}).get("types", [])) or None

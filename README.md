@@ -242,6 +242,17 @@ to be borrowed under is refused, never shortened. A path to a graph beside you w
 in place of a url. A standard suggests its namespace with `[project]
 suggested_namespace`, and init creates every register the standard declares.
 
+A standard may also hold guidance for the AI agents that write the graphs following
+it: guidance items, each naming a file of the standard and where a follower's copy
+goes. Init copies each one a person has signed, and whose file still holds what was
+signed, then makes `AGENTS.md` refer to the copies and `CLAUDE.md` import
+`AGENTS.md`, so an agent reads the guidance without being pointed at it. Those two
+are the ones at the root of the git working tree holding the new graph (the graph's
+own folder outside one). Init creates a file that is missing, adds to the end of one
+that exists only the lines it lacks, never replaces anything, and names every file
+it wrote. A signature covers the content of any file an item names: `tl check`
+reports it stale, naming the file, once that file changes.
+
 ### A standard declared as items
 
 A standard can declare the shape of the graphs that follow it as items you ratify,
