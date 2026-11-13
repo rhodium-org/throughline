@@ -19,9 +19,10 @@ from dataclasses import dataclass, field
 
 from .fingerprint import fingerprint
 from .signatures import (
-    AT, BY, CONTENT, ID, LINKS, ROLE, STAMP, SUPERSEDES,
+    AT, BY, CONTENT, FILES, ID, LINKS, ROLE, STAMP, SUPERSEDES,
     W_AT, W_BY, W_ID, W_OF, W_OF_ID, W_REASON,
-    describe, entry_of, is_draft, is_stale, latest, names, now_iso, relevant,
+    describe, entry_of, files_record, files_uncovered, is_draft, is_stale, latest, names, now_iso,
+    relevant,
     requirement_met, retired, signatures, signed_record, stale_entries, stamp_of,
     standing,
 )
@@ -342,11 +343,14 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
         if by or by_id:
             own = entry_of(item, by=by, by_id=by_id)
             if own is not None:
-                if not is_stale(item, schema, own):
+                # A signature that holds no digest of a file the item names has
+                # the file still to accept (SR-0322), so it may be given again.
+                if not is_stale(item, schema, own) and not files_uncovered(item, schema, own):
                     return (f"{item.uid} is already signed by {describe(own)} and its "
                             f"content{unchanged}; pass --replacing to correct the "
                             "recorded ratifier instead")
-            elif not schema.roles and standing(item, schema).met:
+            elif (not schema.roles and standing(item, schema).met
+                  and not any(files_uncovered(item, schema, e) for e in relevant(item))):
                 return (f"{item.uid} is already ratified by {names(item)} and its "
                         f"content{unchanged}; pass --replacing to correct the "
                         "recorded ratifier instead")
@@ -494,6 +498,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     links = [] if item.is_deleted else links_record(item, schema)
     if links:
         entry[LINKS] = links
+    # The content of each file the item names, beside it (SR-0322): a signature
+    # that covered only the path would let the file change unseen.
+    files = {} if item.is_deleted else files_record(item, schema)
+    if files:
+        entry[FILES] = files
     # Kept so a correction never reads as the original record (SR-0148's condition
     # that an accountability record never changes without the graph showing it).
     if superseded is not None and superseded != by:

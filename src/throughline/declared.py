@@ -777,6 +777,10 @@ def _extend_schema_config(project, decls: Declarations) -> None:
                 spec["type"] = {"file": "string"}.get(a.type.base, a.type.base)
                 if a.type.base == "enum":
                     spec["values"] = list(a.type.values or ())
+            if a.type.base == "file":
+                # The formed schema reads it as a string; the mark is what lets a
+                # signature cover the file it names (SR-0322).
+                spec["file"] = True
             if a.required:
                 spec["required"] = True
             if a.normative:

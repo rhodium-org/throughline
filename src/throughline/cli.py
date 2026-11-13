@@ -254,7 +254,7 @@ class _ScanProgress:
 def cmd_init(args) -> int:
     progress = _ScanProgress()
     try:
-        init_project(args.path, name=args.name, force=args.force,
+        made = init_project(args.path, name=args.name, force=args.force,
                      defaults=not args.no_defaults, demo=not args.no_demo,
                      bare=args.bare, on_progress=progress,
                      from_schema=args.from_schema, ref=args.ref,
@@ -279,6 +279,13 @@ def cmd_init(args) -> int:
         else:
             print("the standard declares no registers, so this graph has "
                   "none — add them with `tl register new <PREFIX> <dir> --type <type>`")
+        # The standard's guidance (SR-0323): every file created or added to is
+        # named, since two of them may lie outside the folder init was given.
+        for note in getattr(made, "guidance_report", None) or []:
+            if note.kind == "warning":
+                print(f"tl: {note.text}", file=sys.stderr)
+            else:
+                print(f"{note.kind} {note.text}")
         return OK
     # Report exactly what was seeded, mirroring the same precedence init_project
     # applies: --bare / --no-defaults win over the demo (SR-0100).

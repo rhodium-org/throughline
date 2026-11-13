@@ -25,8 +25,10 @@ is invented in the lift: a record that never held a role or a time has none.
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 
 from .fingerprint import DELETED_KEY, deletion_content, deletion_fingerprint, fingerprint, signed_content
 from .signed_links import links_moved
@@ -43,10 +45,11 @@ AT = "at"
 STAMP = "fingerprint"
 CONTENT = "content"
 LINKS = "links"
+FILES = "files"
 SUPERSEDES = "supersedes"
 BACKFILLED = "backfilled"
 REVISION = "revision"
-ENTRY_KEYS = (BY, ID, ROLE, AT, STAMP, CONTENT, LINKS, SUPERSEDES, BACKFILLED,
+ENTRY_KEYS = (BY, ID, ROLE, AT, STAMP, CONTENT, LINKS, FILES, SUPERSEDES, BACKFILLED,
               REVISION)
 
 # The keys of one withdrawal record: who withdrew it, their identifier, why,
@@ -184,9 +187,106 @@ def describe(entry: dict) -> str:
     return name + (f" ({', '.join(bits)})" if bits else "")
 
 
+# The file that marks a graph's root. Named here, not imported, because storage
+# imports this module.
+_CONFIG_NAME = "throughline.toml"
+
+
+def graph_root(item) -> Path | None:
+    """The root of the graph ``item`` was read from, or None for an item that was
+    not read from a file (one built in memory, or read at a git ref)."""
+    path = getattr(item, "_path", None)
+    if path is None:
+        return None
+    for folder in Path(path).resolve().parents:
+        if (folder / _CONFIG_NAME).is_file():
+            return folder
+    return None
+
+
+def named_files(item, schema) -> list[str]:
+    """The files ``item`` names (SR-0322): the values of its attributes whose type
+    is built on the base type file, in the order the type declares them."""
+    specs = (schema.types.get(item.type) or {}) if schema is not None else {}
+    out: list[str] = []
+    for name, spec in specs.items():
+        if not getattr(spec, "file", False):
+            continue
+        value = item.attrs.get(name)
+        for v in (value if isinstance(value, list) else [value]):
+            if isinstance(v, str) and v and v not in out:
+                out.append(v)
+    return out
+
+
+def file_digest(root: Path | None, rel: str) -> str | None:
+    """``sha256:`` and the digest of the content of the file ``rel`` names under
+    ``root``, or None where it names no file there or reaches outside the root.
+
+    Taken with every CRLF read as LF, so a text file checked out with the line
+    endings of another system, as git does on Windows, is the file that was
+    signed. The same rule is applied to every file, so a digest is the same on
+    every system whatever the file holds."""
+    if root is None or "\\" in rel or rel.startswith("/") or ".." in Path(rel).parts:
+        return None
+    path = root / rel
+    try:
+        if not path.is_file():
+            return None
+        content = path.read_bytes().replace(b"\r\n", b"\n")
+        return "sha256:" + hashlib.sha256(content).hexdigest()
+    except OSError:
+        return None
+
+
+def files_record(item, schema) -> dict:
+    """What ratify records for the files ``item`` names (SR-0322): each path and
+    the digest of its content as it stands. A named file that is not there is a
+    finding of the check, and is left out."""
+    root = graph_root(item)
+    out: dict[str, str] = {}
+    for rel in named_files(item, schema):
+        digest = file_digest(root, rel)
+        if digest is not None:
+            out[rel] = digest
+    return out
+
+
+def files_moved(item, schema, entry: dict) -> list[str]:
+    """The named files ``entry`` no longer covers (SR-0322): one whose content
+    differs from what was signed, one that has gone, and one the item names now
+    that the signature never recorded. Empty for a signature that records no
+    files: one taken before files were covered cannot be judged, like a signature
+    with no stamp, and neither can an item that was not read from a file."""
+    recorded = entry.get(FILES)
+    if not isinstance(recorded, dict) or signs_deletion(entry):
+        return []
+    root = graph_root(item)
+    if root is None:
+        return []
+    named = named_files(item, schema)
+    moved = [rel for rel in named if recorded.get(rel) != file_digest(root, rel)]
+    return moved
+
+
+def files_uncovered(item, schema, entry: dict) -> list[str]:
+    """The files ``item`` names that ``entry`` holds no digest for (SR-0322): the
+    signature was taken before files were covered, or before the item named the
+    file. It is not stale, because nothing shows the file moved, but signing
+    again accepts something: the file as it stands."""
+    if signs_deletion(entry):
+        return []
+    recorded = entry.get(FILES)
+    recorded = recorded if isinstance(recorded, dict) else {}
+    root = graph_root(item)
+    return [rel for rel in named_files(item, schema)
+            if rel not in recorded and file_digest(root, rel) is not None]
+
+
 def is_stale(item, schema, entry: dict) -> bool:
     """Whether ``entry`` no longer covers the item (SR-0261): its stamp differs
-    from the fingerprint it was taken over, or the links it covers have moved. A
+    from the fingerprint it was taken over, the links it covers have moved, or a
+    file the item names no longer holds what was signed (SR-0322). A
     signature with no stamp cannot be judged and is not called stale. A signature
     that does not bear on the item as it stands — a content signature kept on a
     tombstone as history (SR-0269) — is neither current nor stale, so it is not
@@ -196,7 +296,8 @@ def is_stale(item, schema, entry: dict) -> bool:
         return False
     if signs_deletion(entry):
         return stamp != deletion_fingerprint(item)
-    return stamp != fingerprint(item, schema) or links_moved(item, schema, entry)
+    return (stamp != fingerprint(item, schema) or links_moved(item, schema, entry)
+            or bool(files_moved(item, schema, entry)))
 
 
 def stale_entries(item, schema) -> list[dict]:

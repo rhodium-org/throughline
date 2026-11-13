@@ -1,0 +1,48 @@
+uid: UR-0047
+type: user_requirement
+status: ratified
+title: A standard's guidance for AI agents arrives with every graph that follows
+  it
+text: As someone starting a graph that follows a standard, I want the guidance the
+  standard's keeper writes for AI agents (how its items are written, what its consumers
+  check beyond the declarations) to arrive in my graph when I start it from the standard,
+  and to be read by the agent without my pointing at it, so that an agent writes
+  items those consumers accept the first time, without a template repository to copy
+  and keep current.
+rationale: 'Asked for by the operator on 3 Nov 2026 after a deck template (rhodium-org/presentation-manager-deck-template)
+  fell behind the presentation standard it copied: it pinned v1.0.0 while the standard
+  reached v2.1.0, and tl refused it under the new standard. A blank graph from tl
+  init stays current, but tl context describes only the declarations, and what a
+  consumer checks beyond them reached the agent only as a failed build. First proposed
+  and signed as UR-0046 on the branch of pull request 136; that number was since
+  given to another item on main, so it is proposed again here. Rejected: a template
+  repository, which ages; prose rules as standard items, which a deterministic reader
+  cannot apply (UR-0044). Who pays: a standard''s keeper writes and versions the
+  guidance, optionally; a follower gets the files, which it owns.'
+normative: true
+links:
+- target: BN-0008
+  type: derives_from
+- target: UR-0044
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-13T09:03:18Z'
+  fingerprint: sha256:8788b465d2ea7bca8fc95b7bf17f860d661829029ad4c42cad43f9106246cc1d
+  content:
+    type: user_requirement
+    text: As someone starting a graph that follows a standard, I want the guidance
+      the standard's keeper writes for AI agents (how its items are written, what
+      its consumers check beyond the declarations) to arrive in my graph when I start
+      it from the standard, and to be read by the agent without my pointing at it,
+      so that an agent writes items those consumers accept the first time, without
+      a template repository to copy and keep current.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
