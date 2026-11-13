@@ -140,21 +140,21 @@ tl -C idd check --strict     # this repo's own requirements graph — must stay 
 
 ### Working on more than one package at once — chain the editable installs
 
-throughline, [throughline-compose](https://github.com/rhodium-org/throughline-compose)
-and [throughline-ratify](https://github.com/rhodium-org/throughline-ratify) are
-separate repositories that install one another. `pip install -e ".[dev]"` makes
-*this* package editable and resolves the others **from PyPI** — so you can be
-editing one while running the published copy of the next, and every version string
-will agree. Two people (or a person and an agent) then run the same command in the
-same repo, get different answers, and argue about the graph rather than about the
-toolchain.
+throughline and [throughline-ratify](https://github.com/rhodium-org/throughline-ratify)
+are separate repositories, and ratify installs throughline. `pip install -e ".[dev]"`
+in ratify makes *that* package editable and resolves throughline **from PyPI** — so
+you can be editing one while running the published copy of the other, and every
+version string will agree. (throughline-compose is deprecated: composition lives in
+this package, `tl-compose` is a second name for `tl`, and nothing installs it.)
+Two people (or a person and an agent) then run the same command in the same repo,
+get different answers, and argue about the graph rather than about the toolchain.
 
 Check the repos out side by side and chain them in a **single** command, so the
 resolver never reaches the index:
 
 ```sh
 # from whichever repo you are working in — name every sibling you have checked out
-pip install -e ../throughline -e ../throughline-compose -e ".[dev]"
+pip install -e ../throughline -e ".[dev]"
 ```
 
 Then verify rather than assume; every path must be your checkout, never
@@ -169,10 +169,7 @@ that all fail *silently*:
 
 ```sh
 pipx install --editable ./throughline
-pipx install --editable ./throughline-compose
-pipx inject --force --editable throughline-compose ./throughline
 pipx install --editable ./throughline-ratify
-pipx inject --force --editable throughline-ratify ./throughline-compose
 pipx inject --force --editable throughline-ratify ./throughline   # core LAST
 ```
 
