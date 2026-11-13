@@ -83,6 +83,15 @@ def test_check_reports_the_signature_stale_and_names_the_file_when_it_changes(tm
     assert not _stale(std)
 
 
+def test_the_same_file_with_another_system_s_line_endings_is_not_stale(tmp_path):
+    std = _standard(tmp_path)
+    how = std / "guide" / "how.md"
+    how.write_bytes(TEXT.encode().replace(b"\n", b"\r\n"))
+    assert not _stale(std)
+    how.write_bytes(TEXT.encode())
+    assert not _stale(std)
+
+
 def test_a_named_file_that_has_gone_makes_the_signature_stale(tmp_path):
     std = _standard(tmp_path)
     (std / "guide" / "how.md").unlink()

@@ -221,14 +221,20 @@ def named_files(item, schema) -> list[str]:
 
 def file_digest(root: Path | None, rel: str) -> str | None:
     """``sha256:`` and the digest of the content of the file ``rel`` names under
-    ``root``, or None where it names no file there or reaches outside the root."""
+    ``root``, or None where it names no file there or reaches outside the root.
+
+    Taken with every CRLF read as LF, so a text file checked out with the line
+    endings of another system, as git does on Windows, is the file that was
+    signed. The same rule is applied to every file, so a digest is the same on
+    every system whatever the file holds."""
     if root is None or "\\" in rel or rel.startswith("/") or ".." in Path(rel).parts:
         return None
     path = root / rel
     try:
         if not path.is_file():
             return None
-        return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+        content = path.read_bytes().replace(b"\r\n", b"\n")
+        return "sha256:" + hashlib.sha256(content).hexdigest()
     except OSError:
         return None
 
