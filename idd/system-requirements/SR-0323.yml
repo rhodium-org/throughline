@@ -1,0 +1,43 @@
+uid: SR-0323
+type: system_requirement
+status: proposed
+title: tl init --from-schema copies the standard's signed guidance and refers to
+  it from AGENTS.md and CLAUDE.md
+text: 'When tl init --from-schema names a standard that holds guidance items (meta-standard
+  REG-0010), init shall copy each guidance item''s file, as it is at the source''s
+  --ref, to that item''s copy_to path in the new project, where the item is ratified
+  and its signature still holds over the file (SR-0322). A guidance item that is
+  unsigned, or whose file changed after it was signed, is not copied, and init warns,
+  naming it. Init shall then make AGENTS.md at the new project''s root refer to each
+  file it copied, and CLAUDE.md there import AGENTS.md: it creates either file where
+  there is none, and adds to the end of one that exists only the lines it lacks.
+  Init shall not replace or remove anything in a file that exists: where a copy_to
+  path already holds other content, init keeps that file, warns naming it, and carries
+  on.'
+rationale: 'Guidance items, not a fixed path: the standard declares what it gives
+  its followers and where each copy goes, and a person signs it like every other
+  declaration, so nothing unsigned reaches a follower. Copied once and then the follower''s
+  own, like the registers (SR-0296). An agent reads only the files its framework
+  loads by itself (CLAUDE.md for Claude Code, AGENTS.md for most others), so guidance
+  under a name of its own, such as glossary-guidance.md, is read by nobody until
+  one of those refers to it. Existing files are added to, not refused (operator,
+  13 Nov 2026), which replaces the decision of 3 Nov 2026 to halt: halting left a
+  graph started beside an AGENTS.md with no guidance at all. Rejected: writing the
+  guidance text into AGENTS.md, which mixes signed text with the follower''s own
+  and cannot be compared with a later version of the standard; replacing an existing
+  file, which loses the follower''s instructions. Who pays: a follower finds a line
+  or two added to agent files it already had; and init writes only inside the new
+  project, so for a graph in a subfolder such as idd/ an agent started at the repository
+  root loads these files only once it works in that folder.'
+normative: true
+links:
+- target: UR-0047
+  type: implements
+- target: SR-0283
+  type: relates
+- target: SR-0322
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
