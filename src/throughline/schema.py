@@ -93,6 +93,83 @@ def kind_accepts(kind: str | None, value) -> bool:
     return True
 
 
+def shown(value) -> str:
+    """A value as a finding's message or a chart's label names it (SR-0333): text
+    in double quotes, a list as its members joined by a comma and a space, and
+    anything else as YAML writes it. Never the language's own rendering, which a
+    reader must decode and another implementation could not reproduce."""
+    if isinstance(value, str):
+        return f'"{value}"'
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return listed(value)
+    return _plain(value)
+
+
+def listed(values) -> str:
+    """The members of ``values`` joined by a comma and a space (SR-0333). A set
+    is given in sorted order, so the same set always reads the same."""
+    if isinstance(values, (set, frozenset)):
+        values = sorted(values, key=str)
+    return ", ".join(v if isinstance(v, str) else _plain(v) for v in values)
+
+
+def _plain(value) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return f"[{listed(value)}]"
+    if isinstance(value, dict):
+        return "{" + ", ".join(f"{k}: {_plain(v)}" for k, v in value.items()) + "}"
+    if isinstance(value, float):
+        return repr(value) if value == value and abs(value) != float("inf") else (
+            ".nan" if value != value else (".inf" if value > 0 else "-.inf"))
+    return str(value)
+
+
+def kind_name(value) -> str:
+    """The kind of ``value`` in the format's words, not the language's
+    (SR-0333): string, integer, float, boolean, list, mapping or null."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    for kind, name in ((str, "string"), (int, "integer"), (float, "float"),
+                       (list, "list"), (dict, "mapping")):
+        if isinstance(value, kind):
+            return name
+    return type(value).__name__
+
+
+# A number given as text (SR-0328): an optional sign and decimal digits, and for
+# a float an optional fraction and an optional exponent. Stated here, not left to
+# the language's own reader, so every implementation of the format reads the same
+# values: no underscores, no inf, no nan.
+_INT_TEXT = re.compile(r"[+-]?[0-9]+\Z")
+_FLOAT_TEXT = re.compile(r"[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?\Z")
+
+
+def read_number(kind: str, raw: str):
+    """``raw`` read as an ``int`` or a ``float``. Raises ``ValueError`` saying what
+    form the kind takes when the text is not in it (SR-0328)."""
+    text = raw.strip()
+    if kind == "int":
+        if not _INT_TEXT.match(text):
+            raise ValueError(f"expected a whole number in digits, got '{raw}'")
+        return int(text)
+    if not _FLOAT_TEXT.match(text):
+        raise ValueError("expected a number in digits, with an optional fraction "
+                         f"and exponent, got '{raw}'")
+    return float(text)
+
+
+# The status the shipped lifecycle binds to the tombstone role. Read only for an
+# item that belongs to no project, and for a project that declares no roles
+# table; everywhere else the project's own binding decides (SR-0325).
+SHIPPED_TOMBSTONE = "deleted"
+
+
 class SchemaError(ValueError):
     """Malformed or internally inconsistent project configuration (SR-0082)."""
 
@@ -351,10 +428,15 @@ class Schema:
                     raise SchemaError(
                         f"type '{tname}' attribute '{aname}' list must be true or "
                         f"false, not {many!r}")
+                for flag in ("required", "normative"):
+                    if not isinstance(meta.get(flag, False), bool):
+                        raise SchemaError(
+                            f"type '{tname}' attribute '{aname}' {flag} must be "
+                            f"true or false, not {shown(meta[flag])} (SR-0330)")
                 specs[aname] = AttrSpec(
                     name=aname, kind=kind,
-                    required=bool(meta.get("required", False)),
-                    normative=bool(meta.get("normative", False)),
+                    required=meta.get("required", False),
+                    normative=meta.get("normative", False),
                     values=values, default=meta.get("default"), list=many,
                     file=meta.get("file") is True)
             types[tname] = specs
@@ -414,6 +496,11 @@ class Schema:
         coverage = tuple(rules.get("coverage", []) or [])
         _check_coverage(coverage)
         rule_overrides = {k: v for k, v in rules.items() if k != "coverage"}
+        for rule, sev in rule_overrides.items():
+            if sev not in (ERROR, WARNING, OFF):
+                raise SchemaError(
+                    f"[rules] {rule} must be one of error, warning or off, not "
+                    f"{shown(sev)} (SR-0330)")
 
         docs_paths = tuple((config.get("docs") or {}).get("paths", []) or [])
 
@@ -557,9 +644,9 @@ class Schema:
             return None
         if rule.frm is not None and src_type not in rule.frm:
             return (f"'{link_type}' link must originate from a "
-                    f"{sorted(rule.frm)} item, not {src_type}")
+                    f"{listed(rule.frm)} item, not {src_type}")
         if dst_type is not None and rule.to is not None and dst_type not in rule.to:
-            return (f"'{link_type}' link must point to a {sorted(rule.to)} "
+            return (f"'{link_type}' link must point to a {listed(rule.to)} "
                     f"item, not {dst_type}")
         return None
 
@@ -594,6 +681,15 @@ class Schema:
         justification has just been withdrawn, and only the second may restatus items
         on its own — so the two uses of the reachable set stay distinct."""
         return self.ground_link_types | self.suspect_link_types
+
+    def tombstone_status(self) -> str:
+        """The status that marks a tombstone (SR-0325): the one bound to the
+        tombstone role, or an empty string where the project's roles bind none. A
+        project with no roles table at all predates roles (SR-0136) and is read
+        with the shipped lifecycle's binding."""
+        if not self.status_roles:
+            return SHIPPED_TOMBSTONE
+        return self.status_roles.get("tombstone", "")
 
     def dead_statuses(self) -> frozenset[str]:
         """Statuses that mean the item is no longer live — the 'invalidated' and

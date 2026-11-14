@@ -94,16 +94,44 @@ def transition_refusal(schema, item: Item, to: str) -> str | None:
     return None
 
 
-def set_status(schema, item: Item, to: str) -> None:
+def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
     """The single choke point for a status change (SR-0130). Every operation
     moves an item through here, so a move the configured [transitions] forbid is
     refused at the source rather than written and caught later by `check`. When a
     project declares no transitions the move is unconstrained, matching the tool's
-    other optional vocabularies."""
+    other optional vocabularies.
+
+    A status the project does not declare is refused here, and so is the tombstone
+    status unless the caller is the deletion itself (``deleting``), so no caller
+    of the operation can write either (SR-0327)."""
+    if not schema.is_status(to):
+        raise GroundingError(f"'{to}' is not a declared status")
+    if not deleting:
+        refuse_tombstone_status(schema, to)
     refusal = transition_refusal(schema, item, to)
     if refusal is not None:
         raise GroundingError(refusal)
     item.status = to
+
+
+def refuse_tombstone_status(schema, status: str | None) -> None:
+    """Refuse to write the status bound to the tombstone role by any route but
+    `tl delete` (SR-0327): that status says the item was deleted, and only delete
+    records the status it held, the day, the reason and the content retired
+    (SR-0012). Without that record `tl restore` cannot return the item."""
+    if status is not None and status == schema.tombstone_status():
+        raise GroundingError(
+            f"'{status}' says the item was deleted, and only `tl delete <UID> "
+            "--reason <why>` puts an item there, recording what it held")
+
+
+def refuse_undeclared_link_type(schema, link_type: str) -> None:
+    """Refuse a link of a type the project does not declare, where it declares its
+    link types, before the link is written (SR-0331)."""
+    if not schema.is_link_type(link_type):
+        raise GroundingError(
+            f"'{link_type}' is not a declared link type — the link types are "
+            f"{', '.join(sorted(schema.link_types))}")
 
 
 def refuse_ratified_status(schema, status: str | None) -> None:
@@ -156,7 +184,7 @@ def attribute_owner(name: str) -> tuple[str, str] | None:
 def is_flagged_ambiguous(item: Item) -> bool:
     """True while ``item`` carries the ambiguity flag. The one predicate the gate,
     ratify and clarify read, so an item is flagged for all of them or for none."""
-    return bool(item.attrs.get(AMBIGUOUS_ATTR))
+    return item.attrs.get(AMBIGUOUS_ATTR) is True
 
 
 def ambiguity_report(item: Item) -> str:
@@ -398,6 +426,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
+    if not (by or "").strip():
+        # A signature names the person who gave it (SR-0098). Refused here, not
+        # only by the command line, so no caller can record one with no name.
+        raise GroundingError(f"{uid}: a signature names who signs — say who "
+                             "ratifies (`--by <who>`)")
     schema = project.schema
     idx = index if index is not None else Index.build(project)
     # A stable identifier for the same human, in its own field and never conflated

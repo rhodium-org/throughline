@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from .fingerprint import fingerprint
 from .grounding import (
+    refuse_tombstone_status, refuse_undeclared_link_type,
     AMBIGUOUS_ATTR,
     GroundingError,
     set_status,
@@ -29,9 +30,9 @@ from .grounding import (
 )
 from .graph import Index
 from .model import Item, Link
-from .schema import kind_accepts
+from .schema import kind_accepts, listed, read_number
 from .signatures import OUTRIGHT, STAMP, latest, names, retired, signatures
-from .uid import UidError, next_uid, parse_uid
+from .uid import UidError, next_uid, number_refusal, parse_uid
 
 def coerce_attr(schema, item_type: str, key: str, raw: str):
     """Coerce a ``--attr KEY=VALUE`` string to the kind the schema declares for
@@ -50,12 +51,10 @@ def coerce_attr(schema, item_type: str, key: str, raw: str):
     try:
         if kind == "enum":
             if raw not in spec.values:
-                raise ValueError(f"not in {list(spec.values)}")
+                raise ValueError(f"not one of {listed(spec.values)}")
             return raw
-        if kind == "int":
-            return int(raw)
-        if kind == "float":
-            return float(raw)
+        if kind in ("int", "float"):
+            return read_number(kind, raw)
         if kind == "bool":
             low = raw.strip().lower()
             if low in ("true", "1", "yes"):
@@ -131,12 +130,16 @@ def birth_item(schema, reg, uid: str, *, item_type: str, title: str = "",
     # declares no 'proposed' role we fall back to 'initial'.
     has_proposed_role = bool((schema.status_roles or {}).get("proposed"))
     refuse_ratified_status(schema, status)
+    refuse_tombstone_status(schema, status)
+    if status is not None and not schema.is_status(status):
+        raise GroundingError(f"'{status}' is not a declared status")
     if status is None:
         status = schema.status_role("proposed" if has_proposed_role else "initial")
     # The flag is the kind's, not the command's (SR-0201): an intent or a
     # non-goal is born non-normative because its type says so.
     item = Item(uid=uid, type=item_type, status=status, title=title, text=text,
-                normative=schema.is_normative(item_type))
+                normative=schema.is_normative(item_type),
+                _tombstone=schema.tombstone_status())
     item.attrs.update(attrs)
     if origin:
         item.attrs["origin"] = origin
@@ -344,7 +347,7 @@ def delete_item(project, uid: str, *, reason: str = "unspecified") -> Deletion |
     dependents = signed_dependents(project, uid, idx)
     outright = not signatures(item) and not dependents
     was = item.status
-    set_status(schema, item, tombstone)
+    set_status(schema, item, tombstone, deleting=True)
     # What the tombstone keeps (SR-0012): the day the UID was retired, why, the
     # fingerprint of the content it last held, so the record says what was retired
     # wherever the file travels without its history, and the status it held, so a
@@ -501,8 +504,13 @@ def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
             raise UidError(f"{uid} does not match prefix {prefix}")
         if project.get(uid) is not None:
             raise GroundingError(f"{uid} already exists")
+        taken = number_refusal(reg, uid)
+        if taken is not None:
+            raise GroundingError(taken)
     else:
         uid = next_uid(reg)
+    if ground:
+        refuse_undeclared_link_type(project.schema, ground_type)
     item = birth_item(project.schema, reg, uid, item_type=item_type, title=title,
                       text=text, status=status, origin=origin, attrs=attrs)
     for target in ground:

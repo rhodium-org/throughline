@@ -36,6 +36,26 @@ def _load_yaml(text: str):
     """Parse one YAML document safely, through the loader chosen above."""
     return yaml.load(text, Loader=_YAML_LOADER)
 
+
+def _read_mapping(path: Path, what: str, needs: tuple[str, ...]) -> dict:
+    """The mapping the file at ``path`` holds, refused by name where it cannot be
+    read as ``what`` (SR-0324): not valid YAML, not a mapping, or without one of
+    the keys in ``needs``. Such a file gives no item or register a finding could
+    name, so the project is not loaded at all."""
+    try:
+        raw = _load_yaml(path.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, UnicodeDecodeError) as e:
+        why = " ".join(str(e).split())
+        raise ProjectError(f"cannot read {path} as {what}: it is not valid YAML "
+                           f"— {why}") from e
+    if not isinstance(raw, dict):
+        kind = "empty" if raw is None else f"a {kind_name(raw)}, not a mapping"
+        raise ProjectError(f"cannot read {path} as {what}: the file is {kind}")
+    for key in needs:
+        if not isinstance(raw.get(key), str) or not raw[key]:
+            raise ProjectError(f"cannot read {path} as {what}: it holds no '{key}'")
+    return raw
+
 from collections.abc import Mapping
 from types import MappingProxyType
 
@@ -45,7 +65,7 @@ from .fingerprint import (
 from .graph import Index
 from .grounding import ratification_refusal
 from .model import Item, Link, Project, Register
-from .schema import SchemaError
+from .schema import SchemaError, kind_name
 from .signatures import (
     AT, BACKFILLED, BY, CONTENT, ID, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION,
     STAMP, requirement_met, retired, signs_deletion,
@@ -1478,7 +1498,7 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
     project.nested_projects = sorted(nested)
     for manifest in manifests:
         reg_dir = manifest.parent
-        raw = _load_yaml(manifest.read_text(encoding="utf-8")) or {}
+        raw = _read_mapping(manifest, "a register manifest", ("prefix",))
         reg = Register.from_manifest(raw, path=reg_dir)
         if reg.prefix in project.registers:
             # A second register folder claims a prefix already loaded. Keeping the
@@ -1492,7 +1512,7 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
         for item_file in sorted(reg_dir.glob("*.yml")):
             if item_file.name in manifest_names:
                 continue
-            d = _load_yaml(item_file.read_text(encoding="utf-8")) or {}
+            d = _read_mapping(item_file, "an item", ("uid", "type"))
             item = Item.from_dict(d, path=item_file)
             item._register_prefix = reg.prefix
             for msg in item._load_errors:
@@ -1514,9 +1534,13 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
         attach(project)
         if early is not None and not project.declarations:
             raise early
-        project.schema
+        tombstone = project.schema.tombstone_status()
     except SchemaError as e:
         raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
+    # Each item is told its project's tombstone status (SR-0325), so the question
+    # "is this a tombstone" has one answer wherever the item travels.
+    for item in project.items():
+        item._tombstone = tombstone
     return project
 
 
@@ -1670,6 +1694,7 @@ def _statuses_in(project: Project, tree, *, with_restorable: bool = False):
     absent: list[tuple[str, str]] = []
     restorable: set[str] = set()
     schema = project.schema
+    tombstone = schema.tombstone_status()
     for rel, text in tree.read(rels).items():
         try:
             data = _load_yaml(text) or {}
@@ -1690,11 +1715,12 @@ def _statuses_in(project: Project, tree, *, with_restorable: bool = False):
             continue
         # A tombstone nobody had signed, judged by the gate's own predicate over
         # the item as the baseline held it (SR-0268).
-        if with_restorable and status == "deleted":
+        if with_restorable and tombstone and status == tombstone:
             try:
                 past = Item.from_dict(dict(data, uid=uid))
             except Exception:
                 continue
+            past._tombstone = tombstone
             if not retired(past, schema):
                 restorable.add(uid)
     for uid, status in absent:
@@ -1836,7 +1862,11 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
         except ProjectError as e:
             raise ProjectError(f"no throughline project at {ref} — {e}") from e
         # load_project reads every item into memory here, so the project is
-        # fully materialised and safe to use after the temp dir is removed.
+        # fully materialised and safe to use after the temp dir is removed. Its
+        # root is the project's own again, not the directory about to be removed,
+        # so the documents `[docs] paths` names are found where they are and a
+        # region that asks what the documents reference can read them (SR-0090).
+        project.path = root
         return project, sha
 
 

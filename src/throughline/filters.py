@@ -12,7 +12,11 @@ builtins, imports, nor object internals.
 from __future__ import annotations
 
 import ast
+import functools
+import io
 import operator
+import re
+import tokenize
 
 # Comparison operators the language allows. Everything absent here — arithmetic,
 # bitwise, `is` — is rejected, so a filter stays a pure predicate over values.
@@ -48,6 +52,45 @@ class FilterError(ValueError):
     """A filter expression could not be parsed or evaluated (SR-0045)."""
 
 
+# The literal forms the grammar lists (SR-0104): a single- or double-quoted
+# string, an integer and a decimal. Python's own parser reads more than these, and
+# what it reads beyond them is refused here, by its spelling, since the tree it
+# builds no longer says how a value was written.
+_NUMBER = re.compile(r"[0-9]+(\.[0-9]+)?\Z")
+_STRING = re.compile(r"""(?!'{3}|"{3})['"]""")
+
+
+@functools.lru_cache(maxsize=512)
+def _parse(expr: str) -> ast.expr:
+    """Parse ``expr`` to a tree, refusing every literal form outside the grammar
+    (SR-0104). White space around the expression is no part of it."""
+    expr = expr.strip()
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError as e:
+        raise FilterError(f"could not parse filter: {e.msg}") from e
+    previous = None
+    for tok in tokenize.generate_tokens(io.StringIO(expr).readline):
+        if tok.type == tokenize.NUMBER and not _NUMBER.match(tok.string):
+            raise FilterError(
+                f"unsupported number {tok.string}: a filter takes an integer or "
+                "a decimal written in digits, such as 3 or 2.5")
+        if tok.type == tokenize.STRING:
+            if not _STRING.match(tok.string):
+                raise FilterError(
+                    f"unsupported string {tok.string}: a filter takes a string in "
+                    "single or double quotes, with no prefix and no triple quotes")
+            if previous == tokenize.STRING:
+                raise FilterError(
+                    "two strings side by side are not joined in a filter; write "
+                    "one string")
+        if tok.type == tokenize.OP and tok.string == "...":
+            raise FilterError("'...' is not allowed in filters")
+        if tok.type not in (tokenize.NL, tokenize.COMMENT):
+            previous = tok.type
+    return tree.body
+
+
 def check_filter(expr: str, names: frozenset[str] = FILTER_NAMES) -> None:
     """Validate ``expr`` against the grammar without evaluating it (SR-0191).
 
@@ -61,11 +104,7 @@ def check_filter(expr: str, names: frozenset[str] = FILTER_NAMES) -> None:
     """
     if not expr or not expr.strip():
         return
-    try:
-        tree = ast.parse(expr, mode="eval")
-    except SyntaxError as e:
-        raise FilterError(f"could not parse filter: {e.msg}") from e
-    _check(tree.body, names)
+    _check(_parse(expr), names)
 
 
 def _check(node, names: frozenset[str]) -> None:
@@ -129,12 +168,9 @@ def safe_eval(expr: str, namespace: dict) -> object:
 
     Raises :class:`FilterError` on a malformed or disallowed expression so
     callers can report it and fail fast (SR-0103, NFR-0022)."""
+    body = _parse(expr)
     try:
-        tree = ast.parse(expr, mode="eval")
-    except SyntaxError as e:
-        raise FilterError(f"could not parse filter: {e.msg}") from e
-    try:
-        return _eval(tree.body, namespace)
+        return _eval(body, namespace)
     except FilterError:
         raise
     except Exception as e:  # noqa: BLE001 - normalise to a typed error

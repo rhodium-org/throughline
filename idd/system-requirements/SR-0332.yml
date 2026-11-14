@@ -1,0 +1,35 @@
+uid: SR-0332
+type: system_requirement
+status: implemented
+title: A borrowed item whose UID is not well formed is refused by name
+text: When a composed source holds an item whose UID does not fit the UID grammar,
+  the Tool shall refuse to compose, naming the source and the item, and never stop
+  with an unhandled error.
+rationale: 'Such an item cannot be given a namespaced name, and release 5.3.0 stops
+  with a Python error when it tries. A standalone check of the source reports it
+  as uid-grammar. Who pays: a consumer of such a source is told which item to have
+  corrected.'
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0230
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:82d3ebceba5b879e13901a5cf9674cf53d3dba8ccfbed62254ab01413970fce5
+  content:
+    type: system_requirement
+    text: When a composed source holds an item whose UID does not fit the UID grammar,
+      the Tool shall refuse to compose, naming the source and the item, and never
+      stop with an unhandled error.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

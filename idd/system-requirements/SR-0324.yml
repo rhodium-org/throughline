@@ -1,0 +1,39 @@
+uid: SR-0324
+type: system_requirement
+status: implemented
+title: A file that cannot be read as an item or a manifest is refused by name
+text: When an item file is not valid YAML, is not a mapping, or holds no uid or no
+  type, or a register manifest holds no prefix, the Tool shall refuse to load the
+  project, naming the file and what is wrong with it, and shall write nothing. It
+  shall never stop with an unhandled error.
+rationale: 'SR-0134 turns a malformed part of an item into a finding, which needs
+  an item to name. These files give none: release 5.3.0 stops on them with a Python
+  traceback (KeyError ''uid'', ScannerError). Skipping the file and reporting a finding
+  was rejected: a write made meanwhile could allocate the skipped item''s number.
+  Who pays: nobody whose graph loads today; a keeper with such a file is told which
+  one.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0134
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:90e3a09b87e7384811f5aa6a2c970a536127bccf7d0fc19ed50fde0193ab0891
+  content:
+    type: system_requirement
+    text: When an item file is not valid YAML, is not a mapping, or holds no uid
+      or no type, or a register manifest holds no prefix, the Tool shall refuse to
+      load the project, naming the file and what is wrong with it, and shall write
+      nothing. It shall never stop with an unhandled error.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

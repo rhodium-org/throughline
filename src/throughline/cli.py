@@ -23,6 +23,7 @@ from .fingerprint import fingerprint
 from .graph import Index
 from .links import LinkError, add_link, remove_link, retype_link
 from .grounding import (
+    refuse_undeclared_link_type,
     Cascade,
     AMBIGUOUS_ATTR,
     CLARIFICATION_ATTRS,
@@ -137,7 +138,8 @@ from .storage import (
     write_item,
     write_manifest,
 )
-from .uid import PREFIX_GRAMMAR, UidError, next_uid, parse_uid, valid_prefix
+from .uid import (PREFIX_GRAMMAR, UidError, next_uid, number_refusal, parse_uid,
+                  valid_prefix)
 from .validate import (
     ERROR,
     OFF,
@@ -1440,14 +1442,21 @@ def cmd_blast(args) -> int:
     if project.get(uid) is None:
         return _err(f"{uid} does not exist")
     idx = Index.build(project)
-    affected = idx.impact(uid)
+    # Grouped by depth and, within a depth, by the type of the link that reached
+    # each dependent (SR-0035).
+    reached = sorted(idx.impact_reached(uid), key=lambda r: (r[1], r[2]))
     if args.format == "json":
-        print(json.dumps(affected, indent=2))
+        print(json.dumps([{"uid": dep, "depth": depth, "link": kind}
+                          for dep, depth, kind in reached], indent=2))
     else:
-        print(f"{uid} — blast radius: {len(affected)} dependent item(s)")
-        for uid in affected:
-            it = project.get(uid)
-            print(f"  {uid}  [{it.type}/{it.status}] {it.title}".rstrip())
+        print(f"{uid} — blast radius: {len(reached)} dependent item(s)")
+        group = None
+        for dep, depth, kind in reached:
+            if (depth, kind) != group:
+                group = (depth, kind)
+                print(f"  depth {depth} · {kind}")
+            it = project.get(dep)
+            print(f"    {dep}  [{it.type}/{it.status}] {it.title}".rstrip())
     return OK
 
 
@@ -2497,6 +2506,9 @@ def _composed_new(args) -> int:
             return _err(f"--uid {args.uid} does not match prefix {args.prefix}")
         if consumer.get(args.uid) is not None:
             return _err(f"{args.uid} already exists")
+        taken = number_refusal(reg, args.uid)
+        if taken is not None:
+            return _err(taken)
         uid = args.uid
     else:
         uid = next_uid(reg)
@@ -2520,6 +2532,11 @@ def _composed_new(args) -> int:
     # local target must exist locally, a namespace-qualified one in the union.
     default_type = args.ground_type or "derives_from"
     grounds: list[tuple[str, str]] = []
+    if args.ground:
+        try:
+            refuse_undeclared_link_type(consumer.schema, default_type)
+        except GroundingError as e:
+            return _err(str(e))
     for target in args.ground:
         exists = (union.project.get(union_uid(union, target)) is not None
                   if is_namespace_qualified(target)

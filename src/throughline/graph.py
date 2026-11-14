@@ -117,8 +117,15 @@ class Index:
         one so a neighbourhood touching a borrowed clause does not swallow the
         whole standard behind it. ``uid`` itself is always walked — a caller who
         named it is standing on it deliberately."""
+        return [other for other, _depth, _kind in
+                self._walk(uid, direction, link_types, max_depth, expand)]
+
+    def _walk(self, uid: str, direction: str, link_types: set[str] | None = None,
+              max_depth: int = 0, expand=None) -> list[tuple[str, int, str]]:
+        """The walk behind :meth:`closure`: each item reached, with the depth it
+        was first reached at and the type of the link that reached it."""
         step = self.out_links if direction == "out" else self.in_links
-        hit: list[str] = []
+        hit: list[tuple[str, int, str]] = []
         seen = {uid}
         frontier = [uid]
         depth = 0
@@ -127,10 +134,10 @@ class Index:
             for cur in frontier:
                 if expand is not None and cur != uid and not expand(cur):
                     continue
-                for other, _k in step(cur, link_types):
+                for other, kind in step(cur, link_types):
                     if other not in seen:
                         seen.add(other)
-                        hit.append(other)
+                        hit.append((other, depth + 1, kind))
                         nxt.append(other)
             frontier = nxt
             depth += 1
@@ -140,6 +147,14 @@ class Index:
         """Transitive set reachable via *incoming* links — what depends on this
         (SR-0035 / blast radius)."""
         return self.closure(uid, "in", link_types)
+
+    def impact_reached(self, uid: str,
+                       link_types: set[str] | None = None) -> list[tuple[str, int, str]]:
+        """The blast radius with how each dependent was reached (SR-0035): the
+        items of :meth:`impact`, in its order, each as ``(uid, depth, link type)``
+        — the depth it was first reached at and the type of the link that reached
+        it there."""
+        return self._walk(uid, "in", link_types)
 
     def subgraph(self, uid: str, link_types: set[str] | None = None,
                  max_depth: int = 0, expand=None) -> Neighbourhood:

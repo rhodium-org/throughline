@@ -1,0 +1,34 @@
+uid: SR-0331
+type: system_requirement
+status: implemented
+title: A link of an undeclared type is refused when it is made
+text: Where the project declares its link types, tl link, tl link --retype, tl new
+  --ground-type and tl apply shall refuse a link type the schema does not declare,
+  naming the declared types, before writing anything.
+rationale: 'tl link A B --type bogus is written and reported only by the next check,
+  as bad-link-target. SR-0130 already refuses a status move at the source for the
+  same reason. Who pays: nobody; the link was already an error at the gate.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0084
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:715ffbe80f6f169ff7842ec51e42cae494e8b5cf38b5449fd165766360b6aba2
+  content:
+    type: system_requirement
+    text: Where the project declares its link types, tl link, tl link --retype, tl
+      new --ground-type and tl apply shall refuse a link type the schema does not
+      declare, naming the declared types, before writing anything.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

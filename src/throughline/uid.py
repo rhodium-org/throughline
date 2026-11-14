@@ -61,6 +61,25 @@ def used_numbers(register) -> set[int]:
     return nums
 
 
+def number_refusal(register, uid: str) -> str | None:
+    """Why the explicit ``uid`` may not be given in ``register``, or ``None``
+    (SR-0326): its number is reserved, or an item already holds it, whatever the
+    padding of either."""
+    _prefix, number = parse_uid(uid)
+    if number in register.reserved:
+        return f"{uid}: number {number} is reserved in register {register.prefix}"
+    for item in register.items.values():
+        try:
+            prefix, held = parse_uid(item.uid)
+        except UidError:
+            continue
+        if prefix == register.prefix and held == number:
+            return (f"{uid} already exists" if item.uid == uid else
+                    f"{uid}: number {number} is already used in register "
+                    f"{register.prefix}, by {item.uid}")
+    return None
+
+
 def next_uid(register) -> str:
     """Allocate the next unused number for the register's prefix (SR-0005)."""
     used = used_numbers(register)

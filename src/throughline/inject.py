@@ -68,6 +68,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .graph import Index
+from .schema import listed, shown
 from .signatures import describe
 from .validate import FilterError, eval_filter, is_namespace_qualified
 
@@ -92,6 +93,10 @@ _BLOCK = re.compile(
 # Any single tl: marker, to detect an unbalanced open/close the block regex skips.
 _OPEN = re.compile(rf"<!--\s*tl:{_NAME}\b", re.IGNORECASE)
 _END = re.compile(r"<!--\s*tl:end\s*-->", re.IGNORECASE)
+# An opener closed with no white space after its kind. The block pattern asks for
+# that white space, so such a marker is never a region; it is refused by name
+# rather than counted as an opener and left unrendered (SR-0094).
+_TIGHT = re.compile(rf"<!--\s*tl:{_NAME}(?:\.[A-Za-z_][A-Za-z0-9_]*)?-->", re.IGNORECASE)
 
 # An optional matrix selector (SR-0099): incoming:/outgoing:<link_type> before
 # the filter. Reuses the coverage-rule grammar so the language is identical. An
@@ -284,6 +289,11 @@ def inject_text(project, text: str, resolver: "TargetResolver | None" = None) ->
     composing caller passes a union-backed resolver so borrowed clauses resolve."""
     if resolver is None:
         resolver = TargetResolver(project)
+    tight = _TIGHT.search(text)
+    if tight is not None:
+        raise InjectError(
+            f"malformed tl: marker '{tight.group(0)}' — put a space before '-->', "
+            "or the region is not rendered")
     opens = len(_OPEN.findall(text))
     ends = len(_END.findall(text))
     if opens != ends:
@@ -685,7 +695,11 @@ def _chart_groups(project, key: str, rows: list) -> tuple[list[str], list[int], 
             val = getattr(it, key)
         else:
             raw = it.attrs.get(key)
-            val = None if raw is None else str(raw)
+            # A list reads as its members, not as the language writes a list
+            # (SR-0333).
+            val = None if raw is None else (raw if isinstance(raw, str)
+                                            else listed(raw) if isinstance(raw, list)
+                                            else shown(raw))
         if val is None:
             continue
         counts_s[val] = counts_s.get(val, 0) + 1
@@ -693,10 +707,33 @@ def _chart_groups(project, key: str, rows: list) -> tuple[list[str], list[int], 
     return order_s, [counts_s[v] for v in order_s], f"Items by {key}"
 
 
+_CHART_FIELDS = ("type", "status", "degree")
+
+
+def _check_chart_key(project, key: str) -> None:
+    """Fail on a key that names nothing (SR-0116): not a field, not the reserved
+    ``degree``, and not an attribute any item type declares or any item carries.
+    A misspelt key would otherwise render the placeholder for a key no item
+    exhibits, and the document would say nothing was wrong. A project that
+    declares no item types has free-form attributes, so any name may be one."""
+    types = project.schema.types
+    if key in _CHART_FIELDS or not types:
+        return
+    if any(key in attrs for attrs in types.values()):
+        return
+    if any(key in it.attrs for it in project.items()):
+        return
+    declared = sorted({a for attrs in types.values() for a in attrs})
+    raise InjectError(
+        f"tl:chart: unknown key '{key}' — a chart groups by type, status, degree "
+        "or an attribute" + (f" ({', '.join(declared)})" if declared else ""))
+
+
 def _render_chart(project, arg: str) -> str:
     """A Mermaid bar chart of the live-item count grouped by a key (SR-0116). A
     malformed filter fails injection; a key no item exhibits renders a placeholder."""
     key, expr = _parse_chart_arg(arg)
+    _check_chart_key(project, key)
     rows = [it for it in matching(project, expr) if _is_live(project, it.uid)]
     labels, counts, title = _chart_groups(project, key, rows)
     if not labels:

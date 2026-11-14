@@ -35,7 +35,7 @@ from .grounding import attribute_owner
 from .inherit import InheritanceError, declarations, describe, merge
 from .model import Item, Project
 from .schema import Schema, SchemaError
-from .storage import CONFIG_NAME, ProjectError, load_project, write_item
+from .storage import CONFIG_NAME, ProjectError, load_project, read_baseline, write_item
 from .tomledit import TomlDocument, TomlEditError
 from .validate import ERROR, Finding, validate
 
@@ -130,14 +130,15 @@ def may_invalidate(old: Schema, new: Schema, *, grounding_changed: bool) -> bool
         return True
     if not _wider(old.link_types, new.link_types):
         return True
-    if old.transitions is not None:
-        if new.transitions is None:
-            pass
-        else:
-            for frm in set(old.transitions) | set(new.transitions):
-                if not new.transitions.get(frm, frozenset()) >= old.transitions.get(
-                        frm, frozenset()):
-                    return True
+    if new.transitions is not None:
+        if old.transitions is None:
+            # The first table forbids every move it does not list, where every
+            # move was allowed before it (SR-0182).
+            return True
+        for frm in set(old.transitions) | set(new.transitions):
+            if not new.transitions.get(frm, frozenset()) >= old.transitions.get(
+                    frm, frozenset()):
+                return True
     for ltype in set(old.link_rules) | set(new.link_rules):
         o = old.link_rules.get(ltype)
         n = new.link_rules.get(ltype)
@@ -168,10 +169,18 @@ def _new_errors(project: Project, config: dict,
     change, and so the report names only what this change did. ``formed`` is the
     schema configuration the change produces where the project takes its schema
     from a source (SR-0275)."""
-    before = {_key(f) for f in validate(project) if f.severity == ERROR}
+    # Measured against the baseline `tl check` reads, so a move an item has made
+    # since it, which the change would forbid, is found here and not at the next
+    # check (SR-0182). Where no baseline can be read, no move is known.
+    try:
+        base = read_baseline(project)
+    except ProjectError:
+        base = None
+    moved = dict(baseline=base.statuses, restorable=base.restorable) if base else {}
+    before = {_key(f) for f in validate(project, **moved) if f.severity == ERROR}
     prospective = dataclasses.replace(project, config=config, schema_config=formed,
                                       _schema=None)
-    return [f for f in validate(prospective)
+    return [f for f in validate(prospective, **moved)
             if f.severity == ERROR and _key(f) not in before]
 
 
@@ -372,8 +381,15 @@ def linktype_remove(project: Project, name: str) -> Change:
 def grounding_add(project: Project, field: str, value: str) -> Change:
     _check_grounding_field(field)
     _refuse_inherited(project, "grounding", field, value)
+    # A follower's list is added to its schema source's when the schema is formed,
+    # so it writes the one member it adds and never a copy of what it inherits
+    # (UR-0041, SR-0277).
+    current = [] if project.inheritance is not None else sorted(
+        getattr(project.schema, field))
+    if value in getattr(project.schema, field):
+        raise SchemaOpError(f"{field} entry '{value}' is already declared")
     return _add_to(project, "grounding", field, value, f"{field} entry",
-                   current=sorted(getattr(project.schema, field)))
+                   current=current)
 
 
 def grounding_remove(project: Project, field: str, value: str) -> Change:
@@ -523,9 +539,13 @@ def type_remove(project: Project, name: str) -> Change:
 
 
 def _remove_type(doc: TomlDocument, name: str, why: str) -> None:
-    doc.remove_table(f"types.{name}")
     if doc.has_table("types"):
+        doc.remove_table(f"types.{name}")
         doc.note_table("types", why)
+    else:
+        # No table is left to carry the reason, so it stands where the type's
+        # own table stood (SR-0184).
+        doc.remove_table(f"types.{name}", because=why)
 
 
 def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None,
@@ -701,7 +721,7 @@ def role_remove(project: Project, role: str, identifier: str | None = None) -> C
                 raise SchemaOpError("the last role cannot go while [ratify.requires] "
                                     "stands — clear the requirements first")
         return Change(f"withdrawing the role '{role}'", cfg,
-                      lambda doc, why: doc.remove_key(_RATIFY_ROLES, role))
+                      lambda doc, why: _withdraw_role(doc, role, why))
     ident = _identifier(identifier)
     members = roles[role]
     if ident not in members:
@@ -715,6 +735,11 @@ def role_remove(project: Project, role: str, identifier: str | None = None) -> C
     cfg["ratify"]["roles"] = roles
     return Change(f"removing {ident} from the role '{role}'", cfg,
                   lambda doc, why: doc.set_key(_RATIFY_ROLES, role, members, because=why))
+
+
+def _withdraw_role(doc: TomlDocument, role: str, why: str) -> None:
+    doc.remove_key(_RATIFY_ROLES, role)
+    doc.note_table(_RATIFY_ROLES, why)
 
 
 def requires_set(project: Project, itype: str, *, roles: list[str] | None = None,
@@ -742,9 +767,11 @@ def requires_set(project: Project, itype: str, *, roles: list[str] | None = None
     table = ("ratify", "requires", itype)
 
     def edit(doc, why):
+        # One change, one reason (SR-0184): written above the first key set.
         for key in ("roles", "signatures"):
             if key in body:
                 doc.set_key(table, key, body[key], because=why)
+                why = None
             elif key in before:
                 doc.remove_key(table, key)
 
@@ -767,7 +794,8 @@ def requires_clear(project: Project, itype: str) -> Change:
     else:
         del cfg["ratify"]["requires"]
     return Change(f"clearing what '{itype}' requires", cfg,
-                  lambda doc, why: doc.remove_table(("ratify", "requires", itype)))
+                  lambda doc, why: doc.remove_table(("ratify", "requires", itype),
+                                                    because=why))
 
 
 def awaiting(project: Project) -> set[str]:

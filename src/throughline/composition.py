@@ -41,6 +41,7 @@ from .resolvers import (
     resolver_for,
 )
 from .seam import is_borrowed
+from .signatures import retired
 from .sources import Source, SourceError, parse_sources, withdrawn_declarations
 from .union import ComposeError, Union, build_union
 from .validate import is_namespace_qualified
@@ -403,7 +404,10 @@ def composed_check_summary(union: Union, index: Index | None = None) -> list[str
     inferred from its size.
     """
     lines = list(check_summary(union.project))
-    live = [it for it in union.project.items() if not it.is_deleted]
+    # Live as the Items line above counts it (SR-0078): not a retired tombstone.
+    # A proposed deletion is still live scope until a person signs it (SR-0012).
+    schema = union.project.schema
+    live = [it for it in union.project.items() if not retired(it, schema)]
     local = [it for it in live if union.qualified(it.uid) == it.uid]
     borrowed = len(live) - len(local)
 

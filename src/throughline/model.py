@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .schema import Schema
+from .schema import SHIPPED_TOMBSTONE, Schema, kind_name
 from .signatures import RATIFICATIONS, WITHDRAWALS, lift_legacy
 
 if TYPE_CHECKING:
@@ -100,6 +100,11 @@ class Item:
     # the same tool for the same reason (SR-0245). None when unset; an empty tuple
     # means that graph signs none.
     _authored_signed_link_types: tuple[str, ...] | None = None
+    # The status the project this item was read from binds to the tombstone role
+    # (SR-0325), set by whatever reads or creates the item in a project. An empty
+    # string means that project binds none, so it has no tombstones. None means
+    # the item belongs to no project yet, and the shipped lifecycle's word stands.
+    _tombstone: str | None = None
 
     @property
     def authored_uid(self) -> str:
@@ -110,7 +115,10 @@ class Item:
 
     @property
     def is_deleted(self) -> bool:
-        return self.status == "deleted"
+        """Whether this item is a tombstone: it holds the status its project binds
+        to the tombstone role (SR-0325)."""
+        tombstone = SHIPPED_TOMBSTONE if self._tombstone is None else self._tombstone
+        return bool(tombstone) and self.status == tombstone
 
     @staticmethod
     def _parse_links(raw: object) -> tuple[list["Link"], list[str]]:
@@ -121,7 +129,7 @@ class Item:
         links: list[Link] = []
         errors: list[str] = []
         if not isinstance(raw, list):
-            errors.append(f"'links' must be a list, got {type(raw).__name__}")
+            errors.append(f"'links' must be a list, got {kind_name(raw)}")
             return links, errors
         for i, l in enumerate(raw, start=1):
             if not isinstance(l, dict):
@@ -142,7 +150,7 @@ class Item:
         if raw is None:
             return [], []
         if not isinstance(raw, list):
-            return [], [f"'{name}' must be a list, got {type(raw).__name__}"]
+            return [], [f"'{name}' must be a list, got {kind_name(raw)}"]
         records: list[dict] = []
         errors: list[str] = []
         for i, entry in enumerate(raw, start=1):
@@ -156,11 +164,16 @@ class Item:
     def from_dict(cls, d: dict, path: Path | None = None) -> "Item":
         links, load_errors = cls._parse_links(d.get("links", []) or [])
         attrs = d.get("attrs", {}) or {}
+        if not isinstance(attrs, dict):
+            # Tolerated as the malformed link is (SR-0134): the item is read with
+            # no attributes and check names the file and the reason.
+            load_errors.append(f"'attrs' must be a mapping, got {kind_name(attrs)}")
+            attrs = {}
         # A format-3 flat record is lifted into the list as the item is read
         # (SR-0255), so an older graph, a file re-read from history and a file an
         # older Tool wrote all present one shape. The lifted entry is placed first:
         # it is the oldest a file can hold. Nothing is invented by the lift.
-        lifted, withdrawn = lift_legacy(attrs) if isinstance(attrs, dict) else ([], [])
+        lifted, withdrawn = lift_legacy(attrs)
         ratifications, errs = cls._parse_records(d.get(RATIFICATIONS), RATIFICATIONS)
         load_errors += errs
         withdrawals, errs = cls._parse_records(d.get(WITHDRAWALS), WITHDRAWALS)

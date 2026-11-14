@@ -47,7 +47,7 @@ from pathlib import Path
 from typing import Callable
 
 from .fingerprint import fingerprint, revision
-from .grounding import GroundingError, set_status
+from .grounding import GroundingError, refuse_undeclared_link_type, set_status
 from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
                     new_item, parse_attrs)
 from .links import GroundingView, LinkError, add_link, remove_link
@@ -336,7 +336,7 @@ def parse_change_set(text: str) -> list[dict]:
             if isinstance(label, str):
                 if not _LABEL_RE.match(label):
                     problems.append(f"{name}: \"label\" must be letters, digits, "
-                                    "'_' or '-', got {label!r}")
+                                    f"'_' or '-', got {label!r}")
                 elif label in labels:
                     problems.append(f"{name}: label {label!r} is already used in "
                                     "this set")
@@ -344,7 +344,10 @@ def parse_change_set(text: str) -> list[dict]:
                     labels.add(label)
         for ref in (op.get("target"), *[l.get("target") for l in op.get("links", [])
                                         if isinstance(l, dict)]):
-            if _is_label(ref) and ref[1:] not in labels:
+            if _is_label(ref) and kind == "new" and ref[1:] == op.get("label"):
+                problems.append(f"{name}: {ref} is the item this operation itself "
+                                "creates; an item cannot link to itself")
+            elif _is_label(ref) and ref[1:] not in labels:
                 problems.append(f"{name}: {ref} names no item created earlier in "
                                 "this set")
         ops.append(op)
@@ -598,6 +601,7 @@ def apply_change_set(project, operations: list[dict], *,
                 if op.get("rationale"):
                     item.rationale = op["rationale"]
                 for l in op.get("links", []):
+                    refuse_undeclared_link_type(schema, l["type"])
                     item.links.append(Link(target=resolve(l["target"]), type=l["type"]))
                 path = write_item(item, project.register_of(item.uid))
                 if "label" in op:
