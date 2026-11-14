@@ -17,14 +17,14 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:8fd1cb950252f998f404ea09fb19a97c6299e05c9fc53749590007adaa84c5f4
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  at: '2026-11-14T23:06:55Z'
+  fingerprint: sha256:fcda6181cb1aacc942e8d0b0ce0599beed6dee1cf3b8f9f1989c49ee26520caf
   content:
     type: system_requirement
     text: The Tool shall never assign a UID that has ever existed in the project,
-      including UIDs of deleted items; retired numbers shall be recorded so allocation
-      skips them.
+      including UIDs of deleted items. A deleted item's file stays as a tombstone,
+      so allocation, which takes the next number above every one in use, passes over
+      it; a number a register's manifest reserves is passed over likewise.
     normative: true
     derived: false
     attrs:

@@ -15,13 +15,14 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:0df5bd702b78df1b61b0a316ab3c1ded895e033ee3918ad2e035def890d9290a
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  at: '2026-11-14T23:07:01Z'
+  fingerprint: sha256:c7871994912b98c0ed361ee8f970a97f32ec05943e5d4a7bc6429e4def1a5a94
   content:
     type: system_requirement
-    text: The Tool shall support CommonMark Markdown (subset in doc 06 §6) in item
-      text fields, including tables, lists, code blocks, and images by relative path.
+    text: Item text fields may hold CommonMark Markdown, including tables, lists,
+      code blocks, and images by relative path. The Tool shall carry it exactly as
+      written, in the item's file and in generated documents, and shall neither interpret
+      nor validate it.
     normative: true
     derived: false
     attrs:
