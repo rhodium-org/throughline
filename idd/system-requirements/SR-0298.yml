@@ -1,6 +1,6 @@
 uid: SR-0298
 type: system_requirement
-status: ratified
+status: rejected
 title: tl proposes declarations from the graphs that would follow
 text: tl shall propose, as proposed AI-origin items in a standard, the register,
   attribute, value set and link declarations that one or more named graphs hold,
@@ -16,6 +16,11 @@ attrs:
   priority: could
   verification: test
   origin: ai
+  invalidated_reason: Proposing a standard from graphs that disagree is a matter
+    of judgement (what to call a thing, which graph is right), which belongs in a
+    skill an agent runs, not in a command of the Tool. The Tool checks followers
+    against a standard (UR-0044); it does not write one. Decided by Henry Grech-Cini
+    on 14 November 2026.
 ratifications:
 - by: Henry Grech-Cini
   at: '2026-11-01T16:48:06Z'
