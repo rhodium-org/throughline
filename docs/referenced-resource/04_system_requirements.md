@@ -499,13 +499,13 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0036 -->
-**SR-0036 — Baselines** — `system_requirement`, status `ratified`
+**SR-0036 — Baselines** — `system_requirement`, status `rejected`
 
 > The Tool shall create named baselines pinning the exact state of all items, list baselines, and check out or read any baseline.
 
 *Implements:* UR-0013
 
-**priority**: must · **verification**: test
+**priority**: must · **verification**: test · **invalidated_reason**: Git already gives this: a tag names an exact state of every item, a commit hash pins one, tags are listed by git, and any of them is read by tl docs --at (SR-0090) and compared by tl diff (SR-0037). A second kind of name kept by the Tool would only repeat it. Decided by Henry Grech-Cini on 14 November 2026.
 
 *Ratified by:* Henry Grech-Cini
 <!-- tl:end -->

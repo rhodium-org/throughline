@@ -1,6 +1,6 @@
 uid: SR-0145
 type: system_requirement
-status: ratified
+status: rejected
 title: Reclassify an item by supersession, never by moving it
 text: The Tool shall reclassify an item — into another register, another type, or
   both — by superseding it, never by relocating or renumbering it. The operation
@@ -51,6 +51,11 @@ attrs:
   priority: should
   verification: test
   origin: ai
+  invalidated_reason: 'Supersession adds a level of indirection to every graph that
+    uses it: a reader, and an AI agent above all, must follow a superseded item to
+    its replacement before it can trust what it reads. An item in the wrong register
+    is retired and written again where it belongs. Decided by Henry Grech-Cini on
+    14 November 2026.'
 ratifications:
 - by: Henry Grech-Cini
   fingerprint: sha256:53f1d47d513a4ea2cc61acf4247243a31c72933ded4ac3bcca882fa45e534c01
