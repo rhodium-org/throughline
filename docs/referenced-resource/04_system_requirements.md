@@ -748,7 +748,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0052 -->
-**SR-0052 — Coverage report** — `system_requirement`, status `ratified`
+**SR-0052 — Coverage report** — `system_requirement`, status `implemented`
 
 > The Tool shall generate a coverage report per coverage rule (SR-0042) with counts, percentages, and the list of uncovered UIDs.
 
