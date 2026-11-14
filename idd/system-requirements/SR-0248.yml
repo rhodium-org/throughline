@@ -26,6 +26,8 @@ links:
   type: implements
 - target: SR-0006
   type: refines
+- target: UR-0026
+  type: implements
 attrs:
   priority: must
   verification: test

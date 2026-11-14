@@ -1,6 +1,6 @@
 uid: SR-0126
 type: system_requirement
-status: ratified
+status: rejected
 title: GUID-backfill migration preserves review state
 text: Migrating an existing project to GUID identity shall assign every item a deterministic
   GUID (derived from its frozen UID) and rebase every review and suspect stamp to
@@ -14,6 +14,12 @@ attrs:
   priority: must
   verification: test
   origin: hybrid
+  invalidated_reason: 'Superseded by tl resolve (SR-0006, SR-0248, SR-0250): a UID
+    allocated on two branches is detected when they merge and the later item is renumbered,
+    with the links to it rewritten. GUID identity was never built, and SR-0123 contradicts
+    SR-0154, which is what the fingerprint does. A signature given before a merge
+    is kept safe by ratifying on the main branch. Decided by Henry Grech-Cini on
+    14 November 2026.'
 ratifications:
 - by: henry
   fingerprint: sha256:76d3d92eea57b530cfa11b723c82528cfe1749d7bd2b08520bd4e89061721aee

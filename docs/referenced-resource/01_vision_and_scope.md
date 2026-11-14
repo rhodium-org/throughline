@@ -99,7 +99,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 <!-- tl:item NG-0004 -->
 **NG-0004 — No central identity server** — `non_goal`, status `ratified`
 
-> throughline does not provide, and does not require, an online counter or coordinating service to allocate UIDs. Allocation atomicity derives solely from compare-and-swap on the trunk ref, keeping identity allocation viable for fully offline and zero-backend (e.g. in-browser) clients.
+> throughline does not provide, and does not require, an online counter or coordinating service to allocate UIDs. A UID is allocated from the files a branch holds, and a clash between two branches is settled when they merge (SR-0006), keeping identity allocation viable for fully offline and zero-backend (e.g. in-browser) clients.
 
 **origin**: hybrid
 
