@@ -1,6 +1,6 @@
 uid: SR-0340
 type: system_requirement
-status: proposed
+status: ratified
 title: A GQL filter is never run as code
 text: A GQL filter shall be read by a parser of the Tool's own for the constructs
   it accepts and evaluated by walking what that parser built. No part of a filter
@@ -22,3 +22,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-14T23:20:09Z'
+  fingerprint: sha256:54d06392b90d7372073a3434d815074228cfeebdd3d7d55b2d6a3ef0290360aa
+  content:
+    type: system_requirement
+    text: A GQL filter shall be read by a parser of the Tool's own for the constructs
+      it accepts and evaluated by walking what that parser built. No part of a filter
+      shall reach eval, exec, a database, a shell or any other interpreter, and a
+      filter that cannot be parsed shall fail with an error naming where, never fall
+      back to another reading.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

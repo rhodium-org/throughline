@@ -1,6 +1,6 @@
 uid: SR-0336
 type: system_requirement
-status: proposed
+status: ratified
 title: A filter is a GQL search condition over one item
 text: 'Where a project declares GQL as its filter language (the next requirement),
   a filter shall be a search condition of ISO/IEC 39075:2024 in which the item under
@@ -38,3 +38,26 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-14T23:19:56Z'
+  fingerprint: sha256:48905de9d05a78c1ff9a9d5147126263980aeafb6062352080c272cf94c8ac91
+  content:
+    type: system_requirement
+    text: 'Where a project declares GQL as its filter language (the next requirement),
+      a filter shall be a search condition of ISO/IEC 39075:2024 in which the item
+      under test is bound to the variable item. It shall accept exactly: AND, OR,
+      NOT and parentheses; the comparisons =, <>, <, <=, > and >=; IS NULL and IS
+      NOT NULL; IN and NOT IN over a list; CONTAINS, STARTS WITH and ENDS WITH between
+      texts; character string literals in single or double quotes, integers, decimals,
+      TRUE, FALSE, NULL and lists of them in square brackets; a property of the item,
+      written item.name; the functions LOWER, UPPER, TRIM, COALESCE and SIZE; and
+      EXISTS over one edge pattern from or to the item, as in EXISTS { (item)-[:implements]->()
+      } and EXISTS { (item)<-[:verifies]-() }, whose other end may carry one condition.
+      It shall refuse every other construct, naming it, and shall give the same items
+      in a query, a coverage rule and a document. A condition that is unknown, because
+      a property it reads is absent, does not select the item.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

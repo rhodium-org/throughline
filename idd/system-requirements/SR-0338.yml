@@ -1,6 +1,6 @@
 uid: SR-0338
 type: system_requirement
-status: proposed
+status: ratified
 title: An item is read by a filter as the node the engines read
 text: In a GQL filter the item shall have the properties uid, type, status, register,
   title, text, rationale, normative and derived; its standing, signed, stale, retired,
@@ -26,3 +26,22 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-14T23:20:06Z'
+  fingerprint: sha256:025fdaa6e7fa5fb1909b9ebcfc289dfe314fbdc65f994c3f66055d465a7b9eb1
+  content:
+    type: system_requirement
+    text: In a GQL filter the item shall have the properties uid, type, status, register,
+      title, text, rationale, normative and derived; its standing, signed, stale,
+      retired, reviewed and signers (SR-0335); one property for each attribute it
+      holds, by the attribute's name, unless that name is one of the properties listed
+      here; and attrs, a record of every attribute, through which one of those is
+      read, as in item.attrs.status. A property the item does not hold is null. The
+      other end of an edge pattern is the item a link points at or comes from, with
+      the same properties, or, for a link target that is no item, a node whose one
+      property is target. An edge is labelled by its link type.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

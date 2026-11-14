@@ -1,6 +1,6 @@
 uid: SR-0337
 type: system_requirement
-status: proposed
+status: ratified
 title: A project says which language its filters are in
 text: A project shall declare its filter language in its configuration, as filter_language
   under [project], with the value gql or python. Where it declares none, its filters
@@ -26,3 +26,20 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-14T23:20:04Z'
+  fingerprint: sha256:388243e655df34534d229a5fa5dcaab61574600f6fbd5124201e79f6558e8735
+  content:
+    type: system_requirement
+    text: A project shall declare its filter language in its configuration, as filter_language
+      under [project], with the value gql or python. Where it declares none, its
+      filters are read in the earlier language (SR-0104), so a project written before
+      this requirement answers exactly as it did. tl init shall write gql. Every
+      filter of a project, in its coverage rules and in its documents, is in the
+      one language it declares; the Tool shall never tell the language of a filter
+      from the filter's own text.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
