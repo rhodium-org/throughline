@@ -193,6 +193,21 @@ if it is new), reference the UID in your commit, and keep `tl -C idd check
 --strict` and `tl -C idd docs --check` green. See [`CONTRIBUTING.md`](CONTRIBUTING.md)
 and [`HOW_TO_USE.md`](HOW_TO_USE.md).
 
+### Ask for signatures last, on a branch that holds the current `main`
+
+Before you ask the operator to ratify items on a branch, merge the current
+`main` into it and, where that merge stops on an item file both sides added, run
+`tl resolve`. Then hand over. A UID allocated on two branches is settled at the
+merge by renumbering the later item (SR-0006), and an item's fingerprint covers
+its UID, so an item signed before its number was settled has to be signed again.
+Signing last, on an up-to-date branch, means the numbers are settled first.
+
+It narrows the gap; it does not close it. If someone else merges between the
+signature and your merge and takes the same number, `tl resolve` renumbers your
+item and says its signature no longer matches: ask for that one item to be signed
+again. Do not ratify on `main` to avoid this: items are signed on the branch that
+proposes them, which is what the pull request gate checks.
+
 ### Act; ask the operator only for what needs a human
 
 The operator's part is to ratify, to approve the `pypi` deployment a release

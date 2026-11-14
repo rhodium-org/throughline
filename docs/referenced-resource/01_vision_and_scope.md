@@ -103,7 +103,7 @@ absence. The entries below are **generated from the graph** by `tl docs`:
 
 **origin**: hybrid
 
-*Ratified by:* Henry Grech-Cini
+*Ratified by:* Henry Grech-Cini (github:rhodium289)
 <!-- tl:end -->
 
 <!-- tl:item NG-0005 -->
