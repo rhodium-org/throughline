@@ -1,0 +1,19 @@
+uid: SR-0329
+type: system_requirement
+status: proposed
+title: Only true flags an item as ambiguous
+text: An item shall be flagged ambiguous only when its ambiguity flag is the boolean
+  true. tl check shall report any other value of the flag under the rule attribute-kind.
+rationale: 'The flag is read by truthiness, so a file holding the text false, written
+  by hand or by another tool, is flagged. SR-0223 already stores only a boolean when
+  the Tool writes it. Who pays: nobody whose flags the Tool wrote.'
+normative: true
+links:
+- target: UR-0035
+  type: implements
+- target: SR-0223
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

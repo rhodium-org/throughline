@@ -1,0 +1,24 @@
+uid: SR-0325
+type: system_requirement
+status: proposed
+title: A tombstone is whatever status the tombstone role names
+text: Wherever the Tool asks whether an item is a tombstone, in an operation, a check
+  rule, a query, a document or a summary, and in the baseline it compares against,
+  it shall test the status the project binds to the tombstone role, and never the
+  word deleted.
+rationale: 'SR-0131 has operations resolve statuses by role, and delete does write
+  the role''s status. But the item model, the erased-tombstone and key-collision
+  rules, orphan, unserved, ambiguous, the restorable set and the composed summary
+  compare with the literal ''deleted'', so a project that binds the role to another
+  word gets tombstones no rule recognises. Who pays: no project that binds the role
+  to deleted, as the shipped lifecycle does.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0131
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

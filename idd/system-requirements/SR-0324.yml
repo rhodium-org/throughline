@@ -1,0 +1,24 @@
+uid: SR-0324
+type: system_requirement
+status: proposed
+title: A file that cannot be read as an item or a manifest is refused by name
+text: When an item file is not valid YAML, is not a mapping, or holds no uid or no
+  type, or a register manifest holds no prefix, the Tool shall refuse to load the
+  project, naming the file and what is wrong with it, and shall write nothing. It
+  shall never stop with an unhandled error.
+rationale: 'SR-0134 turns a malformed part of an item into a finding, which needs
+  an item to name. These files give none: release 5.3.0 stops on them with a Python
+  traceback (KeyError ''uid'', ScannerError). Skipping the file and reporting a finding
+  was rejected: a write made meanwhile could allocate the skipped item''s number.
+  Who pays: nobody whose graph loads today; a keeper with such a file is told which
+  one.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+- target: SR-0134
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

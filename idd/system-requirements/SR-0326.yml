@@ -1,0 +1,21 @@
+uid: SR-0326
+type: system_requirement
+status: proposed
+title: An explicit UID is unused by number, however it is padded, and not reserved
+text: tl new given an explicit UID shall refuse it where the register already holds
+  an item with that number, whatever the padding of either, or where the register's
+  manifest reserves that number.
+rationale: 'SR-0005 accepts an explicit unused UID and SR-0003 forbids reuse, but
+  the test is equality of text: REQ-2 is accepted beside REQ-0002, and a reserved
+  number is not looked at. Who pays: an author who names a UID whose number is taken
+  is refused and names another.'
+normative: true
+links:
+- target: UR-0002
+  type: implements
+- target: SR-0005
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

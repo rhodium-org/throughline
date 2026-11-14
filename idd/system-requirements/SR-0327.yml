@@ -1,0 +1,24 @@
+uid: SR-0327
+type: system_requirement
+status: proposed
+title: Only tl delete moves an item to the tombstone status
+text: tl status, tl new --status and the status operation beneath them shall refuse
+  the status bound to the tombstone role, naming tl delete, and shall refuse a status
+  the project does not declare. The refusals shall be made by the operation itself,
+  not only by the command line.
+rationale: 'tl status <UID> deleted writes the status with no deletion record (SR-0012),
+  leaving an item that is deleted to every rule and that tl restore refuses. It is
+  the same gap SR-0318 closed for the ratified status. The declared-status test exists
+  only in the command line, so a program calling the operation can write any word.
+  Who pays: an author who used tl status to delete uses tl delete, which asks for
+  a reason.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0130
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

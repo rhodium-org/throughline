@@ -1,0 +1,23 @@
+uid: SR-0330
+type: system_requirement
+status: proposed
+title: A schema value of the wrong kind is refused when the configuration is read
+text: The Tool shall refuse a configuration in which an attribute's required or normative
+  key is not a boolean, or a rule's severity is not one of error, warning or off,
+  naming the key and the value.
+rationale: 'required and normative are read by truthiness (required = ''no'' is required),
+  a misspelt severity is carried into the finding and counts as neither error nor
+  warning, and a severity that is not text is ignored. SR-0041 names the three severities.
+  Who pays: a keeper whose configuration holds such a value must correct it before
+  any command runs; tl migrate could not repair it, since the meaning intended is
+  not recoverable.'
+normative: true
+links:
+- target: UR-0011
+  type: implements
+- target: SR-0082
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
