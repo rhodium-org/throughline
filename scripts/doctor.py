@@ -39,6 +39,21 @@ from importlib import metadata
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _this_package() -> str:
+    """The package this checkout holds, as its pyproject.toml names it. Not the
+    folder's name: a worktree or a clone may sit in a folder called anything, and
+    the checkout is still this package (UR-0021)."""
+    try:
+        import tomllib
+        with open(REPO_ROOT / "pyproject.toml", "rb") as f:
+            return tomllib.load(f)["project"]["name"]
+    except (OSError, KeyError, ValueError, ImportError):
+        return REPO_ROOT.name
+
+
+THIS_PACKAGE = _this_package()
 MIN_PYTHON = (3, 11)
 
 # The packages that install one another. A checkout sitting beside this repo is the
@@ -150,7 +165,7 @@ def _install_kind(dist_name: str) -> tuple[str, str]:
 
 def _checkout_for(dist_name: str) -> Path:
     """Where this contributor would have ``dist_name`` checked out, if they do."""
-    return REPO_ROOT if dist_name == REPO_ROOT.name else REPO_ROOT.parent / dist_name
+    return REPO_ROOT if dist_name == THIS_PACKAGE else REPO_ROOT.parent / dist_name
 
 
 def _checked_out() -> list[str]:
@@ -195,8 +210,8 @@ def _chain_remediation(unchained: list[str]) -> str:
     # a contributor reading both sees one command, not two that differ cosmetically.
     present = _checked_out()
     installs = " ".join(
-        [f"-e ../{d}" for d in present if d != REPO_ROOT.name]
-        + (['-e ".[dev]"'] if REPO_ROOT.name in present else [])
+        [f"-e ../{d}" for d in present if d != THIS_PACKAGE]
+        + (['-e ".[dev]"'] if THIS_PACKAGE in present else [])
     )
     return (
         "You have these checked out but are running the published build, so your "

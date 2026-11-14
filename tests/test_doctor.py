@@ -302,3 +302,15 @@ def test_probe_mode_reports_this_interpreter_as_json(capsys):
     assert set(payload) == set(doctor.TOOLCHAIN)
     kind, _where = payload["throughline"]
     assert kind in {"absent", "editable", "published"}
+
+
+def test_this_checkout_is_the_package_whatever_its_folder_is_called(monkeypatch, tmp_path):
+    """UR-0021. A worktree or a clone in a folder not named after the package is
+    still this package's checkout. The folder's name was read as the package's,
+    so in such a folder the doctor looked for throughline beside the checkout,
+    called an editable install of it wrong, and left it out of the remedy."""
+    monkeypatch.setattr(doctor, "REPO_ROOT", tmp_path / "some-worktree")
+    assert doctor.THIS_PACKAGE == "throughline"
+    assert doctor._checkout_for("throughline") == tmp_path / "some-worktree"
+    assert doctor._checkout_for("throughline-ratify") == tmp_path / "throughline-ratify"
+
