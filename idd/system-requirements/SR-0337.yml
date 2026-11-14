@@ -1,0 +1,28 @@
+uid: SR-0337
+type: system_requirement
+status: proposed
+title: A project says which language its filters are in
+text: A project shall declare its filter language in its configuration, as filter_language
+  under [project], with the value gql or python. Where it declares none, its filters
+  are read in the earlier language (SR-0104), so a project written before this requirement
+  answers exactly as it did. tl init shall write gql. Every filter of a project,
+  in its coverage rules and in its documents, is in the one language it declares;
+  the Tool shall never tell the language of a filter from the filter's own text.
+rationale: 'A new format number would stop every graph loading until it was migrated,
+  and most repositories install the Tool unpinned, so the day of the release would
+  turn their checks red, as 9 November 2026 did. A key leaves an unmigrated graph
+  working and lets each be moved when its keeper chooses. Guessing the language from
+  a filter''s text was rejected: type == ''x'' and item.type = ''x'' are easy to
+  tell apart, and the one that is not would be read wrongly without a word. Who pays:
+  nobody until they migrate; the earlier language is carried in the Tool until a
+  later major release removes it.'
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

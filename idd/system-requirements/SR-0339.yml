@@ -1,0 +1,31 @@
+uid: SR-0339
+type: system_requirement
+status: proposed
+title: tl migrate rewrites a project's filters into GQL, or changes nothing
+text: 'tl migrate shall offer to move a project to GQL filters: it rewrites every
+  coverage rule''s filter in the configuration and every filter in the marked regions
+  of the documents the project configures, each into the GQL condition that selects
+  the same items, and sets filter_language to gql. Before writing anything it shall
+  evaluate each rewritten filter against the project''s items and compare the items
+  selected with those the original selects; where any differs, or a filter uses a
+  construct it cannot rewrite, it shall change nothing and name the filter and the
+  document or rule that holds it. A project already at gql is left as it is. It shall
+  say how many filters it rewrote.'
+rationale: 'The rewriting is mechanical because the earlier grammar is closed (SR-0104),
+  but the two languages differ where a property is absent: attrs.get(''p'') != ''x''
+  selects an item with no p, and item.p <> ''x'' does not, so that one is written
+  item.p IS NULL OR item.p <> ''x''. Checking the selection on the project''s own
+  items, before writing, is what makes the move safe to run on a graph nobody is
+  watching. All or nothing, since a project is in one language (the requirement before
+  this). Who pays: a keeper runs tl migrate once and reads a diff of their rules
+  and documents; a filter the Tool cannot rewrite is rewritten by hand.'
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
