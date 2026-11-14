@@ -199,7 +199,10 @@ The operator's part is to ratify, to approve the `pypi` deployment a release
 waits on, and to hold the secrets. Everything else a session can do, it does
 without asking and without waiting: fix red CI, merge its own pull request once
 CI is green, the branch is mergeable and no item in it is still `proposed`, and
-bump the version the release will carry. A release is a GitHub release whose tag
+bump the version the release will carry. Before a release, run
+`python scripts/compare_releases.py --against <last release> <directories of graphs>`
+and list every difference it reports in the release notes, or mend it (SR-0334).
+A release is a GitHub release whose tag
 is `v` plus the version `pyproject.toml` declares (the workflow refuses any
 other); where the session cannot create it, it asks once, with the exact
 `gh release create vX.Y.Z` command, and says the deployment then waits for the

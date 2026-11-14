@@ -1,0 +1,50 @@
+uid: SR-0334
+type: system_requirement
+status: implemented
+title: A candidate build is compared with a released one over every graph it is pointed
+  at
+text: 'The repository shall hold a command that, given a released version of the
+  Tool and one or more directories, finds every graph beneath them, runs the released
+  version and the working tree over each, read-only, and reports every graph whose
+  check findings (plain and strict), documents gate, dump or exit code differ, with
+  the difference. It shall exit non-zero when any graph differs and say how many
+  were compared, how many were refused alike by both, and how many it could not read.
+  It shall write to no graph and name no directory of its own: the graphs are wherever
+  the caller says.'
+rationale: 'A release that changes what a graph answers must say so (NFR-0011), and
+  a difference nobody looked for is found by a keeper after the upgrade. The comparison
+  is over real graphs because the unit tests cover the cases someone thought of.
+  Kept as contributor tooling beside the doctor (UR-0021), not as a tl command: it
+  needs a second installed version, which a user of the Tool has no reason to have.
+  Naming a fixed set of graphs was rejected: where a keeper''s graphs are is theirs
+  to say. Who pays: the person cutting a release, some minutes for a few hundred
+  graphs; a difference that is intended is listed in the release notes, not hidden.'
+normative: true
+links:
+- target: UR-0048
+  type: implements
+- target: NFR-0011
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T12:12:18Z'
+  fingerprint: sha256:76b8068e4b8ef36cc1ba0900c8ac24d310fee8089ddb46c259ff8db65fe403f2
+  content:
+    type: system_requirement
+    text: 'The repository shall hold a command that, given a released version of
+      the Tool and one or more directories, finds every graph beneath them, runs
+      the released version and the working tree over each, read-only, and reports
+      every graph whose check findings (plain and strict), documents gate, dump or
+      exit code differ, with the difference. It shall exit non-zero when any graph
+      differs and say how many were compared, how many were refused alike by both,
+      and how many it could not read. It shall write to no graph and name no directory
+      of its own: the graphs are wherever the caller says.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
