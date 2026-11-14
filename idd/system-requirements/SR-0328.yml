@@ -1,6 +1,6 @@
 uid: SR-0328
 type: system_requirement
-status: ratified
+status: implemented
 title: A number given as text is read in one stated form
 text: Where an operation reads an int or float attribute value from text, an int
   shall be an optional sign and decimal digits, and a float the same with an optional

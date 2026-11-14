@@ -13,7 +13,7 @@ from typing import Callable, NamedTuple
 
 from .fingerprint import fingerprint
 from .graph import Index
-from .grounding import ungrounded_by
+from .grounding import GroundingError, refuse_undeclared_link_type, ungrounded_by
 from .model import Item, Link
 from .storage import write_item
 
@@ -65,12 +65,21 @@ def _refuse_ungrounding(project, view: GroundingView, src_uid: str, change: str,
                     "link the replacement first, then remove this one")
 
 
+def _declared(project, link_type: str) -> None:
+    """Refuse a link type the project does not declare (SR-0331)."""
+    try:
+        refuse_undeclared_link_type(project.schema, link_type)
+    except GroundingError as e:
+        raise LinkError(str(e)) from e
+
+
 def add_link(project, src_uid: str, target: str, link_type: str, *,
              stamp: bool = False, view: GroundingView | None = None) -> str:
     """Add ``src --link_type--> target``. Where that edge already exists, refresh
     its stamp in place when ``stamp`` is asked for, and refuse otherwise, since a
     parallel duplicate would hide a stale stamp behind a fresh one (SR-0034).
     Returns ``"linked"`` or ``"restamped"``."""
+    _declared(project, link_type)
     view = view or own_view(project)
     src = _source(project, src_uid)
     dst = _target(view, target)
@@ -95,6 +104,7 @@ def retype_link(project, src_uid: str, target: str, link_type: str, *,
     """Change the type of the edge joining ``src`` to ``target`` in place
     (SR-0143), refused where the new type would leave the graph ungrounded
     (SR-0211). Returns the type it had."""
+    _declared(project, link_type)
     view = view or own_view(project)
     src = _source(project, src_uid)
     dst = _target(view, target)

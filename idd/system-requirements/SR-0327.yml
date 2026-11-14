@@ -1,6 +1,6 @@
 uid: SR-0327
 type: system_requirement
-status: ratified
+status: implemented
 title: Only tl delete moves an item to the tombstone status
 text: tl status, tl new --status and the status operation beneath them shall refuse
   the status bound to the tombstone role, naming tl delete, and shall refuse a status

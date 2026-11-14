@@ -1,6 +1,6 @@
 uid: SR-0332
 type: system_requirement
-status: ratified
+status: implemented
 title: A borrowed item whose UID is not well formed is refused by name
 text: When a composed source holds an item whose UID does not fit the UID grammar,
   the Tool shall refuse to compose, naming the source and the item, and never stop

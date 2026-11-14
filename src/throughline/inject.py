@@ -68,6 +68,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .graph import Index
+from .schema import listed, shown
 from .signatures import describe
 from .validate import FilterError, eval_filter, is_namespace_qualified
 
@@ -694,7 +695,11 @@ def _chart_groups(project, key: str, rows: list) -> tuple[list[str], list[int], 
             val = getattr(it, key)
         else:
             raw = it.attrs.get(key)
-            val = None if raw is None else str(raw)
+            # A list reads as its members, not as the language writes a list
+            # (SR-0333).
+            val = None if raw is None else (raw if isinstance(raw, str)
+                                            else listed(raw) if isinstance(raw, list)
+                                            else shown(raw))
         if val is None:
             continue
         counts_s[val] = counts_s.get(val, 0) + 1

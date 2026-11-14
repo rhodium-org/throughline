@@ -455,3 +455,356 @@ def test_attributes_that_are_not_a_mapping_are_a_named_finding(tmp_path):
     findings = [f for f in validate(load_project(root)) if f.uid == "REQ-0001"]
     assert any("'attrs' must be a mapping" in f.message and f.file.endswith(
         "REQ-0001.yml") for f in findings)
+
+
+# ===========================================================================
+# Requirements ratified for what the reading found that none covered
+# (SR-0324 to SR-0333).
+# ===========================================================================
+
+def _said(capsys) -> str:
+    out = capsys.readouterr()
+    return out.out + out.err
+
+
+# ---------------------------------------------- unreadable files (SR-0324)
+
+@pytest.mark.parametrize("content, why", [
+    ("type: requirement\ntext: x\n", "no 'uid'"),
+    ("uid: REQ-0009\ntext: x\n", "no 'type'"),
+    ("- a\n- b\n", "not a mapping"),
+    ("just words\n", "not a mapping"),
+    ("", "empty"),
+    ('uid: REQ-0009\ntype: requirement\ntext: "x\n', "not valid YAML"),
+])
+def test_a_file_that_cannot_be_read_as_an_item_is_refused_by_name(
+        tmp_path, capsys, content, why):
+    """SR-0324: the project is not loaded, the file and what is wrong with it are
+    named, and no command stops with an unhandled error."""
+    root = _demo(tmp_path)
+    (root / "requirements" / "REQ-0009.yml").write_text(content, encoding="utf-8")
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    capsys.readouterr()
+
+    for command in (["check"], ["new", "REQ", "--title", "x", "--no-interactive"]):
+        assert _cli(["-C", root, *command]) == 2
+        said = _said(capsys)
+        assert "REQ-0009.yml" in said and why in said
+
+    assert {p: p.read_bytes() for p in root.rglob("*") if p.is_file()} == before
+
+
+def test_a_manifest_with_no_prefix_is_refused_by_name(tmp_path, capsys):
+    """SR-0324."""
+    root = _demo(tmp_path)
+    (root / "requirements" / ".register.yml").write_text("title: x\n", encoding="utf-8")
+    capsys.readouterr()
+    assert _cli(["-C", root, "check"]) == 2
+    said = _said(capsys)
+    assert ".register.yml" in said and "no 'prefix'" in said
+
+
+# ------------------------------------------- tombstones by role (SR-0325)
+
+def _renamed_tombstone(tmp_path: Path) -> Path:
+    """The demo project with the tombstone role bound to 'binned'."""
+    root = _demo(tmp_path)
+    text = _toml(root).replace('"deleted"', '"binned"').replace(
+        "'deleted'", "'binned'")
+    import re
+    text = re.sub(r"\bdeleted\b", "binned", text)
+    (root / "throughline.toml").write_text(text, encoding="utf-8")
+    assert load_project(root).schema.status_role("tombstone") == "binned"
+    _git(root, "init", "-q")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "as it stood")
+    return root
+
+
+def test_a_tombstone_is_whatever_status_the_role_names(tmp_path, capsys):
+    """SR-0325: delete writes the role's status, and every rule and view then
+    reads the item as a tombstone, which they did only for the word 'deleted'."""
+    root = _renamed_tombstone(tmp_path)
+    assert _cli(["-C", root, "delete", "TEST-0001", "--reason", "gone"]) == 0
+    project = load_project(root)
+    item = project.get("TEST-0001")
+    assert item.status == "binned" and item.is_deleted
+    # Never signed and with no signed dependent, so it was retired outright and
+    # is no longer live scope: no rule reports it.
+    assert not [f for f in validate(project) if f.uid == "TEST-0001"]
+    capsys.readouterr()
+    assert _cli(["-C", root, "query"]) == 0
+    assert "TEST-0001" not in capsys.readouterr().out
+
+
+def test_an_item_whose_status_is_the_word_deleted_is_no_tombstone_elsewhere(tmp_path):
+    """SR-0325: never the word deleted."""
+    root = _renamed_tombstone(tmp_path)
+    file = root / "tests" / "TEST-0001.yml"
+    file.write_text(file.read_text(encoding="utf-8").replace(
+        "status: proposed", "status: deleted"), encoding="utf-8")
+    item = load_project(root).get("TEST-0001")
+    assert item.status == "deleted" and not item.is_deleted
+
+
+def test_an_erased_tombstone_is_reported_under_the_role_s_status(tmp_path):
+    """SR-0325: in the baseline it compares against, too."""
+    root = _renamed_tombstone(tmp_path)
+    assert _cli(["-C", root, "delete", "TEST-0001", "--reason", "gone"]) == 0
+    _git(root, "add", "-A")
+    _git(root, "commit", "-qm", "retired")
+    (root / "tests" / "TEST-0001.yml").unlink()
+    from throughline.storage import read_baseline
+    project = load_project(root)
+    base = read_baseline(project)
+    found = validate(project, baseline=base.statuses, restorable=base.restorable)
+    assert any(f.rule == "tombstone-deleted" and f.uid == "TEST-0001" for f in found)
+
+
+# ------------------------------------------ an explicit UID (SR-0326)
+
+@pytest.mark.parametrize("uid", ["REQ-1", "REQ-01", "REQ-00001", "REQ-000001"])
+def test_an_explicit_uid_whose_number_is_used_is_refused(tmp_path, capsys, uid):
+    """SR-0326: by number, whatever the padding of either."""
+    root = _demo(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", root, "new", "REQ", "--uid", uid, "--title", "x",
+                 "--no-interactive"]) == 2
+    assert "REQ-0001" in _said(capsys)
+    assert not list(root.rglob(f"{uid}.yml"))
+
+
+def test_an_explicit_uid_whose_number_is_reserved_is_refused(tmp_path, capsys):
+    """SR-0326."""
+    root = _demo(tmp_path)
+    manifest = root / "requirements" / ".register.yml"
+    manifest.write_text(manifest.read_text(encoding="utf-8") + "reserved:\n- 7\n",
+                        encoding="utf-8")
+    capsys.readouterr()
+    assert _cli(["-C", root, "new", "REQ", "--uid", "REQ-0007", "--title", "x",
+                 "--no-interactive"]) == 2
+    assert "reserved" in _said(capsys)
+    assert _cli(["-C", root, "new", "REQ", "--uid", "REQ-0008", "--title", "x",
+                 "--no-interactive"]) == 0
+
+
+def test_a_register_given_more_digits_goes_on_from_the_same_numbers(tmp_path, capsys):
+    """SR-0326, SR-0005: widening a register breaks nothing. The next number
+    follows the highest used, the items already there keep their names, and the
+    old numbers cannot be taken again under the new width."""
+    root = _demo(tmp_path)
+    manifest = root / "requirements" / ".register.yml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace(
+        "digits: 4", "digits: 6"), encoding="utf-8")
+    assert load_project(root).registers["REQ"].digits == 6
+
+    assert _cli(["-C", root, "new", "REQ", "--title", "next", "--ground", "INT-0001",
+                 "--no-interactive"]) == 0
+    project = load_project(root)
+    assert project.get("REQ-0001") is not None and project.get("REQ-000002") is not None
+    assert [f for f in validate(project) if f.severity == "error"] == []
+    capsys.readouterr()
+    assert _cli(["-C", root, "new", "REQ", "--uid", "REQ-000001", "--title", "x",
+                 "--no-interactive"]) == 2
+    assert "REQ-0001" in _said(capsys)
+
+
+# ------------------------------------ the tombstone status (SR-0327)
+
+def test_only_delete_moves_an_item_to_the_tombstone_status(tmp_path, capsys):
+    """SR-0327: tl status wrote it with no deletion record, leaving an item that
+    tl restore refused."""
+    root = _demo(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", root, "status", "REQ-0001", "deleted"]) == 2
+    assert "tl delete" in _said(capsys)
+    assert load_project(root).get("REQ-0001").status == "proposed"
+
+    assert _cli(["-C", root, "new", "REQ", "--title", "x", "--status", "deleted",
+                 "--no-interactive"]) == 2
+    assert "tl delete" in _said(capsys)
+
+    assert _cli(["-C", root, "delete", "REQ-0001", "--reason", "gone"]) == 0
+    assert load_project(root).get("REQ-0001").deleted["reason"] == "gone"
+
+
+def test_the_status_operation_itself_refuses_what_the_command_line_did(tmp_path):
+    """SR-0327: by the operation, not only by the command line."""
+    from throughline.grounding import set_status
+    from throughline.items import new_item
+    project = load_project(_demo(tmp_path))
+    item = project.get("REQ-0001")
+    with pytest.raises(GroundingError, match="not a declared status"):
+        set_status(project.schema, item, "nonsense")
+    with pytest.raises(GroundingError, match="tl delete"):
+        set_status(project.schema, item, "deleted")
+    with pytest.raises(GroundingError, match="not a declared status"):
+        new_item(project, "REQ", item_type="requirement", status="nonsense")
+    assert item.status == "proposed"
+
+
+# ------------------------------------------- numbers as text (SR-0328)
+
+def _numbers(tmp_path: Path) -> Path:
+    root = _demo(tmp_path)
+    _append(root, '\n[types.measure]\nattrs.count = { type = "int" }\n'
+                  'attrs.ratio = { type = "float" }\n')
+    return root
+
+
+@pytest.mark.parametrize("attr", [
+    "count=1_000", "count=1.0", "count=0x10", "count=١٢", "count=",
+    "ratio=inf", "ratio=nan", "ratio=1_0.5", "ratio=-Infinity", "ratio=1.", "ratio=.5",
+])
+def test_a_number_outside_the_stated_form_is_refused(tmp_path, attr):
+    """SR-0328."""
+    root = _numbers(tmp_path)
+    assert _cli(["-C", root, "new", "REQ", "--type", "measure", "--title", "m",
+                 "--attr", attr, "--no-interactive"]) == 2
+
+
+@pytest.mark.parametrize("attr, value", [
+    ("count=12", 12), ("count=-3", -3), ("count=+4", 4), ("count= 7 ", 7),
+    ("ratio=2", 2.0), ("ratio=2.5", 2.5), ("ratio=-0.25", -0.25),
+    ("ratio=1e3", 1000.0), ("ratio=2.5E-1", 0.25),
+])
+def test_a_number_in_the_stated_form_is_read(tmp_path, attr, value):
+    """SR-0328."""
+    root = _numbers(tmp_path)
+    assert _cli(["-C", root, "new", "REQ", "--type", "measure", "--title", "m",
+                 "--attr", attr, "--no-interactive"]) == 0
+    held = load_project(root).get("REQ-0002").attrs[attr.split("=")[0]]
+    assert held == value and type(held) is type(value)
+
+
+# ------------------------------------------ the ambiguity flag (SR-0329)
+
+def test_only_true_flags_an_item_as_ambiguous(tmp_path):
+    """SR-0329: the text 'false' was read as a flag."""
+    root = _demo(tmp_path)
+    file = root / "requirements" / "REQ-0001.yml"
+    text = file.read_text(encoding="utf-8")
+    assert "\nattrs:\n" in text
+    file.write_text(text.replace("\nattrs:\n", "\nattrs:\n  ambiguous: 'false'\n"),
+                    encoding="utf-8")
+    found = [f for f in validate(load_project(root)) if f.uid == "REQ-0001"]
+    assert not [f for f in found if f.rule == "ambiguous"]
+    assert any(f.rule == "attribute-kind" and "ambiguous" in f.message for f in found)
+
+    file.write_text(text.replace("\nattrs:\n", "\nattrs:\n  ambiguous: true\n"),
+                    encoding="utf-8")
+    found = [f for f in validate(load_project(root)) if f.uid == "REQ-0001"]
+    assert [f for f in found if f.rule == "ambiguous"]
+    assert not [f for f in found if f.rule == "attribute-kind"]
+
+
+# ------------------------------------- schema values of the wrong kind (SR-0330)
+
+@pytest.mark.parametrize("extra, names", [
+    ('\n[types.measure]\nattrs.count = { type = "int", required = "no" }\n',
+     ("count", "required", '"no"')),
+    ('\n[types.measure]\nattrs.count = { type = "int", normative = 1 }\n',
+     ("count", "normative", "1")),
+    ('\n[rules]\norphan = "eror"\n', ("orphan", '"eror"')),
+    ('\n[rules]\norphan = true\n', ("orphan", "true")),
+])
+def test_a_schema_value_of_the_wrong_kind_is_refused_when_read(
+        tmp_path, capsys, extra, names):
+    """SR-0330: the key and the value are named."""
+    root = _demo(tmp_path)
+    text = _toml(root)
+    if extra.startswith("\n[rules]"):
+        text = text.replace("[[rules.coverage]]", extra.strip() + "\n\n[[rules.coverage]]", 1)
+    else:
+        text += extra
+    (root / "throughline.toml").write_text(text, encoding="utf-8")
+    capsys.readouterr()
+    assert _cli(["-C", root, "check"]) == 2
+    said = _said(capsys)
+    assert all(n in said for n in names)
+
+
+@pytest.mark.parametrize("severity", ["error", "warning", "off"])
+def test_the_three_severities_are_still_read(tmp_path, severity):
+    root = _demo(tmp_path)
+    (root / "throughline.toml").write_text(_toml(root).replace(
+        "[[rules.coverage]]", f'[rules]\nunratified = "{severity}"\n\n[[rules.coverage]]',
+        1), encoding="utf-8")
+    assert load_project(root).schema.rule_overrides["unratified"] == severity
+
+
+# ------------------------------------- a link of an undeclared type (SR-0331)
+
+def test_a_link_of_an_undeclared_type_is_refused_when_it_is_made(tmp_path, capsys):
+    """SR-0331: it was written, and reported only by the next check."""
+    root = _demo(tmp_path)
+    before = (root / "requirements" / "REQ-0001.yml").read_text(encoding="utf-8")
+    capsys.readouterr()
+
+    assert _cli(["-C", root, "link", "REQ-0001", "NFR-0001", "--type", "bogus"]) == 2
+    assert "bogus" in (said := _said(capsys)) and "relates" in said
+    assert _cli(["-C", root, "link", "REQ-0001", "INT-0001", "--type", "bogus",
+                 "--retype"]) == 2
+    assert (root / "requirements" / "REQ-0001.yml").read_text(encoding="utf-8") == before
+
+    assert _cli(["-C", root, "new", "REQ", "--title", "x", "--ground", "INT-0001",
+                 "--ground-type", "bogus", "--no-interactive"]) == 2
+    assert not (root / "requirements" / "REQ-0002.yml").exists()
+
+    code, said = _apply(root, [{"op": "new", "register": "REQ", "title": "x",
+                                "links": [{"target": "INT-0001", "type": "bogus"}]}],
+                        capsys)
+    assert code != 0 and "bogus" in said
+    assert not (root / "requirements" / "REQ-0002.yml").exists()
+
+
+# ------------------------------- a borrowed item with a malformed UID (SR-0332)
+
+def test_a_borrowed_item_whose_uid_is_not_well_formed_is_refused_by_name():
+    """SR-0332: it stopped with an unhandled error."""
+    source = _project(Item(uid="REQ-0001", type="requirement", status="ratified"))
+    odd = Item(uid="req_one", type="requirement", status="ratified")
+    source.registers["REQ"].items[odd.uid] = odd
+    with pytest.raises(ComposeError, match=r"'std'.*'req_one'"):
+        build_union(_project(), {"std": source})
+
+
+# --------------------------------------- the wording of a finding (SR-0333)
+
+def test_a_finding_names_values_without_the_language_s_renderings(tmp_path):
+    """SR-0333: a list as its members, text in double quotes, a kind by the
+    format's name. The rule, the severity and the item are unchanged."""
+    root = _demo(tmp_path)
+    _append(root, '\n[types.measure]\nattrs.count = { type = "int" }\n'
+                  '\n[link_rules]\nverifies = { from = ["test", "nfr"] }\n')
+    file = root / "requirements" / "REQ-0001.yml"
+    text = file.read_text(encoding="utf-8").replace("priority: must", "priority: urgent")
+    assert "priority: urgent" in text
+    file.write_text(text.replace("\nlinks:\n", "\nlinks:\n- target: TEST-0001\n"
+                                 "  type: verifies\n"), encoding="utf-8")
+    assert _cli(["-C", root, "new", "REQ", "--type", "measure", "--title", "m",
+                 "--no-interactive"]) == 0
+    measure = root / "requirements" / "REQ-0002.yml"
+    measure.write_text(measure.read_text(encoding="utf-8")
+                       + "attrs:\n  count: three\nlinks: nothing\n", encoding="utf-8")
+
+    found = {(f.rule, f.uid): f for f in validate(load_project(root))}
+    said = " | ".join(f.message for f in found.values())
+    assert "['" not in said and "NoneType" not in said and "'three'" not in said
+
+    assert found[("schema", "REQ-0001")].message.endswith("must, should, could")
+    assert '"urgent"' in found[("schema", "REQ-0001")].message
+    assert '"three"' in found[("attribute-kind", "REQ-0002")].message
+    assert "got string" in found[("malformed-link", "REQ-0002")].message
+    assert "nfr, test item" in found[("bad-link-shape", "REQ-0001")].message
+    assert found[("schema", "REQ-0001")].severity == "error"
+
+
+def test_a_chart_labels_a_list_by_its_members(tmp_path):
+    """SR-0333."""
+    root = _demo(tmp_path)
+    file = root / "requirements" / "REQ-0001.yml"
+    file.write_text(file.read_text(encoding="utf-8").replace(
+        "\nattrs:\n", "\nattrs:\n  tags:\n  - a\n  - b\n"), encoding="utf-8")
+    out = inject_text(load_project(root), "<!-- tl:chart tags -->\n<!-- tl:end -->\n")
+    assert '"a, b"' in out and "['a'" not in out

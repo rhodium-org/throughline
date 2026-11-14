@@ -81,7 +81,7 @@ def test_check_reports_a_value_of_the_wrong_kind(tmp_path):
     found = _hold(root, checked="next tuesday", count="three", flag="yes")
     assert sorted(f.message.split("'")[1] for f in found) == ["checked", "count", "flag"]
     assert all(f.uid == "FR-0001" and f.severity == "error" for f in found)
-    assert any("'next tuesday'" in f.message and "date" in f.message for f in found)
+    assert any('"next tuesday"' in f.message and "date" in f.message for f in found)
 
 
 def test_values_of_the_right_kind_and_free_form_ones_pass(tmp_path):

@@ -1,6 +1,6 @@
 uid: SR-0326
 type: system_requirement
-status: ratified
+status: implemented
 title: An explicit UID is unused by number, however it is padded, and not reserved
 text: tl new given an explicit UID shall refuse it where the register already holds
   an item with that number, whatever the padding of either, or where the register's

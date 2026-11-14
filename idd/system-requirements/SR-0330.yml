@@ -1,6 +1,6 @@
 uid: SR-0330
 type: system_requirement
-status: ratified
+status: implemented
 title: A schema value of the wrong kind is refused when the configuration is read
 text: The Tool shall refuse a configuration in which an attribute's required or normative
   key is not a boolean, or a rule's severity is not one of error, warning or off,

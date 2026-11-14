@@ -17,12 +17,12 @@ from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
 from .graph import Index
 from .schema import kind_accepts
-from .grounding import ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
+from .grounding import AMBIGUOUS_ATTR, ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
     CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, files_moved, relevant,
     retired, signatures, signs_deletion, stale_entries, standing,
 )
-from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING
+from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING, listed, shown
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
 from .uid import UID_RE, collisions
 
@@ -88,10 +88,7 @@ def validate(project, strict: bool = False,
     schema = project.schema
     out: list[Finding] = []
     restorable = frozenset(restorable or ())
-    try:
-        tombstone_status = schema.status_role("tombstone")
-    except Exception:                       # the role is optional vocabulary
-        tombstone_status = None
+    tombstone_status = schema.tombstone_status() or None   # optional vocabulary
 
     def add(rule, uid, file, msg):
         sev = schema.rule_severity(rule, _DEFAULT_SEVERITY.get(rule, WARNING), strict)
@@ -222,7 +219,7 @@ def validate(project, strict: bool = False,
     # item never appears in project.items(), so catch it here off the baseline.
     if baseline is not None:
         for uid, prev in baseline.items():
-            if prev == "deleted" and project.get(uid) is None:
+            if prev == tombstone_status and project.get(uid) is None:
                 add("tombstone-deleted", uid, "",
                     "tombstone erased: this UID was retired but its record is gone "
                     "(a UID's death record must never be removed)")
@@ -298,13 +295,14 @@ def validate(project, strict: bool = False,
                 add("schema", item.uid, f, f"required attribute '{name}' missing")
             if present and spec.kind == "enum" and item.attrs[name] not in spec.values:
                 add("schema", item.uid, f,
-                    f"attribute '{name}'='{item.attrs[name]}' not in {list(spec.values)}")
+                    f"attribute '{name}' holds {shown(item.attrs[name])}, which is "
+                    f"not one of {listed(spec.values)}")
             # The declared kind (SR-0282): a rule of its own, so a project upgrading
             # with values written under the old leniency can lower it alone.
             if present and not kind_accepts(spec.kind, item.attrs[name]):
                 add("attribute-kind", item.uid, f,
                     f"attribute '{name}' is declared {spec.kind} but holds "
-                    f"{item.attrs[name]!r}")
+                    f"{shown(item.attrs[name])}")
 
         # Link integrity (SR-0032) + type legality (SR-0030).
         for link in item.links:
@@ -459,6 +457,14 @@ def validate(project, strict: bool = False,
         # removing the flag was shown here (SR-0213).
         if is_flagged_ambiguous(item) and not item.is_deleted:
             add("ambiguous", item.uid, f, ambiguity_report(item))
+        # Only true is a flag (SR-0329): anything else there is a value of the
+        # wrong kind, said so, where it used to be read as a flag by truthiness.
+        flag = item.attrs.get(AMBIGUOUS_ATTR)
+        if (flag is not None and not isinstance(flag, bool)
+                and schema.attr(item.type, AMBIGUOUS_ATTR) is None):
+            add("attribute-kind", item.uid, f,
+                f"attribute '{AMBIGUOUS_ATTR}' is a flag, true or false, but holds "
+                f"{shown(flag)}")
 
         # Suspect links (SR-0034): stored stamp != target's current fingerprint.
         for link in item.links:
@@ -573,7 +579,7 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
             findings.append(Finding(
                 "rule-filter", ERROR, "", cfg_file,
                 f"[[rules.coverage]] #{pos + 1} has an unusable 'needs' clause "
-                f"{needs!r}"))
+                f"{shown(needs)}"))
             continue
         direction, ltype = m.group(1), m.group(2)
         sev = rule.get("severity", WARNING)
@@ -595,7 +601,7 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
                 findings.append(Finding(
                     "rule-filter", ERROR, "", cfg_file,
                     f"[[rules.coverage]] #{pos + 1} ({needs}) could not be "
-                    f"evaluated against {item.uid}: {e} — filter = {expr!r}"))
+                    f"evaluated against {item.uid}: {e} — filter = {shown(expr)}"))
                 break
             if not matched:
                 continue

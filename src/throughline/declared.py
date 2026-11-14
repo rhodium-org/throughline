@@ -32,7 +32,7 @@ import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from .schema import SchemaError, kind_accepts
+from .schema import SchemaError, kind_accepts, read_number, shown
 
 DECLARATION_TYPES = frozenset(
     {"register", "type", "enum", "attribute", "link", "link_type"})
@@ -753,9 +753,13 @@ def _check_conditions(decls: Declarations) -> None:
 def _coerce(base: str, raw):
     if base == "date":
         return _as_date(raw)
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        return raw
     try:
-        return int(raw) if base == "int" else float(raw)
-    except (TypeError, ValueError):
+        return read_number(base, raw)
+    except (AttributeError, ValueError):
         return None
 
 
@@ -972,7 +976,7 @@ def check(project, items=None) -> list[Found]:
                 want = _value_ok(a, it.attrs[name], root)
                 if want:
                     out.append(Found("attribute-declared", it.uid, file_of(it),
-                                     f"{name}: {it.attrs[name]!r} is not {want} ({a.uid}, {a.type.title})"))
+                                     f"{name}: {shown(it.attrs[name])} is not {want} ({a.uid}, {a.type.title})"))
             elif a.required or (a.required_when is not None
                                 and _holds(a.required_when, it.attrs, singles, decls, p)):
                 why = "always" if a.required else f"when {a.required_when.text}"

@@ -1,6 +1,6 @@
 uid: SR-0325
 type: system_requirement
-status: ratified
+status: implemented
 title: A tombstone is whatever status the tombstone role names
 text: Wherever the Tool asks whether an item is a tombstone, in an operation, a check
   rule, a query, a document or a summary, and in the baseline it compares against,

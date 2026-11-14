@@ -1,6 +1,6 @@
 uid: SR-0324
 type: system_requirement
-status: ratified
+status: implemented
 title: A file that cannot be read as an item or a manifest is refused by name
 text: When an item file is not valid YAML, is not a mapping, or holds no uid or no
   type, or a register manifest holds no prefix, the Tool shall refuse to load the

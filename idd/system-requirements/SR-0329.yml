@@ -1,6 +1,6 @@
 uid: SR-0329
 type: system_requirement
-status: ratified
+status: implemented
 title: Only true flags an item as ambiguous
 text: An item shall be flagged ambiguous only when its ambiguity flag is the boolean
   true. tl check shall report any other value of the flag under the rule attribute-kind.

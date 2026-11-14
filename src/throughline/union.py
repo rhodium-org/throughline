@@ -247,6 +247,12 @@ def build_union(consumer: Project, sources: dict[str, Project],
                               for uid, file, msg in source.load_errors]
         for reg in source.registers.values():
             for uid, it in reg.items.items():
+                if not UID_RE.match(uid):
+                    # It cannot be given a namespaced name (SR-0332).
+                    raise ComposeError(
+                        f"source '{namespace}' holds an item whose UID '{uid}' is "
+                        f"not well formed (expected <PREFIX>-<NUMBER>) — it must "
+                        "be corrected in that source before it can be composed")
                 mangled_uid = mangler.uid(namespace, uid)
                 mangled_prefix = parse_uid(mangled_uid)[0]
                 rewritten = _rewrite_links(it, namespace, namespaces, mangler,

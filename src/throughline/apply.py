@@ -47,7 +47,7 @@ from pathlib import Path
 from typing import Callable
 
 from .fingerprint import fingerprint, revision
-from .grounding import GroundingError, set_status
+from .grounding import GroundingError, refuse_undeclared_link_type, set_status
 from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
                     new_item, parse_attrs)
 from .links import GroundingView, LinkError, add_link, remove_link
@@ -601,6 +601,7 @@ def apply_change_set(project, operations: list[dict], *,
                 if op.get("rationale"):
                     item.rationale = op["rationale"]
                 for l in op.get("links", []):
+                    refuse_undeclared_link_type(schema, l["type"])
                     item.links.append(Link(target=resolve(l["target"]), type=l["type"]))
                 path = write_item(item, project.register_of(item.uid))
                 if "label" in op:

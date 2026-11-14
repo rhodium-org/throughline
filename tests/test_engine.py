@@ -2977,13 +2977,13 @@ def test_picker_cancel_returns_usage_and_writes_nothing(tmp_path, monkeypatch):
 def test_link_wizard_selects_both_endpoints_and_type(tmp_path, monkeypatch):
     """A two-endpoint command selects each endpoint in turn and then the link type
     (SR-0120/0121). Both items are intents/requirements; feed source, destination,
-    and a free-text link type."""
+    and a free-text link type, which must be one the project declares (SR-0331)."""
     root = _two_type_project(tmp_path)
     # source: type intent(#1)->INT-0001 ; dest: type requirement(#2)->FR-0001 ; type
-    _make_tty(monkeypatch, ["1", "1", "2", "1", "relates_to"])
+    _make_tty(monkeypatch, ["1", "1", "2", "1", "relates"])
     assert _cli(["-C", str(root), "link"]) == 0
     links = load_project(root).get("INT-0001").links
-    assert ("FR-0001", "relates_to") in [(l.target, l.type) for l in links]
+    assert ("FR-0001", "relates") in [(l.target, l.type) for l in links]
 
 
 def test_ratify_wizard_prompts_for_ratifier(tmp_path, monkeypatch):
@@ -4450,7 +4450,7 @@ def test_new_attr_rejects_value_outside_declared_enum(tmp_path, capsys):
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
                  "--title", "d", "--ground", "INT-0001", "--origin", "human",
                  "--attr", "tier=nope", "--no-interactive"]) == 2
-    assert "['a', 'b', 'unset']" in capsys.readouterr().err
+    assert "a, b, unset" in capsys.readouterr().err        # SR-0333
     assert load_project(str(root)).get("FR-0001") is None
 
 

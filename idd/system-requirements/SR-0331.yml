@@ -1,6 +1,6 @@
 uid: SR-0331
 type: system_requirement
-status: ratified
+status: implemented
 title: A link of an undeclared type is refused when it is made
 text: Where the project declares its link types, tl link, tl link --retype, tl new
   --ground-type and tl apply shall refuse a link type the schema does not declare,

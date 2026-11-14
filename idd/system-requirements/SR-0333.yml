@@ -1,6 +1,6 @@
 uid: SR-0333
 type: system_requirement
-status: ratified
+status: implemented
 title: A finding's message names values without Python's renderings
 text: A finding's message and a chart's label shall write a list as its members joined
   by a comma and a space, a text value in double quotes, any other value as YAML
