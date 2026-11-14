@@ -61,6 +61,23 @@ once with `python scripts/doctor.py --fix` (or `pre-commit install`).
 python -m pytest
 ```
 
+## Before a release: compare with the last one over existing graphs
+
+A release must leave the graphs that already exist answering as they did, or say
+what it changes (UR-0048). The tests cover the cases somebody thought of; this
+covers the graphs people keep:
+
+```
+python scripts/compare_releases.py --against 5.4.0 ~/work ~/standards
+```
+
+Name the last released version and every directory you keep graphs beneath. It
+runs that release and your working tree over each graph it finds, reading only,
+and fails where one answers differently: its check findings, plain and strict,
+its documents gate, its dump, or an exit code. A difference you intend goes in the
+release notes under *Who pays*; one you do not is a defect. The command knows of
+no directory of its own, so it measures your graphs, not ours.
+
 ## Making changes
 
 - Follow Intent-Driven Development: write or update the grounded requirement

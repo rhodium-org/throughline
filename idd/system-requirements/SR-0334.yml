@@ -1,6 +1,6 @@
 uid: SR-0334
 type: system_requirement
-status: ratified
+status: implemented
 title: A candidate build is compared with a released one over every graph it is pointed
   at
 text: 'The repository shall hold a command that, given a released version of the
