@@ -646,7 +646,7 @@ kept as a live example of the tombstone convention.)*
 
 **priority**: must · **verification**: test
 
-*Ratified by:* Henry Grech-Cini
+*Ratified by:* Henry Grech-Cini (github:rhodium289)
 <!-- tl:end -->
 
 <!-- tl:item SR-0104 -->
@@ -662,7 +662,7 @@ kept as a live example of the tombstone convention.)*
 
 **origin**: human · **priority**: must · **verification**: test
 
-*Ratified by:* Henry Grech-Cini
+*Ratified by:* Henry Grech-Cini (github:rhodium289)
 <!-- tl:end -->
 
 <!-- tl:item SR-0105 -->
