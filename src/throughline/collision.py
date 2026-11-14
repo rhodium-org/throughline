@@ -84,6 +84,15 @@ class Relink:
 
 
 @dataclass
+class SignatureMerge:
+    """An item both sides signed (SR-0265): the file with every signature kept,
+    one per signer, oldest first."""
+    path: str
+    text: str
+    kept: list[str]           # each signature kept, as "<who> (<when>)"
+
+
+@dataclass
 class Plan:
     top: Path
     keep: str                 # OURS or THEIRS
@@ -99,6 +108,10 @@ class Plan:
     scope: str = ""                                                   # this graph's root
     mapping: dict[str, str] = field(default_factory=dict)             # every old -> new
     deferred: list[tuple[str, str]] = field(default_factory=list)     # (graph, path)
+    # Items both sides signed, settled by keeping every signature (SR-0265), and
+    # item files whose conflict reaches more than the signature list, left alone.
+    signatures: list[SignatureMerge] = field(default_factory=list)
+    beyond_signatures: list[str] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------- git plumbing
@@ -389,6 +402,42 @@ def _choose_keep(top: Path, keep: str | None, trunk: str | None) -> str:
                          "keeps its number)")
 
 
+_SIGNATURES = "ratifications"
+
+
+def _signer(entry: dict) -> str:
+    """Who a signature is by: the identifier where it has one, else the name."""
+    return str(entry.get("id") or entry.get("by") or "")
+
+
+def _merge_signatures(top: Path, path: str) -> SignatureMerge | None:
+    """The settlement of a conflict in ``path`` that is confined to the signature
+    list (SR-0265), or ``None`` where it reaches any other field. Every entry
+    from both sides is kept, one per signer: where one person signed on both
+    sides, the later signature stands."""
+    ours, theirs = _load(_show(top, f":2:{path}")), _load(_show(top, f":3:{path}"))
+    if not ours or not theirs:
+        return None
+    rest = lambda data: {k: v for k, v in data.items() if k != _SIGNATURES}  # noqa: E731
+    if rest(ours) != rest(theirs):
+        return None
+    kept: dict[str, dict] = {}
+    for entry in [*(ours.get(_SIGNATURES) or []), *(theirs.get(_SIGNATURES) or [])]:
+        if not isinstance(entry, dict):
+            return None
+        who = _signer(entry)
+        if who not in kept or str(entry.get("at") or "") > str(kept[who].get("at") or ""):
+            kept[who] = entry
+    entries = sorted(kept.values(), key=lambda e: (str(e.get("at") or ""), _signer(e)))
+    merged = dict(ours)
+    merged[_SIGNATURES] = entries
+    from .storage import _dump_yaml
+    return SignatureMerge(
+        path=path, text=_dump_yaml(merged),
+        kept=[f"{e.get('by') or _signer(e)} ({e.get('at') or 'no date'})"
+              for e in entries])
+
+
 def plan(project_path: str | Path, *, keep: str | None = None,
          trunk: str | None = None) -> Plan:
     """Work out the whole resolution without writing anything (SR-0248)."""
@@ -422,7 +471,13 @@ def plan(project_path: str | Path, *, keep: str | None = None,
     trunk = trunk or _default_trunk(top)
     if trunk is not None and not _rev(top, trunk):
         raise CollisionError(f"trunk {trunk} is not a commit here")
-    keep = _choose_keep(top, keep, trunk)
+    # Which side keeps a UID matters only to a collision; a merge that stopped on
+    # signatures alone has none, so the question waits until one is found.
+    keep_refusal: CollisionError | None = None
+    try:
+        keep = _choose_keep(top, keep, trunk)
+    except CollisionError as e:
+        keep, keep_refusal = OURS, e
     kept_rev, moved_rev = ("HEAD", "MERGE_HEAD") if keep == OURS else ("MERGE_HEAD", "HEAD")
     kept_stage, moved_stage = (2, 3) if keep == OURS else (3, 2)
     base = (_git(top, "merge-base", "HEAD", "MERGE_HEAD", check=False) or "").strip()
@@ -442,10 +497,25 @@ def plan(project_path: str | Path, *, keep: str | None = None,
         if m.group(1) != prefix:
             continue
         collisions.append((path, p.stem, digits, directory))
+    if collisions and keep_refusal is not None:
+        raise keep_refusal
     result = Plan(top=top, keep=keep, kept_rev=kept_rev, moved_rev=moved_rev,
                   base=base, trunk=trunk, scope=scope)
     collided = {c[0] for c in collisions}
-    result.other_conflicts = sorted(p for p in unmerged if p not in collided)
+    # An item file both sides changed (SR-0265): settled where only its signature
+    # list is in conflict, and named apart where the conflict reaches further.
+    for path, stages in sorted(unmerged.items()):
+        p = Path(path)
+        if path in collided or not {2, 3} <= stages or p.suffix != ".yml" \
+                or not UID_RE.match(p.stem) or 1 not in stages:
+            continue
+        merged = _merge_signatures(top, path)
+        if merged is not None:
+            result.signatures.append(merged)
+        else:
+            result.beyond_signatures.append(path)
+    settled = collided | {m.path for m in result.signatures} | set(result.beyond_signatures)
+    result.other_conflicts = sorted(p for p in unmerged if p not in settled)
 
     # What the graphs this one sources have already moved in this merge (SR-0250):
     # this graph names those items namespace:UID, and its moved side's links to
@@ -631,6 +701,9 @@ def apply(result: Plan) -> list[str]:
     for relink in result.relinks:
         (result.top / relink.path).write_text(relink.text, encoding="utf-8")
         staged.append(relink.path)
+    for merged in result.signatures:
+        (result.top / merged.path).write_text(merged.text, encoding="utf-8")
+        staged.append(merged.path)
     if staged:
         _git(result.top, "add", "--", *staged)
     if result.moves:
@@ -642,5 +715,6 @@ def apply(result: Plan) -> list[str]:
     return staged
 
 
-__all__ = ["CollisionError", "Move", "Plan", "Relink", "apply", "plan", "rewrite",
+__all__ = ["CollisionError", "Move", "Plan", "Relink", "SignatureMerge", "apply", "plan",
+           "rewrite",
            "OURS", "THEIRS"]

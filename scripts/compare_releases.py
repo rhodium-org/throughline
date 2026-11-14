@@ -31,12 +31,14 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import fnmatch
 import json
 import os
 import re
 import shlex
 import subprocess
 import sys
+import time
 import venv
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -54,6 +56,9 @@ COMMANDS: tuple[tuple[str, ...], ...] = (
     ("docs", "--check"),
     ("dump",),
 )
+
+# How often, in graphs, the comparison says how far it has got.
+PROGRESS_EVERY = 25
 
 # A refusal: the Tool's own exit code for a command it would not carry out.
 REFUSED = 2
@@ -167,21 +172,34 @@ def default_cache() -> Path:
     return Path(base) / "throughline-compare"
 
 
-def graphs_beneath(directories) -> list[Path]:
+def graphs_beneath(directories, exclude=()) -> list[Path]:
     """Every graph beneath ``directories``: each directory holding a
     ``throughline.toml``, in path order. Hidden directories, ``node_modules`` and
     virtual environments are not looked in; a graph inside one is a copy a tool
-    keeps, not one somebody works."""
+    keeps, not one somebody works.
+
+    ``exclude`` leaves directories out: each is a pattern as a shell writes one,
+    matched against a directory's name and against its path beneath the directory
+    given, so ``fixtures`` leaves out every folder of that name and
+    ``experiments/*/runs`` one place."""
     found: set[Path] = set()
     for top in directories:
+        top = Path(top)
         for here, dirs, files in os.walk(top):
             dirs[:] = sorted(
                 d for d in dirs
                 if not d.startswith(".") and d not in ("node_modules", "site-packages")
-                and not (Path(here) / d / "pyvenv.cfg").exists())
+                and not (Path(here) / d / "pyvenv.cfg").exists()
+                and not _excluded(Path(here) / d, top, exclude))
             if CONFIG_NAME in files:
                 found.add(Path(here))
     return sorted(found)
+
+
+def _excluded(directory: Path, top: Path, exclude) -> bool:
+    beneath = directory.relative_to(top).as_posix()
+    return any(fnmatch.fnmatch(directory.name, pattern)
+               or fnmatch.fnmatch(beneath, pattern) for pattern in exclude)
 
 
 def _ask(build: list[str], graph: Path, command: tuple[str, ...],
@@ -301,6 +319,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cache", type=Path, default=None, metavar="DIR",
                         help="where released versions are installed (default: the "
                              "per-user cache)")
+    parser.add_argument("--exclude", action="append", default=[], metavar="PATTERN",
+                        help="leave out directories of this name, or at this path "
+                             "beneath a directory given (repeatable), e.g. "
+                             "--exclude fixtures --exclude 'experiments/*/runs'")
+    parser.add_argument("--progress", action=argparse.BooleanOptionalAction,
+                        default=None,
+                        help="say how far the comparison has got, on standard error "
+                             "(default: only when that is a terminal)")
     parser.add_argument("--jobs", type=int, default=min(8, os.cpu_count() or 1))
     parser.add_argument("--timeout", type=float, default=180.0,
                         help="seconds allowed for one command on one graph")
@@ -312,7 +338,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"compare_releases: not a directory: {', '.join(missing)}",
               file=sys.stderr)
         return 2
-    graphs = graphs_beneath([Path(d).resolve() for d in args.directories])
+    graphs = graphs_beneath([Path(d).resolve() for d in args.directories],
+                            args.exclude)
     if not graphs:
         print("compare_releases: no graph (no throughline.toml) beneath "
               + ", ".join(args.directories), file=sys.stderr)
@@ -323,9 +350,21 @@ def main(argv: list[str] | None = None) -> int:
     candidate = (shlex.split(args.candidate_command) if args.candidate_command
                  else working_tree_command())
 
+    progress = sys.stderr.isatty() if args.progress is None else args.progress
+    started = time.monotonic()
+    results: list[Compared] = []
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        results = list(pool.map(
-            lambda g: compare_graph(g, released, candidate, args.timeout), graphs))
+        # In the order given, so the report reads in path order; the pool works
+        # ahead, and each result is taken as it comes due.
+        for done, result in enumerate(pool.map(
+                lambda g: compare_graph(g, released, candidate, args.timeout),
+                graphs), start=1):
+            results.append(result)
+            if progress and (done % PROGRESS_EVERY == 0 or done == len(graphs)):
+                differ = sum(bool(r.differences or r.reordered) for r in results)
+                print(f"compare_releases: {done} of {len(graphs)} graphs compared, "
+                      f"{differ} differ, {time.monotonic() - started:.0f}s",
+                      file=sys.stderr, flush=True)
 
     if args.format == "json":
         print(json.dumps(report(results, args.against), indent=2))

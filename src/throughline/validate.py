@@ -227,7 +227,15 @@ def validate(project, strict: bool = False,
     ground_kinds = schema.ground_link_types
     cycle_types = ground_kinds | {"refines"}
 
-    cyc = idx.refines_cycle(cycle_types)
+    # A chain of refines links that comes back on itself is its own finding, with
+    # a severity of its own (SR-0032): nothing is justified in a circle, one
+    # refinement is merely said to refine itself. A circle through a grounding
+    # link, alone or mixed with refines, is circular justification as before.
+    refining = idx.refines_cycle({"refines"})
+    if refining:
+        add("refines-cycle", refining[0], _file(project.get(refining[0]) or _dummy()),
+            "circular refines chain: " + " -> ".join(refining))
+    cyc = idx.refines_cycle(ground_kinds if refining else cycle_types)
     if cyc:
         add("grounding-cycle", cyc[0], _file(project.get(cyc[0]) or _dummy()),
             "circular justification: " + " -> ".join(cyc))

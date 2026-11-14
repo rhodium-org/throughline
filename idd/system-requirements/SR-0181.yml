@@ -1,6 +1,6 @@
 uid: SR-0181
 type: system_requirement
-status: ratified
+status: implemented
 title: Change the project's own schema through the tool
 text: The Tool shall provide operations that change the project's declared schema
   — its item types and their attributes, its link vocabulary and endpoint rules,

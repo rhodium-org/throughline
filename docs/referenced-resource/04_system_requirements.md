@@ -42,7 +42,7 @@ example of the tombstone convention.
 <!-- tl:item SR-0003 -->
 **SR-0003 — No UID reuse** — `system_requirement`, status `ratified`
 
-> The Tool shall never assign a UID that has ever existed in the project, including UIDs of deleted items; retired numbers shall be recorded so allocation skips them.
+> The Tool shall never assign a UID that has ever existed in the project, including UIDs of deleted items. A deleted item's file stays as a tombstone, so allocation, which takes the next number above every one in use, passes over it; a number a register's manifest reserves is passed over likewise.
 
 *Implements:* UR-0001, UR-0002
 
@@ -78,7 +78,7 @@ example of the tombstone convention.
 <!-- tl:item SR-0006 -->
 **SR-0006 — Merge-safe allocation** — `system_requirement`, status `ratified`
 
-> The Tool shall detect UID collisions arising from parallel branches at validation time and provide a conflict-resolution command that reassigns the younger item to a fresh UID and rewrites references to it.
+> The Tool shall detect UID collisions arising from parallel branches at validation time and provide a conflict-resolution command that keeps the UID on the side already on the trunk, reassigns the other item to a fresh UID and rewrites references to it.
 
 *Rationale:* Detection plus an assisted single-direction fix keeps SR-0001 while making merges tractable.
 
@@ -164,7 +164,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0013 -->
 **SR-0013 — Ordering as metadata** — `system_requirement`, status `ratified`
 
-> The Tool shall represent presentation order with an explicit per-register ordering that can be edited freely without touching item identity or content fingerprints.
+> The Tool shall carry presentation order apart from identity and content: an item's order and a register's sections are kept exactly as written and are no part of an item's fingerprint, so ordering can be edited freely without touching item identity, content fingerprints or signatures.
 
 *Implements:* UR-0002
 
@@ -188,7 +188,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0015 -->
 **SR-0015 — Rich text in statements** — `system_requirement`, status `ratified`
 
-> The Tool shall support CommonMark Markdown (subset in doc 06 §6) in item text fields, including tables, lists, code blocks, and images by relative path.
+> Item text fields may hold CommonMark Markdown, including tables, lists, code blocks, and images by relative path. The Tool shall carry it exactly as written, in the item's file and in generated documents, and shall neither interpret nor validate it.
 
 *Implements:* UR-0008
 
@@ -323,7 +323,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0023 -->
 **SR-0023 — Schema validation** — `system_requirement`, status `ratified`
 
-> The Tool shall validate every item against the project schema (types, required fields, enum membership, ID regex) and report violations with file, field, and reason.
+> The Tool shall validate every item against the project schema (required attributes, the kind each declared attribute holds, enum membership, and the UID grammar) and report violations with file, field, and reason.
 
 *Implements:* UR-0016
 
@@ -419,7 +419,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0032 -->
-**SR-0032 — Link integrity** — `system_requirement`, status `ratified`
+**SR-0032 — Link integrity** — `system_requirement`, status `implemented`
 
 > Validation shall flag links to unknown UIDs, links to deleted items, and (configurably) circular refines chains.
 
@@ -787,7 +787,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0090 -->
 **SR-0090 — Reproduce a document at a past revision** — `system_requirement`, status `ratified`
 
-> The Tool shall render the requirements document as the graph stood at a named git revision, so a stakeholder can reproduce exactly what a baseline said. Given a commit-ish, the Tool shall reconstruct the project from that revision's tracked files without touching the working tree, render the document from it, and stamp the provenance line with the revision and its resolved commit hash. Because items are plain YAML under version control, this makes any past state addressable by commit rather than only the current checkout. When the project is not inside a git work tree, or the revision cannot be resolved, the Tool shall fail with a clear message rather than silently render the working tree.
+> The Tool shall render the requirements document as the graph stood at a named git revision, so a stakeholder can reproduce exactly what a baseline said. Given a commit-ish, the Tool shall reconstruct the project from that revision's tracked files without touching the working tree, and render the document from it. Because items are plain YAML under version control, this makes any past state addressable by commit rather than only the current checkout. When the project is not inside a git work tree, or the revision cannot be resolved, the Tool shall fail with a clear message rather than silently render the working tree.
 
 *Implements:* UR-0013
 
@@ -1098,7 +1098,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0099 -->
-**SR-0099 — Directional traceability matrix in documents** — `system_requirement`, status `ratified`
+**SR-0099 — Directional traceability matrix in documents** — `system_requirement`, status `implemented`
 
 > The tl:matrix document directive shall accept an optional <direction>:<link_type> selector (direction one of incoming or outgoing, reusing the coverage-rule grammar) preceding its filter. With a selector, each matching item is rendered as a row whose relationship column lists the items linked to it in that direction by that link type — so a document can render, for example, each user_requirement and the items that implement it (incoming:implements). With no selector the directive keeps its default behaviour (grounding trace plus verifying items). A relationship cell shall list only live items — an item that is rejected or deleted does not realize anything and shall be omitted (the terminal-status set is the same one the invalidate cascade uses). A malformed selector or filter fails injection rather than rendering silently wrong.
 
