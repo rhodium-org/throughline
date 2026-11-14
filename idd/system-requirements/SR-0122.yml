@@ -16,9 +16,9 @@ attrs:
   invalidated_reason: 'Superseded by tl resolve (SR-0006, SR-0248, SR-0250): a UID
     allocated on two branches is detected when they merge and the later item is renumbered,
     with the links to it rewritten. GUID identity was never built, and SR-0123 contradicts
-    SR-0154, which is what the fingerprint does. A signature given before a merge
-    is kept safe by ratifying on the main branch. Decided by Henry Grech-Cini on
-    14 November 2026.'
+    SR-0154, which is what the fingerprint does. The one cost is accepted: an item
+    signed on a branch and then renumbered at the merge is signed again. Decided
+    by Henry Grech-Cini on 14 November 2026.'
 ratifications:
 - by: henry
   fingerprint: sha256:5cc57c3878dddf13b384810d9e76ef507721301bde87b7305bc4b3217ffe890e
