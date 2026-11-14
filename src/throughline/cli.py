@@ -1440,14 +1440,21 @@ def cmd_blast(args) -> int:
     if project.get(uid) is None:
         return _err(f"{uid} does not exist")
     idx = Index.build(project)
-    affected = idx.impact(uid)
+    # Grouped by depth and, within a depth, by the type of the link that reached
+    # each dependent (SR-0035).
+    reached = sorted(idx.impact_reached(uid), key=lambda r: (r[1], r[2]))
     if args.format == "json":
-        print(json.dumps(affected, indent=2))
+        print(json.dumps([{"uid": dep, "depth": depth, "link": kind}
+                          for dep, depth, kind in reached], indent=2))
     else:
-        print(f"{uid} — blast radius: {len(affected)} dependent item(s)")
-        for uid in affected:
-            it = project.get(uid)
-            print(f"  {uid}  [{it.type}/{it.status}] {it.title}".rstrip())
+        print(f"{uid} — blast radius: {len(reached)} dependent item(s)")
+        group = None
+        for dep, depth, kind in reached:
+            if (depth, kind) != group:
+                group = (depth, kind)
+                print(f"  depth {depth} · {kind}")
+            it = project.get(dep)
+            print(f"    {dep}  [{it.type}/{it.status}] {it.title}".rstrip())
     return OK
 
 

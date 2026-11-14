@@ -334,7 +334,11 @@ class TomlDocument:
         tail = [""] if self._lines and self._lines[-1].strip() else []
         self._lines.extend(tail + block + [f"[{written}]"])
 
-    def remove_table(self, name: str | tuple[str, ...]) -> None:
+    def remove_table(self, name: str | tuple[str, ...], *,
+                     because: str | None = None) -> None:
+        """Remove the table ``name`` with the comment that introduced it.
+        ``because`` is recorded where the table stood (SR-0184), set apart by a
+        blank line so it is not read as introducing whatever follows."""
         span = self._table_span(name)
         if span is None:
             raise TomlEditError(f"no table [{_render_path(_as_path(name))}] "
@@ -344,7 +348,15 @@ class TomlDocument:
             # The comment directly above the next header introduces that table,
             # not this one, so it stays with it.
             end = self._comment_start(end, start)
-        del self._lines[self._comment_start(start, -1):end]
+        at = self._comment_start(start, -1)
+        del self._lines[at:end]
+        if because:
+            note = comment_block(because)
+            if at < len(self._lines) and self._lines[at].strip():
+                note.append("")
+            if at > 0 and self._lines[at - 1].strip():
+                note.insert(0, "")
+            self._lines[at:at] = note
 
     def array_table_spans(self,
                           name: str | tuple[str, ...]) -> list[tuple[int, int]]:

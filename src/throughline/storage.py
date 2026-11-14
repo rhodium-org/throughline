@@ -1836,7 +1836,11 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
         except ProjectError as e:
             raise ProjectError(f"no throughline project at {ref} — {e}") from e
         # load_project reads every item into memory here, so the project is
-        # fully materialised and safe to use after the temp dir is removed.
+        # fully materialised and safe to use after the temp dir is removed. Its
+        # root is the project's own again, not the directory about to be removed,
+        # so the documents `[docs] paths` names are found where they are and a
+        # region that asks what the documents reference can read them (SR-0090).
+        project.path = root
         return project, sha
 
 

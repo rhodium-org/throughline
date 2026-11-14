@@ -156,11 +156,16 @@ class Item:
     def from_dict(cls, d: dict, path: Path | None = None) -> "Item":
         links, load_errors = cls._parse_links(d.get("links", []) or [])
         attrs = d.get("attrs", {}) or {}
+        if not isinstance(attrs, dict):
+            # Tolerated as the malformed link is (SR-0134): the item is read with
+            # no attributes and check names the file and the reason.
+            load_errors.append(f"'attrs' must be a mapping, got {type(attrs).__name__}")
+            attrs = {}
         # A format-3 flat record is lifted into the list as the item is read
         # (SR-0255), so an older graph, a file re-read from history and a file an
         # older Tool wrote all present one shape. The lifted entry is placed first:
         # it is the oldest a file can hold. Nothing is invented by the lift.
-        lifted, withdrawn = lift_legacy(attrs) if isinstance(attrs, dict) else ([], [])
+        lifted, withdrawn = lift_legacy(attrs)
         ratifications, errs = cls._parse_records(d.get(RATIFICATIONS), RATIFICATIONS)
         load_errors += errs
         withdrawals, errs = cls._parse_records(d.get(WITHDRAWALS), WITHDRAWALS)

@@ -398,6 +398,11 @@ def ratify(project, uid: str, by: str, *, index: Index | None = None,
     item = project.get(uid)
     if item is None:
         raise GroundingError(f"{uid} does not exist")
+    if not (by or "").strip():
+        # A signature names the person who gave it (SR-0098). Refused here, not
+        # only by the command line, so no caller can record one with no name.
+        raise GroundingError(f"{uid}: a signature names who signs — say who "
+                             "ratifies (`--by <who>`)")
     schema = project.schema
     idx = index if index is not None else Index.build(project)
     # A stable identifier for the same human, in its own field and never conflated

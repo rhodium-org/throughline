@@ -336,7 +336,7 @@ def parse_change_set(text: str) -> list[dict]:
             if isinstance(label, str):
                 if not _LABEL_RE.match(label):
                     problems.append(f"{name}: \"label\" must be letters, digits, "
-                                    "'_' or '-', got {label!r}")
+                                    f"'_' or '-', got {label!r}")
                 elif label in labels:
                     problems.append(f"{name}: label {label!r} is already used in "
                                     "this set")
@@ -344,7 +344,10 @@ def parse_change_set(text: str) -> list[dict]:
                     labels.add(label)
         for ref in (op.get("target"), *[l.get("target") for l in op.get("links", [])
                                         if isinstance(l, dict)]):
-            if _is_label(ref) and ref[1:] not in labels:
+            if _is_label(ref) and kind == "new" and ref[1:] == op.get("label"):
+                problems.append(f"{name}: {ref} is the item this operation itself "
+                                "creates; an item cannot link to itself")
+            elif _is_label(ref) and ref[1:] not in labels:
                 problems.append(f"{name}: {ref} names no item created earlier in "
                                 "this set")
         ops.append(op)

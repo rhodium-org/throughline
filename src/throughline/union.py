@@ -273,13 +273,16 @@ def build_union(consumer: Project, sources: dict[str, Project],
                                  # judgement too (SR-0245).
                                  _authored_signed_link_types=tuple(
                                      sorted(source_schema.signed_link_types)))
+                # Asked before the union's registers are looked in: the consumer's
+                # are already there, and a borrowed item merged into one of them
+                # would make the consumer's own items read as borrowed (SR-0230).
+                if mangled_prefix in consumer.registers:
+                    raise ComposeError(
+                        f"source '{namespace}' mangles to prefix "
+                        f"'{mangled_prefix}', which the consumer already uses — "
+                        "import the source under a distinct namespace")
                 target = union.registers.get(mangled_prefix)
                 if target is None:
-                    if mangled_prefix in consumer.registers:
-                        raise ComposeError(
-                            f"source '{namespace}' mangles to prefix "
-                            f"'{mangled_prefix}', which the consumer already uses — "
-                            "import the source under a distinct namespace")
                     target = Register(prefix=mangled_prefix,
                                       title=f"{namespace}:{reg.prefix}")
                     union.registers[mangled_prefix] = target
