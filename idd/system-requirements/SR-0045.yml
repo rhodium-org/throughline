@@ -4,7 +4,8 @@ status: ratified
 title: Filter expression language
 text: The Tool shall provide one boolean filter language over an item's `uid`, `type`,
   `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs`
-  and `links`, usable identically in search, table generation, exports, and coverage
+  and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed` and
+  `signers`, usable identically in search, table generation, exports, and coverage
   rules.
 rationale: 'The list named tags, which the Tool has never had, and left out uid,
   rationale, normative and derived, which it admits (issue #40). The names are written
