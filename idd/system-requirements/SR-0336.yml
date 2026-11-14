@@ -1,0 +1,63 @@
+uid: SR-0336
+type: system_requirement
+status: ratified
+title: A filter is a GQL search condition over one item
+text: 'Where a project declares GQL as its filter language (the next requirement),
+  a filter shall be a search condition of ISO/IEC 39075:2024 in which the item under
+  test is bound to the variable item. It shall accept exactly: AND, OR, NOT and parentheses;
+  the comparisons =, <>, <, <=, > and >=; IS NULL and IS NOT NULL; IN and NOT IN
+  over a list; CONTAINS, STARTS WITH and ENDS WITH between texts; character string
+  literals in single or double quotes, integers, decimals, TRUE, FALSE, NULL and
+  lists of them in square brackets; a property of the item, written item.name; the
+  functions LOWER, UPPER, TRIM, COALESCE and SIZE; and EXISTS over one edge pattern
+  from or to the item, as in EXISTS { (item)-[:implements]->() } and EXISTS { (item)<-[:verifies]-()
+  }, whose other end may carry one condition. It shall refuse every other construct,
+  naming it, and shall give the same items in a query, a coverage rule and a document.
+  A condition that is unknown, because a property it reads is absent, does not select
+  the item.'
+rationale: 'throughline-engine takes GQL as the language a host asks a graph in,
+  and must also reproduce the Python-subset filter because filters are stored in
+  graph files; with this each implementation carries one expression language. IN,
+  CONTAINS, STARTS WITH and ENDS WITH are not in the standard: they are the engine''s
+  extensions X001 to X004, written as Cypher writes them. Only a condition is taken,
+  not a whole statement: a filter says which items, and the Tool already says what
+  is done with them. Rejected: a dialect of the Tool''s own, which the engines would
+  then have to chase. Who pays: tl carries a parser for this subset, where SR-0104
+  chose a Python subset so that none was carried; an author learns item.status =
+  ''ratified'' in place of status == ''ratified''. Agreed in principle by Henry Grech-Cini
+  on 14 November 2026 (issue 167).'
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+- target: SR-0104
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-14T23:19:56Z'
+  fingerprint: sha256:48905de9d05a78c1ff9a9d5147126263980aeafb6062352080c272cf94c8ac91
+  content:
+    type: system_requirement
+    text: 'Where a project declares GQL as its filter language (the next requirement),
+      a filter shall be a search condition of ISO/IEC 39075:2024 in which the item
+      under test is bound to the variable item. It shall accept exactly: AND, OR,
+      NOT and parentheses; the comparisons =, <>, <, <=, > and >=; IS NULL and IS
+      NOT NULL; IN and NOT IN over a list; CONTAINS, STARTS WITH and ENDS WITH between
+      texts; character string literals in single or double quotes, integers, decimals,
+      TRUE, FALSE, NULL and lists of them in square brackets; a property of the item,
+      written item.name; the functions LOWER, UPPER, TRIM, COALESCE and SIZE; and
+      EXISTS over one edge pattern from or to the item, as in EXISTS { (item)-[:implements]->()
+      } and EXISTS { (item)<-[:verifies]-() }, whose other end may carry one condition.
+      It shall refuse every other construct, naming it, and shall give the same items
+      in a query, a coverage rule and a document. A condition that is unknown, because
+      a property it reads is absent, does not select the item.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
