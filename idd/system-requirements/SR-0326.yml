@@ -1,6 +1,6 @@
 uid: SR-0326
 type: system_requirement
-status: proposed
+status: ratified
 title: An explicit UID is unused by number, however it is padded, and not reserved
 text: tl new given an explicit UID shall refuse it where the register already holds
   an item with that number, whatever the padding of either, or where the register's
@@ -19,3 +19,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:9bb95c6343be2b3935770e8a67b169d194c06f2deef4b22aa18f781ef3650756
+  content:
+    type: system_requirement
+    text: tl new given an explicit UID shall refuse it where the register already
+      holds an item with that number, whatever the padding of either, or where the
+      register's manifest reserves that number.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

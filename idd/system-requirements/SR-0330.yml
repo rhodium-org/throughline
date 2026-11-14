@@ -1,6 +1,6 @@
 uid: SR-0330
 type: system_requirement
-status: proposed
+status: ratified
 title: A schema value of the wrong kind is refused when the configuration is read
 text: The Tool shall refuse a configuration in which an attribute's required or normative
   key is not a boolean, or a rule's severity is not one of error, warning or off,
@@ -21,3 +21,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:6e96369fcd43ad5433573f6db7a4ba5ac0c64b3e24cef8e1234f3f624aed0c53
+  content:
+    type: system_requirement
+    text: The Tool shall refuse a configuration in which an attribute's required
+      or normative key is not a boolean, or a rule's severity is not one of error,
+      warning or off, naming the key and the value.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -1,6 +1,6 @@
 uid: SR-0325
 type: system_requirement
-status: proposed
+status: ratified
 title: A tombstone is whatever status the tombstone role names
 text: Wherever the Tool asks whether an item is a tombstone, in an operation, a check
   rule, a query, a document or a summary, and in the baseline it compares against,
@@ -22,3 +22,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:cf0f43b7d304ba543942d1f89cdfbe23abcb029fd1faddfbfacacec2eb43c43d
+  content:
+    type: system_requirement
+    text: Wherever the Tool asks whether an item is a tombstone, in an operation,
+      a check rule, a query, a document or a summary, and in the baseline it compares
+      against, it shall test the status the project binds to the tombstone role,
+      and never the word deleted.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

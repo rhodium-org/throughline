@@ -1,6 +1,6 @@
 uid: SR-0329
 type: system_requirement
-status: proposed
+status: ratified
 title: Only true flags an item as ambiguous
 text: An item shall be flagged ambiguous only when its ambiguity flag is the boolean
   true. tl check shall report any other value of the flag under the rule attribute-kind.
@@ -17,3 +17,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:f58d5a783fe6cd6c5f10786d45aebcf0e9d256147b03a0bb856f98fa63f9c7c5
+  content:
+    type: system_requirement
+    text: An item shall be flagged ambiguous only when its ambiguity flag is the
+      boolean true. tl check shall report any other value of the flag under the rule
+      attribute-kind.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
