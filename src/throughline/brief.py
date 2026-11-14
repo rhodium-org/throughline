@@ -366,6 +366,7 @@ _CTX_COMMAND_USAGE = {
     "blast": "tl blast <UID>",
     "subgraph": "tl subgraph <UID> [--depth N] [--link-type KIND] [--format json]",
     "shape": "tl shape [--format json]",
+    "diff": "tl diff [FROM] [TO] [--format json]",
     "coverage": "tl coverage [--format json]",
     "dump": "tl dump [-o FILE]",
     "diagram": "tl diagram [types|transitions|both]",

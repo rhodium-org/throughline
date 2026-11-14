@@ -423,6 +423,18 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.set_defaults(func=handlers.get("cmd_coverage"))
 
+    s = sub.add_parser(
+        "diff",
+        help="report what changed between two states of the graph: items added, "
+             "removed and modified, and links added and removed; a state is a git "
+             "revision (a tag, a commit, a branch) or the working tree")
+    s.add_argument("frm", nargs="?", default="HEAD", metavar="FROM",
+                   help="the earlier state, a git revision (default: HEAD)")
+    s.add_argument("to", nargs="?", default=None, metavar="TO",
+                   help="the later state, a git revision (default: the working tree)")
+    s.add_argument("--format", choices=["text", "json"], default="text")
+    s.set_defaults(func=handlers.get("cmd_diff"))
+
     s = sub.add_parser("shape",
                        help="report the graph's (from)-[link]->(to) type shape")
     s.add_argument("--format", choices=["text", "json"], default="text")
