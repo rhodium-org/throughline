@@ -59,6 +59,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0316 |
 | UR-0046 | Proposed until a person signs it | SR-0305, SR-0306, SR-0307, SR-0308, SR-0309, SR-0310, SR-0311, SR-0312, SR-0313, SR-0314, SR-0315, SR-0317, SR-0318, SR-0319 |
 | UR-0047 | A standard's guidance for AI agents arrives with every graph that follows it | SR-0322, SR-0323 |
+| UR-0048 | A release is shown to leave existing graphs as they were, or to say what it changes | SR-0334 |
 <!-- tl:end -->
 
 ## Coverage check
