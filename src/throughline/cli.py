@@ -1521,22 +1521,30 @@ def cmd_blast(args) -> int:
         return USAGE
     if project.get(uid) is None:
         return _err(f"{uid} does not exist")
-    idx = Index.build(project)
-    # Grouped by depth and, within a depth, by the type of the link that reached
-    # each dependent (SR-0035).
-    reached = sorted(idx.impact_reached(uid), key=lambda r: (r[1], r[2]))
-    if args.format == "json":
-        print(json.dumps([{"uid": dep, "depth": depth, "link": kind}
+    return _print_blast(project, uid, uid, args.format)
+
+
+def _print_blast(project, start: str, shown: str, fmt: str, display=None) -> int:
+    """Print the blast radius of ``start`` in ``project`` (SR-0035): each dependent
+    grouped by depth and, within a depth, by the type of the link that reached it.
+    ``shown`` is the start as its reader named it and ``display`` turns a UID of
+    ``project`` into the name a reader knows it by, for a graph whose items are
+    held under other names than they are read by."""
+    display = display or (lambda u: u)
+    reached = sorted(Index.build(project).impact_reached(start),
+                     key=lambda r: (r[1], r[2]))
+    if fmt == "json":
+        print(json.dumps([{"uid": display(dep), "depth": depth, "link": kind}
                           for dep, depth, kind in reached], indent=2))
-    else:
-        print(f"{uid} — blast radius: {len(reached)} dependent item(s)")
-        group = None
-        for dep, depth, kind in reached:
-            if (depth, kind) != group:
-                group = (depth, kind)
-                print(f"  depth {depth} · {kind}")
-            it = project.get(dep)
-            print(f"    {dep}  [{it.type}/{it.status}] {it.title}".rstrip())
+        return OK
+    print(f"{shown} — blast radius: {len(reached)} dependent item(s)")
+    group = None
+    for dep, depth, kind in reached:
+        if (depth, kind) != group:
+            group = (depth, kind)
+            print(f"  depth {depth} · {kind}")
+        it = project.get(dep)
+        print(f"    {display(dep)}  [{it.type}/{it.status}] {it.title}".rstrip())
     return OK
 
 
@@ -2219,6 +2227,32 @@ def _composed_trace(args) -> int:
     return OK
 
 
+def _composed_blast(args) -> int:
+    """The blast radius over the composed union (SR-0230, SR-0035): what rests on
+    an item, whichever graph it is in, so a consumer can ask what of its own
+    depends on a clause it borrows. The whole union is walked: a consumer item may
+    rest on a borrowed clause through another borrowed clause."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_blast(args)
+
+    uid = _resolve_uid(consumer, args.uid, "show the blast radius of", "UID")
+    if uid is None:
+        return USAGE
+
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+
+    start = union_uid(union, uid)
+    if union.project.get(start) is None:
+        return _err(f"{uid} does not exist")
+    return _print_blast(union.project, start, uid, args.format,
+                        display=union.qualified)
+
+
 def _composed_subgraph(args) -> int:
     """The neighbourhood of one item over the composed union (throughline-compose
     SR-0041): both directed closures plus the links joining their members, in
@@ -2778,6 +2812,11 @@ UNION_COMMANDS: dict[str, tuple] = {
         "a `tl:matrix` target cell pointing at a borrowed clause renders that "
         "clause's own reference number, and `tl:sourced` mirrors the borrowed "
         "clauses the selected items cite, in full."),
+    "blast": (
+        _composed_blast,
+        "walks what rests on an item over the union, so the blast radius of a "
+        "borrowed clause names your own items that depend on it, and every item "
+        "reads as `<namespace>:<UID>`."),
     "trace": (
         _composed_trace,
         "a link into a borrowed clause is followed *into* the source (with its own "
