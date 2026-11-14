@@ -222,7 +222,11 @@ def merge(source: dict, local: dict, namespace: str) -> tuple[dict, Inheritance]
         out["rules"] = rules_out
 
     grounding = dict(local.get("grounding") or {})
-    for key in set(source.get("grounding") or {}) | set(grounding):
+    # The project's own keys in the order it wrote them, then the source's in the
+    # order it wrote them. Never a set: its order changes from one run to the
+    # next, and with it the bytes of everything formed from this (NFR-0012).
+    for key in [*grounding, *(k for k in (source.get("grounding") or {})
+                              if k not in grounding)]:
         there = (source.get("grounding") or {}).get(key)
         if isinstance(there, list) or isinstance(grounding.get(key), list) \
                 or key in _GROUNDING_DEFAULTS:

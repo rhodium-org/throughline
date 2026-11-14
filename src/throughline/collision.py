@@ -614,7 +614,7 @@ def _what_cannot_move(top: Path, result: Plan, mapping: dict[str, str]) -> None:
     log = _git(top, "log", "--format=%h %s", f"{result.base}..{result.moved_rev}",
                check=False) or ""
     for line in log.splitlines():
-        for m in set(words.findall(line)):
+        for m in sorted(set(words.findall(line))):
             result.commits.append((m, line))
 
 

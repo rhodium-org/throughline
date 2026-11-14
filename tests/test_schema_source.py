@@ -357,3 +357,31 @@ def test_migrate_removes_a_copied_coverage_rule_and_keeps_the_followers(tmp_path
     assert "type == 'slide'" not in text and "status != 'deleted'" not in text
     assert text.count("[[rules.coverage]]") == 1 and "# the follower's own rule" in text
     assert load_project(fol).schema.coverage == before
+
+
+def test_a_follower_s_dump_is_the_same_bytes_on_every_run(tmp_path):
+    """NFR-0012: identical input, byte-identical export. A follower's grounding
+    table was formed by walking a set of its keys, so the keys it took from its
+    schema source came out in an order that changed from one run to the next. Found
+    by comparing 5.4.0 with itself over existing graphs (SR-0334): 105 of them."""
+    import os
+    import subprocess
+    import sys
+
+    std = _standard(tmp_path)
+    fol = tmp_path / "fol"
+    # A follower as `tl init --from-schema` writes it: no grounding table of its
+    # own, so every grounding key it has comes from its schema source.
+    assert _cli(["-C", fol, "init", "--from-schema", std]) == 0
+    src = Path(__file__).resolve().parent.parent / "src"
+    dumps = set()
+    for seed in ("0", "1", "2", "3", "4", "5"):
+        done = subprocess.run(
+            [sys.executable, "-c",
+             f"import sys; sys.path.insert(0, {str(src)!r}); "
+             "from throughline.cli import main; sys.exit(main())",
+             "-C", str(fol), "dump"],
+            capture_output=True, text=True, env={**os.environ, "PYTHONHASHSEED": seed})
+        assert done.returncode == 0, done.stderr
+        dumps.add(done.stdout)
+    assert len(dumps) == 1
