@@ -221,3 +221,135 @@ def test_nothing_in_the_module_reaches_an_interpreter():
 def test_an_empty_condition_selects_everything():
     assert sel("") == ["FR-1", "FR-2", "INT-1", "TST-1"]
     assert sel("   ") == ["FR-1", "FR-2", "INT-1", "TST-1"]
+
+
+# ===========================================================================
+# A project says which language its filters are in (SR-0337).
+# ===========================================================================
+
+from pathlib import Path  # noqa: E402
+
+from throughline.cli import main as cli_main  # noqa: E402
+from throughline.inject import inject_text  # noqa: E402
+from throughline.storage import ProjectError, load_project  # noqa: E402
+from throughline.validate import query_items, validate  # noqa: E402
+
+
+def _cli(argv) -> int:
+    return cli_main([str(a) for a in argv])
+
+
+def _toml(root: Path) -> str:
+    return (root / "throughline.toml").read_text(encoding="utf-8")
+
+
+def _set(root: Path, old: str, new: str) -> None:
+    text = _toml(root)
+    assert old in text
+    (root / "throughline.toml").write_text(text.replace(old, new), encoding="utf-8")
+
+
+def _earlier(tmp_path: Path) -> Path:
+    """A project as one written before the key: no filter_language, and its rule
+    and its document's markers in the earlier language."""
+    root = tmp_path / "earlier"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    text = _toml(root)
+    start = text.index("# The language this project's filters are in")
+    end = text.index('filter_language = "gql"\n') + len('filter_language = "gql"\n')
+    text = text[:start] + text[end:]
+    text = text.replace("item.type = 'requirement' AND item.status <> 'deleted'",
+                        "type == 'requirement' and status != 'deleted'")
+    (root / "throughline.toml").write_text(text, encoding="utf-8")
+    doc = root / "docs" / "overview.md"
+    doc.write_text(doc.read_text(encoding="utf-8").replace(
+        "item.type = '", "type == '"), encoding="utf-8")
+    return root
+
+
+def test_tl_init_writes_a_project_whose_filters_are_gql(tmp_path, capsys):
+    """SR-0337: tl init writes gql, in the key, the rule and the document."""
+    root = tmp_path / "new"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    project = load_project(root)
+    assert project.filter_language == "gql" == project.schema.filter_language
+    assert project.schema.coverage[0]["filter"] == \
+        "item.type = 'requirement' AND item.status <> 'deleted'"
+    assert "tl:table item.type = 'requirement'" in (
+        root / "docs" / "overview.md").read_text(encoding="utf-8")
+    assert _cli(["-C", root, "check"]) == 0
+    assert _cli(["-C", root, "docs", "--check"]) == 0
+    capsys.readouterr()
+    assert _cli(["-C", root, "query", "item.type = 'requirement'"]) == 0
+    assert "REQ-0001" in capsys.readouterr().out
+
+
+def test_a_project_that_says_nothing_is_read_as_it_was(tmp_path, capsys):
+    """SR-0337: where it declares none, its filters are read in the earlier
+    language, so a project written before the key answers exactly as it did."""
+    root = _earlier(tmp_path)
+    project = load_project(root)
+    assert project.filter_language == "python"
+    assert not [f for f in validate(project) if f.severity == "error"]
+    assert _cli(["-C", root, "docs", "--check"]) == 0
+    assert [it.uid for it in query_items(project, "type == 'requirement'")] == ["REQ-0001"]
+    capsys.readouterr()
+    assert _cli(["-C", root, "query", "item.type = 'requirement'"]) == 2
+    assert "bad filter" in capsys.readouterr().err
+
+
+def test_the_language_is_the_project_s_and_never_guessed(tmp_path, capsys):
+    """SR-0337: the Tool never tells the language of a filter from its text. A
+    filter in the other language is refused, in a rule, a query and a document."""
+    root = tmp_path / "new"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    project = load_project(root)
+    with pytest.raises(FilterError):
+        query_items(project, "type == 'requirement'")
+    with pytest.raises(Exception, match="filter"):
+        inject_text(project, "<!-- tl:count type == 'requirement' -->\n<!-- tl:end -->\n")
+    _set(root, "item.type = 'requirement' AND item.status <> 'deleted'",
+         "type == 'requirement' and status != 'deleted'")
+    capsys.readouterr()
+    assert _cli(["-C", root, "check"]) == 2
+    assert "unusable filter" in capsys.readouterr().err
+
+
+def test_a_language_that_is_neither_is_refused(tmp_path, capsys):
+    """SR-0337."""
+    root = tmp_path / "new"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    _set(root, 'filter_language = "gql"', 'filter_language = "sql"')
+    capsys.readouterr()
+    assert _cli(["-C", root, "check"]) == 2
+    said = capsys.readouterr().err
+    assert "filter_language" in said and '"sql"' in said
+
+
+def test_a_coverage_rule_and_a_document_select_the_same_in_gql(tmp_path):
+    """SR-0336: the same items in a query, a coverage rule and a document."""
+    root = tmp_path / "new"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    assert _cli(["-C", root, "new", "REQ", "--title", "second", "--ground",
+                 "INT-0001", "--ground-type", "implements", "--no-interactive"]) == 0
+    project = load_project(root)
+    expr = "item.type = 'requirement' AND NOT EXISTS { (item)<-[:verifies]-() }"
+    assert [it.uid for it in query_items(project, expr)] == ["REQ-0002"]
+    assert sorted(f.uid for f in validate(project) if f.rule == "coverage") == ["REQ-0002"]
+    out = inject_text(project, f"<!-- tl:count {expr} -->\n<!-- tl:end -->\n")
+    assert "\n1\n" in out
+
+
+def test_a_follower_takes_its_standard_s_language(tmp_path, capsys):
+    """SR-0337: a project's filters are all in one language, and a follower's
+    coverage rules include its standard's."""
+    std = tmp_path / "std"
+    assert _cli(["-C", std, "init", "--no-demo"]) == 0
+    fol = tmp_path / "fol"
+    assert _cli(["-C", fol, "init", "--from-schema", std]) == 0
+    assert load_project(fol).filter_language == "gql"
+    assert _cli(["-C", fol, "check"]) in (0, 1)
+
+    _set(fol, 'filter_language = "gql"', 'filter_language = "python"')
+    with pytest.raises(ProjectError, match="one language"):
+        load_project(fol)

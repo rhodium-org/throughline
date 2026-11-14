@@ -2110,7 +2110,8 @@ def _composed_query(args) -> int:
     index = Index.build(view)
     try:
         matched = [it for it in pool
-                   if eval_filter(it, args.expr, index, view.schema)]
+                   if eval_filter(it, args.expr, index, view.schema,
+                                  view.filter_language)]
     except FilterError as e:
         return _err(f"bad filter expression: {e}")
     # Local UIDs are uppercase and namespaces lowercase, so sorting by the name the
