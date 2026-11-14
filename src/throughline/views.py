@@ -304,3 +304,71 @@ def check_summary(project) -> list[str]:
     ]
     return lines
 
+
+# ------------------------------------------------------------------ diff (SR-0037)
+
+# The fields of an item in the order a difference names them: what it is and
+# says first, then its attributes, then the records kept about it.
+_DIFF_FIRST = ("type", "status", "title", "text", "rationale", "normative",
+               "derived", "order")
+_DIFF_LAST = ("ratifications", "withdrawals", "reviewed", "deleted", "key")
+# Dates a write stamps on an item are a consequence of a change, not one.
+_DIFF_IGNORED = frozenset({"uid", "links", "attrs", "created", "modified"})
+
+
+def _diff_summary(item) -> dict:
+    return {"uid": item.uid, "type": item.type, "status": item.status,
+            "title": item.title}
+
+
+def _fields_moved(was, now) -> list[str]:
+    a, b = was.to_dict(), now.to_dict()
+    moved = [k for k in _DIFF_FIRST if a.get(k) != b.get(k)]
+    attrs_a, attrs_b = a.get("attrs") or {}, b.get("attrs") or {}
+    moved += [f"attrs.{k}" for k in sorted(set(attrs_a) | set(attrs_b))
+              if attrs_a.get(k) != attrs_b.get(k)]
+    stamps_a = {(l.target, l.type): l.stamp for l in was.links}
+    stamps_b = {(l.target, l.type): l.stamp for l in now.links}
+    if any(stamps_a[k] != stamps_b[k] for k in stamps_a.keys() & stamps_b.keys()):
+        moved.append("link stamps")
+    moved += [k for k in _DIFF_LAST if a.get(k) != b.get(k)]
+    known = set(_DIFF_FIRST) | set(_DIFF_LAST) | _DIFF_IGNORED
+    moved += [k for k in sorted((set(a) | set(b)) - known) if a.get(k) != b.get(k)]
+    return moved
+
+
+def graph_diff(was, now) -> dict:
+    """What differs between two states of a graph (SR-0037): the items ``now``
+    holds that ``was`` did not, those ``was`` held that ``now`` does not, and
+    those both hold that differ, each with the fields that moved and the links
+    added and removed. Every list is in UID order.
+
+    An item is one whose file is there, a tombstone included: an item retired
+    between the two states is modified (its status moved), and one whose file is
+    gone is removed. A link is its target and its type, so a retyped link is one
+    removed and one added; a stamp that moved on a link both states hold is named
+    as ``link stamps``. Each project's own items are compared, not those it
+    borrows."""
+    before = {it.uid: it for it in was.items()}
+    after = {it.uid: it for it in now.items()}
+    modified = []
+    for uid in sorted(before.keys() & after.keys()):
+        a, b = before[uid], after[uid]
+        links_a = {(l.target, l.type) for l in a.links}
+        links_b = {(l.target, l.type) for l in b.links}
+        fields = _fields_moved(a, b)
+        if not fields and links_a == links_b:
+            continue
+        modified.append({
+            **_diff_summary(b), "fields": fields,
+            "links_added": [{"target": t, "type": k}
+                            for t, k in sorted(links_b - links_a)],
+            "links_removed": [{"target": t, "type": k}
+                              for t, k in sorted(links_a - links_b)]})
+    return {
+        "added": [_diff_summary(after[u]) for u in sorted(after.keys() - before.keys())],
+        "removed": [_diff_summary(before[u])
+                    for u in sorted(before.keys() - after.keys())],
+        "modified": modified,
+    }
+

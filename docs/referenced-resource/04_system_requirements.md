@@ -511,7 +511,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:end -->
 
 <!-- tl:item SR-0037 -->
-**SR-0037 — Diff between versions** — `system_requirement`, status `ratified`
+**SR-0037 — Diff between versions** — `system_requirement`, status `implemented`
 
 > The Tool shall compare two baselines, revisions, or working state and report per item added/deleted/modified and links added/removed, as text and JSON.
 
