@@ -267,3 +267,43 @@ def test_the_name_of_a_fetch_s_working_directory_is_not_a_difference(tmp_path, c
         "candidate": {"check --format json": refusal("pslr80jp")}})
     code, said = _run(tmp_path, tmp_path / "work", capsys=capsys)
     assert code == 0 and "1 refused alike by both" in said
+
+
+def test_directories_can_be_left_out_by_name_or_by_path(tmp_path):
+    """Issue 168: a run over a whole workspace took in scratch clones, fixtures
+    and old experiment runs, with no way to leave them out."""
+    keep = _graph(tmp_path / "work" / "app" / "idd")
+    _graph(tmp_path / "work" / "app" / "fixtures" / "broken")
+    _graph(tmp_path / "work" / "experiments" / "a" / "runs" / "one" / "idd")
+    stay = _graph(tmp_path / "work" / "experiments" / "a" / "idd")
+
+    found = compare.graphs_beneath(
+        [tmp_path / "work"], exclude=["fixtures", "experiments/*/runs"])
+    assert found == [keep, stay]
+
+    code = compare.main(["--against", "9.9.9", "--released-command", "true",
+                         "--exclude", "*", str(tmp_path / "work")])
+    assert code == 2, "leaving everything out compares nothing, and says so"
+
+
+def test_it_says_how_far_it_has_got_when_asked(tmp_path, capsys, monkeypatch):
+    """Issue 168: 25 minutes with nothing printed reads as a hang."""
+    monkeypatch.setattr(compare, "PROGRESS_EVERY", 2)
+    for name in "abcde":
+        _graph(tmp_path / "work" / name)
+    stand_in = tmp_path / "stand_in.py"
+    stand_in.write_text(STAND_IN, encoding="utf-8")
+    command = shlex.join([sys.executable, str(stand_in), "both"])
+
+    assert compare.main(["--against", "9.9.9", "--released-command", command,
+                         "--candidate-command", command, "--progress",
+                         str(tmp_path / "work")]) == 0
+    said = capsys.readouterr()
+    assert "2 of 5 graphs compared" in said.err and "5 of 5 graphs compared" in said.err
+    assert "graphs compared, " not in said.out, "progress is not part of the report"
+
+    assert compare.main(["--against", "9.9.9", "--released-command", command,
+                         "--candidate-command", command, "--no-progress",
+                         str(tmp_path / "work")]) == 0
+    assert capsys.readouterr().err == ""
+

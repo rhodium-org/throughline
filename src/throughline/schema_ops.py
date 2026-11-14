@@ -27,6 +27,9 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import functools
+import inspect
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -250,6 +253,40 @@ def _refuse_inherited(project: Project, *path: str) -> None:
         raise _inherited(project.inheritance, tuple(path))
 
 
+# A name written as another graph's: the namespace a source is bound under, a
+# colon, and the name it has there (`std:slide`).
+_OTHER_GRAPH = re.compile(r"^([a-z][a-z0-9_-]*):\S")
+
+
+def _refuse_other_graph(*names) -> None:
+    """Refuse, before anything is built, a change that names something in another
+    graph's namespace (SR-0181): an operation changes only the project it is run
+    against, and `std:slide` is a thing of the graph bound as `std`."""
+    for name in names:
+        for one in (name if isinstance(name, (list, tuple)) else [name]):
+            m = _OTHER_GRAPH.match(one) if isinstance(one, str) else None
+            if m:
+                raise SchemaOpError(
+                    f"'{one}' names something in the graph bound as '{m.group(1)}', "
+                    "and a schema operation changes only the project it is run "
+                    f"against (SR-0181). Make the change in '{m.group(1)}' itself")
+
+
+def _own_names(*params: str):
+    """Guard an operation: the arguments named are refused where they name
+    something in another graph (SR-0181)."""
+    def wrap(fn):
+        sig = inspect.signature(fn)
+
+        @functools.wraps(fn)
+        def guarded(*args, **kwargs):
+            bound = sig.bind(*args, **kwargs).arguments
+            _refuse_other_graph(*[bound.get(p) for p in params])
+            return fn(*args, **kwargs)
+        return guarded
+    return wrap
+
+
 def is_composed(project: Project) -> bool:
     return bool(project.config.get("sources"))
 
@@ -344,6 +381,7 @@ def _declare(project: Project, table: str, key: str, values: list[str],
                                                because=why))
 
 
+@_own_names('name')
 def status_add(project: Project, name: str) -> Change:
     _refuse_inherited(project, "status", name)
     if not _array(project.formed_config, "status", "values"):
@@ -352,15 +390,18 @@ def status_add(project: Project, name: str) -> Change:
     return _add_to(project, "status", "values", name, "status")
 
 
+@_own_names('names')
 def status_declare(project: Project, names: list[str]) -> Change:
     return _declare(project, "status", "values", names, "status", "status")
 
 
+@_own_names('name')
 def status_remove(project: Project, name: str) -> Change:
     _refuse_inherited(project, "status", name)
     return _remove_from(project, "status", "values", name, "status")
 
 
+@_own_names('name')
 def linktype_add(project: Project, name: str) -> Change:
     _refuse_inherited(project, "link", name)
     if not _array(project.formed_config, "links", "types"):
@@ -369,15 +410,18 @@ def linktype_add(project: Project, name: str) -> Change:
     return _add_to(project, "links", "types", name, "link type")
 
 
+@_own_names('names')
 def linktype_declare(project: Project, names: list[str]) -> Change:
     return _declare(project, "links", "types", names, "link type", "linktype")
 
 
+@_own_names('name')
 def linktype_remove(project: Project, name: str) -> Change:
     _refuse_inherited(project, "link", name)
     return _remove_from(project, "links", "types", name, "link type")
 
 
+@_own_names('value')
 def grounding_add(project: Project, field: str, value: str) -> Change:
     _check_grounding_field(field)
     _refuse_inherited(project, "grounding", field, value)
@@ -392,6 +436,7 @@ def grounding_add(project: Project, field: str, value: str) -> Change:
                    current=current)
 
 
+@_own_names('value')
 def grounding_remove(project: Project, field: str, value: str) -> Change:
     _check_grounding_field(field)
     _refuse_inherited(project, "grounding", field, value)
@@ -406,6 +451,7 @@ def _check_grounding_field(field: str) -> None:
             + ", ".join(_GROUNDING_FIELDS))
 
 
+@_own_names('frm', 'to')
 def transition_allow(project: Project, frm: str, to: str) -> Change:
     _refuse_inherited(project, "transition", frm)
     cfg = _copy(project)
@@ -419,6 +465,7 @@ def transition_allow(project: Project, frm: str, to: str) -> Change:
                                                because=why))
 
 
+@_own_names('frm', 'to')
 def transition_deny(project: Project, frm: str, to: str) -> Change:
     _refuse_inherited(project, "transition", frm)
     cfg = _copy(project)
@@ -440,6 +487,7 @@ def linkrule_deny(project: Project, ltype: str, *, side: str, itype: str) -> Cha
     return _linkrule(project, ltype, side=side, itype=itype, add=False)
 
 
+@_own_names('ltype', 'itype')
 def _linkrule(project: Project, ltype: str, *, side: str, itype: str,
               add: bool) -> Change:
     if side not in ("from", "to"):
@@ -473,6 +521,7 @@ def _linkrule(project: Project, ltype: str, *, side: str, itype: str,
                                                because=why))
 
 
+@_own_names('ltype')
 def linkrule_clear(project: Project, ltype: str) -> Change:
     _refuse_inherited(project, "link_rule", ltype)
     cfg = _copy(project)
@@ -489,6 +538,7 @@ def _clear_rule(doc: TomlDocument, ltype: str, why: str) -> None:
     doc.note_table("link_rules", why)
 
 
+@_own_names('name')
 def type_add(project: Project, name: str, *, normative: bool = True) -> Change:
     _refuse_inherited(project, "type", name)
     cfg = _copy(project)
@@ -506,6 +556,7 @@ def type_add(project: Project, name: str, *, normative: bool = True) -> Change:
                   + ("" if normative else " (non-normative)"), cfg, edit)
 
 
+@_own_names('name')
 def type_normative(project: Project, name: str, value: bool) -> Change:
     """Declare whether items of an existing type are normative (SR-0201). The
     items already written keep their flag until `tl migrate` rewrites it (SR-0203),
@@ -527,6 +578,7 @@ def type_normative(project: Project, name: str, value: bool) -> Change:
                                                because=why))
 
 
+@_own_names('name')
 def type_remove(project: Project, name: str) -> Change:
     _refuse_inherited(project, "type", name)
     cfg = _copy(project)
@@ -548,6 +600,7 @@ def _remove_type(doc: TomlDocument, name: str, why: str) -> None:
         doc.remove_table(f"types.{name}", because=why)
 
 
+@_own_names('itype', 'name')
 def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None,
              values: list[str] | None = None, required: bool = False,
              normative: bool = False, default=None) -> Change:
@@ -588,6 +641,7 @@ def attr_add(project: Project, itype: str, name: str, *, kind: str | None = None
                                                spec, because=why))
 
 
+@_own_names('itype', 'name')
 def attr_remove(project: Project, itype: str, name: str) -> Change:
     _refuse_inherited(project, "attr", itype, name)
     cfg = _copy(project)
@@ -611,6 +665,7 @@ def attr_carriers(project: Project, itype: str, name: str) -> list[Item]:
                   key=lambda it: it.uid)
 
 
+@_own_names('itype', 'name')
 def attr_values_unset(project: Project, itype: str, name: str) -> Change:
     """Finish a withdrawal made before withdrawing could remove values (SR-0207):
     the type no longer declares ``name``, but its items still carry it. No value
@@ -742,6 +797,7 @@ def _withdraw_role(doc: TomlDocument, role: str, why: str) -> None:
     doc.note_table(_RATIFY_ROLES, why)
 
 
+@_own_names('itype')
 def requires_set(project: Project, itype: str, *, roles: list[str] | None = None,
                  signatures: int | None = None) -> Change:
     """Declare what an item of ``itype`` requires before it counts as ratified
@@ -781,6 +837,7 @@ def requires_set(project: Project, itype: str, *, roles: list[str] | None = None
     return Change(f"requiring {what} for '{itype}'", cfg, edit)
 
 
+@_own_names('itype')
 def requires_clear(project: Project, itype: str) -> Change:
     """Withdraw what ``itype`` requires; it needs one signature in a declared role
     again, as a kind with no declaration does."""

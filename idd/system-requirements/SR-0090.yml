@@ -5,12 +5,11 @@ title: Reproduce a document at a past revision
 text: The Tool shall render the requirements document as the graph stood at a named
   git revision, so a stakeholder can reproduce exactly what a baseline said. Given
   a commit-ish, the Tool shall reconstruct the project from that revision's tracked
-  files without touching the working tree, render the document from it, and stamp
-  the provenance line with the revision and its resolved commit hash. Because items
-  are plain YAML under version control, this makes any past state addressable by
-  commit rather than only the current checkout. When the project is not inside a
-  git work tree, or the revision cannot be resolved, the Tool shall fail with a clear
-  message rather than silently render the working tree.
+  files without touching the working tree, and render the document from it. Because
+  items are plain YAML under version control, this makes any past state addressable
+  by commit rather than only the current checkout. When the project is not inside
+  a git work tree, or the revision cannot be resolved, the Tool shall fail with a
+  clear message rather than silently render the working tree.
 normative: true
 links:
 - target: UR-0013
@@ -20,19 +19,17 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:bce559288995b9d5009d119914cb5a7502870b5ae0c6b76593e8e000d5ffe763
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  at: '2026-11-14T23:07:03Z'
+  fingerprint: sha256:59f9dcc93785f1cef14c5ad4e6602fb9a948f701984c9d718aa6079c90108132
   content:
     type: system_requirement
     text: The Tool shall render the requirements document as the graph stood at a
       named git revision, so a stakeholder can reproduce exactly what a baseline
       said. Given a commit-ish, the Tool shall reconstruct the project from that
-      revision's tracked files without touching the working tree, render the document
-      from it, and stamp the provenance line with the revision and its resolved commit
-      hash. Because items are plain YAML under version control, this makes any past
-      state addressable by commit rather than only the current checkout. When the
-      project is not inside a git work tree, or the revision cannot be resolved,
+      revision's tracked files without touching the working tree, and render the
+      document from it. Because items are plain YAML under version control, this
+      makes any past state addressable by commit rather than only the current checkout.
+      When the project is not inside a git work tree, or the revision cannot be resolved,
       the Tool shall fail with a clear message rather than silently render the working
       tree.
     normative: true

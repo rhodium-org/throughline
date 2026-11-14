@@ -119,6 +119,19 @@ def _parse_matrix_arg(
     first four are None and the whole arg is the filter. `primary`/`secondary` are
     the target-display tokens (each `uid` or an attribute name); `primary` defaults
     to `uid` when a selector is present but no suffix is given."""
+    # What is written as a selector and is not one fails (SR-0099): read as a
+    # filter it would be refused for some other reason, or render the default
+    # matrix where a direction was asked for.
+    lead = re.match(r"^(\w+):", arg.strip())
+    if lead and lead.group(1) not in ("incoming", "outgoing"):
+        raise InjectError(
+            f"malformed tl:matrix selector '{arg.strip().split()[0]}': the direction "
+            "is incoming or outgoing, as in incoming:implements")
+    if re.match(r"^(incoming|outgoing)\b", arg.strip()) and not re.match(
+            r"^(incoming|outgoing):\w", arg.strip()):
+        raise InjectError(
+            f"malformed tl:matrix selector '{arg.strip().split()[0]}': a direction "
+            "is followed by a link type, as in incoming:implements")
     m = _MATRIX_REL.match(arg.strip())
     if m:
         primary = m.group(3) or "uid"

@@ -2,9 +2,9 @@ uid: SR-0023
 type: system_requirement
 status: ratified
 title: Schema validation
-text: The Tool shall validate every item against the project schema (types, required
-  fields, enum membership, ID regex) and report violations with file, field, and
-  reason.
+text: The Tool shall validate every item against the project schema (required attributes,
+  the kind each declared attribute holds, enum membership, and the UID grammar) and
+  report violations with file, field, and reason.
 normative: true
 links:
 - target: UR-0016
@@ -14,14 +14,13 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:e18cd4d7d6e558b5571c11ebfb06ec3b382780ab96c640921a28a8fb4822dcaa
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  at: '2026-11-14T23:07:02Z'
+  fingerprint: sha256:181be571f5e19b52b38a690025bfe0a4f8a367fea6fc9269be3f977f2930595d
   content:
     type: system_requirement
-    text: The Tool shall validate every item against the project schema (types, required
-      fields, enum membership, ID regex) and report violations with file, field,
-      and reason.
+    text: The Tool shall validate every item against the project schema (required
+      attributes, the kind each declared attribute holds, enum membership, and the
+      UID grammar) and report violations with file, field, and reason.
     normative: true
     derived: false
     attrs:

@@ -979,10 +979,26 @@ def cmd_resolve(args) -> int:
         result = plan_resolution(args.path, keep=args.keep, trunk=args.trunk)
     except CollisionError as e:
         return _err(str(e))
+    def signatures() -> None:
+        """What was settled, and what was not, among items both sides signed
+        (SR-0265)."""
+        keep = "would keep" if args.dry_run else "kept"
+        for merged in result.signatures:
+            print(f"signed on both sides: {Path(merged.path).stem} — {keep} every "
+                  f"signature: {', '.join(merged.kept)}")
+        for path in result.beyond_signatures:
+            print(f"still in conflict: {Path(path).stem} — the two sides differ in "
+                  f"more than its signatures, so it is not settled here ({path})")
+
     if not result.moves and not result.relinks:
-        print("no UID collisions in this merge — nothing to resolve")
+        signatures()
+        if not result.signatures:
+            print("no UID collisions in this merge — nothing to resolve")
         for path in result.other_conflicts:
             print(f"  still in conflict (not a UID collision): {path}")
+        if result.signatures and not args.dry_run:
+            apply_resolution(result)
+            print("staged — run `tl check`, then `git commit` to finish the merge")
         return OK
     kept = "ours" if result.keep == OURS else "theirs"
     moved = "theirs" if result.keep == OURS else "ours"
@@ -1019,6 +1035,7 @@ def cmd_resolve(args) -> int:
         new = result.mapping[old]
         print(f"note: commit {sha} ({subject}) cites {old}; a commit cannot be "
               f"rewritten, so {old} there means what is now {new}")
+    signatures()
     for path in result.other_conflicts:
         print(f"still in conflict (not a UID collision): {path}")
     if not args.dry_run:
