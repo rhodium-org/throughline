@@ -37,8 +37,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162, SR-0170, SR-0205, SR-0208, SR-0219, SR-0242, SR-0243, SR-0244, SR-0245, SR-0267, SR-0269, SR-0272 |
 | UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0115, SR-0116, SR-0117, SR-0118, SR-0119, SR-0186, SR-0187, SR-0220 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
-| UR-0026 | Conflict-free parallel identity allocation | SR-0122, SR-0123, SR-0124, SR-0125, SR-0126 |
-| UR-0027 | Item identity is tamper-evident | SR-0127, SR-0128 |
+| UR-0026 | Conflict-free parallel identity allocation | SR-0006, SR-0248 |
+| UR-0027 | Item identity is tamper-evident | SR-0127 |
 | UR-0028 | A stale item shows what changed before it asks to be re-ratified | SR-0165, SR-0166, SR-0167, SR-0198, SR-0200, SR-0215, SR-0216, SR-0217, SR-0218, SR-0246 |
 | UR-0029 | Ratification shows the ratifier what they are accepting | SR-0195, SR-0269 |
 | UR-0030 | A ratification that records the wrong person can be corrected | SR-0196 |

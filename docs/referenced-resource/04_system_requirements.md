@@ -82,7 +82,7 @@ example of the tombstone convention.
 
 *Rationale:* Detection plus an assisted single-direction fix keeps SR-0001 while making merges tractable.
 
-*Implements:* UR-0014
+*Implements:* UR-0014, UR-0026
 
 **priority**: must · **verification**: test
 

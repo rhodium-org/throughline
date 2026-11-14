@@ -1,6 +1,6 @@
 uid: SR-0123
 type: system_requirement
-status: ratified
+status: rejected
 title: GUID is the normative-content fingerprint datum
 text: The normative-content fingerprint shall be computed over the item's GUID rather
   than its UID, so that allocating, renumbering or relabelling a UID (on the item
@@ -14,6 +14,12 @@ attrs:
   priority: must
   verification: test
   origin: hybrid
+  invalidated_reason: 'Superseded by tl resolve (SR-0006, SR-0248, SR-0250): a UID
+    allocated on two branches is detected when they merge and the later item is renumbered,
+    with the links to it rewritten. GUID identity was never built, and SR-0123 contradicts
+    SR-0154, which is what the fingerprint does. The one cost is accepted: an item
+    signed on a branch and then renumbered at the merge is signed again. Decided
+    by Henry Grech-Cini on 14 November 2026.'
 ratifications:
 - by: henry
   fingerprint: sha256:1b3b1e00a6a6d1e422ff1b4dc3134db391ccc45942d6f3f6be6c71a880311415

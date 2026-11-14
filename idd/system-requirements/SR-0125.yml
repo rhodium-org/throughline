@@ -1,6 +1,6 @@
 uid: SR-0125
 type: system_requirement
-status: ratified
+status: rejected
 title: Pre-integration references resolve by GUID
 text: Before a UID is allocated, references between newly created items shall be
   expressed and resolved by GUID; reference resolution shall accept either a UID
@@ -13,6 +13,12 @@ attrs:
   priority: must
   verification: test
   origin: hybrid
+  invalidated_reason: 'Superseded by tl resolve (SR-0006, SR-0248, SR-0250): a UID
+    allocated on two branches is detected when they merge and the later item is renumbered,
+    with the links to it rewritten. GUID identity was never built, and SR-0123 contradicts
+    SR-0154, which is what the fingerprint does. The one cost is accepted: an item
+    signed on a branch and then renumbered at the merge is signed again. Decided
+    by Henry Grech-Cini on 14 November 2026.'
 ratifications:
 - by: henry
   fingerprint: sha256:f9a9e80a2eab73537886abf17aa9727ec864a9167dcac6ebf576189c33c58e78

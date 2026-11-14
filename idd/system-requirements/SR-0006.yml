@@ -11,6 +11,8 @@ normative: true
 links:
 - target: UR-0014
   type: implements
+- target: UR-0026
+  type: implements
 attrs:
   priority: must
   verification: test

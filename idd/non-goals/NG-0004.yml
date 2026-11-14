@@ -3,23 +3,24 @@ type: non_goal
 status: ratified
 title: No central identity server
 text: throughline does not provide, and does not require, an online counter or coordinating
-  service to allocate UIDs. Allocation atomicity derives solely from compare-and-swap
-  on the trunk ref, keeping identity allocation viable for fully offline and zero-backend
-  (e.g. in-browser) clients.
+  service to allocate UIDs. A UID is allocated from the files a branch holds, and
+  a clash between two branches is settled when they merge (SR-0006), keeping identity
+  allocation viable for fully offline and zero-backend (e.g. in-browser) clients.
 normative: false
 attrs:
   origin: hybrid
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:a511f1e2e493a5e2fc9355f70c8491402489995632b92b766cf048b467c0efdc
-  backfilled: true
+  id: github:rhodium289
+  at: '2026-11-14T15:34:57Z'
+  fingerprint: sha256:97e87d7b19b2fa385fce831ae26659d4cabe1532298178b494f94766fee5d91c
   content:
     type: non_goal
     text: throughline does not provide, and does not require, an online counter or
-      coordinating service to allocate UIDs. Allocation atomicity derives solely
-      from compare-and-swap on the trunk ref, keeping identity allocation viable
-      for fully offline and zero-backend (e.g. in-browser) clients.
+      coordinating service to allocate UIDs. A UID is allocated from the files a
+      branch holds, and a clash between two branches is settled when they merge (SR-0006),
+      keeping identity allocation viable for fully offline and zero-backend (e.g.
+      in-browser) clients.
     normative: false
     derived: false
     attrs: {}
-  revision: 91baf29853480f5b45321c44878662983ee24849
