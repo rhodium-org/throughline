@@ -1,6 +1,6 @@
 uid: SR-0335
 type: system_requirement
-status: ratified
+status: implemented
 title: 'A filter can read an item''s standing: signed, stale, retired, reviewed and
   who signed'
 text: 'A filter shall be able to read, for each item: signed, true when its signatures

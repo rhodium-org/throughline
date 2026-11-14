@@ -410,7 +410,9 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     s.add_argument("expr", nargs="?", default="",
                    help="SR-0045 filter, e.g. \"status == 'draft'\" or "
                         "\"type == 'system_requirement' and "
-                        "attrs.get('priority') == 'must'\"; omit to list all")
+                        "attrs.get('priority') == 'must'\", or by standing, "
+                        "\"signed and not stale\" (signed, stale, retired, "
+                        "reviewed, signers); omit to list all")
     s.add_argument("--format", choices=["text", "json"], default="text")
     s.add_argument("--all", action="store_true",
                    help="include deleted (tombstoned) items")

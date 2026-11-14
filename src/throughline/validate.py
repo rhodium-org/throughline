@@ -20,7 +20,7 @@ from .schema import kind_accepts
 from .grounding import AMBIGUOUS_ATTR, ambiguity_report, grounding_gap, is_flagged_ambiguous, is_unserved
 from .signatures import (
     CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, files_moved, relevant,
-    retired, signatures, signs_deletion, stale_entries, standing,
+    requirement_met, retired, signatures, signs_deletion, stale_entries, standing,
 )
 from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING, listed, shown
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
@@ -592,7 +592,7 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
             if retired(item, schema):
                 continue
             try:
-                matched = eval_filter(item, expr, idx)
+                matched = eval_filter(item, expr, idx, schema)
             except FilterError as e:
                 # The rule cannot be enforced. Reported once, as an error, and the
                 # rule abandoned: a filter that raises used to be read as 'matches
@@ -673,7 +673,7 @@ def coverage_report(project, index: Index | None = None, *,
         for item in project.items():
             if retired(item, schema) or (counts is not None and not counts(item)):
                 continue
-            if not eval_filter(item, expr, idx):
+            if not eval_filter(item, expr, idx, schema):
                 continue
             matched += 1
             links = (idx.in_links(item.uid, {ltype}) if direction == "incoming"
@@ -711,31 +711,83 @@ class _LinkView:
         return bool(self._idx.in_links(self._item.uid, types))
 
 
-def _filter_namespace(item, idx: Index | None = None) -> dict:
+def _filter_namespace(item, idx: Index | None = None, schema=None) -> dict:
     """The one set of names an SR-0045 filter can reference (grammar: SR-0104).
     Shared by coverage rules, the `query` CLI, and document injection so the
     language is identical in all three. The keys are exactly
     :data:`throughline.filters.FILTER_NAMES`, which is what the static check
     validates against; a test holds the two together."""
-    return {
+    return _Namespace(item, schema, {
         "type": item.type, "status": item.status, "register": item._register_prefix,
         "uid": item.uid, "derived": item.derived, "normative": item.normative,
         "title": item.title, "text": item.text, "rationale": item.rationale,
         "attrs": dict(item.attrs),  # e.g. attrs.get('priority') == 'must'
         "links": _LinkView(item, idx),  # e.g. links.outgoing('implements')
         "true": True, "false": False, "none": None,
-    }
+    })
 
 
-def eval_filter(item, expr: str, idx: Index | None = None) -> bool:
+def _signers(item, schema) -> list[str]:
+    """The name and the identifier of each person whose signature bears on the
+    item as it stands, each once, in the order they signed."""
+    out: list[str] = []
+    for entry in relevant(item):
+        for value in (entry.get("by"), entry.get("id")):
+            if value and str(value) not in out:
+                out.append(str(value))
+    return out
+
+
+# An item's standing as a filter reads it (SR-0335). Each is the judgement the
+# gate makes, by the function the gate calls, so a filter and `tl check` cannot
+# disagree about whether an item is signed.
+_STANDING = {
+    "signed": lambda item, schema: requirement_met(item, schema),
+    "stale": lambda item, schema: bool(stale_entries(item, schema)),
+    "retired": lambda item, schema: retired(item, schema),
+    "reviewed": lambda item, schema: (item.reviewed is not None
+                                      and fingerprint(item, schema) == item.reviewed),
+    "signers": _signers,
+}
+
+
+class _Namespace(dict):
+    """The names a filter reads, with an item's standing worked out only when a
+    filter asks for it: judging a signature means fingerprinting the item, which
+    most filters never need. Standing is judged against a schema, so a caller
+    that gives none is refused the name, never answered false."""
+
+    def __init__(self, item, schema, fields: dict):
+        super().__init__(fields)
+        self._item = item
+        self._schema = schema
+        for name in _STANDING:
+            super().__setitem__(name, None)
+
+    def __getitem__(self, name):
+        work = _STANDING.get(name)
+        if work is None:
+            return super().__getitem__(name)
+        if self._schema is None:
+            raise FilterError(f"'{name}' is unavailable in this context: an item's "
+                              "standing is judged against its project's schema")
+        # A caller may hand over how to get the schema instead of the schema, so
+        # a filter that asks for no standing never has one formed for it.
+        schema = self._schema() if callable(self._schema) else self._schema
+        return work(self._item, schema)
+
+
+def eval_filter(item, expr: str, idx: Index | None = None, schema=None) -> bool:
     """Evaluate an SR-0045 boolean filter against one item. Raises FilterError
     on a malformed expression so user-facing callers can report it. Project
     files are untrusted input, so the expression is walked by a constrained
     parser rather than passed to eval (SR-0103, NFR-0022). ``idx`` supplies the
-    link graph so incoming link predicates (SR-0106) can be answered."""
+    link graph so incoming link predicates (SR-0106) can be answered, and
+    ``schema`` the project's schema, or a function that returns it, so the item's
+    standing (SR-0335) can be."""
     if not expr or not expr.strip():
         return True
-    return bool(safe_eval(expr, _filter_namespace(item, idx)))
+    return bool(safe_eval(expr, _filter_namespace(item, idx, schema)))
 
 
 def query_items(project, expr: str | None = None, *, include_deleted: bool = False,
@@ -751,7 +803,8 @@ def query_items(project, expr: str | None = None, *, include_deleted: bool = Fal
                   if include_deleted or not retired(it, project.schema)]
     if expr:
         idx = index if index is not None else Index.build(project)
-        candidates = [it for it in candidates if eval_filter(it, expr, idx)]
+        candidates = [it for it in candidates
+                      if eval_filter(it, expr, idx, project.schema)]
     return sorted(candidates, key=lambda it: it.uid)
 
 
