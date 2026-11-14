@@ -416,7 +416,8 @@ def matching(project, expr: str) -> list:
     idx = Index.build(project)
     try:
         items = [it for it in project.items()
-                 if not it.is_deleted and eval_filter(it, expr, idx)]
+                 if not it.is_deleted
+                 and eval_filter(it, expr, idx, lambda: project.schema)]
     except FilterError as e:
         raise InjectError(f"bad filter '{expr}': {e}") from e
     return sorted(items, key=lambda it: it.uid)

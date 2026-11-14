@@ -44,6 +44,9 @@ _METHODS = frozenset({
 FILTER_NAMES = frozenset({
     "type", "status", "register", "uid", "derived", "normative",
     "title", "text", "rationale", "attrs", "links",
+    # An item's standing (SR-0335): the judgement the gate makes, read here and
+    # never worked out in a filter.
+    "signed", "stale", "retired", "reviewed", "signers",
     "true", "false", "none",
 })
 

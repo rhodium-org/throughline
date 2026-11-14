@@ -4,7 +4,8 @@ status: ratified
 title: Filter expression language
 text: The Tool shall provide one boolean filter language over an item's `uid`, `type`,
   `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs`
-  and `links`, usable identically in search, table generation, exports, and coverage
+  and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed` and
+  `signers`, usable identically in search, table generation, exports, and coverage
   rules.
 rationale: 'The list named tags, which the Tool has never had, and left out uid,
   rationale, normative and derived, which it admits (issue #40). The names are written
@@ -22,15 +23,16 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:1742905d7f8db9f53fafc0ba42d31f704f10d75afe5fd2e12a6a91c4fc9f12af
-  backfilled: true
-  revision: e04256de446ad351702edd141b1b2a0d116ee6c9
+  id: github:rhodium289
+  at: '2026-11-14T17:21:05Z'
+  fingerprint: sha256:f71a1fff1f1789ce9d5ea2d4f9f12da5c8ece7e5d51ef095836b9c959ee1fca7
   content:
     type: system_requirement
     text: The Tool shall provide one boolean filter language over an item's `uid`,
       `type`, `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`,
-      `attrs` and `links`, usable identically in search, table generation, exports,
-      and coverage rules.
+      `attrs` and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed`
+      and `signers`, usable identically in search, table generation, exports, and
+      coverage rules.
     normative: true
     derived: false
     attrs:

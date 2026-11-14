@@ -14,18 +14,16 @@ text: The filter language (SR-0045) shall be a fixed, closed grammar defined by 
   or, and not, with parentheses for grouping; the comparisons ==, !=, <, <=, >, and
   >=; the membership tests in and not in; literal values — single- or double-quoted
   strings, integers, decimals, the booleans true and false, and none — and literal
-  lists, tuples, and sets of them; references to the fixed field namespace (uid,
-  type, status, register, title, text, rationale, normative, derived, attrs, and
-  links) and no other bare names; indexing a field by a literal or field key, for
-  example attrs['priority']; and a closed allow-list of read-only accessor methods
-  on a referenced value, for example attrs.get('priority'), title.lower(), or the
-  link predicates links.outgoing('implements') and links.incoming('verifies') (SR-0106).
-  Every construct outside this grammar — arithmetic, assignment, comprehensions,
-  generator or conditional expressions, lambdas, attribute access other than the
-  allowed accessor calls, a call to anything but an allowed accessor, or any name
-  absent from the namespace — shall be rejected as a malformed filter and never evaluated.
-  The grammar shall be identical in search, query, table and matrix generation, exports,
-  and coverage rules.
+  lists, tuples, and sets of them; references to the names SR-0045 lists and no other
+  bare names; indexing a field by a literal or field key, for example attrs['priority'];
+  and a closed allow-list of read-only accessor methods on a referenced value, for
+  example attrs.get('priority'), title.lower(), or the link predicates links.outgoing('implements')
+  and links.incoming('verifies') (SR-0106). Every construct outside this grammar
+  — arithmetic, assignment, comprehensions, generator or conditional expressions,
+  lambdas, attribute access other than the allowed accessor calls, a call to anything
+  but an allowed accessor, or any name absent from the namespace — shall be rejected
+  as a malformed filter and never evaluated. The grammar shall be identical in search,
+  query, table and matrix generation, exports, and coverage rules.
 rationale: SR-0045 named the language's dimensions but never its syntax, so the accepted
   grammar was implicitly whatever the evaluator could parse — the whole of Python,
   which is simultaneously the deserialisation-class RCE that SR-0103 closes and an
@@ -53,9 +51,9 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  fingerprint: sha256:d8899288ed9b814ff340d69b9d5d2b6f0c1a99f189ee27c18e4667a65abf46df
-  backfilled: true
-  revision: a78fa850e4070f62cad9cd86fed10c1db295cdcb
+  id: github:rhodium289
+  at: '2026-11-14T17:21:05Z'
+  fingerprint: sha256:45b03370e722cc3f584f6c2ed35b07362db8501bcf8b9e42738b9227cb8a545a
   content:
     type: system_requirement
     text: The filter language (SR-0045) shall be a fixed, closed grammar defined
@@ -71,11 +69,10 @@ ratifications:
       the comparisons ==, !=, <, <=, >, and >=; the membership tests in and not in;
       literal values — single- or double-quoted strings, integers, decimals, the
       booleans true and false, and none — and literal lists, tuples, and sets of
-      them; references to the fixed field namespace (uid, type, status, register,
-      title, text, rationale, normative, derived, attrs, and links) and no other
-      bare names; indexing a field by a literal or field key, for example attrs['priority'];
-      and a closed allow-list of read-only accessor methods on a referenced value,
-      for example attrs.get('priority'), title.lower(), or the link predicates links.outgoing('implements')
+      them; references to the names SR-0045 lists and no other bare names; indexing
+      a field by a literal or field key, for example attrs['priority']; and a closed
+      allow-list of read-only accessor methods on a referenced value, for example
+      attrs.get('priority'), title.lower(), or the link predicates links.outgoing('implements')
       and links.incoming('verifies') (SR-0106). Every construct outside this grammar
       — arithmetic, assignment, comprehensions, generator or conditional expressions,
       lambdas, attribute access other than the allowed accessor calls, a call to

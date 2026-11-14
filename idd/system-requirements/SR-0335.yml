@@ -1,0 +1,53 @@
+uid: SR-0335
+type: system_requirement
+status: implemented
+title: 'A filter can read an item''s standing: signed, stale, retired, reviewed and
+  who signed'
+text: 'A filter shall be able to read, for each item: signed, true when its signatures
+  meet what its type requires; stale, true when a signature it carries no longer
+  matches its content, its signed links or a file it names; retired, true when it
+  is a tombstone that stands; reviewed, true when its review record matches its present
+  content; and signers, the name and the identifier of each person whose signature
+  it carries, as a list. Each is the judgement tl check makes, read by the filter
+  and never worked out in it. The signature record itself, with the content it recorded,
+  is not readable from a filter.'
+rationale: 'A filter could read signatures through attrs until format 4 moved them
+  to the ratifications list (SR-0254); the names a filter may read were not widened
+  then, so a coverage rule, a query or a document table can no longer ask whether
+  an item is signed. The fixed list of names was kept short as a guard against injection,
+  but it is not what guards: a filter is never run as code (SR-0103) and may call
+  only the listed methods (SR-0104), and that is unchanged. Five worked-out names
+  were chosen over exposing the raw record, which would need constructs the grammar
+  refuses to search it. Asked for by Henry Grech-Cini on 14 November 2026. Who pays:
+  nobody; a filter that names none of these reads as before.'
+normative: true
+links:
+- target: UR-0010
+  type: implements
+- target: SR-0045
+  type: refines
+- target: SR-0254
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T17:21:05Z'
+  fingerprint: sha256:06a5be4f2ba0368df5ddda492ba070f1884cadec2fca2974e2049ff7b97a81b3
+  content:
+    type: system_requirement
+    text: 'A filter shall be able to read, for each item: signed, true when its signatures
+      meet what its type requires; stale, true when a signature it carries no longer
+      matches its content, its signed links or a file it names; retired, true when
+      it is a tombstone that stands; reviewed, true when its review record matches
+      its present content; and signers, the name and the identifier of each person
+      whose signature it carries, as a list. Each is the judgement tl check makes,
+      read by the filter and never worked out in it. The signature record itself,
+      with the content it recorded, is not readable from a filter.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
