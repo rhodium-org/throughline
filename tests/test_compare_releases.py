@@ -68,8 +68,9 @@ def _run(tmp_path: Path, *dirs: Path, extra=(), capsys=None) -> tuple[int, str]:
     stand_in.write_text(STAND_IN, encoding="utf-8")
     code = compare.main([
         "--against", "9.9.9",
-        "--released-command", f"{sys.executable} {stand_in} released",
-        "--candidate-command", f"{sys.executable} {stand_in} candidate",
+        # Quoted, so a path with a backslash or a space in it stays one word.
+        "--released-command", shlex.join([sys.executable, str(stand_in), "released"]),
+        "--candidate-command", shlex.join([sys.executable, str(stand_in), "candidate"]),
         *extra, *[str(d) for d in dirs]])
     said = capsys.readouterr() if capsys else None
     return code, (said.out + said.err) if said else ""

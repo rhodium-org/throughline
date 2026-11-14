@@ -293,7 +293,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="the released version to compare with, e.g. 5.4.0")
     parser.add_argument("--released-command", metavar="CMD",
                         help="a command that runs the released version, used in "
-                             "place of installing it")
+                             "place of installing it; written as for a POSIX shell, "
+                             "so quote a path that holds a backslash or a space")
     parser.add_argument("--candidate-command", metavar="CMD",
                         help="a command that runs the candidate (default: this "
                              "working tree)")
