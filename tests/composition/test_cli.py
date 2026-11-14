@@ -1188,3 +1188,46 @@ def test_compose_ratify_stops_at_a_signed_link_that_moved(consumer_dir, capsys):
                      "--accept-change"]) == 0
     tlc_main(["-C", str(consumer_dir), "check", "--base", ""])
     assert "ratified-stale" not in capsys.readouterr().out
+
+
+# ------------------------------------------------- blast over the union (SR-0230)
+
+def test_compose_blast_of_a_borrowed_clause_finds_what_rests_on_it(consumer_dir, capsys):
+    """SR-0230: an operation whose answer depends on the union runs over it. blast
+    read the consumer alone, so a borrowed clause "did not exist" and a consumer
+    could not ask what of its own depends on one, which trace and subgraph could."""
+    rc = tlc_main(["-C", str(consumer_dir), "blast", "toy:SR-0001"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.startswith("toy:SR-0001 — blast radius: ")
+    assert "depth 1 · relates" in out
+    assert "\n    SR-0001  [" in out
+    assert "TOYSR-0001" not in out  # never the mangled internal UID
+
+
+def test_compose_blast_gives_a_program_the_same_answer(consumer_dir, capsys):
+    """SR-0230, SR-0035: each dependent with its depth and the link that reached it,
+    named as the composer names it."""
+    import json
+    assert tlc_main(["-C", str(consumer_dir), "blast", "toy:SR-0001",
+                     "--format", "json"]) == 0
+    reached = json.loads(capsys.readouterr().out)
+    assert {"uid": "SR-0001", "depth": 1, "link": "relates"} in reached
+    assert not [r for r in reached if r["uid"].startswith("TOY")]
+
+
+def test_compose_blast_of_a_clause_nothing_binds_is_refused(consumer_dir, capsys):
+    assert tlc_main(["-C", str(consumer_dir), "blast", "toy:SR-9999"]) == 2
+    assert "toy:SR-9999 does not exist" in capsys.readouterr().err
+
+
+def test_compose_blast_of_a_local_item_is_what_it_was(consumer_dir, source_dir, capsys):
+    """Nothing in a source rests on the consumer, so a local item's blast radius
+    is its own graph's, as before."""
+    import json
+    from throughline.cli import cmd_blast  # noqa: F401  (the local command exists)
+    assert tlc_main(["-C", str(consumer_dir), "blast", "SR-0001", "--format", "json"]) == 0
+    composed = json.loads(capsys.readouterr().out)
+    assert all(not r["uid"].startswith(("toy:", "TOY")) for r in composed)
+    assert tlc_main(["-C", str(source_dir), "blast", "SR-0001", "--format", "json"]) == 0
+    json.loads(capsys.readouterr().out)   # a project with no sources still answers

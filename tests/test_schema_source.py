@@ -385,3 +385,29 @@ def test_a_follower_s_dump_is_the_same_bytes_on_every_run(tmp_path):
         assert done.returncode == 0, done.stderr
         dumps.add(done.stdout)
     assert len(dumps) == 1
+
+
+def test_a_follower_s_schema_listing_is_the_same_on_every_run(tmp_path):
+    """NFR-0012. `tl schema show` listed the grounding entries a follower inherits
+    in an order that changed from run to run, from the same set that reordered its
+    dump. Reported from the engine's conformance tests against 5.4.0."""
+    import os
+    import subprocess
+    import sys
+
+    std = _standard(tmp_path)
+    fol = tmp_path / "fol"
+    assert _cli(["-C", fol, "init", "--from-schema", std]) == 0
+    src = Path(__file__).resolve().parent.parent / "src"
+    seen = set()
+    for seed in ("0", "1", "2", "3", "4", "5"):
+        done = subprocess.run(
+            [sys.executable, "-c",
+             f"import sys; sys.path.insert(0, {str(src)!r}); "
+             "from throughline.cli import main; sys.exit(main())",
+             "-C", str(fol), "schema", "show"],
+            capture_output=True, text=True, env={**os.environ, "PYTHONHASHSEED": seed})
+        assert done.returncode == 0, done.stderr
+        seen.add(done.stdout)
+    assert len(seen) == 1
+    assert "grounding" in next(iter(seen))
