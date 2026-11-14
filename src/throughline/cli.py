@@ -141,6 +141,7 @@ from .storage import (
 from .uid import (PREFIX_GRAMMAR, UidError, next_uid, number_refusal, parse_uid,
                   valid_prefix)
 from .validate import (
+    coverage_report,
     ERROR,
     OFF,
     WARNING,
@@ -1267,6 +1268,42 @@ def cmd_dump(args) -> int:
     return OK
 
 
+def _print_coverage(rules, fmt: str, scope: str = "") -> int:
+    """Render a coverage report (SR-0052) as text or JSON."""
+    if fmt == "json":
+        print(json.dumps([r.to_dict() for r in rules], indent=2))
+        return OK
+    if not rules:
+        print("this project declares no coverage rules ([[rules.coverage]])")
+        return OK
+    for r in rules:
+        share = "nothing to cover" if r.percent is None else (
+            f"{r.covered} of {r.matched} covered ({r.percent}%)")
+        off = " — rule is off" if r.severity == OFF else ""
+        print(f"#{r.number}  {r.filter or '(every item)'}  needs {r.needs}{off}")
+        print(f"    {share}")
+        if r.uncovered:
+            print(f"    uncovered: {', '.join(r.uncovered)}")
+    if scope:
+        sys.stdout.flush()
+        print(f"\n{scope}", file=sys.stderr)
+    return OK
+
+
+def cmd_coverage(args) -> int:
+    """Report how far each coverage rule is met (SR-0052): parse, call
+    :func:`throughline.validate.coverage_report`, render."""
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    try:
+        rules = coverage_report(project)
+    except FilterError as e:
+        return _err(f"a coverage rule cannot be evaluated: {e}")
+    return _print_coverage(rules, args.format)
+
+
 def cmd_shape(args) -> int:
     try:
         project = load_project(args.path)
@@ -2031,6 +2068,30 @@ def _composed_query(args) -> int:
     return OK
 
 
+def _composed_coverage(args) -> int:
+    """The coverage report over the composed union (SR-0052, SR-0230): a rule's
+    links are judged over the union, so a link from or to a borrowed item counts,
+    and the items counted are the project's own, as the gate reports them."""
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return sources
+    if not sources:
+        return cmd_coverage(args)
+    res, union, rc = _resolve_union(consumer, sources, args.path)
+    if rc is not None:
+        return rc
+    view = union.displayed()
+    try:
+        rules = coverage_report(
+            view, counts=lambda it: not is_namespace_qualified(it.uid))
+    except FilterError as e:
+        return _err(f"a coverage rule cannot be evaluated: {e}")
+    return _print_coverage(
+        rules, args.format,
+        f"your own items, with links judged over {len(res.resolved)} composed "
+        "source(s)")
+
+
 def _composed_dump(args) -> int:
     """Export the composed graph as one JSON document (throughline-compose SR-0040):
     every link in the document resolves inside it, items read in ``namespace:UID``
@@ -2651,6 +2712,11 @@ UNION_COMMANDS: dict[str, tuple] = {
         _composed_check,
         "composes consumer + sources, validates the union with the unchanged "
         "validator, and reports every finding in `<namespace>:<UID>` vocabulary."),
+    "coverage": (
+        _composed_coverage,
+        "reports each coverage rule over your own items, with the links a rule "
+        "asks for judged over the union, so one from or to a borrowed clause "
+        "counts."),
     "query": (
         _composed_query,
         "lists over the composed graph, so a borrowed clause is findable and is "

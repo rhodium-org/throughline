@@ -613,6 +613,78 @@ def _coverage_rules(project, idx: Index, strict: bool) -> list[Finding]:
     return findings
 
 
+@dataclass(frozen=True)
+class RuleCoverage:
+    """How far one coverage rule is met (SR-0052): the items it applies to, and
+    those among them that lack the link it asks for."""
+    number: int                     # the rule's place among [[rules.coverage]], from 1
+    filter: str
+    needs: str
+    severity: str
+    matched: int
+    uncovered: list[str]
+
+    @property
+    def covered(self) -> int:
+        return self.matched - len(self.uncovered)
+
+    @property
+    def percent(self) -> float | None:
+        """The share of matched items that are covered, to one decimal place, or
+        ``None`` where the rule matches nothing: nothing to cover is not
+        everything covered."""
+        if not self.matched:
+            return None
+        return round(100 * self.covered / self.matched, 1)
+
+    def to_dict(self) -> dict:
+        return {"rule": self.number, "filter": self.filter, "needs": self.needs,
+                "severity": self.severity, "matched": self.matched,
+                "covered": self.covered, "percent": self.percent,
+                "uncovered": list(self.uncovered)}
+
+
+def coverage_report(project, index: Index | None = None, *,
+                    counts=None) -> list[RuleCoverage]:
+    """Each declared coverage rule with how far it is met (SR-0052): how many live
+    items it applies to, how many of them carry the link it asks for, and the UIDs
+    of those that do not, in UID order.
+
+    It reads a rule as the gate does (SR-0042) — the same items, the same filter,
+    the same links — so the UIDs it leaves uncovered are the ones `tl check`
+    raises the ``coverage`` finding on. A rule switched off is still reported:
+    the report says how the graph stands, not what the gate enforces. ``counts``
+    narrows which items are counted, for a caller reporting over a wider graph
+    than its own. Raises :class:`FilterError` for a rule whose filter cannot be
+    evaluated, which the gate reports as ``rule-filter``."""
+    idx = index if index is not None else Index.build(project)
+    schema = project.schema
+    out: list[RuleCoverage] = []
+    for pos, rule in enumerate(schema.coverage, start=1):
+        needs = str(rule.get("needs", "")).strip()
+        m = COVERAGE_NEEDS_RE.match(needs)
+        if not m:
+            raise FilterError(f"[[rules.coverage]] #{pos} has an unusable 'needs' "
+                              f"clause {shown(needs)}")
+        direction, ltype = m.group(1), m.group(2)
+        expr = rule.get("filter", "")
+        matched = 0
+        uncovered: list[str] = []
+        for item in project.items():
+            if retired(item, schema) or (counts is not None and not counts(item)):
+                continue
+            if not eval_filter(item, expr, idx):
+                continue
+            matched += 1
+            links = (idx.in_links(item.uid, {ltype}) if direction == "incoming"
+                     else idx.out_links(item.uid, {ltype}))
+            if not links:
+                uncovered.append(item.uid)
+        out.append(RuleCoverage(pos, expr, needs, rule.get("severity", WARNING),
+                                matched, sorted(uncovered)))
+    return out
+
+
 class _LinkView:
     """The ``links`` value a filter sees (SR-0106): read-only predicates over an
     item's graph edges, called in the accessor style of ``attrs.get`` —

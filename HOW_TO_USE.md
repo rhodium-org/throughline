@@ -283,6 +283,7 @@ tl check [--strict] [--format json]            # validate the graph — the CI g
 tl trace <UID> [--direction in|out] [--depth N]
 tl blast <UID> [--format json]                 # everything depending on an item
 tl shape [--format json]                       # observed (from)-[link]->(to) triples
+tl coverage [--format json]                    # each coverage rule: how many it applies to, how many are covered, what is not
 tl diagram [types|transitions|both]            # Mermaid of the model / lifecycle
 tl docs [FILE ...] [--at REF]                  # inject graph content into marked Markdown regions
 tl docs [FILE ...] --check                      # CI gate: fail if any document is out of date

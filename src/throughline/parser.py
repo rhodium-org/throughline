@@ -416,6 +416,13 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                    help="include deleted (tombstoned) items")
     s.set_defaults(func=handlers.get("cmd_query"))
 
+    s = sub.add_parser(
+        "coverage",
+        help="report each coverage rule with how many items it applies to, how "
+             "many are covered, the percentage and the UIDs left uncovered")
+    s.add_argument("--format", choices=["text", "json"], default="text")
+    s.set_defaults(func=handlers.get("cmd_coverage"))
+
     s = sub.add_parser("shape",
                        help="report the graph's (from)-[link]->(to) type shape")
     s.add_argument("--format", choices=["text", "json"], default="text")
