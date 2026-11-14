@@ -1,6 +1,6 @@
 uid: UR-0048
 type: user_requirement
-status: proposed
+status: ratified
 title: A release is shown to leave existing graphs as they were, or to say what it
   changes
 text: As someone who keeps graphs with the Tool, I want every release measured, before
@@ -19,3 +19,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T12:12:00Z'
+  fingerprint: sha256:91bef11a766b90bf6cba1cce7d8ce4911b34c929000e13e9e8557b3cc9c74f3c
+  content:
+    type: user_requirement
+    text: As someone who keeps graphs with the Tool, I want every release measured,
+      before it is published, against the graphs that already exist, so that upgrading
+      never changes what a graph of mine answers without the release having said
+      so first.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
