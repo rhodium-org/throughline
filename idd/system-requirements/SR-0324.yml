@@ -1,6 +1,6 @@
 uid: SR-0324
 type: system_requirement
-status: proposed
+status: ratified
 title: A file that cannot be read as an item or a manifest is refused by name
 text: When an item file is not valid YAML, is not a mapping, or holds no uid or no
   type, or a register manifest holds no prefix, the Tool shall refuse to load the
@@ -22,3 +22,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:90e3a09b87e7384811f5aa6a2c970a536127bccf7d0fc19ed50fde0193ab0891
+  content:
+    type: system_requirement
+    text: When an item file is not valid YAML, is not a mapping, or holds no uid
+      or no type, or a register manifest holds no prefix, the Tool shall refuse to
+      load the project, naming the file and what is wrong with it, and shall write
+      nothing. It shall never stop with an unhandled error.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

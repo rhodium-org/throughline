@@ -1,6 +1,6 @@
 uid: SR-0328
 type: system_requirement
-status: proposed
+status: ratified
 title: A number given as text is read in one stated form
 text: Where an operation reads an int or float attribute value from text, an int
   shall be an optional sign and decimal digits, and a float the same with an optional
@@ -21,3 +21,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:db1716afb18657ebead6a1703cb2cb71e0368e044e92c050b40814955d2b5aff
+  content:
+    type: system_requirement
+    text: Where an operation reads an int or float attribute value from text, an
+      int shall be an optional sign and decimal digits, and a float the same with
+      an optional fraction and an optional exponent; white space around the value
+      is ignored and anything else is refused. Underscores between digits, inf and
+      nan are refused.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

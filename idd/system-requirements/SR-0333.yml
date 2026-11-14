@@ -1,6 +1,6 @@
 uid: SR-0333
 type: system_requirement
-status: proposed
+status: ratified
 title: A finding's message names values without Python's renderings
 text: A finding's message and a chart's label shall write a list as its members joined
   by a comma and a space, a text value in double quotes, any other value as YAML
@@ -21,3 +21,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-14T06:29:50Z'
+  fingerprint: sha256:ac47b8cc570a0824e97b61420607274121c4dbaee7ea52ce094de029d4065b7f
+  content:
+    type: system_requirement
+    text: A finding's message and a chart's label shall write a list as its members
+      joined by a comma and a space, a text value in double quotes, any other value
+      as YAML writes it, and a kind as string, integer, float, boolean, list, mapping
+      or null. A finding's rule, severity and item are unchanged.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
