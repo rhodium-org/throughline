@@ -1,6 +1,6 @@
 uid: SR-0036
 type: system_requirement
-status: ratified
+status: rejected
 title: Baselines
 text: The Tool shall create named baselines pinning the exact state of all items,
   list baselines, and check out or read any baseline.
@@ -11,6 +11,11 @@ links:
 attrs:
   priority: must
   verification: test
+  invalidated_reason: 'Git already gives this: a tag names an exact state of every
+    item, a commit hash pins one, tags are listed by git, and any of them is read
+    by tl docs --at (SR-0090) and compared by tl diff (SR-0037). A second kind of
+    name kept by the Tool would only repeat it. Decided by Henry Grech-Cini on 14
+    November 2026.'
 ratifications:
 - by: Henry Grech-Cini
   fingerprint: sha256:f3e8553441932ec0703fa401d7d3b9e20052d0675dc9cbd9f13696cffd8b7127
