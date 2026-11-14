@@ -2,8 +2,10 @@ uid: SR-0013
 type: system_requirement
 status: ratified
 title: Ordering as metadata
-text: The Tool shall represent presentation order with an explicit per-register ordering
-  that can be edited freely without touching item identity or content fingerprints.
+text: 'The Tool shall carry presentation order apart from identity and content: an
+  item''s order and a register''s sections are kept exactly as written and are no
+  part of an item''s fingerprint, so ordering can be edited freely without touching
+  item identity, content fingerprints or signatures.'
 normative: true
 links:
 - target: UR-0002

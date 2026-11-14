@@ -3,7 +3,9 @@ type: system_requirement
 status: ratified
 title: No UID reuse
 text: The Tool shall never assign a UID that has ever existed in the project, including
-  UIDs of deleted items; retired numbers shall be recorded so allocation skips them.
+  UIDs of deleted items. A deleted item's file stays as a tombstone, so allocation,
+  which takes the next number above every one in use, passes over it; a number a
+  register's manifest reserves is passed over likewise.
 normative: true
 links:
 - target: UR-0001

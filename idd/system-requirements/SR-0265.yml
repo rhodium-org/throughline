@@ -1,6 +1,6 @@
 uid: SR-0265
 type: system_requirement
-status: ratified
+status: implemented
 title: A merge conflict confined to the signature list is settled by keeping every
   signature
 text: tl resolve shall settle a merge conflict in an item file when the conflict

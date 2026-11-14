@@ -1,6 +1,6 @@
 uid: SR-0032
 type: system_requirement
-status: ratified
+status: implemented
 title: Link integrity
 text: Validation shall flag links to unknown UIDs, links to deleted items, and (configurably)
   circular refines chains.

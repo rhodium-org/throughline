@@ -1,6 +1,6 @@
 uid: SR-0099
 type: system_requirement
-status: ratified
+status: implemented
 title: Directional traceability matrix in documents
 text: The tl:matrix document directive shall accept an optional <direction>:<link_type>
   selector (direction one of incoming or outgoing, reusing the coverage-rule grammar)

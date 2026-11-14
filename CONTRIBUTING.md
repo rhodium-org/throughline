@@ -71,7 +71,9 @@ covers the graphs people keep:
 python scripts/compare_releases.py --against 5.4.0 ~/work ~/standards
 ```
 
-Name the last released version and every directory you keep graphs beneath. It
+Add `--exclude` for folders that are not graphs anyone keeps (`--exclude fixtures
+--exclude 'experiments/*/runs'`); on a terminal it says how far it has got as it
+goes. Name the last released version and every directory you keep graphs beneath. It
 runs that release and your working tree over each graph it finds, reading only,
 and fails where one answers differently: its check findings, plain and strict,
 its documents gate, its dump, or an exit code. A difference you intend goes in the

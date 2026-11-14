@@ -808,3 +808,85 @@ def test_a_chart_labels_a_list_by_its_members(tmp_path):
         "\nattrs:\n", "\nattrs:\n  tags:\n  - a\n  - b\n"), encoding="utf-8")
     out = inject_text(load_project(root), "<!-- tl:chart tags -->\n<!-- tl:end -->\n")
     assert '"a, b"' in out and "['a'" not in out
+
+
+# ===========================================================================
+# Requirements that were ratified and built only in part (issue #169).
+# ===========================================================================
+
+@pytest.mark.parametrize("command", [
+    ["status", "add", "std:parked"],
+    ["status", "remove", "std:proposed"],
+    ["linktype", "add", "std:blocks"],
+    ["type", "add", "std:slide"],
+    ["type", "remove", "std:slide"],
+    ["attr", "add", "std:slide", "layout"],
+    ["attr", "add", "requirement", "std:layout"],
+    ["transition", "allow", "std:proposed", "ratified"],
+    ["grounding", "add", "root_types", "std:slide"],
+    ["linkrule", "allow", "std:verifies", "--from", "test"],
+])
+def test_a_schema_change_aimed_at_another_graph_s_namespace_is_refused(
+        tmp_path, capsys, command):
+    """SR-0181: an operation changes only the project it is run against, and
+    refuses a change expressed against another graph's namespace before writing
+    anything. A namespaced name was taken as an ordinary one."""
+    root = _demo(tmp_path)
+    before = _toml(root)
+    capsys.readouterr()
+    assert _cli(["-C", root, "schema", *command, "--because", "x"]) == 2
+    said = _said(capsys)
+    assert "'std'" in said and "only the project it is run against" in said
+    assert _toml(root) == before
+
+
+def test_a_refines_chain_that_comes_back_on_itself_is_its_own_finding(tmp_path):
+    """SR-0032: validation flags circular refines chains, configurably. The rule
+    `refines-cycle` had a default severity and was never raised: such a chain was
+    reported as circular justification, which it is not."""
+    a = Item(uid="FR-1", type="requirement", status="ratified",
+             links=[Link(target="FR-2", type="refines")])
+    b = Item(uid="FR-2", type="requirement", status="ratified",
+             links=[Link(target="FR-1", type="refines")])
+    found = validate(_project(a, b))
+    assert [f.rule for f in found if "cycle" in f.rule] == ["refines-cycle"]
+    (cycle,) = [f for f in found if f.rule == "refines-cycle"]
+    assert cycle.severity == "error" and "FR-1" in cycle.message and "FR-2" in cycle.message
+
+    off = validate(_project(a, b, config={"rules": {"refines-cycle": "off"}}))
+    assert not [f for f in off if "cycle" in f.rule]
+
+
+def test_a_circle_through_a_grounding_link_is_still_circular_justification(tmp_path):
+    """SR-0032: unchanged."""
+    a = Item(uid="FR-1", type="requirement", status="ratified",
+             links=[Link(target="FR-2", type="derives_from")])
+    b = Item(uid="FR-2", type="requirement", status="ratified",
+             links=[Link(target="FR-1", type="refines")])
+    found = validate(_project(a, b))
+    assert [f.rule for f in found if "cycle" in f.rule] == ["grounding-cycle"]
+
+
+@pytest.mark.parametrize("arg", [
+    "inbound:implements type == 'requirement'",
+    "incoming type == 'requirement'",
+    "outgoing: type == 'requirement'",
+    "incoming:",
+])
+def test_a_malformed_matrix_selector_fails_as_a_selector(tmp_path, arg):
+    """SR-0099: a malformed selector fails injection. It was read as a filter, so
+    it failed, if at all, as a bad filter with nothing said about the selector."""
+    project = load_project(_demo(tmp_path))
+    with pytest.raises(InjectError, match="malformed tl:matrix selector"):
+        inject_text(project, f"<!-- tl:matrix {arg} -->\n<!-- tl:end -->\n")
+
+
+@pytest.mark.parametrize("arg", [
+    "incoming:verifies type == 'requirement'",
+    "outgoing:implements@uid type == 'requirement'",
+    "type == 'requirement'",
+])
+def test_a_well_formed_matrix_argument_still_renders(tmp_path, arg):
+    project = load_project(_demo(tmp_path))
+    out = inject_text(project, f"<!-- tl:matrix {arg} -->\n<!-- tl:end -->\n")
+    assert "REQ-0001" in out

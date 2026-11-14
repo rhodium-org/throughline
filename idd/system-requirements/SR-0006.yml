@@ -3,8 +3,9 @@ type: system_requirement
 status: ratified
 title: Merge-safe allocation
 text: The Tool shall detect UID collisions arising from parallel branches at validation
-  time and provide a conflict-resolution command that reassigns the younger item
-  to a fresh UID and rewrites references to it.
+  time and provide a conflict-resolution command that keeps the UID on the side already
+  on the trunk, reassigns the other item to a fresh UID and rewrites references to
+  it.
 rationale: Detection plus an assisted single-direction fix keeps SR-0001 while making
   merges tractable.
 normative: true
