@@ -1,0 +1,25 @@
+uid: SR-0344
+type: system_requirement
+status: proposed
+title: A dead item grounds nothing and serves no root
+text: 'An item in the status bound to the invalidated role, and a tombstone that
+  stands, shall not count toward grounding: a delivery root that only such items
+  ground into is unserved, and an item whose every grounding chain passes through
+  one is an orphan.'
+rationale: 'A delivery root served only by a rejected item is reported served, and
+  an item grounded only through a rejected one is reported grounded (issue 70), so
+  retiring the one thing that answered a root silently turns it into an answered
+  one. Who pays: a graph that keeps live items grounded only in rejected or retired
+  ones turns red at the gate until each is grounded again or retired too. How many
+  graphs that is has not been measured; the release comparison (SR-0334) will say
+  before this ships.'
+normative: true
+links:
+- target: UR-0004
+  type: implements
+- target: SR-0211
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

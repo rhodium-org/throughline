@@ -1,0 +1,24 @@
+uid: SR-0345
+type: system_requirement
+status: proposed
+title: An export of a project's own items resolves no source
+text: tl dump --local shall export the project's own items without resolving any
+  source it declares. Its composition block shall name each declared source as declared,
+  and shall give no count of borrowed items and no edition for a source it did not
+  read.
+rationale: 'The export uses nothing it fetches, yet it needs the network and every
+  source''s credentials first, and fails where a source cannot be reached (issue
+  66); NG-0008 already says a source is not resolved for an operation whose answer
+  does not depend on the union. Who pays: a reader of a local export loses the count
+  of what was left out and the editions of the sources; the composed export still
+  gives both.'
+normative: true
+links:
+- target: UR-0037
+  type: implements
+- target: SR-0230
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

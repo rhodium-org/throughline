@@ -1,0 +1,24 @@
+uid: SR-0343
+type: system_requirement
+status: proposed
+title: A link made as an item is created is stamped
+text: A grounding link attached when an item is created, by tl new --ground or by
+  a new operation of a change set, shall be stamped with its target's fingerprint,
+  as tl link --stamp stamps one.
+rationale: 'A link with no stamp was never confirmed, so a later change to the parent
+  flags nothing: tl amend says no dependent was confirmed against the old content,
+  and tl check is silent (issue 72). The author who grounds a new item in a parent
+  has read the parent at that moment, which is what a stamp records. Who pays: an
+  item created from now on is marked suspect when its parent''s normative content
+  changes, and its link is confirmed again with tl link --stamp; links already written
+  are untouched.'
+normative: true
+links:
+- target: UR-0005
+  type: implements
+- target: SR-0034
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

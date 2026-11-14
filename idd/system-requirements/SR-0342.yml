@@ -1,0 +1,24 @@
+uid: SR-0342
+type: system_requirement
+status: proposed
+title: A ratify run passes over an item the same person has already signed
+text: Where a ratify run names several items and one of them is already signed by
+  the person signing, with nothing changed since, ratify shall say so, leave that
+  item as it is and go on to the others. A run that names only such items changes
+  nothing and says so. Every other refusal still refuses the whole run before anything
+  is written.
+rationale: 'A run interrupted part way, with the first item signed and the second
+  not, is recovered by running the same command again; that second run was refused
+  outright because the first item had nothing left to accept (issue 58). An unchanged
+  signature by the same person is not a fault in the run. Who pays: nobody; the item
+  was refused before and is skipped now.'
+normative: true
+links:
+- target: UR-0039
+  type: implements
+- target: SR-0199
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

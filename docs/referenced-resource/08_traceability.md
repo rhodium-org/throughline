@@ -15,8 +15,8 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0239, SR-0249 |
 | UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
-| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271 |
-| UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188, SR-0270 |
+| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271, SR-0344 |
+| UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188, SR-0270, SR-0343 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
 | UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
 | UR-0008 | Stakeholder-quality publishing | SR-0015, SR-0057 |
@@ -35,7 +35,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102, SR-0129, SR-0161, SR-0171, SR-0190, SR-0204 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162, SR-0170, SR-0205, SR-0208, SR-0219, SR-0242, SR-0243, SR-0244, SR-0245, SR-0267, SR-0269, SR-0272 |
-| UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0115, SR-0116, SR-0117, SR-0118, SR-0119, SR-0186, SR-0187, SR-0220 |
+| UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0115, SR-0116, SR-0117, SR-0118, SR-0119, SR-0186, SR-0187, SR-0220, SR-0341 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
 | UR-0026 | Conflict-free parallel identity allocation | SR-0006, SR-0248 |
 | UR-0027 | Item identity is tamper-evident | SR-0127 |
@@ -48,9 +48,9 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0034 | An item flagged ambiguous can be clarified, with a record of who did it and why | SR-0213, SR-0214 |
 | UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223, SR-0329 |
 | UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234, SR-0266 |
-| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238, SR-0240, SR-0247, SR-0332 |
+| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238, SR-0240, SR-0247, SR-0332, SR-0345 |
 | UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253 |
-| UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265 |
+| UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265, SR-0342 |
 | UR-0040 | A ratification record says when it was given | SR-0256 |
 | UR-0041 | A graph that follows a standard declares only what it adds | SR-0275, SR-0276, SR-0277, SR-0278, SR-0279 |
 | UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
