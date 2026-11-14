@@ -70,7 +70,11 @@ values = ["proposed", "deferred", "ratified", "implemented", "verified",
 [transitions]
 proposed = ["ratified", "deferred", "suspect", "rejected", "deleted"]
 deferred = ["proposed", "suspect", "rejected", "deleted"]
-ratified    = ["implemented", "suspect", "rejected", "deleted"]
+# A ratified requirement that is not going to be built yet is parked, not
+# rejected: it was agreed, and it can be put forward again. Asked for by Henry
+# Grech-Cini on 14 November 2026, to park requirements that were ratified and
+# never built.
+ratified = ["implemented", "suspect", "rejected", "deleted", "deferred"]
 implemented = ["verified", "suspect", "rejected", "deleted"]
 verified    = ["implemented", "suspect", "deleted"]
 suspect = ["proposed", "ratified", "implemented", "verified", "rejected",
