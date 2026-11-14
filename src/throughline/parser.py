@@ -260,6 +260,13 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                    help="with --beneath: migrate each graph that is behind, has no "
                         "uncommitted changes and is not in a linked worktree; "
                         "commits nothing (SR-0302..SR-0304)")
+    s.add_argument("--to-gql", action="store_true",
+                   help="rewrite this project's filters, in its coverage rules and "
+                        "its documents, into GQL conditions that select the same "
+                        "items, and set filter_language; changes nothing where any "
+                        "filter cannot be rewritten (SR-0339)")
+    s.add_argument("--dry-run", action="store_true",
+                   help="with --to-gql: show what would be rewritten, write nothing")
     s.set_defaults(func=handlers.get("cmd_migrate"))
 
     s = sub.add_parser("register", help="register (prefix-owning collection) operations")
