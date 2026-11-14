@@ -62,6 +62,7 @@ from .inject import (
     referenced_uids,
 )
 from .views import (
+    graph_diff,
     check_summary,
     ground_line,
     render_for_ratification,
@@ -1302,6 +1303,48 @@ def cmd_coverage(args) -> int:
     except FilterError as e:
         return _err(f"a coverage rule cannot be evaluated: {e}")
     return _print_coverage(rules, args.format)
+
+
+def cmd_diff(args) -> int:
+    """Report what changed between two states of the graph (SR-0037): parse, read
+    each state, call :func:`throughline.views.graph_diff`, render. A state is a
+    git revision (a tag, a commit, a branch) or, where none is named, the working
+    tree."""
+    def state(ref):
+        if ref is None:
+            return load_project(args.path), None
+        return load_project_at_ref(args.path, ref)
+    try:
+        was, was_sha = state(args.frm)
+        now, now_sha = state(args.to)
+    except ProjectError as e:
+        return _err(str(e))
+    diff = graph_diff(was, now)
+    if args.format == "json":
+        print(json.dumps({"from": {"revision": args.frm, "commit": was_sha},
+                          "to": {"revision": args.to, "commit": now_sha}, **diff},
+                         indent=2, default=str))
+        return OK
+
+    def line(mark: str, it: dict) -> str:
+        return f"{mark} {it['uid']}  [{it['type']}/{it['status']}] {it['title']}".rstrip()
+
+    for it in diff["added"]:
+        print(line("+", it))
+    for it in diff["removed"]:
+        print(line("-", it))
+    for it in diff["modified"]:
+        print(line("~", it))
+        if it["fields"]:
+            print(f"    changed: {', '.join(it['fields'])}")
+        links = ([f"+{l['type']} {l['target']}" for l in it["links_added"]]
+                 + [f"-{l['type']} {l['target']}" for l in it["links_removed"]])
+        if links:
+            print(f"    links: {', '.join(links)}")
+    print(f"{args.frm} -> {args.to or 'the working tree'}: "
+          f"{len(diff['added'])} added · {len(diff['removed'])} removed · "
+          f"{len(diff['modified'])} modified")
+    return OK
 
 
 def cmd_shape(args) -> int:
