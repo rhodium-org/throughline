@@ -111,6 +111,11 @@ def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
     refusal = transition_refusal(schema, item, to)
     if refusal is not None:
         raise GroundingError(refusal)
+    # An item that leaves the tombstone status is no tombstone, so the record of
+    # its deletion goes with the status, as it does when a deletion is declined
+    # (SR-0012, SR-0268). Left behind, the item reads as live and deleted at once.
+    if not deleting and item.is_deleted and to != item.status:
+        item.deleted = None
     item.status = to
 
 
