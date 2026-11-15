@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Henry J Grech-Cini
 # SPDX-License-Identifier: Apache-2.0
-"""UR-0037, SR-0230 to SR-0236 — composition lives in the Tool.
+"""UR-0037, SR-0230 to SR-0235 and SR-0353 — composition lives in the Tool.
 
 The behaviours that are new with the fold, rather than carried across from
 throughline-compose 0.21.0 (whose own suite runs beside this file): the resolver
@@ -209,12 +209,32 @@ def test_without_sources_a_sourced_marker_fails_naming_the_marker(consumer_dir, 
     assert "reference no external clause" in doc.read_text()
 
 
-# ------------------------------------------------ SR-0236: tl-compose is tl
+# ------------------------------------- SR-0353: tl is the one command name
 
-def test_tl_compose_is_a_second_name_for_the_same_program():
+def test_tl_and_throughline_are_the_only_command_names():
+    """tl-compose and throughline-compose were removed in 6.0.0, as SR-0247 had
+    announced since 3.15.0; nothing installs them any more."""
     root = Path(throughline.__file__).parent.parent.parent
     scripts = tomllib.loads((root / "pyproject.toml").read_text())["project"]["scripts"]
-    assert scripts["tl"] == scripts["tl-compose"] == scripts["throughline-compose"]
+    assert scripts == {"tl": "throughline.cli:main",
+                       "throughline": "throughline.cli:main"}
+
+
+def test_running_as_a_removed_name_prints_nothing_about_it(monkeypatch, capsys):
+    """The deprecation notice went with the names: a copy installed by hand under
+    an old name is just tl, and says nothing on standard error."""
+    monkeypatch.setattr(sys, "argv", ["tl-compose", "--version"])
+    with pytest.raises(SystemExit):
+        tl_main()
+    assert capsys.readouterr().err == ""
+
+
+def test_no_message_of_the_tool_tells_a_reader_to_run_tl_compose():
+    told = re.compile(r"\b(run|use|call)s? `?(tl-compose|throughline-compose)\b")
+    hits = [f"{p.name}: {m.group(0)}"
+            for p in sorted(Path(throughline.__file__).parent.glob("*.py"))
+            for m in told.finditer(p.read_text(encoding="utf-8"))]
+    assert hits == []
 
 
 def test_agentinfo_is_an_alias_of_context(consumer_dir, capsys):
@@ -241,7 +261,7 @@ def test_the_composition_names_are_exported():
 def test_the_shared_parser_leaves_room_for_throughline_compose_0_21():
     """throughline-compose 0.21.0 builds this parser and then adds `agentinfo` and
     `--local` on query and dump itself. Until the next major release those
-    additions must not collide with the Tool's own (SR-0231, SR-0236); 3.11.0
+    additions must not collide with the Tool's own (SR-0231); 3.11.0
     shipped the collision, and every `tl-compose` call on it failed."""
     import argparse
     from throughline.cli import build_parser

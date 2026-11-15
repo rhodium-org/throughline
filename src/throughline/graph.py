@@ -118,7 +118,7 @@ class Index:
         never disagree about what points at an item (SR-0189).
 
         ``expand`` is the boundary seam ``render_trace`` also offers: a node it
-        rejects is still reported, but is not walked through. tl-compose passes
+        rejects is still reported, but is not walked through. A composed caller passes
         one so a neighbourhood touching a borrowed clause does not swallow the
         whole standard behind it. ``uid`` itself is always walked — a caller who
         named it is standing on it deliberately."""
@@ -167,7 +167,7 @@ class Index:
         plus every link joining two members of the resulting node set.
 
         A target that is not a local item (dangling, or namespace-qualified and
-        resolvable only under tl-compose) stays in the node set as a leaf; it has
+        resolvable only over the composed union) stays in the node set as a leaf; it has
         no outgoing links here, so the walk stops at it rather than failing.
 
         ``expand`` bounds only what is *walked through*; a link joining two nodes

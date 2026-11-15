@@ -3,7 +3,7 @@
 """Build one throughline graph from a consumer plus its declared sources (SR-0230; throughline-compose SR-0004).
 
 The core throughline validator is reused *unchanged* (SR-0004): rather than teach
-`tl` about namespaces, `tl-compose` folds every source's items into a single union
+`tl` about namespaces, composition folds every source's items into a single union
 :class:`~throughline.model.Project` and runs the ordinary `validate` over it. The
 one trick is identity. A source's UIDs are its own (SR-0002), so two sources — or a
 source and the consumer — may both hold ``SR-0001``. Before merging, each borrowed

@@ -575,9 +575,9 @@ def context_markdown(project) -> str:
 def context_item_section(project, view, *, uid_display=None) -> str:
     """The `<UID>` section of the brief, as markdown (SR-0190).
 
-    Both `tl context <UID>` and tl-compose's union-aware version render through
+    Both `tl context <UID>` and its union-aware version render through
     here, so the wording an agent is trained on cannot differ between the two
-    tools — only the graph the neighbourhood was computed over does.
+    paths — only the graph the neighbourhood was computed over does.
     """
     show = uid_display or (lambda u: u)
     lines: list[str] = []

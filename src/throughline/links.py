@@ -3,8 +3,8 @@
 """Adding, restamping, retyping and removing a link (SR-0143, SR-0211, SR-0212).
 
 These are the operations behind `tl link` and `tl unlink`, offered here so a tool
-that grounds over a wider graph than the one it writes, such as tl-compose over a
-union, performs them through the Tool rather than through a copy that falls behind.
+that grounds over a wider graph than the one it writes, such as `tl` over a
+composed union, performs them through the Tool rather than through a copy that falls behind.
 Such a tool passes a :class:`GroundingView`; everything else is the operation's own.
 """
 from __future__ import annotations

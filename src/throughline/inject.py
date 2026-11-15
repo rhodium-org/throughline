@@ -204,7 +204,7 @@ class TargetResolver:
     """Resolves a matrix link target's display, liveness and attributes (SR-0110).
 
     The default reads only the local project, so injection behaves exactly as it
-    did before this seam existed. A composing front end (tl-compose) supplies a
+    did before this seam existed. A composing caller (`tl` over sources) supplies a
     resolver backed by the union graph, so a namespace-qualified target such as
     ``asvs:SR-0227`` — absent from the local project — still resolves its own
     ``source_ref`` and counts as live."""

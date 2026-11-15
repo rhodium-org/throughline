@@ -989,7 +989,7 @@ def test_compose_dump_identifies_the_composition_layer(consumer_dir, capsys):
     # SR-0040: the header named the core alone, so nothing in the file said
     # composition was involved at all.
     doc = _dump(consumer_dir, capsys)
-    # One program, one version: the dump names the Tool that composed it (SR-0236),
+    # One program, one version: the dump names the Tool that composed it (SR-0353),
     # and the composition block says composition was involved.
     assert doc["throughline_dump"]["tool_version"] == throughline.__version__
     assert doc["composition"]["scope"] == "composed"

@@ -1,6 +1,6 @@
 uid: SR-0236
 type: system_requirement
-status: ratified
+status: deleted
 title: tl-compose is a second name for tl
 text: The Tool shall install tl-compose and throughline-compose as command names
   that run the same program as tl, with no difference in function or output beyond
@@ -36,3 +36,9 @@ ratifications:
     attrs:
       priority: must
   revision: 4ae5b46df3eea34fcaf4680ce86c510c8009f1a4
+deleted:
+  date: '2026-11-15'
+  reason: 'Superseded by SR-0353: tl-compose and throughline-compose are no longer
+    installed (removed in 6.0.0, as SR-0247 announced).'
+  fingerprint: sha256:ddfe16dc92b330afb9a828c3247c3bb6044cc2ba118e6daf0ef8f1ecbaf506ed
+  from: ratified
