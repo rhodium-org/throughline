@@ -294,8 +294,7 @@ def _gate_format_version(config: dict, root: Path) -> None:
     if disk < EARLIER_FORMAT_VERSION:
         raise FormatError(
             f"{root / CONFIG_NAME} is at format version {disk}; this tl "
-            f"({_running_tool()}) reads {EARLIER_FORMAT_VERSION} and "
-            f"{FORMAT_VERSION} — run `tl migrate` to "
+            f"({_running_tool()}) uses {EARLIER_FORMAT_VERSION} — run `tl migrate` to "
             f"upgrade the project (a lossless, in-place rewrite)",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
     _gate_filter_language(_declares_gql(config), disk, root)
