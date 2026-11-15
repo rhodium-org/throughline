@@ -30,6 +30,7 @@ from pathlib import Path
 
 from .brief import _by_count
 from .graph import Index
+from .grounding import is_unserved
 from .inject import InjectError, TargetResolver, matching, register_directive, render_item
 from .links import GroundingView
 from .model import Project
@@ -370,11 +371,9 @@ def local_grounding(union: Union, schema, index: Index, local) -> tuple[int, int
         1 for it in non_roots if grounded_at_seam(union, schema, index, it.uid))
     # A local delivery root may be served by a borrowed item, so the in-links are
     # read over the whole union even though the roots counted are the consumer's.
+    # Served as the gate's `unserved-root` finding has it (SR-0348).
     delivery = [it for it in local if it.type in schema.delivery_roots]
-    served = sum(
-        1 for it in delivery
-        if any(lt in schema.ground_link_types for _o, lt in index.in_links(it.uid))
-    )
+    served = sum(1 for it in delivery if not is_unserved(schema, index, it))
     return grounded, len(non_roots), served, len(delivery)
 
 
