@@ -255,3 +255,32 @@ def test_a_tombstone_that_stands_grounds_nothing_and_a_proposed_one_still_does(
     from throughline.grounding import grounding_gap
     assert grounding_gap(project.schema, Index.build(project),
                          project.get("TEST-0001")) is not None
+
+
+def test_a_dead_item_under_a_dead_item_is_a_record_kept_and_no_orphan(tmp_path, capsys):
+    """SR-0344 is about what a dead item does for the living. A rejected
+    requirement under a rejected need is reported as it was before."""
+    root = _demo(tmp_path)
+    assert _cli(["-C", root, "link", "TEST-0001", "NFR-0001", "--type", "verifies"]) == 0
+    assert _cli(["-C", root, "new", "TEST", "--ground", "REQ-0001", "--ground-type",
+                 "verifies", "--title", "t", "--text", "x", "--no-interactive"]) == 0
+    for uid in ("TEST-0002", "REQ-0001"):
+        assert _cli(["-C", root, "status", uid, "rejected"]) == 0
+
+    found = _findings(root, capsys)
+
+    assert not _named(found, "TEST-0002", "orphan")
+    assert not _named(found, "REQ-0001", "orphan")
+
+
+def test_a_dead_root_whose_servers_are_dead_is_reported_as_it_was(tmp_path, capsys):
+    """SR-0344: a rejected intent with its rejected requirements is a record
+    kept, not a live root left unanswered."""
+    root = _demo(tmp_path)
+    for uid in ("TEST-0001", "REQ-0001", "NFR-0001", "INT-0001"):
+        assert _cli(["-C", root, "status", uid, "rejected"]) == 0
+
+    found = _findings(root, capsys)
+
+    assert not _named(found, "INT-0001", "unserved-root")
+    assert not any("orphan" in line for line in found)

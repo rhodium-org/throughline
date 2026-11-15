@@ -45,7 +45,14 @@ def is_dead(schema, item: Item) -> bool:
 def reaches_root(idx: Index, schema, uid: str) -> bool:
     """True if ``uid`` grounds upward to a root type over the schema's grounding
     link types, by a chain no dead item stands on (SR-0344). ``schema`` is a
-    :class:`throughline.schema.Schema`."""
+    :class:`throughline.schema.Schema`.
+
+    A dead item is asked the earlier question, whether any chain reaches a root:
+    it is dead scope that grounds nothing, and a rejected requirement under a
+    rejected need is a record kept, not a live item left without justification."""
+    start = idx.items.get(uid)
+    if start is not None and is_dead(schema, start):
+        return idx.reaches(uid, schema.is_root, schema.ground_link_types)
     return idx.reaches(uid, schema.is_root, schema.ground_link_types,
                        through=lambda it: not is_dead(schema, it))
 
@@ -69,6 +76,8 @@ def is_unserved(schema, idx: Index, item: Item) -> bool:
     gate's `unserved-root` finding. A dead item serves no root (SR-0344)."""
     if item.type not in schema.delivery_roots:
         return False
+    if is_dead(schema, item):       # a dead root is asked the earlier question
+        return not idx.in_links(item.uid, schema.ground_link_types)
     for source, _kind in idx.in_links(item.uid, schema.ground_link_types):
         held = idx.items.get(source)
         if held is None or not is_dead(schema, held):
