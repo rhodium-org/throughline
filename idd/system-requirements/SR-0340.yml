@@ -1,6 +1,6 @@
 uid: SR-0340
 type: system_requirement
-status: ratified
+status: implemented
 title: A GQL filter is never run as code
 text: A GQL filter shall be read by a parser of the Tool's own for the constructs
   it accepts and evaluated by walking what that parser built. No part of a filter
