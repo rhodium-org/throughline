@@ -40,6 +40,7 @@ from .grounding import (
     flag_refusal,
     invalidate,
     origin_change_refusal,
+    own_signature_standing,
     ratification_obstacle,
     ratify,
     reaches_root,
@@ -56,6 +57,7 @@ from .diagrams import diagram_transitions, diagram_types
 from .inject import (
     InjectError,
     document_paths,
+    unmatched_patterns,
     has_markers,
     inject_documents,
     inject_text,
@@ -110,6 +112,7 @@ from .composition import (
     composition_brief,
     describe_binding,
     dump_composition,
+    dump_declared,
     local_view,
     owning_source,
     resolve_sources,
@@ -125,6 +128,7 @@ from .sources import SourceError, parse_sources
 from .union import ComposeError, build_union, translate_finding
 from .storage import (
     CONFIG_NAME,
+    EARLIER_FORMAT_VERSION,
     FORMAT_VERSION,
     MANIFEST_NAME,
     ProjectError,
@@ -872,7 +876,8 @@ def cmd_new(args) -> int:
             and sys.stdin.isatty() and sys.stdout.isatty():
         grounds = _prompt_grounding(project, schema, item, default_type)
         for target, ltype in grounds:
-            item.links.append(Link(target=target, type=ltype))
+            item.links.append(Link(target=target, type=ltype,       # SR-0343
+                                   stamp=fingerprint(project.get(target), schema)))
 
     path = write_item(item, project.register_of(item.uid))
     print(f"created {item.uid} -> {path}")
@@ -1505,6 +1510,18 @@ def cmd_docs(args, resolver=None) -> int:
     except ProjectError as e:
         return _err(str(e))
 
+    if not args.file:
+        missing = unmatched_patterns(project)
+        if missing:
+            # SR-0341: a configured document that is not there fails the gate and
+            # stops the write, before anything is rendered.
+            for pattern in missing:
+                print(f"missing: no file matches '{pattern}' under [docs] paths",
+                      file=sys.stderr)
+            print(f"{len(missing)} configured document pattern(s) match nothing — "
+                  "restore the document, or correct [docs] paths in "
+                  "throughline.toml", file=sys.stderr)
+            return FINDINGS
     if not document_paths(project, args.file):
         # In --check mode (the CI gate, SR-0095) an unconfigured project has no
         # documents to be stale, so the gate is inert and passes. In write mode a
@@ -1688,6 +1705,7 @@ def cmd_ratify(args) -> int:
     role = getattr(args, "role", None)
     by_id = getattr(args, "by_id", None)
     items = []
+    passed_over: list[str] = []
     for uid in uids:
         item = project.get(uid)
         if item is None:
@@ -1695,9 +1713,23 @@ def cmd_ratify(args) -> int:
         obstacle = ratification_obstacle(schema, idx, item, replacing=args.replacing,
                                          by=args.by, by_id=by_id)
         if obstacle is not None:
+            # One of several that this person has already signed, unchanged since,
+            # is said and passed over (SR-0342); it is no reason to refuse the rest.
+            own = None if len(uids) == 1 or args.replacing else own_signature_standing(
+                schema, idx, item, by=args.by, by_id=by_id)
+            if own is not None:
+                passed_over.append(f"{uid} is already signed by {describe(own)} and "
+                                   "has not changed since: left as it is")
+                continue
             return _err(obstacle if len(uids) == 1
                         else f"{obstacle} — nothing in this run was ratified")
         items.append(item)
+    for line in passed_over:
+        print(line, file=sys.stderr)
+    if not items:
+        print("every item named is already signed and unchanged: nothing was signed",
+              file=sys.stderr)
+        return OK
     # Resolved once, before anything is shown, so the difference put in front of
     # the ratifier and the gate below are the same answer (SR-0165). Judged on the
     # latest signature; a person renewing their own is shown what moved since it.
@@ -2225,16 +2257,22 @@ def _composed_dump(args) -> int:
     if not sources:
         return cmd_dump(args)
 
-    res, union, rc = _resolve_union(consumer, sources, args.path)
-    if rc is not None:
-        return rc
-
-    view = union.displayed()
-    composition = dump_composition(res, view, local=args.local)
-    data = build_dump(local_view(view, consumer) if args.local else view, _version())
-    for item in data["items"]:
-        item["source"] = owning_source(item["uid"])
-    data["composition"] = composition
+    if args.local:
+        # The project's own items need nothing from a source, so none is
+        # resolved (SR-0345): an unreachable source does not stop this export.
+        data = build_dump(consumer, _version())
+        for item in data["items"]:
+            item["source"] = None
+        data["composition"] = dump_declared(sources, consumer)
+    else:
+        res, union, rc = _resolve_union(consumer, sources, args.path)
+        if rc is not None:
+            return rc
+        view = union.displayed()
+        data = build_dump(view, _version())
+        for item in data["items"]:
+            item["source"] = owning_source(item["uid"])
+        data["composition"] = dump_composition(res, view, local=False)
 
     text = json.dumps(data, indent=2, default=str, sort_keys=False)
     if args.output:
@@ -2454,15 +2492,21 @@ def _migrate_beneath(args) -> int:
     is safe to rewrite (SR-0302..SR-0304). Nothing is ever committed."""
     found = migrate_beneath.survey(args.beneath)
     behind = [f for f in found if f.behind]
-    holding = [f for f in found if f.due and not f.behind]
+    unmarked = [f for f in found if f.unmarked]
+    holding = [f for f in found if f.due and not f.behind and not f.unmarked]
     if not args.apply:
         _print_behind(behind)
+        _print_unmarked(unmarked)
         _print_holding(holding)
     _print_unmigratable(found)
-    current = sum(1 for f in found if f.declared == FORMAT_VERSION and not f.due)
-    print(f"{current} graph(s) already at format version {FORMAT_VERSION}"
-          + (" with nothing to migrate" if holding else ""))
-    behind = behind + holding
+    # Both formats this Tool reads (SR-0346); the later only where one is found,
+    # so a tree of graphs in the earlier language is reported as it always was.
+    for version in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+        current = sum(1 for f in found if f.declared == version and not f.due)
+        if current or version == EARLIER_FORMAT_VERSION:
+            print(f"{current} graph(s) already at format version {version}"
+                  + (" with nothing to migrate" if holding else ""))
+    behind = behind + unmarked + holding
     if not args.apply:
         if behind:
             print("nothing was written — run again with --apply to migrate those "
@@ -2485,8 +2529,9 @@ def _migrate_beneath(args) -> int:
         if o.migrated:
             by_repo[o.found.repository] = by_repo.get(o.found.repository, 0) + 1
     for repo, n in by_repo.items():
-        print(f"migrated {n} graph(s) in {repo} to format version {FORMAT_VERSION} "
-              "— review with `git diff` and commit them there")
+        print(f"migrated {n} graph(s) in {repo} to format version "
+              f"{EARLIER_FORMAT_VERSION} — review with `git diff` and commit "
+              "them there")
     if not by_repo:
         print("migrated nothing")
     # What each migrated graph now awaits (SR-0317): migrating signs nothing, so
@@ -2506,12 +2551,24 @@ def _migrate_beneath(args) -> int:
     return FINDINGS if failed else OK
 
 
+def _print_unmarked(unmarked) -> None:
+    """Graphs whose filters are GQL at a format version that does not say so
+    (SR-0346), as tl 5.9 left a graph it moved."""
+    if not unmarked:
+        return
+    print(f"{len(unmarked)} graph(s) whose filters are GQL below format version "
+          f"{FORMAT_VERSION}, which `tl migrate` sets so that an older tl refuses "
+          "them instead of misreading them:")
+    for f in unmarked:
+        print(f"  {f.root}  format {f.declared}")
+
+
 def _print_holding(holding) -> None:
     """Graphs at the current format that still declare a status between proposal
     and signature (SR-0316): 5.0 retired them without a new format."""
     if not holding:
         return
-    print(f"{len(holding)} graph(s) at format version {FORMAT_VERSION} that still "
+    print(f"{len(holding)} graph(s) at format version {EARLIER_FORMAT_VERSION} that still "
           "hold a status between proposal and signature, which `tl migrate` retires "
           "(UR-0046):")
     for f in holding:
@@ -2520,9 +2577,9 @@ def _print_holding(holding) -> None:
 
 def _print_behind(behind) -> None:
     if not behind:
-        print(f"no graph is below format version {FORMAT_VERSION}")
+        print(f"no graph is below format version {EARLIER_FORMAT_VERSION}")
         return
-    print(f"{len(behind)} graph(s) below format version {FORMAT_VERSION}:")
+    print(f"{len(behind)} graph(s) below format version {EARLIER_FORMAT_VERSION}:")
     groups: dict[Path | None, list] = {}
     for f in behind:
         groups.setdefault(f.repository, []).append(f)
@@ -2756,7 +2813,10 @@ def _composed_new(args) -> int:
             return _err(f"grounding target {target} does not exist")
         grounds.append((target, default_type))
     for target, ltype in grounds:
-        item.links.append(Link(target=target, type=ltype))
+        parent = (union.project.get(union_uid(union, target))
+                  if is_namespace_qualified(target) else consumer.get(target))
+        item.links.append(Link(target=target, type=ltype,           # SR-0343
+                               stamp=fingerprint(parent, consumer.schema)))
 
     reg.items[uid] = item
     path = write_item(item, reg)

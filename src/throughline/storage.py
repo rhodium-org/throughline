@@ -88,8 +88,15 @@ MANIFEST_NAME = ".register.yml"
 # SR-0102) renamed it to `.register.yml`; v3 (SR-0131) requires a [status.roles]
 # table so operations resolve statuses by semantic role, never by a fixed literal;
 # v4 (SR-0254) holds an item's ratification record as a top-level `ratifications`
-# list, one signature per person, in place of the flat `ratified_*` attributes.
-FORMAT_VERSION = 4
+# list, one signature per person, in place of the flat `ratified_*` attributes;
+# v5 (SR-0346) is v4 on disk, declared by a project whose filters are GQL search
+# conditions, so a Tool that cannot read them refuses it by its format.
+FORMAT_VERSION = 5
+
+# The major a project whose filters are in the earlier language may stay at, read
+# with no migration (SR-0346), and the one `tl migrate` brings an older project
+# to: every Tool since v4 reads it, so nothing is moved past it unasked.
+EARLIER_FORMAT_VERSION = 4
 
 # The major from which a project must declare [status.roles] — the one whose
 # operations resolve a written status through a semantic role (SR-0131). Named
@@ -212,7 +219,7 @@ def _infer_format_version(root: Path) -> int:
         manifest = _MANIFEST_BY_VERSION[major]
         if any(manifest in names for _here, names in _walk_project(root)):
             return major
-    return FORMAT_VERSION
+    return EARLIER_FORMAT_VERSION
 
 
 def _read_format_version(config: dict, root: Path) -> int:
@@ -284,11 +291,31 @@ def _gate_format_version(config: dict, root: Path) -> None:
             f"({_running_tool()}) implements format {FORMAT_VERSION} — upgrade "
             f"that installation to open this project: {_upgrade_command()}",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
-    if disk < FORMAT_VERSION:
+    if disk < EARLIER_FORMAT_VERSION:
         raise FormatError(
             f"{root / CONFIG_NAME} is at format version {disk}; this tl "
-            f"({_running_tool()}) uses {FORMAT_VERSION} — run `tl migrate` to "
+            f"({_running_tool()}) uses {EARLIER_FORMAT_VERSION} — run `tl migrate` to "
             f"upgrade the project (a lossless, in-place rewrite)",
+            declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
+    _gate_filter_language(_declares_gql(config), disk, root)
+
+
+def _declares_gql(config: dict) -> bool:
+    """Whether a configuration says its filters are GQL (SR-0337)."""
+    return (config.get("project") or {}).get("filter_language") == "gql"
+
+
+def _gate_filter_language(gql: bool, disk: int, root: Path) -> None:
+    """Refuse a project whose filters are GQL at any format version but the one
+    that says so (SR-0346). A Tool from before GQL filters reads each as a filter
+    of the earlier language that fails to parse and selects nothing, and refuses
+    nothing; the format version is what it does refuse on."""
+    if gql and disk != FORMAT_VERSION:
+        raise FormatError(
+            f'{root / CONFIG_NAME} declares filter_language = "gql" at format '
+            f"version {disk}; a project whose filters are GQL declares format "
+            f"version {FORMAT_VERSION}, so that a tl that cannot read them refuses "
+            f"it — run `tl migrate` to set it",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
 
 
@@ -1221,6 +1248,7 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 # Each must be idempotent — it runs on every `tl migrate`, sound project or not.
 _REPAIRS: dict[int, Callable[[Path, "Index | None"], RepairResult]] = {
     STATUS_ROLES_MAJOR: _repair_status_roles_major,
+    EARLIER_FORMAT_VERSION: _repair_status_roles_major,
     FORMAT_VERSION: _repair_status_roles_major}
 
 
@@ -1332,13 +1360,18 @@ def migrate_project(path: str | Path, *,
             f"({FORMAT_VERSION}) — upgrade tl rather than migrate down",
             declared=start, implemented=FORMAT_VERSION, path=cfg_file)
     current = start
-    while current < FORMAT_VERSION:
+    while current < EARLIER_FORMAT_VERSION:
         step = _MIGRATIONS.get(current)
         if step is None:
             raise ProjectError(
                 f"no migration path from format version {current} to {current + 1}")
         step(root)
         current += 1
+    # A project in the earlier language stays at the major every Tool since it
+    # reads; one whose filters are GQL says the major that tells an older Tool
+    # to refuse it (SR-0346), which nothing on disk but the number changes for.
+    if _declares_gql(config):
+        current = FORMAT_VERSION
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
@@ -1566,8 +1599,12 @@ def load_project(path: str | Path, *, base: str | Path | None = None) -> Project
         raise ProjectError(f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
     _gate_format_version(config, root)
-    return _build_project(root, config, {MANIFEST_NAME},
-                          base=Path(base) if base is not None else None)
+    project = _build_project(root, config, {MANIFEST_NAME},
+                             base=Path(base) if base is not None else None)
+    # The language may come with a schema the project takes from a source.
+    _gate_filter_language(project.filter_language == "gql",
+                          _read_format_version(config, root), root)
+    return project
 
 
 def read_project(path: str | Path) -> Project:
@@ -1589,13 +1626,16 @@ def read_project(path: str | Path) -> Project:
             f"{cfg_file} declares format version {disk}, but this tl understands up "
             f"to {FORMAT_VERSION} — upgrade tl to read this source",
             declared=disk, implemented=FORMAT_VERSION, path=cfg_file)
+    _gate_filter_language(_declares_gql(config), disk, root)
     major = disk
     while major < FORMAT_VERSION:
         upgrade = _CONFIG_UPGRADES.get(major)
         if upgrade is not None:
             config = upgrade(config)
         major += 1
-    return _build_project(root, config, _ALL_MANIFEST_NAMES)
+    project = _build_project(root, config, _ALL_MANIFEST_NAMES)
+    _gate_filter_language(project.filter_language == "gql", disk, root)
+    return project
 
 
 # -------------------------------------------------------------- git baseline

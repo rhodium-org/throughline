@@ -294,6 +294,12 @@ def test_each_signature_is_judged_stale_on_its_own(tmp_path):
 
 def test_a_suspect_item_can_be_signed_again_whatever_it_holds(tmp_path):
     root = _project(tmp_path, config=ROLES)
+    # A second intent, so the requirement stays grounded when the first is
+    # invalidated: a dead item grounds nothing (SR-0344).
+    assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Also why",
+                 "--text", "Another vision.", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", root, "link", "REQ-0001", "INT-0002", "--type", "implements"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada", "--as", "senior",
                  "--by-id", "github:ada"]) == 0
     assert _cli(["-C", root, "invalidate", "INT-0001", "--reason", "superseded"]) == 0
@@ -385,7 +391,7 @@ def test_the_dump_carries_the_list_and_says_so(tmp_path, capsys):
     assert _cli(["-C", root, "dump"]) == 0
     dump = json.loads(capsys.readouterr().out)
     assert dump["throughline_dump"]["dump_schema_version"] == 2
-    assert dump["throughline_dump"]["format_version"] == 4
+    assert dump["throughline_dump"]["format_version"] == 5   # as tl init wrote
     item = {i["uid"]: i for i in dump["items"]}["REQ-0001"]
     assert item["ratifications"][0]["by"] == "Ada" and "ratified_by" not in item.get("attrs", {})
 
@@ -419,7 +425,7 @@ def _as_format_3(root: Path) -> Path:
                        "ratified_content": entry["content"], "ratified_id": "github:ada"})
     write_item(item)
     cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8").replace("format_version = 4",
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace("format_version = 5",
                                                            "format_version = 3"),
                    encoding="utf-8")
     return root / "requirements" / "REQ-0001.yml"

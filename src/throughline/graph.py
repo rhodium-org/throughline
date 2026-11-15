@@ -84,9 +84,12 @@ class Index:
                 shape[key] = shape.get(key, 0) + 1
         return shape
 
-    def reaches(self, uid: str, target_pred, link_types: set[str]) -> bool:
+    def reaches(self, uid: str, target_pred, link_types: set[str],
+                through=None) -> bool:
         """True if a path over ``link_types`` from uid hits an item satisfying
-        target_pred. The start item is tested too."""
+        target_pred. The start item is tested too. ``through``, where given,
+        says which items a path may pass through or end at: one it rejects is
+        neither tested nor walked past, though the start always is."""
         seen: set[str] = set()
         stack = [uid]
         while stack:
@@ -96,6 +99,8 @@ class Index:
             seen.add(cur)
             it = self.items.get(cur)
             if it is None:
+                continue
+            if through is not None and cur != uid and not through(it):
                 continue
             if target_pred(it):
                 return True

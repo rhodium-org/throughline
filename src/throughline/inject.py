@@ -919,6 +919,16 @@ def document_paths(project, explicit=None) -> list["Path"]:
     return out
 
 
+def unmatched_patterns(project) -> list[str]:
+    """The `[docs] paths` patterns that match no file (SR-0341). A document that
+    was renamed or deleted leaves its pattern matching nothing, and a gate that
+    passed then would be guarding a document that is not there."""
+    from pathlib import Path as _Path
+    root = _Path(project.path)
+    return [pattern for pattern in project.schema.docs_paths
+            if not any(c.is_file() for c in root.glob(pattern))]
+
+
 def inject_documents(project, paths=None, *, resolver=None) -> list[DocumentRender]:
     """Render every configured document without writing any of it.
 

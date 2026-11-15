@@ -32,10 +32,29 @@ from .identity import RATIFICATION_ATTRS, normalise_identifier
 from .model import Item, Link
 
 
+def is_dead(schema, item: Item) -> bool:
+    """Whether ``item`` is dead scope: in the status bound to the invalidated
+    role, or a tombstone that stands (SR-0344). A deletion still proposed is live
+    (SR-0267), so that an unsigned deletion changes nothing downstream."""
+    if retired(item, schema):
+        return True
+    invalidated = (schema.status_roles or {}).get("invalidated")
+    return invalidated is not None and item.status == invalidated
+
+
 def reaches_root(idx: Index, schema, uid: str) -> bool:
     """True if ``uid`` grounds upward to a root type over the schema's grounding
-    link types. ``schema`` is a :class:`throughline.schema.Schema`."""
-    return idx.reaches(uid, schema.is_root, schema.ground_link_types)
+    link types, by a chain no dead item stands on (SR-0344). ``schema`` is a
+    :class:`throughline.schema.Schema`.
+
+    A dead item is asked the earlier question, whether any chain reaches a root:
+    it is dead scope that grounds nothing, and a rejected requirement under a
+    rejected need is a record kept, not a live item left without justification."""
+    start = idx.items.get(uid)
+    if start is not None and is_dead(schema, start):
+        return idx.reaches(uid, schema.is_root, schema.ground_link_types)
+    return idx.reaches(uid, schema.is_root, schema.ground_link_types,
+                       through=lambda it: not is_dead(schema, it))
 
 
 def grounding_gap(schema, idx: Index, item: Item) -> str | None:
@@ -53,10 +72,17 @@ def grounding_gap(schema, idx: Index, item: Item) -> str | None:
 
 
 def is_unserved(schema, idx: Index, item: Item) -> bool:
-    """True when ``item`` is a delivery root that nothing grounds into, the
-    gate's `unserved-root` finding."""
-    return (item.type in schema.delivery_roots
-            and not idx.in_links(item.uid, schema.ground_link_types))
+    """True when ``item`` is a delivery root that nothing live grounds into, the
+    gate's `unserved-root` finding. A dead item serves no root (SR-0344)."""
+    if item.type not in schema.delivery_roots:
+        return False
+    if is_dead(schema, item):       # a dead root is asked the earlier question
+        return not idx.in_links(item.uid, schema.ground_link_types)
+    for source, _kind in idx.in_links(item.uid, schema.ground_link_types):
+        held = idx.items.get(source)
+        if held is None or not is_dead(schema, held):
+            return False
+    return True
 
 
 def ungrounded_by(schema, items, before: Index, after: Index) -> tuple[list[str], list[str]]:
@@ -396,6 +422,28 @@ def ratification_obstacle(schema, idx: Index, item: Item, *,
     # cannot be reached from where the item stands it is signed there, first
     # signature or later (SR-0237).
     return None
+
+
+def own_signature_standing(schema, idx: Index, item: Item, *,
+                           by: str | None = None, by_id: str | None = None):
+    """The signature the person named already holds on ``item`` over content that
+    has not changed since, or ``None`` (SR-0342). It is the one obstacle a run
+    over several items passes over: there is nothing to refuse the others for,
+    because this person has already accepted this item as it stands. Any other
+    obstacle, asked first, is not this one."""
+    if not (by or by_id):
+        return None
+    if draft_refusal(schema, item) or ratification_refusal(schema, idx, item):
+        return None
+    try:
+        if item.status == schema.status_role("suspect"):
+            return None
+    except Exception:                       # the role is optional vocabulary
+        pass
+    own = entry_of(item, by=by, by_id=by_id)
+    if own is None or is_stale(item, schema, own) or files_uncovered(item, schema, own):
+        return None
+    return own
 
 
 def ratify(project, uid: str, by: str, *, index: Index | None = None,

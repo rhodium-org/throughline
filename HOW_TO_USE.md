@@ -409,6 +409,15 @@ It rewrites every coverage rule and every document marker, or nothing: before it
 writes, it checks on the project's own items that each rewritten filter selects
 what the original did.
 
+A project whose filters are GQL declares `format_version = 5`; `tl init` writes
+it and `tl migrate --to-gql` sets it with the language. A tl from before GQL
+filters would read each one as a filter that selects nothing, and say nothing;
+at version 5 it refuses the project and names the upgrade instead. So upgrade
+tl wherever a graph is read (a pinned build, a hosted service, a colleague's
+machine) before you move it. A project in the earlier language stays at
+version 4, is read as it always was, and `tl migrate` leaves it there. GQL at
+any other version is refused; `tl migrate` sets it.
+
 ### Two branches allocated the same UID
 
 `tl new` numbers from whatever is on the branch you are on, so two branches that

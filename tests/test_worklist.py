@@ -135,7 +135,13 @@ def test_a_suspect_item_is_awaiting_a_human_again(graph):
     """An item signed and then made suspect by a cascade is not settled, whatever
     its record says (SR-0175): the gate would accept a signature on it again, so
     the worklist offers it, and progress counts it as outstanding — one answer to
-    "may this be signed?", not two (SR-0195, SR-0229)."""
+    "may this be signed?", not two (SR-0195, SR-0229). The item rests on a second
+    intent too, so it stays grounded when the first is invalidated: a dead item
+    grounds nothing (SR-0344)."""
+    project = load_project(graph)
+    _add(project, "INT", "INT-0002", item_type="intent", title="Also why", text="W.")
+    assert _cli(["-C", graph, "link", "REQ-0001", "INT-0002",
+                 "--type", "derives_from"]) == 0
     project = load_project(graph)
     ratify(project, "REQ-0001", by="Ada", index=Index.build(project))
     write_item(project.get("REQ-0001"), project.register_of("REQ-0001"))

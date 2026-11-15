@@ -522,6 +522,21 @@ def dump_composition(res: Resolution, view: Project, *, local: bool) -> dict:
     }
 
 
+def dump_declared(sources, consumer: Project) -> dict:
+    """The composition block of an export of the project's own items (SR-0345).
+    No source was read, so each is named as the project declares it, with no
+    edition and no count of what it would have lent: a number here would be one
+    nobody measured."""
+    return {
+        "compose_dump_schema_version": COMPOSE_DUMP_SCHEMA_VERSION,
+        "scope": "local",
+        "local_item_count": sum(1 for _ in consumer.items()),
+        "sources": [{"namespace": s.namespace, "url": s.url, "ref": s.ref,
+                     "path": s.path, "subdir": s.subdir}
+                    for s in sorted(sources, key=lambda s: s.namespace)],
+    }
+
+
 def _dump_source(ns: str, res: Resolution, item_count: int) -> dict:
     """One composed source as data. The fingerprint is the edition that was
     actually read, which is what a mutable ref cannot be trusted to name on its

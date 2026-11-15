@@ -16,8 +16,8 @@ from pathlib import Path
 
 from . import discovery
 from .sources import schema_source
-from .storage import (CONFIG_NAME, FORMAT_VERSION, ProjectError,
-                      _read_format_version, borrowed_statuses_to_retire,
+from .storage import (CONFIG_NAME, EARLIER_FORMAT_VERSION, FORMAT_VERSION,
+                      ProjectError, _declares_gql, _read_format_version, borrowed_statuses_to_retire,
                       load_project, migrate_project,
                       unsigned_agreement_statuses)
 
@@ -33,16 +33,25 @@ class Found:
     # The statuses between proposal and signature it still declares (SR-0316):
     # 5.0 retired them without a new format, so its format alone cannot say.
     retires: tuple[str, ...] = ()
+    # Its filters are GQL below the format version that says so (SR-0346).
+    unmarked: bool = False
 
     @property
     def behind(self) -> bool:
-        return self.declared is not None and self.declared < FORMAT_VERSION
+        return self.declared is not None and self.declared < EARLIER_FORMAT_VERSION
+
+    @property
+    def read(self) -> bool:
+        """At a format this Tool reads without migration (SR-0346)."""
+        return self.declared in (EARLIER_FORMAT_VERSION, FORMAT_VERSION) \
+            and not self.unmarked
 
     @property
     def due(self) -> bool:
-        """Something ``tl migrate`` would change: below the current format, or at
-        it with statuses still to retire (SR-0316)."""
-        return self.behind or (self.declared == FORMAT_VERSION and bool(self.retires))
+        """Something ``tl migrate`` would change: below the formats read, at one
+        with statuses still to retire (SR-0316), or in GQL below the format
+        version that says so (SR-0346)."""
+        return self.behind or self.unmarked or (self.read and bool(self.retires))
 
     @property
     def ahead(self) -> bool:
@@ -60,8 +69,11 @@ def _found(root: Path) -> Found:
     try:
         config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
         declared = _read_format_version(config, root)
+        unmarked = _declares_gql(config) and \
+            EARLIER_FORMAT_VERSION <= declared < FORMAT_VERSION
         return Found(root, repository, declared,
-                     retires=_retires(root, config, declared))
+                     retires=() if unmarked else _retires(root, config, declared),
+                     unmarked=unmarked)
     except (OSError, ValueError, ProjectError) as e:
         return Found(root, repository, None, str(e).splitlines()[0])
 
@@ -73,8 +85,8 @@ def _retires(root: Path, config: dict, declared: int) -> tuple[str, ...]:
     items hold (SR-0319). Writes nothing."""
     if schema_source(config) is None:
         return unsigned_agreement_statuses(config)
-    if declared != FORMAT_VERSION:
-        return ()   # behind already, so due; only the current format loads
+    if declared not in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+        return ()   # behind already, so due; only the formats read load
     try:
         return borrowed_statuses_to_retire(load_project(root))
     except ProjectError:
