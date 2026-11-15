@@ -1,6 +1,6 @@
 uid: SR-0342
 type: system_requirement
-status: ratified
+status: implemented
 title: A ratify run passes over an item the same person has already signed
 text: Where a ratify run names several items and one of them is already signed by
   the person signing, with nothing changed since, ratify shall say so, leave that

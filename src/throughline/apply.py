@@ -50,7 +50,7 @@ from .fingerprint import fingerprint, revision
 from .grounding import GroundingError, refuse_undeclared_link_type, set_status
 from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
                     new_item, parse_attrs)
-from .links import GroundingView, LinkError, add_link, remove_link
+from .links import GroundingView, LinkError, add_link, own_view, remove_link
 from .model import Item, Link
 from .schema import SchemaError
 from .storage import ProjectError, write_item
@@ -602,7 +602,12 @@ def apply_change_set(project, operations: list[dict], *,
                     item.rationale = op["rationale"]
                 for l in op.get("links", []):
                     refuse_undeclared_link_type(schema, l["type"])
-                    item.links.append(Link(target=resolve(l["target"]), type=l["type"]))
+                    target = resolve(l["target"])
+                    parent = (view or own_view(project)).find(target)   # none: a link out
+                    item.links.append(Link(
+                        target=target, type=l["type"],
+                        stamp=fingerprint(parent, schema) if parent is not None
+                        else None))                 # SR-0343
                 path = write_item(item, project.register_of(item.uid))
                 if "label" in op:
                     labels[op["label"]] = item.uid

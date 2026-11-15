@@ -1,6 +1,6 @@
 uid: SR-0344
 type: system_requirement
-status: ratified
+status: implemented
 title: A dead item grounds nothing and serves no root
 text: 'An item in the status bound to the invalidated role, and a tombstone that
   stands, shall not count toward grounding: a delivery root that only such items

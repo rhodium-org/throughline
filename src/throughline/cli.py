@@ -40,6 +40,7 @@ from .grounding import (
     flag_refusal,
     invalidate,
     origin_change_refusal,
+    own_signature_standing,
     ratification_obstacle,
     ratify,
     reaches_root,
@@ -56,6 +57,7 @@ from .diagrams import diagram_transitions, diagram_types
 from .inject import (
     InjectError,
     document_paths,
+    unmatched_patterns,
     has_markers,
     inject_documents,
     inject_text,
@@ -110,6 +112,7 @@ from .composition import (
     composition_brief,
     describe_binding,
     dump_composition,
+    dump_declared,
     local_view,
     owning_source,
     resolve_sources,
@@ -872,7 +875,8 @@ def cmd_new(args) -> int:
             and sys.stdin.isatty() and sys.stdout.isatty():
         grounds = _prompt_grounding(project, schema, item, default_type)
         for target, ltype in grounds:
-            item.links.append(Link(target=target, type=ltype))
+            item.links.append(Link(target=target, type=ltype,       # SR-0343
+                                   stamp=fingerprint(project.get(target), schema)))
 
     path = write_item(item, project.register_of(item.uid))
     print(f"created {item.uid} -> {path}")
@@ -1505,6 +1509,18 @@ def cmd_docs(args, resolver=None) -> int:
     except ProjectError as e:
         return _err(str(e))
 
+    if not args.file:
+        missing = unmatched_patterns(project)
+        if missing:
+            # SR-0341: a configured document that is not there fails the gate and
+            # stops the write, before anything is rendered.
+            for pattern in missing:
+                print(f"missing: no file matches '{pattern}' under [docs] paths",
+                      file=sys.stderr)
+            print(f"{len(missing)} configured document pattern(s) match nothing — "
+                  "restore the document, or correct [docs] paths in "
+                  "throughline.toml", file=sys.stderr)
+            return FINDINGS
     if not document_paths(project, args.file):
         # In --check mode (the CI gate, SR-0095) an unconfigured project has no
         # documents to be stale, so the gate is inert and passes. In write mode a
@@ -1688,6 +1704,7 @@ def cmd_ratify(args) -> int:
     role = getattr(args, "role", None)
     by_id = getattr(args, "by_id", None)
     items = []
+    passed_over: list[str] = []
     for uid in uids:
         item = project.get(uid)
         if item is None:
@@ -1695,9 +1712,23 @@ def cmd_ratify(args) -> int:
         obstacle = ratification_obstacle(schema, idx, item, replacing=args.replacing,
                                          by=args.by, by_id=by_id)
         if obstacle is not None:
+            # One of several that this person has already signed, unchanged since,
+            # is said and passed over (SR-0342); it is no reason to refuse the rest.
+            own = None if len(uids) == 1 or args.replacing else own_signature_standing(
+                schema, idx, item, by=args.by, by_id=by_id)
+            if own is not None:
+                passed_over.append(f"{uid} is already signed by {describe(own)} and "
+                                   "has not changed since: left as it is")
+                continue
             return _err(obstacle if len(uids) == 1
                         else f"{obstacle} — nothing in this run was ratified")
         items.append(item)
+    for line in passed_over:
+        print(line, file=sys.stderr)
+    if not items:
+        print("every item named is already signed and unchanged: nothing was signed",
+              file=sys.stderr)
+        return OK
     # Resolved once, before anything is shown, so the difference put in front of
     # the ratifier and the gate below are the same answer (SR-0165). Judged on the
     # latest signature; a person renewing their own is shown what moved since it.
@@ -2225,16 +2256,22 @@ def _composed_dump(args) -> int:
     if not sources:
         return cmd_dump(args)
 
-    res, union, rc = _resolve_union(consumer, sources, args.path)
-    if rc is not None:
-        return rc
-
-    view = union.displayed()
-    composition = dump_composition(res, view, local=args.local)
-    data = build_dump(local_view(view, consumer) if args.local else view, _version())
-    for item in data["items"]:
-        item["source"] = owning_source(item["uid"])
-    data["composition"] = composition
+    if args.local:
+        # The project's own items need nothing from a source, so none is
+        # resolved (SR-0345): an unreachable source does not stop this export.
+        data = build_dump(consumer, _version())
+        for item in data["items"]:
+            item["source"] = None
+        data["composition"] = dump_declared(sources, consumer)
+    else:
+        res, union, rc = _resolve_union(consumer, sources, args.path)
+        if rc is not None:
+            return rc
+        view = union.displayed()
+        data = build_dump(view, _version())
+        for item in data["items"]:
+            item["source"] = owning_source(item["uid"])
+        data["composition"] = dump_composition(res, view, local=False)
 
     text = json.dumps(data, indent=2, default=str, sort_keys=False)
     if args.output:
@@ -2756,7 +2793,10 @@ def _composed_new(args) -> int:
             return _err(f"grounding target {target} does not exist")
         grounds.append((target, default_type))
     for target, ltype in grounds:
-        item.links.append(Link(target=target, type=ltype))
+        parent = (union.project.get(union_uid(union, target))
+                  if is_namespace_qualified(target) else consumer.get(target))
+        item.links.append(Link(target=target, type=ltype,           # SR-0343
+                               stamp=fingerprint(parent, consumer.schema)))
 
     reg.items[uid] = item
     path = write_item(item, reg)

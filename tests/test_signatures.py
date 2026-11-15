@@ -294,6 +294,12 @@ def test_each_signature_is_judged_stale_on_its_own(tmp_path):
 
 def test_a_suspect_item_can_be_signed_again_whatever_it_holds(tmp_path):
     root = _project(tmp_path, config=ROLES)
+    # A second intent, so the requirement stays grounded when the first is
+    # invalidated: a dead item grounds nothing (SR-0344).
+    assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "Also why",
+                 "--text", "Another vision.", "--origin", "human",
+                 "--no-interactive"]) == 0
+    assert _cli(["-C", root, "link", "REQ-0001", "INT-0002", "--type", "implements"]) == 0
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada", "--as", "senior",
                  "--by-id", "github:ada"]) == 0
     assert _cli(["-C", root, "invalidate", "INT-0001", "--reason", "superseded"]) == 0

@@ -529,9 +529,13 @@ def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
     item = birth_item(project.schema, reg, uid, item_type=item_type, title=title,
                       text=text, status=status, origin=origin, attrs=attrs)
     for target in ground:
-        if project.get(target) is None:
+        parent = project.get(target)
+        if parent is None:
             raise GroundingError(f"grounding target {target} does not exist")
-        item.links.append(Link(target=target, type=ground_type))
+        # Stamped at birth, as `tl link --stamp` stamps one (SR-0343): an
+        # unstamped link never notices its parent changing.
+        item.links.append(Link(target=target, type=ground_type,
+                               stamp=fingerprint(parent, project.schema)))
     item.key = key
     reg.items[uid] = item
     return item

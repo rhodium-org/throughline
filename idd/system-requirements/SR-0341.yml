@@ -1,6 +1,6 @@
 uid: SR-0341
 type: system_requirement
-status: ratified
+status: implemented
 title: The documents gate fails where a configured document is not there
 text: tl docs --check shall fail, naming the pattern, where a pattern under [docs]
   paths matches no file. tl docs shall refuse the same way and write nothing.

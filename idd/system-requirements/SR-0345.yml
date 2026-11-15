@@ -1,6 +1,6 @@
 uid: SR-0345
 type: system_requirement
-status: ratified
+status: implemented
 title: An export of a project's own items resolves no source
 text: tl dump --local shall export the project's own items without resolving any
   source it declares. Its composition block shall name each declared source as declared,

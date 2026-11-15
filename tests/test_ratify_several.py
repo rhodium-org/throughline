@@ -69,15 +69,17 @@ def test_an_unknown_item_refuses_the_whole_run_before_anything_is_written(graph,
 
 def test_an_item_that_cannot_be_ratified_refuses_the_whole_run(graph, capsys):
     """The obstacle is found for every item before any is signed (SR-0195 for the
-    run, not just the first item): here REQ-0002 is already signed by the same
-    content, which a plain re-ratification refuses."""
-    assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Ada Lovelace"]) == 0
+    run, not just the first item): here REQ-0002 is already ratified by another
+    person over the same content, which a second signature accepts nothing on.
+    An item the same person already signed is passed over instead (SR-0342,
+    tests/test_older_issues.py)."""
+    assert _cli(["-C", graph, "ratify", "REQ-0002", "--by", "Grace Hopper"]) == 0
     capsys.readouterr()
     rc = _cli(["-C", graph, "ratify", "REQ-0001", "REQ-0002", "REQ-0003", "--by", "Ada Lovelace"])
     assert rc != 0
     err = capsys.readouterr().err
     assert "REQ-0002" in err and "nothing in this run was ratified" in err
-    assert _ratifiers(graph) == {"REQ-0001": None, "REQ-0002": "Ada Lovelace", "REQ-0003": None}
+    assert _ratifiers(graph) == {"REQ-0001": None, "REQ-0002": "Grace Hopper", "REQ-0003": None}
 
 
 def test_a_stale_item_in_the_batch_refuses_the_run_without_accept_change(graph, capsys):

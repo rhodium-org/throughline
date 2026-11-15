@@ -1002,10 +1002,10 @@ def test_compose_dump_local_records_that_it_was_narrowed(consumer_dir, capsys):
     assert {it["uid"] for it in doc["items"]} == {"INT-0001", "SR-0001"}
     comp = doc["composition"]
     assert comp["scope"] == "local"
-    # Counted over the union either way: what the numbers exist to say is how much
-    # is *missing* from this document.
+    # No source is read for it (SR-0345), so it counts its own items and gives no
+    # count of what the sources would have lent.
     assert comp["local_item_count"] == 2
-    assert comp["borrowed_item_count"] == 3
+    assert "borrowed_item_count" not in comp
 
 
 def test_compose_dump_is_deterministic(consumer_dir, capsys):
