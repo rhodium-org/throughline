@@ -128,6 +128,7 @@ from .sources import SourceError, parse_sources
 from .union import ComposeError, build_union, translate_finding
 from .storage import (
     CONFIG_NAME,
+    EARLIER_FORMAT_VERSION,
     FORMAT_VERSION,
     MANIFEST_NAME,
     ProjectError,
@@ -2491,15 +2492,21 @@ def _migrate_beneath(args) -> int:
     is safe to rewrite (SR-0302..SR-0304). Nothing is ever committed."""
     found = migrate_beneath.survey(args.beneath)
     behind = [f for f in found if f.behind]
-    holding = [f for f in found if f.due and not f.behind]
+    unmarked = [f for f in found if f.unmarked]
+    holding = [f for f in found if f.due and not f.behind and not f.unmarked]
     if not args.apply:
         _print_behind(behind)
+        _print_unmarked(unmarked)
         _print_holding(holding)
     _print_unmigratable(found)
-    current = sum(1 for f in found if f.declared == FORMAT_VERSION and not f.due)
-    print(f"{current} graph(s) already at format version {FORMAT_VERSION}"
-          + (" with nothing to migrate" if holding else ""))
-    behind = behind + holding
+    # Both formats this Tool reads (SR-0346); the later only where one is found,
+    # so a tree of graphs in the earlier language is reported as it always was.
+    for version in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+        current = sum(1 for f in found if f.declared == version and not f.due)
+        if current or version == EARLIER_FORMAT_VERSION:
+            print(f"{current} graph(s) already at format version {version}"
+                  + (" with nothing to migrate" if holding else ""))
+    behind = behind + unmarked + holding
     if not args.apply:
         if behind:
             print("nothing was written — run again with --apply to migrate those "
@@ -2522,8 +2529,9 @@ def _migrate_beneath(args) -> int:
         if o.migrated:
             by_repo[o.found.repository] = by_repo.get(o.found.repository, 0) + 1
     for repo, n in by_repo.items():
-        print(f"migrated {n} graph(s) in {repo} to format version {FORMAT_VERSION} "
-              "— review with `git diff` and commit them there")
+        print(f"migrated {n} graph(s) in {repo} to format version "
+              f"{EARLIER_FORMAT_VERSION} — review with `git diff` and commit "
+              "them there")
     if not by_repo:
         print("migrated nothing")
     # What each migrated graph now awaits (SR-0317): migrating signs nothing, so
@@ -2543,12 +2551,24 @@ def _migrate_beneath(args) -> int:
     return FINDINGS if failed else OK
 
 
+def _print_unmarked(unmarked) -> None:
+    """Graphs whose filters are GQL at a format version that does not say so
+    (SR-0346), as tl 5.9 left a graph it moved."""
+    if not unmarked:
+        return
+    print(f"{len(unmarked)} graph(s) whose filters are GQL below format version "
+          f"{FORMAT_VERSION}, which `tl migrate` sets so that an older tl refuses "
+          "them instead of misreading them:")
+    for f in unmarked:
+        print(f"  {f.root}  format {f.declared}")
+
+
 def _print_holding(holding) -> None:
     """Graphs at the current format that still declare a status between proposal
     and signature (SR-0316): 5.0 retired them without a new format."""
     if not holding:
         return
-    print(f"{len(holding)} graph(s) at format version {FORMAT_VERSION} that still "
+    print(f"{len(holding)} graph(s) at format version {EARLIER_FORMAT_VERSION} that still "
           "hold a status between proposal and signature, which `tl migrate` retires "
           "(UR-0046):")
     for f in holding:
@@ -2557,9 +2577,9 @@ def _print_holding(holding) -> None:
 
 def _print_behind(behind) -> None:
     if not behind:
-        print(f"no graph is below format version {FORMAT_VERSION}")
+        print(f"no graph is below format version {EARLIER_FORMAT_VERSION}")
         return
-    print(f"{len(behind)} graph(s) below format version {FORMAT_VERSION}:")
+    print(f"{len(behind)} graph(s) below format version {EARLIER_FORMAT_VERSION}:")
     groups: dict[Path | None, list] = {}
     for f in behind:
         groups.setdefault(f.repository, []).append(f)

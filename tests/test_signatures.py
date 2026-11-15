@@ -391,7 +391,7 @@ def test_the_dump_carries_the_list_and_says_so(tmp_path, capsys):
     assert _cli(["-C", root, "dump"]) == 0
     dump = json.loads(capsys.readouterr().out)
     assert dump["throughline_dump"]["dump_schema_version"] == 2
-    assert dump["throughline_dump"]["format_version"] == 4
+    assert dump["throughline_dump"]["format_version"] == 5   # as tl init wrote
     item = {i["uid"]: i for i in dump["items"]}["REQ-0001"]
     assert item["ratifications"][0]["by"] == "Ada" and "ratified_by" not in item.get("attrs", {})
 
@@ -425,7 +425,7 @@ def _as_format_3(root: Path) -> Path:
                        "ratified_content": entry["content"], "ratified_id": "github:ada"})
     write_item(item)
     cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8").replace("format_version = 4",
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace("format_version = 5",
                                                            "format_version = 3"),
                    encoding="utf-8")
     return root / "requirements" / "REQ-0001.yml"

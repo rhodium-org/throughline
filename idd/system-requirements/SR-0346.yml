@@ -1,6 +1,6 @@
 uid: SR-0346
 type: system_requirement
-status: ratified
+status: implemented
 title: A project whose filters are GQL is refused by a Tool that cannot read them
 text: A project whose filter_language is gql shall declare on-disk format version
   5, and the Tool shall refuse a project that declares gql at any other version,

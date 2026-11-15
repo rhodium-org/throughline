@@ -36,6 +36,7 @@ from throughline.grounding import GroundingError
 from throughline.schema import Schema, SchemaError
 from throughline.storage import (
     CONFIG_NAME,
+    EARLIER_FORMAT_VERSION,
     FORMAT_VERSION,
     ProjectError,
     baseline_statuses,
@@ -2559,7 +2560,7 @@ def test_migrate_v2_to_v3_backfills_status_roles(tmp_path):
     cfg_file.write_text(text, encoding="utf-8")
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (2, FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
     schema = load_project(root).schema
     assert schema.status_role("ratified") == "ratified"
     # no draft is declared, so the repair binds initial to proposal (SR-0313)
@@ -2583,7 +2584,7 @@ format_version = 2
 values = ["draft", "ratified"]
 '''
     cfg_file.write_text(text, encoding="utf-8")
-    assert migrate_project(root)[:2] == (2, FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
     schema = load_project(root).schema
     assert schema.status_role("initial") == "draft"
     assert schema.status_role("ratified") == "ratified"
@@ -3310,7 +3311,7 @@ def test_infer_absent_field_from_v1_layout_routes_to_migrate(tmp_path):
     _set_format_version(root, None)  # drop the version line entirely
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (1, FORMAT_VERSION)  # migrate off the inferred major
+    assert migrate_project(root)[:2] == (1, EARLIER_FORMAT_VERSION)  # migrate off the inferred major
 
 
 def test_infer_absent_field_from_v2_layout_routes_to_migrate(tmp_path):
@@ -3324,7 +3325,7 @@ def test_infer_absent_field_from_v2_layout_routes_to_migrate(tmp_path):
     _set_format_version(root, None)
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (2, FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
     assert list(load_project(root).items()) == []  # loads after upgrade
 
 
@@ -3534,7 +3535,7 @@ def test_migrate_binds_records_on_a_project_that_also_needs_upgrading(tmp_path):
         f"format_version = {FORMAT_VERSION}", "format_version = 2"), encoding="utf-8")
 
     result = migrate_project(root)
-    assert (result.start, result.end) == (2, FORMAT_VERSION)
+    assert (result.start, result.end) == (2, EARLIER_FORMAT_VERSION)
     assert list(result.bound) == ["REQ-0001"]
     assert load_project(root).schema.status_role("ratified") == "ratified"
 
@@ -4064,10 +4065,10 @@ def test_migrate_v1_document_manifests_to_v2_registers(tmp_path):
     its item intact — a genuine upgrade that preserves data (NFR-0010, SR-0102)."""
     root = tmp_path / "proj"
     reg = _make_legacy_v1_project(root)
-    assert migrate_project(root)[:2] == (1, FORMAT_VERSION)  # walks the whole chain
+    assert migrate_project(root)[:2] == (1, EARLIER_FORMAT_VERSION)  # walks the whole chain
     assert (reg / ".register.yml").exists()
     assert not (reg / ".document.yml").exists()
-    assert f"format_version = {FORMAT_VERSION}" in (
+    assert f"format_version = {EARLIER_FORMAT_VERSION}" in (
         root / "throughline.toml").read_text(encoding="utf-8")
     assert [i.uid for i in load_project(root).items()] == ["SR-0001"]  # item survived
 
@@ -4572,7 +4573,7 @@ def test_dump_structure_is_complete_and_deterministic():
     assert list(dump) == ["throughline_dump", "config", "registers", "items"]
     meta = dump["throughline_dump"]
     assert meta["dump_schema_version"] == DUMP_SCHEMA_VERSION
-    assert meta["format_version"] == FORMAT_VERSION
+    assert meta["format_version"] == EARLIER_FORMAT_VERSION  # none declared
     assert meta["tool_version"] == "9.9.9"
     # The schema (config) travels with the dump.
     assert dump["config"] == project.config

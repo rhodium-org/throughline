@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from .fingerprint import fingerprint, revision
 from .model import Project
-from .storage import FORMAT_VERSION
+from .storage import EARLIER_FORMAT_VERSION
 
 # 2 since format 4 (SR-0254, SR-0263): an item carries its signatures as a
 # top-level `ratifications` list and its withdrawals as `withdrawals`, and no
@@ -59,7 +59,10 @@ def build_dump(project: Project, tool_version: str) -> dict:
     out = {
         "throughline_dump": {
             "dump_schema_version": DUMP_SCHEMA_VERSION,
-            "format_version": FORMAT_VERSION,
+            # The version the project declares (SR-0346): two are read, and
+            # which one says what language its filters are in.
+            "format_version": (project.config.get("project") or {}).get(
+                "format_version", EARLIER_FORMAT_VERSION),
             "tool_version": tool_version,
         },
         "config": project.config,

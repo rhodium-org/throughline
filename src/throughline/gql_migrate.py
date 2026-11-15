@@ -31,7 +31,7 @@ from .gql import check_condition
 from .graph import Index
 from .inject import _BLOCK, _MATRIX_REL, document_paths
 from .schema import GQL, PYTHON
-from .storage import CONFIG_NAME, ProjectError, load_project
+from .storage import CONFIG_NAME, FORMAT_VERSION, ProjectError, load_project
 from .tomledit import TomlDocument, render_assignment
 from .validate import eval_filter
 
@@ -419,6 +419,9 @@ def plan_move(path) -> Move:
         "The language this project's filters are in, in its coverage rules and "
         "its documents (SR-0337): a GQL search condition over the item. Moved "
         "from the earlier language by `tl migrate --to-gql` (SR-0339)."))
+    # With the language, the format version that says so (SR-0346): a tl from
+    # before GQL filters refuses the project instead of misreading it.
+    doc.set_key("project", "format_version", FORMAT_VERSION)
     move.config = doc.text()
 
     # The documents: every marked region whose directive takes a filter.

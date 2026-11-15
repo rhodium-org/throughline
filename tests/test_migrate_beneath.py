@@ -19,7 +19,7 @@ import pytest
 
 from throughline.cli import main as cli_main
 from throughline.discovery import graphs_beneath
-from throughline.storage import FORMAT_VERSION
+from throughline.storage import EARLIER_FORMAT_VERSION, FORMAT_VERSION
 
 
 def _cli(argv) -> int:
@@ -189,10 +189,10 @@ def test_apply_migrates_the_rest_commits_nothing_and_carries_on(tmp_path, capsys
 
     assert _cli(["migrate", "--beneath", repo, "--apply"]) == 1
     out = capsys.readouterr().out
-    assert _declared(a) == _declared(b) == FORMAT_VERSION
+    assert _declared(a) == _declared(b) == EARLIER_FORMAT_VERSION
     assert f"{bad.resolve()} — no migration path from format version 0" in out
     assert (f"migrated 2 graph(s) in {repo.resolve()} to format version "
-            f"{FORMAT_VERSION}") in out
+            f"{EARLIER_FORMAT_VERSION}") in out
     assert _git(repo, "rev-parse", "HEAD") == head
     assert _git(repo, "status", "--porcelain") != ""
 
