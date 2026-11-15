@@ -283,6 +283,29 @@ def test_a_rewriting_that_would_select_differently_stops_the_move(tmp_path, caps
     assert _files(root) == before
 
 
+def test_a_trim_that_would_keep_a_tab_stops_the_move(tmp_path, capsys):
+    """SR-0339, SR-0336: strip() removes every white space and TRIM removes
+    spaces only, so a text edged with a tab is where the two part."""
+    root = _earlier(tmp_path)
+    item = root / "requirements" / "REQ-0001.yml"
+    item.write_text(item.read_text(encoding="utf-8").replace(
+        "\nattrs:\n", '\nattrs:\n  note: "\\tdone"\n'), encoding="utf-8")
+    doc = root / "docs" / "overview.md"
+    doc.write_text(doc.read_text(encoding="utf-8")
+                   + "\n<!-- tl:count attrs.get('note', '').strip() == 'done' -->\n"
+                     "<!-- tl:end -->\n", encoding="utf-8")
+    assert _cli(["-C", root, "docs"]) == 0
+    assert load_project(root).get("REQ-0001").attrs["note"] == "\tdone"
+    before = _files(root)
+    capsys.readouterr()
+
+    assert _cli(["-C", root, "migrate", "--to-gql"]) == 1
+
+    said = capsys.readouterr().err
+    assert "does not select what it did" in said and "REQ-0001" in said
+    assert _files(root) == before
+
+
 def test_tl_migrate_says_filters_are_still_in_the_earlier_language(tmp_path, capsys):
     """SR-0339: tl migrate offers the move; it does not make it unasked."""
     root = _earlier(tmp_path)
