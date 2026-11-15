@@ -1,6 +1,6 @@
 uid: SR-0345
 type: system_requirement
-status: proposed
+status: ratified
 title: An export of a project's own items resolves no source
 text: tl dump --local shall export the project's own items without resolving any
   source it declares. Its composition block shall name each declared source as declared,
@@ -22,3 +22,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T04:33:11Z'
+  fingerprint: sha256:5ee82d5195c9121c041089d0c16eb78af817756619c3cc4221f63e8973e199ea
+  content:
+    type: system_requirement
+    text: tl dump --local shall export the project's own items without resolving
+      any source it declares. Its composition block shall name each declared source
+      as declared, and shall give no count of borrowed items and no edition for a
+      source it did not read.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
