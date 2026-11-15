@@ -22,7 +22,10 @@ from .signatures import (
     CONTENT, STAMP, W_BY, W_OF, W_REASON, counts, describe, files_moved, relevant,
     requirement_met, retired, signatures, signs_deletion, stale_entries, standing,
 )
-from .schema import COVERAGE_NEEDS_RE, ERROR, OFF, WARNING, listed, shown
+from .gql import evaluate as gql_evaluate
+from .schema import (
+    COVERAGE_NEEDS_RE, ERROR, GQL, OFF, PYTHON, WARNING, Schema, listed, shown,
+)
 from .storage import CONFIG_NAME, FORMAT_VERSION, STATUS_ROLES_MAJOR
 from .uid import UID_RE, collisions
 
@@ -785,7 +788,8 @@ class _Namespace(dict):
         return work(self._item, schema)
 
 
-def eval_filter(item, expr: str, idx: Index | None = None, schema=None) -> bool:
+def eval_filter(item, expr: str, idx: Index | None = None, schema=None,
+                language: str | None = None) -> bool:
     """Evaluate an SR-0045 boolean filter against one item. Raises FilterError
     on a malformed expression so user-facing callers can report it. Project
     files are untrusted input, so the expression is walked by a constrained
@@ -795,6 +799,13 @@ def eval_filter(item, expr: str, idx: Index | None = None, schema=None) -> bool:
     standing (SR-0335) can be."""
     if not expr or not expr.strip():
         return True
+    # The language is the project's, never told from the filter's own text
+    # (SR-0337). Given a schema and no language, the schema's; given neither, the
+    # earlier language, as before the key existed.
+    if language is None:
+        language = schema.filter_language if isinstance(schema, Schema) else PYTHON
+    if language == GQL:
+        return gql_evaluate(expr, item, idx, schema) is True
     return bool(safe_eval(expr, _filter_namespace(item, idx, schema)))
 
 
@@ -812,7 +823,8 @@ def query_items(project, expr: str | None = None, *, include_deleted: bool = Fal
     if expr:
         idx = index if index is not None else Index.build(project)
         candidates = [it for it in candidates
-                      if eval_filter(it, expr, idx, project.schema)]
+                      if eval_filter(it, expr, idx, project.schema,
+                                     project.filter_language)]
     return sorted(candidates, key=lambda it: it.uid)
 
 

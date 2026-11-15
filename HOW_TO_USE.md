@@ -366,6 +366,42 @@ only if it carries a link of a signed type, and a person signs it again —
 checked exactly as before. A project that declares `signed_links` needs
 throughline 3.15.0 or later: an older `tl` refuses the key.
 
+### Filters are GQL conditions
+
+A filter says which items: in a coverage rule, in `tl query`, and in the `tl:`
+markers of a document. In a project that `tl init` creates it is a GQL search
+condition (ISO/IEC 39075), with the item under test written `item`:
+
+```
+item.type = 'requirement' AND item.status <> 'deleted'
+item.priority IN ['must', 'should']        item.text CONTAINS 'shall'
+item.priority IS NULL                      LOWER(item.title) STARTS WITH 'the'
+item.signed AND NOT item.stale             'github:ada' IN item.signers
+EXISTS { (item)<-[:verifies]-() }          EXISTS { (item)-[:implements]->() }
+EXISTS { (item)-[]->(t WHERE t.type = 'intent') }
+```
+
+A property the item does not hold is null, and a test against null is unknown,
+which selects nothing: `item.priority <> 'must'` leaves out an item with no
+priority, and `item.priority IS NULL OR item.priority <> 'must'` keeps it. An
+attribute named like a field is `item.attrs.<name>`. Inside a document marker
+write a link as `-[]->`, since `-->` would end the marker. A filter is read by
+tl's own parser and is never run as code.
+
+The language is the project's, set by `filter_language = "gql"` under
+`[project]`. A project that says nothing is read in the earlier language
+(`type == 'requirement' and status != 'deleted'`), exactly as before, and moves
+when you choose:
+
+```
+tl migrate --to-gql --dry-run    # show each filter and what it becomes
+tl migrate --to-gql              # rewrite the configuration and the documents
+```
+
+It rewrites every coverage rule and every document marker, or nothing: before it
+writes, it checks on the project's own items that each rewritten filter selects
+what the original did.
+
 ### Two branches allocated the same UID
 
 `tl new` numbers from whatever is on the branch you are on, so two branches that

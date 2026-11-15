@@ -141,6 +141,11 @@ from .storage import (
 )
 from .uid import (PREFIX_GRAMMAR, UidError, next_uid, number_refusal, parse_uid,
                   valid_prefix)
+from .gql_migrate import (
+    apply_move as apply_filter_move,
+    filters_in_earlier_language,
+    plan_move as plan_filter_move,
+)
 from .validate import (
     coverage_report,
     ERROR,
@@ -308,10 +313,56 @@ def cmd_init(args) -> int:
 
 
 def cmd_migrate(args) -> int:
+    if getattr(args, "to_gql", False):
+        return _migrate_filters(args)
     rc = _migrate_alone(args)
     if rc == OK and not getattr(args, "beneath", None):
         _advise_signing(args.path)
+        _advise_filters(args.path)
     return rc
+
+
+def _advise_filters(path) -> None:
+    """Offer the move to GQL filters (SR-0339): how many of the project's filters
+    are in the earlier language, and the command that rewrites them. It is offered,
+    never made unasked. Silent where there is none."""
+    waiting = filters_in_earlier_language(path)
+    if waiting:
+        print(f"also: {waiting} filter(s) of this project are in the earlier "
+              "filter language, which still reads as it did — `tl -C "
+              f"{_shown_path(path)} migrate --to-gql` rewrites them as GQL "
+              "conditions (SR-0339)")
+
+
+def _migrate_filters(args) -> int:
+    """Move a project's filters into GQL, or change nothing (SR-0339): plan with
+    :func:`throughline.gql_migrate.plan_move`, report, and write only a plan that
+    holds no refusal."""
+    try:
+        move = plan_filter_move(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    if move.already:
+        print("this project's filters are already GQL — nothing to rewrite")
+        return OK
+    would = "would rewrite" if args.dry_run or move.refusals else "rewrote"
+    for r in move.rewrites:
+        print(f"{would} {r.where}\n    {r.old}\n    {r.new}")
+    if move.refusals:
+        for refusal in move.refusals:
+            print(f"refused: {refusal}", file=sys.stderr)
+        print(f"{len(move.refusals)} filter(s) could not be moved, so nothing was "
+              "written: a project's filters are all in one language. Rewrite those "
+              "by hand, or change them, and run this again", file=sys.stderr)
+        return FINDINGS
+    if args.dry_run:
+        print(f"{len(move.rewrites)} filter(s) would be rewritten; nothing was written")
+        return OK
+    apply_filter_move(move)
+    print(f"{len(move.rewrites)} filter(s) rewritten as GQL in "
+          f"{1 + len(move.documents)} file(s); filter_language is now gql — run "
+          "`tl check` and `tl docs --check`, then commit")
+    return OK
 
 
 def _advise_signing(path) -> None:
@@ -2110,7 +2161,8 @@ def _composed_query(args) -> int:
     index = Index.build(view)
     try:
         matched = [it for it in pool
-                   if eval_filter(it, args.expr, index, view.schema)]
+                   if eval_filter(it, args.expr, index, view.schema,
+                                  view.filter_language)]
     except FilterError as e:
         return _err(f"bad filter expression: {e}")
     # Local UIDs are uppercase and namespaces lowercase, so sorting by the name the
@@ -2509,6 +2561,8 @@ def _composed_migrate(args) -> int:
     declined. The second pass is safe because the repair is idempotent (SR-0137): a
     bound record carries a fingerprint and never matches again, so the union pass
     can only add."""
+    if getattr(args, "to_gql", False):
+        return _migrate_filters(args)
     rc = _migrate_alone(args)
     if rc != OK or getattr(args, "beneath", None):
         # Over many graphs each is migrated alone (SR-0304): the -C project's
@@ -2521,6 +2575,7 @@ def _composed_migrate(args) -> int:
         return sources
     if not sources:
         _advise_signing(args.path)
+        _advise_filters(args.path)
         return OK
 
     res, union, rc = _resolve_union(consumer, sources, args.path)

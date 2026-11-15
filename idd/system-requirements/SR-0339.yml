@@ -1,6 +1,6 @@
 uid: SR-0339
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate rewrites a project's filters into GQL, or changes nothing
 text: 'tl migrate shall offer to move a project to GQL filters: it rewrites every
   coverage rule''s filter in the configuration and every filter in the marked regions

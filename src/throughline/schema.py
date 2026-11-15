@@ -174,7 +174,26 @@ class SchemaError(ValueError):
     """Malformed or internally inconsistent project configuration (SR-0082)."""
 
 
-def _check_coverage(coverage: tuple) -> None:
+# The languages a project's filters may be in (SR-0337): the GQL search condition
+# of SR-0336, and the earlier Python-subset language of SR-0104, which is what a
+# project that says nothing is read in.
+GQL, PYTHON = "gql", "python"
+FILTER_LANGUAGES = (GQL, PYTHON)
+
+
+def _parse_filter_language(raw) -> str:
+    """Read ``[project] filter_language`` (SR-0337). Absent, the earlier language:
+    a project written before the key answers exactly as it did."""
+    if raw is None:
+        return PYTHON
+    if raw not in FILTER_LANGUAGES:
+        raise SchemaError(
+            f"[project] filter_language must be one of {', '.join(FILTER_LANGUAGES)}, "
+            f"not {shown(raw)}")
+    return raw
+
+
+def _check_coverage(coverage: tuple, language: str = PYTHON) -> None:
     """Refuse a coverage rule that could not be enforced (SR-0191).
 
     A rule the gate cannot run is the failure this exists to end: until now a
@@ -189,13 +208,20 @@ def _check_coverage(coverage: tuple) -> None:
         if not isinstance(rule, dict):
             raise SchemaError(f"{where} is not a table")
         try:
-            check_filter(rule.get("filter") or "")
+            if language == GQL:
+                from .gql import check_condition
+                check_condition(rule.get("filter") or "")
+            else:
+                check_filter(rule.get("filter") or "")
         except FilterError as e:
             raise SchemaError(
                 f"{where} has an unusable filter: {e}\n"
                 f"    filter = {rule.get('filter')!r}\n"
-                "  An item attribute is read with attrs.get('name'); `tl query "
-                "<EXPR>` tries an expression out.") from e
+                + ("  This project's filters are GQL conditions (filter_language "
+                   "= \"gql\"): an attribute is read as item.<name>; `tl query "
+                   "<EXPR>` tries one out." if language == GQL else
+                   "  An item attribute is read with attrs.get('name'); `tl query "
+                   "<EXPR>` tries an expression out.")) from e
         needs = rule.get("needs")
         if needs is None:
             raise SchemaError(
@@ -384,6 +410,8 @@ class Schema:
     # schema source names it, unless told otherwise (SR-0283). Read from this
     # configuration only.
     suggested_namespace: str | None = None
+    # The language this project's filters are in (SR-0337).
+    filter_language: str = PYTHON
 
     # ------------------------------------------------------------------ build
 
@@ -394,6 +422,8 @@ class Schema:
         name = ((config.get("project") or {}).get("name")) or ""
         suggested_namespace = _parse_suggested_namespace(
             (config.get("project") or {}).get("suggested_namespace"))
+        filter_language = _parse_filter_language(
+            (config.get("project") or {}).get("filter_language"))
 
         types: dict[str, dict[str, AttrSpec]] = {}
         type_normative: dict[str, bool] = {}
@@ -494,7 +524,7 @@ class Schema:
 
         rules = config.get("rules") or {}
         coverage = tuple(rules.get("coverage", []) or [])
-        _check_coverage(coverage)
+        _check_coverage(coverage, filter_language)
         rule_overrides = {k: v for k, v in rules.items() if k != "coverage"}
         for rule, sev in rule_overrides.items():
             if sev not in (ERROR, WARNING, OFF):
@@ -551,6 +581,7 @@ class Schema:
             roles=roles, requirements=requirements,
             type_normative=type_normative,
             suggested_namespace=suggested_namespace,
+            filter_language=filter_language,
         )
         schema._check_consistency()
         return schema

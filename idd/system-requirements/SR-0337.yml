@@ -1,6 +1,6 @@
 uid: SR-0337
 type: system_requirement
-status: ratified
+status: implemented
 title: A project says which language its filters are in
 text: A project shall declare its filter language in its configuration, as filter_language
   under [project], with the value gql or python. Where it declares none, its filters

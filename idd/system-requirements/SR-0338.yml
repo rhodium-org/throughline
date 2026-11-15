@@ -1,6 +1,6 @@
 uid: SR-0338
 type: system_requirement
-status: ratified
+status: implemented
 title: An item is read by a filter as the node the engines read
 text: In a GQL filter the item shall have the properties uid, type, status, register,
   title, text, rationale, normative and derived; its standing, signed, stale, retired,
