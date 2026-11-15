@@ -1,6 +1,6 @@
 uid: SR-0347
 type: system_requirement
-status: proposed
+status: ratified
 title: A dead item grounds nothing in a composed project either
 text: 'In a project that declares sources, the Tool shall judge grounding over the
   union by the rule of SR-0344: a grounding chain that passes through a dead item,
@@ -28,3 +28,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T16:18:23Z'
+  fingerprint: sha256:6a032f2a1991cf178fb30bf0a03f1763408e3e0b1c24a804acbcffa321d62e44
+  content:
+    type: system_requirement
+    text: 'In a project that declares sources, the Tool shall judge grounding over
+      the union by the rule of SR-0344: a grounding chain that passes through a dead
+      item, the project''s own or a borrowed one, shall not count, and a local item
+      whose every chain does shall be reported an orphan. A chain that reaches a
+      live borrowed item shall count as grounded, as before.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

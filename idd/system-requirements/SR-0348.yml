@@ -1,6 +1,6 @@
 uid: SR-0348
 type: system_requirement
-status: proposed
+status: ratified
 title: The check summary counts a root served as the finding does
 text: 'The check summary shall count the delivery roots served by the rule the unserved-root
   finding is reported by (SR-0344), so that a root only dead items ground into is
@@ -26,3 +26,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T16:18:24Z'
+  fingerprint: sha256:4d02f9f1c479f652c17f35bb205ed7f51595edf3ae8b548a095bc394474c185c
+  content:
+    type: system_requirement
+    text: 'The check summary shall count the delivery roots served by the rule the
+      unserved-root finding is reported by (SR-0344), so that a root only dead items
+      ground into is not counted as served: in a project on its own and, for the
+      project''s own delivery roots, in a composed one.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
