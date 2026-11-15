@@ -1,0 +1,53 @@
+uid: SR-0352
+type: system_requirement
+status: ratified
+title: A change set names an item it made earlier by its label wherever an operation
+  names an item
+text: Wherever an operation in a change set names an item, whether the item it acts
+  on, the target of a link or unlink, or the target of a new item's link, tl apply
+  shall accept the label of an item created earlier in the same set and act on that
+  item, in a project that declares sources as in one that does not. A label naming
+  no item created earlier in the set shall refuse the whole set, naming the operation.
+  A dry run shall report what a real run of the same set does.
+rationale: 'Found 15 November 2026 laying down rhodium-org/propertyqr''s site graph,
+  which composes the sitemap standard, with one change set under 5.11.0: a link whose
+  target named a page the same set had just created, by its label, was refused as
+  naming an item that does not exist. tl apply --describe already says an item created
+  earlier in the set is named by its label, and a new operation''s links and a link
+  operation''s item were resolved that way; the target of a link or unlink was resolved
+  to its UID and then looked for in the union as it stood before the set began, which
+  knows nothing the set made. The workaround, ordering the set so targets come first
+  and making a cycle by hand with tl link afterwards, is the hand-sorting the label
+  exists to spare an assistant that cannot run the Tool. A label naming a later item
+  stays refused, because the set is carried out in order. Who pays: nobody; a set
+  that was refused now applies.'
+normative: true
+links:
+- target: UR-0038
+  type: implements
+  stamp: sha256:c0ab0b8e33b5fe85562ad960cdf1037cefd127360c37142fd8a78a8b560c82f0
+- target: SR-0252
+  type: refines
+- target: SR-0212
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T20:20:09Z'
+  fingerprint: sha256:4eb784c37cd080ecc02453b0069f2e1fe7e6671c00cd3f8e0db539ec5c50536f
+  content:
+    type: system_requirement
+    text: Wherever an operation in a change set names an item, whether the item it
+      acts on, the target of a link or unlink, or the target of a new item's link,
+      tl apply shall accept the label of an item created earlier in the same set
+      and act on that item, in a project that declares sources as in one that does
+      not. A label naming no item created earlier in the set shall refuse the whole
+      set, naming the operation. A dry run shall report what a real run of the same
+      set does.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
