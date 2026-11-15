@@ -154,8 +154,8 @@ def parse_sources(project, *, withdrawn: str = "refuse") -> list[Source]:
     """Read the ``[[sources]]`` array from a loaded project's config.
 
     Returns an empty list when none are declared — a project with no sources is
-    an ordinary throughline project and ``tl-compose`` behaves exactly like ``tl``
-    over it (SR-0003).
+    an ordinary throughline project and the composed commands behave exactly like
+    the plain ones over it (SR-0003).
 
     ``withdrawn`` says what a ``reexport`` key means here (SR-0045): ``"refuse"``
     for the consumer's own configuration, the one file the composer can edit;

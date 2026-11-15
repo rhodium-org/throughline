@@ -145,7 +145,7 @@ are separate repositories, and ratify installs throughline. `pip install -e ".[d
 in ratify makes *that* package editable and resolves throughline **from PyPI** — so
 you can be editing one while running the published copy of the other, and every
 version string will agree. (throughline-compose is deprecated: composition lives in
-this package, `tl-compose` is a second name for `tl`, and nothing installs it.)
+this package, `tl` is the one command, and nothing installs it.)
 Two people (or a person and an agent) then run the same command in the same repo,
 get different answers, and argue about the graph rather than about the toolchain.
 

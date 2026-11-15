@@ -37,15 +37,15 @@ def render_trace(project, start: str, *, direction: str = "out", max_depth: int 
                  uid_display=None, expand=None, emit=print) -> None:
     """Print the link tree rooted at ``start`` as an indented ASCII tree.
 
-    The single walk both ``tl trace`` and ``tl-compose trace`` share, so the tree
-    glyphs cannot drift between the two front ends. Two seams let a composing
+    The single walk ``tl trace`` shares with and without sources, so the tree
+    glyphs cannot drift between the two paths. Two seams let a composing
     caller specialise the view without touching the walk:
 
     - ``uid_display(uid) -> str`` renders the label shown for a node's UID
-      (default: the UID itself); tl-compose passes the namespace-qualified form so
+      (default: the UID itself); a composed trace passes the namespace-qualified form so
       a borrowed clause reads ``asvs:SR-0272`` rather than its mangled union UID.
     - ``expand(uid) -> bool`` decides whether to recurse into a node's own links
-      (default: always). tl-compose stops at the source boundary by expanding only
+      (default: always). A composed trace stops at the source boundary by expanding only
       consumer-local items, so a borrowed clause is shown but its source-internal
       graph is not dragged in.
 
@@ -68,8 +68,8 @@ def render_trace(project, start: str, *, direction: str = "out", max_depth: int 
         item = project.get(uid)
         if item is None:
             # A link target that is not a local item: a dangling reference, or a
-            # namespace-qualified reference to another source (resolved only under
-            # tl-compose). Show it as a leaf rather than crashing the walk.
+            # namespace-qualified reference to another source (resolved only over
+            # the composed union). Show it as a leaf rather than crashing the walk.
             emit(f"{line}{edge}{disp} (unresolved)")
             return
         label = f"{disp}  [{item.type}/{item.status}] {item.title}".rstrip()
@@ -92,7 +92,7 @@ def render_subgraph(project, view, *, uid_display=None, emit=print) -> None:
 
     The one rendering both ``tl subgraph`` and ``tl context <UID>`` use, so the
     two cannot drift (SR-0190). ``uid_display`` is the same seam ``render_trace``
-    offers: tl-compose passes the namespace-qualified form so a borrowed clause
+    offers: a composed caller passes the namespace-qualified form so a borrowed clause
     reads ``asvs:SR-0272`` rather than its mangled union UID.
     """
     show = uid_display or (lambda u: u)

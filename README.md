@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-306
+305
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 45
@@ -296,10 +296,9 @@ whose standard declares only in its configuration is unchanged.
 Sources are read-only, fetched once into a per-user cache and reached again only
 when a tag or branch has moved; `TL_OFFLINE=1` composes from the cache alone. A
 program embedding the Tool reaches a source through the `Resolver` it supplies, so
-a browser can compose without git or a network of its own. `tl-compose` is a
-deprecated second name for `tl`: it runs the same program, says so on standard
-error, and will be removed in the next major release. The separate
-`throughline-compose` package is deprecated too; nothing needs it.
+a browser can compose without git or a network of its own. `tl` is the one
+command: the `tl-compose` name was removed in 6.0.0 (SR-0353), and the separate
+`throughline-compose` package is deprecated; nothing needs it.
 
 ## Try it
 

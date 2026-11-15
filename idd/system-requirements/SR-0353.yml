@@ -1,0 +1,41 @@
+uid: SR-0353
+type: system_requirement
+status: ratified
+title: tl and throughline are the Tool's only command names
+text: 'The Tool shall install tl and throughline as its command names and no other:
+  it shall not install tl-compose or throughline-compose. Wherever a message or a
+  document of the Tool tells a reader what to run, it shall name tl.'
+rationale: 'Henry Grech-Cini, 15 November 2026: "drop the tl-compose alias from throughline
+  too". SR-0247 (8 October 2026, tl 3.15.0) announced that the two names would be
+  removed in the next major release, and the Tool has said so on standard error every
+  time either was run since; 4.0 and 5.0 went out without the removal. This is that
+  removal, so the release that carries it is 6.0.0. Of the gates in the estate that
+  still ran tl-compose, home-platform-idd and truenas-mcp, both are moved to tl before
+  the release. The separate throughline-compose package ships no command names of
+  its own (SR-0236), so it no longer provides tl-compose either. Rejected: keeping
+  the names as silent aliases, which leaves two spellings of one program for every
+  brief, skill and gate to choose between. Who pays: anyone whose script still types
+  tl-compose gets ''command not found'' and changes it to tl, the change the notice
+  has asked for since 3.15.0.'
+normative: true
+links:
+- target: UR-0037
+  type: implements
+  stamp: sha256:e0f8d104325a950c3ac9b96d33840991fd5f9163a36e84f9c11a0abef6c2ca22
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T21:35:25Z'
+  fingerprint: sha256:247c01dda93d2f904998a5f7ea898b3c8bb615944cacdbe59811e6d516aee914
+  content:
+    type: system_requirement
+    text: 'The Tool shall install tl and throughline as its command names and no
+      other: it shall not install tl-compose or throughline-compose. Wherever a message
+      or a document of the Tool tells a reader what to run, it shall name tl.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
