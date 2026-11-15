@@ -161,7 +161,7 @@ from .storage import (
     write_item,
     write_manifest,
 )
-from .uid import UID_RE, collisions, format_uid, next_uid, parse_uid
+from .uid import UID_RE, UidError, collisions, format_uid, next_uid, parse_uid
 from .validate import (
     Finding,
     FilterError,
@@ -191,7 +191,7 @@ __all__ = [
     "migrate_project", "write_item", "write_manifest", "create_register",
     "ProjectError", "FormatError", "CONFIG_NAME", "MANIFEST_NAME",
     # identity of an item
-    "UID_RE", "parse_uid", "format_uid", "next_uid", "collisions",
+    "UID_RE", "UidError", "parse_uid", "format_uid", "next_uid", "collisions",
     "Index", "fingerprint", "revision",
     # the schema a project declares
     "Schema", "AttrSpec", "LinkRule", "Requirement", "SchemaError",

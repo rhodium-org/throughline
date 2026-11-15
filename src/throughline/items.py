@@ -429,11 +429,25 @@ def review_items(project, uids=None, *, all_items: bool = False) -> list:
     return moved
 
 
+def refuse_clashing_prefix(project, prefix: str) -> None:
+    """Refuse to create anything under a prefix two register folders claim
+    (SR-0101). Only one of the folders was read, so the next number would be taken
+    without sight of the other's items, and which folder was read is an accident
+    of their names."""
+    clash = project.prefix_conflicts.get(prefix)
+    if clash:
+        raise GroundingError(
+            f"prefix '{prefix}' is declared by {len(clash)} registers "
+            f"({', '.join(clash)}) — nothing is allocated under it until one is "
+            "renamed, since each would number without sight of the other")
+
+
 def item_type_for(project, prefix: str, explicit: str | None) -> str:
     """The type an item born in ``prefix``'s register takes (SR-0241): the one
     named, else the one the register declares. A register that declares none is a
     refusal, never a guess — a default of ``requirement`` once gave every `tl new
     TEST` a requirement, and nothing reported it until a coverage rule tripped."""
+    refuse_clashing_prefix(project, prefix)
     reg = project.registers.get(prefix)
     if reg is None:
         raise GroundingError(
@@ -494,6 +508,7 @@ def new_item(project, prefix: str, *, item_type: str, uid: str | None = None,
         held = keyed_item(project, key)
         if held is not None:
             raise GroundingError(f"{held.uid} already carries key {key}")
+    refuse_clashing_prefix(project, prefix)
     reg = project.registers.get(prefix)
     if reg is None:
         raise GroundingError(
