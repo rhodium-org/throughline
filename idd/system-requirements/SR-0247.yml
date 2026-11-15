@@ -47,6 +47,16 @@ ratifications:
     attrs:
       priority: must
   revision: 4ae5b46df3eea34fcaf4680ce86c510c8009f1a4
+- by: Henry Grech-Cini
+  at: '2026-11-15T21:35:24Z'
+  fingerprint: sha256:e77bc83a56f44d2730e1500b03ea0369206a4780cba823c83ac5c372a051f1e3
+  content:
+    deleted:
+      date: '2026-11-15'
+      reason: 'Superseded by SR-0353: the deprecated names it announced are removed
+        in 6.0.0, so there is no name left to print the notice for.'
+      fingerprint: sha256:200960b55b35a1c035782a1aff4247d71b6d0e89bac2820f1cfa97beabeadfe0
+      from: implemented
 deleted:
   date: '2026-11-15'
   reason: 'Superseded by SR-0353: the deprecated names it announced are removed in

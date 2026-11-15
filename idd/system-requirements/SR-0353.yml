@@ -1,6 +1,6 @@
 uid: SR-0353
 type: system_requirement
-status: proposed
+status: ratified
 title: tl and throughline are the Tool's only command names
 text: 'The Tool shall install tl and throughline as its command names and no other:
   it shall not install tl-compose or throughline-compose. Wherever a message or a
@@ -26,3 +26,16 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T21:35:25Z'
+  fingerprint: sha256:247c01dda93d2f904998a5f7ea898b3c8bb615944cacdbe59811e6d516aee914
+  content:
+    type: system_requirement
+    text: 'The Tool shall install tl and throughline as its command names and no
+      other: it shall not install tl-compose or throughline-compose. Wherever a message
+      or a document of the Tool tells a reader what to run, it shall name tl.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
