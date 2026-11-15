@@ -18,7 +18,7 @@ from .graph import Index
 from .signatures import (
     describe, is_stale, relevant, retired, signatures, signs_deletion, standing,
 )
-from .grounding import reaches_root
+from .grounding import is_unserved, reaches_root
 from .grounding import (
     CLARIFICATION_ATTRS,
     CLARIFIED_AMBIGUITY_ATTR,
@@ -287,10 +287,8 @@ def check_summary(project) -> list[str]:
     non_roots = [it for it in live if not schema.is_root(it)]
     grounded = sum(1 for it in non_roots if reaches_root(idx, schema, it.uid))
     delivery = [it for it in live if it.type in schema.delivery_roots]
-    served = sum(
-        1 for it in delivery
-        if any(lt in schema.ground_link_types for _o, lt in idx.in_links(it.uid))
-    )
+    # Served as the gate's `unserved-root` finding has it (SR-0348).
+    served = sum(1 for it in delivery if not is_unserved(schema, idx, it))
 
     name = schema.name or Path(project.path).name
     lines = [

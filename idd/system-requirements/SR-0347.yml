@@ -1,0 +1,45 @@
+uid: SR-0347
+type: system_requirement
+status: ratified
+title: A dead item grounds nothing in a composed project either
+text: 'In a project that declares sources, the Tool shall judge grounding over the
+  union by the rule of SR-0344: a grounding chain that passes through a dead item,
+  the project''s own or a borrowed one, shall not count, and a local item whose every
+  chain does shall be reported an orphan. A chain that reaches a live borrowed item
+  shall count as grounded, as before.'
+rationale: 'tl 5.10.0 asks the grounding question of a local orphan a second time,
+  to let a chain into a source count, and asks it without the rule of SR-0344. A
+  composed check therefore drops an orphan that the same graph checked alone reports,
+  while tl ratify refuses the same item as not grounded. The owner ruled that an
+  item in a following graph is an orphan when the item it solely relies on is tombstoned.
+  Rejected: judging whether a live borrowed item is itself grounded inside its source,
+  which is the owning graph''s finding and stays suppressed. Who pays: a project
+  with sources that keeps a live item grounded only in a rejected or retired item,
+  its own or a source''s, turns red at the gate until the item is grounded again
+  or retired too.'
+normative: true
+links:
+- target: UR-0004
+  type: implements
+  stamp: sha256:8127d87c75bef2180ebf1a9a582f3ba89815c9b9c135b372230287f1a5a9f19d
+- target: SR-0344
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T16:18:23Z'
+  fingerprint: sha256:6a032f2a1991cf178fb30bf0a03f1763408e3e0b1c24a804acbcffa321d62e44
+  content:
+    type: system_requirement
+    text: 'In a project that declares sources, the Tool shall judge grounding over
+      the union by the rule of SR-0344: a grounding chain that passes through a dead
+      item, the project''s own or a borrowed one, shall not count, and a local item
+      whose every chain does shall be reported an orphan. A chain that reaches a
+      live borrowed item shall count as grounded, as before.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

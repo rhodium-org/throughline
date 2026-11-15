@@ -30,6 +30,7 @@ from pathlib import Path
 
 from .brief import _by_count
 from .graph import Index
+from .grounding import is_unserved
 from .inject import InjectError, TargetResolver, matching, register_directive, render_item
 from .links import GroundingView
 from .model import Project
@@ -40,7 +41,7 @@ from .resolvers import (
     cache_root,
     resolver_for,
 )
-from .seam import is_borrowed
+from .seam import grounded_at_seam
 from .signatures import retired
 from .sources import Source, SourceError, parse_sources, withdrawn_declarations
 from .union import ComposeError, Union, build_union
@@ -360,28 +361,19 @@ def local_grounding(union: Union, schema, index: Index, local) -> tuple[int, int
     """The grounding figures for the consumer's own items (throughline-compose
     SR-0029).
 
-    The terminus is widened exactly as ``apply_seam`` widens it — "a root, or
-    anything borrowed" — so the headline and the findings answer the same question
-    and cannot disagree. A local item grounded through a source counts as grounded
-    in both, because it is one walk of core's own ``Index.reaches``, not a second
-    grounding engine.
+    The question is ``apply_seam``'s own (:func:`throughline.seam.grounded_at_seam`)
+    — "a root, or anything borrowed, with no dead item on the way" — so the
+    headline and the findings answer the same question and cannot disagree. A
+    local item grounded through a source counts as grounded in both.
     """
     non_roots = [it for it in local if not schema.is_root(it)]
     grounded = sum(
-        1 for it in non_roots
-        if index.reaches(
-            it.uid,
-            lambda i: schema.is_root(i) or is_borrowed(union, i.uid),
-            schema.ground_link_types,
-        )
-    )
+        1 for it in non_roots if grounded_at_seam(union, schema, index, it.uid))
     # A local delivery root may be served by a borrowed item, so the in-links are
     # read over the whole union even though the roots counted are the consumer's.
+    # Served as the gate's `unserved-root` finding has it (SR-0348).
     delivery = [it for it in local if it.type in schema.delivery_roots]
-    served = sum(
-        1 for it in delivery
-        if any(lt in schema.ground_link_types for _o, lt in index.in_links(it.uid))
-    )
+    served = sum(1 for it in delivery if not is_unserved(schema, index, it))
     return grounded, len(non_roots), served, len(delivery)
 
 

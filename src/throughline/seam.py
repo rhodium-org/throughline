@@ -20,8 +20,9 @@ Two rules, both stated in SR-0026:
   * An ``orphan`` on a *local* item is re-asked of core's own walk with the terminus
     widened to "a root, or anything borrowed", so a grounding chain that leaves the
     consumer and enters a source counts as grounded. No second grounding engine —
-    ``Index.reaches`` already takes the predicate and the link types as arguments
-    (SR-0004, NG-0001).
+    it is core's ``reaches_root`` with one more place a chain may end, so a chain
+    that passes through a dead item, local or borrowed, counts no more here than
+    it does in a graph on its own (SR-0004, NG-0001, SR-0347).
 
 A consumer may *widen* the first of those, and only widen it (SR-0035). The
 allowlist keys on the rule name, and a rule name does not say where the remedy for
@@ -44,6 +45,7 @@ from __future__ import annotations
 # read rather than accept it and leave it silently never firing — which is the very
 # failure SR-0035 exists to close. Imported rather than restated so the two cannot
 # drift.
+from .grounding import reaches_root
 from .validate import _DEFAULT_SEVERITY as _CORE_RULES
 
 # Rules whose remedy lies at the seam or in the union itself, and which therefore
@@ -131,6 +133,15 @@ def is_borrowed(union, uid: str) -> bool:
     return union.qualified(uid) != uid
 
 
+def grounded_at_seam(union, schema, index, uid: str) -> bool:
+    """Whether a local item is grounded as a consumer is held to it: its chain
+    reaches a root, or a borrowed item, with no dead item on the way (SR-0347).
+    The one question behind the rescued ``orphan`` and the summary's figure, so
+    the two cannot disagree."""
+    return reaches_root(index, schema, uid,
+                        also=lambda it: is_borrowed(union, it.uid))
+
+
 def apply_seam(findings, union, schema, index, extra_rules=frozenset()):
     """Filter ``findings`` to what the consumer can act on, and rescue local items
     grounded through a source. Returns ``(kept, suppressed, rescued)`` so the caller
@@ -147,11 +158,7 @@ def apply_seam(findings, union, schema, index, extra_rules=frozenset()):
             suppressed.append(f)
             continue
         if f.rule == "orphan" and not is_borrowed(union, f.uid):
-            if index.reaches(
-                f.uid,
-                lambda it: schema.is_root(it) or is_borrowed(union, it.uid),
-                schema.ground_link_types,
-            ):
+            if grounded_at_seam(union, schema, index, f.uid):
                 rescued.append(f)
                 continue
         kept.append(f)

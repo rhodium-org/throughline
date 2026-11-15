@@ -42,18 +42,24 @@ def is_dead(schema, item: Item) -> bool:
     return invalidated is not None and item.status == invalidated
 
 
-def reaches_root(idx: Index, schema, uid: str) -> bool:
+def reaches_root(idx: Index, schema, uid: str, *, also=None) -> bool:
     """True if ``uid`` grounds upward to a root type over the schema's grounding
     link types, by a chain no dead item stands on (SR-0344). ``schema`` is a
     :class:`throughline.schema.Schema`.
 
     A dead item is asked the earlier question, whether any chain reaches a root:
     it is dead scope that grounds nothing, and a rejected requirement under a
-    rejected need is a record kept, not a live item left without justification."""
+    rejected need is a record kept, not a live item left without justification.
+
+    ``also``, where given, says what else a chain may end at. A composed project
+    ends one at a borrowed item too (SR-0347), and asks through here so that
+    there is one rule for what a dead item does to a chain, not a copy of it."""
+    ends = schema.is_root if also is None else (
+        lambda it: schema.is_root(it) or also(it))
     start = idx.items.get(uid)
     if start is not None and is_dead(schema, start):
-        return idx.reaches(uid, schema.is_root, schema.ground_link_types)
-    return idx.reaches(uid, schema.is_root, schema.ground_link_types,
+        return idx.reaches(uid, ends, schema.ground_link_types)
+    return idx.reaches(uid, ends, schema.ground_link_types,
                        through=lambda it: not is_dead(schema, it))
 
 
