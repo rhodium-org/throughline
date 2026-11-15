@@ -1,6 +1,6 @@
 uid: SR-0351
 type: system_requirement
-status: proposed
+status: ratified
 title: A register is made with the item type it holds
 text: 'The Tool shall refuse to create a register unless it is told the item type
   the register holds, and shall hold that type to the rule it holds a type declared
@@ -19,3 +19,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T18:19:50Z'
+  fingerprint: sha256:09a609cbb46980ce6e9f19d0c6e3777895a100acc7736bfa0990a91d727468df
+  content:
+    type: system_requirement
+    text: 'The Tool shall refuse to create a register unless it is told the item
+      type the register holds, and shall hold that type to the rule it holds a type
+      declared on an existing register to: where the project declares its item types,
+      one it declares or one of its live items holds. It shall never default the
+      type.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

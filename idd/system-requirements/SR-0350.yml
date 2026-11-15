@@ -1,6 +1,6 @@
 uid: SR-0350
 type: system_requirement
-status: proposed
+status: ratified
 title: Migration ends with findings while a register declares no item type
 text: When a register still declares no item type after migration's repairs, migration
   shall name each such register, with the command that declares its type, and shall
@@ -22,3 +22,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T18:19:47Z'
+  fingerprint: sha256:170462bff8bc1c57d934d0b82b416e0aad36189e14d2657fbe18dd87d67f1de7
+  content:
+    type: system_requirement
+    text: When a register still declares no item type after migration's repairs,
+      migration shall name each such register, with the command that declares its
+      type, and shall end with findings, keeping every repair it made. Migrating
+      the graphs beneath a path shall name each graph holding such a register and
+      end with findings in the same way, whether it lists the graphs or migrates
+      them.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
