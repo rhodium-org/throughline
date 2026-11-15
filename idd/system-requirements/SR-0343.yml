@@ -1,6 +1,6 @@
 uid: SR-0343
 type: system_requirement
-status: proposed
+status: ratified
 title: A link made as an item is created is stamped
 text: A grounding link attached when an item is created, by tl new --ground or by
   a new operation of a change set, shall be stamped with its target's fingerprint,
@@ -22,3 +22,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T04:33:10Z'
+  fingerprint: sha256:9853c52d60136daf6bf6e4d753012f313c1d4ef83a56647eae95f19b9b86502b
+  content:
+    type: system_requirement
+    text: A grounding link attached when an item is created, by tl new --ground or
+      by a new operation of a change set, shall be stamped with its target's fingerprint,
+      as tl link --stamp stamps one.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -1,6 +1,6 @@
 uid: SR-0341
 type: system_requirement
-status: proposed
+status: ratified
 title: The documents gate fails where a configured document is not there
 text: tl docs --check shall fail, naming the pattern, where a pattern under [docs]
   paths matches no file. tl docs shall refuse the same way and write nothing.
@@ -19,3 +19,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T04:33:10Z'
+  fingerprint: sha256:e82dc5cd4d45e4089b42890523eccee93e193a9381093aa3e2af00f5cbd5e8a6
+  content:
+    type: system_requirement
+    text: tl docs --check shall fail, naming the pattern, where a pattern under [docs]
+      paths matches no file. tl docs shall refuse the same way and write nothing.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

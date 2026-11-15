@@ -1,6 +1,6 @@
 uid: SR-0344
 type: system_requirement
-status: proposed
+status: ratified
 title: A dead item grounds nothing and serves no root
 text: 'An item in the status bound to the invalidated role, and a tombstone that
   stands, shall not count toward grounding: a delivery root that only such items
@@ -23,3 +23,18 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T04:33:10Z'
+  fingerprint: sha256:11dd06b6a912fc2d2f79367ed2c1088c3f63acec09e68d7f40b6dce2e2a0eb11
+  content:
+    type: system_requirement
+    text: 'An item in the status bound to the invalidated role, and a tombstone that
+      stands, shall not count toward grounding: a delivery root that only such items
+      ground into is unserved, and an item whose every grounding chain passes through
+      one is an orphan.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -1,6 +1,6 @@
 uid: SR-0342
 type: system_requirement
-status: proposed
+status: ratified
 title: A ratify run passes over an item the same person has already signed
 text: Where a ratify run names several items and one of them is already signed by
   the person signing, with nothing changed since, ratify shall say so, leave that
@@ -22,3 +22,19 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T04:33:10Z'
+  fingerprint: sha256:b625df9e50a05621a2bcb9ddf3c9404b846419d1ced22f0e80f73a329d4f9997
+  content:
+    type: system_requirement
+    text: Where a ratify run names several items and one of them is already signed
+      by the person signing, with nothing changed since, ratify shall say so, leave
+      that item as it is and go on to the others. A run that names only such items
+      changes nothing and says so. Every other refusal still refuses the whole run
+      before anything is written.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
