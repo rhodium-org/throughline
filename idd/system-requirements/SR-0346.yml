@@ -1,6 +1,6 @@
 uid: SR-0346
 type: system_requirement
-status: proposed
+status: ratified
 title: A project whose filters are GQL is refused by a Tool that cannot read them
 text: A project whose filter_language is gql shall declare on-disk format version
   5, and the Tool shall refuse a project that declares gql at any other version,
@@ -33,3 +33,21 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  id: github:rhodium289
+  at: '2026-11-15T07:51:27Z'
+  fingerprint: sha256:4c575adf6ea7e270775287aff9a5728860e7dc627a20fba0f187e9e7a3c01487
+  content:
+    type: system_requirement
+    text: A project whose filter_language is gql shall declare on-disk format version
+      5, and the Tool shall refuse a project that declares gql at any other version,
+      saying so. The Tool shall read a project at format version 4, whose filters
+      are in the earlier language, and one at version 5, without asking either to
+      migrate. tl init shall write version 5, and tl migrate --to-gql shall set it
+      with the language. A Tool older than this requirement refuses version 5 as
+      a format it does not understand, naming the upgrade.
+    normative: true
+    derived: false
+    attrs:
+      priority: must
