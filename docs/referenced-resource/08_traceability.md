@@ -15,7 +15,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0239, SR-0249 |
 | UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
-| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271, SR-0344 |
+| UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271, SR-0344, SR-0347 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188, SR-0270, SR-0343 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
 | UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
