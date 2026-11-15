@@ -399,7 +399,8 @@ _CTX_COMMAND_USAGE = {
     "restore": "tl restore <UID>",
     "resolve": "tl resolve [--keep ours|theirs] [--trunk REF] [--dry-run]",
     "query": "tl query [--type T] [--status S] [--format json]",
-    "register": "tl register new <PREFIX> <FOLDER> --title <…>",
+    "register": "tl register new <PREFIX> <FOLDER> --title <…> --type <type> | "
+                "tl register type <PREFIX> <type>",
     "schema": "tl schema <noun> <verb> … --because <why>",
     "migrate": "tl migrate",
     "review": "tl review",

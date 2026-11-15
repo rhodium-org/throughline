@@ -63,7 +63,9 @@ def test_explicit_type_still_wins(tmp_path):
 
 def test_untyped_register_refuses_rather_than_guesses(tmp_path, capsys):
     root = _init(tmp_path)
-    assert _cli(["-C", root, "register", "new", "RISK", "risks"]) == 0
+    assert _cli(["-C", root, "register", "new", "RISK", "risks",
+                 "--type", "requirement"]) == 0
+    _drop_type(root, "risks")                 # as a register from before SR-0351
     capsys.readouterr()
     assert _cli(["-C", root, "new", "RISK", "--title", "t",
                  "--no-interactive"]) != 0
@@ -73,6 +75,7 @@ def test_untyped_register_refuses_rather_than_guesses(tmp_path, capsys):
 
 def test_register_new_can_declare_a_type(tmp_path):
     root = _init(tmp_path)
+    assert _cli(["-C", root, "schema", "type", "add", "risk", "--because", "t"]) == 0
     assert _cli(["-C", root, "register", "new", "RISK", "risks",
                  "--type", "risk"]) == 0
     assert _cli(["-C", root, "new", "RISK", "--title", "t",
@@ -104,7 +107,9 @@ def test_migrate_types_a_seeded_register_whatever_its_items_hold(tmp_path):
 def test_migrate_types_a_custom_register_only_from_agreeing_items(tmp_path):
     root = _init(tmp_path)
     for prefix, folder in (("RISK", "risks"), ("MIX", "mixed"), ("EMP", "empty")):
-        assert _cli(["-C", root, "register", "new", prefix, folder]) == 0
+        assert _cli(["-C", root, "register", "new", prefix, folder,
+                     "--type", "requirement"]) == 0
+        _drop_type(root, folder)              # as registers from before SR-0351
     for prefix, kind in (("RISK", "risk"), ("RISK", "risk"),
                          ("MIX", "risk"), ("MIX", "constraint")):
         assert _cli(["-C", root, "new", prefix, "--type", kind, "--title", "t",

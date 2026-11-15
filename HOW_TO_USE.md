@@ -132,10 +132,14 @@ tl init --name "acme-app" --bare   # writes only ./throughline.toml, no seed
 
 ### Create a register (prefix-owning folder) per group of items
 
+Each register is made with the item type it holds, which `tl new` gives items
+born there; a type the bare config does not declare is declared first (SR-0351).
+
 ```bash
-tl register new INT vision   --title "Product vision"          # ./vision/.register.yml
-tl register new BN  goals    --title "Business goals"          # ./goals/.register.yml
-tl register new FR  features --title "Functional requirements" # ./features/.register.yml
+tl schema type add business_need --because "the goals this work serves"
+tl register new INT vision   --type intent        --title "Product vision"          # ./vision/.register.yml
+tl register new BN  goals    --type business_need --title "Business goals"          # ./goals/.register.yml
+tl register new FR  features --type requirement   --title "Functional requirements" # ./features/.register.yml
 ```
 
 A *register* is just a folder with a `.register.yml` manifest that owns a UID
@@ -200,7 +204,7 @@ tl link FR-0001 BN-0001  --type derives_from   # feature justifies itself to the
 ### The default config wants every requirement verified — add a test
 
 ```bash
-tl register new TEST tests --title "Verification"
+tl register new TEST tests --type test --title "Verification"
 tl new TEST --type test --title "Wizard completes in 3 steps"
 tl link TEST-0001 FR-0001 --type verifies
 ```
@@ -271,9 +275,10 @@ default; edit it to fit your project.
 ```
 tl init [--name NAME] [--bare]                 # scaffold a project (--bare = config only, no seed)
 tl init --from-schema <url|path> [--ref REF]   # a graph that follows a standard (SR-0283)
-tl migrate                                     # upgrade an older project's on-disk format to this tl
+tl migrate                                     # upgrade an older project's on-disk format to this tl; exit 1 names a register that declares no type (SR-0350)
 tl migrate --beneath PATH [--apply]            # list (or migrate) every graph beneath PATH below this format (SR-0300)
-tl register new <PREFIX> <dir> [--parent P]    # add a register (prefix-owning collection)
+tl register new <PREFIX> <dir> --type T [--parent P]  # add a register (prefix-owning collection) holding T (SR-0351)
+tl register type <PREFIX> <type>              # declare the item type an existing register holds (SR-0349)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID [--ground-type K]]  # allocate + create (ground at birth)
 tl link <SRC> <DST> --type <kind> [--stamp]    # add a typed link
 throughline delete <UID> --reason "…"                   # propose a deletion: a tombstone a human ratifies (never erased)

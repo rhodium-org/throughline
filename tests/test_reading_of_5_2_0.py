@@ -36,8 +36,8 @@ def _bare(tmp_path: Path) -> Path:
     """A project with no transitions table, one root and one requirement."""
     root = tmp_path / "proj"
     assert _cli(["-C", root, "init", "--name", "t", "--bare"]) == 0
-    assert _cli(["-C", root, "register", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", root, "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", root, "register", "new", "INT", "vision", "--type", "intent"]) == 0
+    assert _cli(["-C", root, "register", "new", "FR", "features", "--type", "requirement"]) == 0
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "why",
                  "--no-interactive"]) == 0
     assert _cli(["-C", root, "new", "FR", "--type", "requirement", "--title", "what",

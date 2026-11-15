@@ -41,8 +41,8 @@ def _project(tmp_path: Path) -> Path:
     assert "[types.requirement]\n" in text
     cfg.write_text(text.replace("[types.requirement]\n", "[types.requirement]\n" + KINDS, 1),
                    encoding="utf-8")
-    assert _cli(["-C", root, "register", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", root, "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", root, "register", "new", "INT", "vision", "--type", "intent"]) == 0
+    assert _cli(["-C", root, "register", "new", "FR", "features", "--type", "requirement"]) == 0
     assert _cli(["-C", root, "new", "INT", "--type", "intent", "--title", "why"]) == 0
     assert _cli(["-C", root, "new", "FR", "--type", "requirement", "--title", "r",
                  "--ground", "INT-0001"]) == 0

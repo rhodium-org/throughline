@@ -173,12 +173,12 @@ def test_register_new_refuses_a_directory_the_project_would_not_read(tmp_path, c
     (root / "archive" / "throughline.toml").write_text('[project]\nname = "old"\n',
                                                       encoding="utf-8")
     for directory in (".drafts", "archive/system", "../elsewhere"):
-        assert _cli(["-C", root, "register", "new", "XX", directory]) == 2
+        assert _cli(["-C", root, "register", "new", "XX", directory, "--type", "requirement"]) == 2
         assert "would never be read" in capsys.readouterr().err
     assert not (root / ".drafts").exists()
     assert not (root / "archive" / "system").exists()
     assert not (tmp_path / "elsewhere").exists()
-    assert _cli(["-C", root, "register", "new", "XX", "drafts"]) == 0
+    assert _cli(["-C", root, "register", "new", "XX", "drafts", "--type", "requirement"]) == 0
 
 
 # ----------------------------------- every reader of the project's files agrees
@@ -187,7 +187,7 @@ def _legacy_v1(root: Path) -> Path:
     """A project in the v1 layout, a `.document.yml` manifest, with no recorded
     format version, so its major must be inferred from what is on disk."""
     assert _cli(["-C", root, "init", "--bare"]) == 0
-    assert _cli(["-C", root, "register", "new", "SR", "system"]) == 0
+    assert _cli(["-C", root, "register", "new", "SR", "system", "--type", "requirement"]) == 0
     assert _cli(["-C", root, "new", "SR", "--type", "system_requirement",
                  "--no-interactive", "--title", "legacy item"]) == 0
     (root / "system" / ".register.yml").rename(root / "system" / ".document.yml")

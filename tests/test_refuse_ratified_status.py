@@ -44,7 +44,7 @@ def test_the_refusal_follows_the_role_not_the_word(tmp_path):
     cfg.write_text(text.replace('ratified = "ratified"', 'ratified = "accepted"')
                    .replace('values = ["proposed",', 'values = ["accepted", "proposed",'),
                    encoding="utf-8")
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent", "--title", "why",
                  "--status", "accepted"]) == 2
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent", "--title", "why",

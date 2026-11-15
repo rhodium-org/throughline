@@ -138,6 +138,7 @@ from .storage import (
     init_project,
     load_project,
     create_register,
+    declare_register_type,
     load_project_at_ref,
     migrate_project,
     write_item,
@@ -320,7 +321,9 @@ def cmd_migrate(args) -> int:
     if getattr(args, "to_gql", False):
         return _migrate_filters(args)
     rc = _migrate_alone(args)
-    if rc == OK and not getattr(args, "beneath", None):
+    # A register left untyped is a finding, not a failure (SR-0350): what the
+    # migration did is kept, so the rest of the advice still holds.
+    if rc in (OK, FINDINGS) and not getattr(args, "beneath", None):
         _advise_signing(args.path)
         _advise_filters(args.path)
     return rc
@@ -550,7 +553,24 @@ def _migrate_alone(args) -> int:
             print(f"  {len(result.stale)} ratified item(s) now await re-ratification "
                   "— `tl ratify` shows that only the flag moved before it asks: "
                   + " ".join(result.stale))
+    if result.untyped:
+        _print_untyped(args.path, result.untyped)
+        return FINDINGS
     return OK
+
+
+def _print_untyped(path, untyped) -> None:
+    """Each register migration left declaring no item type (SR-0350), with the
+    line that types it: an empty register, or one whose items differ, does not
+    say what it is for, so only a person can."""
+    where = _shown_path(path)
+    print(f"{len(untyped)} register(s) declare no item type, so `tl new` there is "
+          "refused without --type; migration cannot tell what an empty register, or "
+          "one whose items differ, is for — declare each (SR-0350):")
+    lines = [f"tl -C {where} register type {prefix} <type>" for prefix, _ in untyped]
+    width = max(len(line) for line in lines)
+    for line, (_, folder) in zip(lines, untyped):
+        print(f"  {line.ljust(width)}   {folder}/")
 
 
 def cmd_register_new(args) -> int:
@@ -563,6 +583,30 @@ def cmd_register_new(args) -> int:
     except ProjectError as e:
         return _err(str(e))
     print(f"created register {reg.prefix} at {reg.path}")
+    return OK
+
+
+def cmd_register_type(args) -> int:
+    """Parse, call :func:`throughline.storage.declare_register_type`, render
+    (SR-0349)."""
+    try:
+        project = load_project(args.path)
+        previous, differing = declare_register_type(project, args.prefix,
+                                                    args.item_type)
+    except ProjectError as e:
+        return _err(str(e))
+    reg = project.registers[args.prefix]
+    if previous == args.item_type:
+        print(f"register {reg.prefix} at {reg.path} already holds {args.item_type} "
+              "— nothing changed")
+    else:
+        was = f" (it held {previous})" if previous else ""
+        print(f"register {reg.prefix} at {reg.path} now holds {args.item_type}{was}; "
+              f"`tl new {reg.prefix}` gives it to items born there")
+    if differing:
+        types = {uid: reg.items[uid].type for uid in differing}
+        print(f"{len(differing)} item(s) there are of another type, which `tl check` "
+              "warns of: " + ", ".join(f"{uid} ({types[uid]})" for uid in differing))
     return OK
 
 
@@ -2511,7 +2555,9 @@ def _migrate_beneath(args) -> int:
         if behind:
             print("nothing was written — run again with --apply to migrate those "
                   "with no uncommitted changes and not in a linked worktree")
-        return OK
+        untyped = {f.root: f.untyped for f in found if f.untyped}
+        _print_untyped_beneath(untyped)
+        return FINDINGS if untyped else OK
 
     outcomes = migrate_beneath.apply(behind)
     skipped = [o for o in outcomes if o.skipped]
@@ -2548,7 +2594,28 @@ def _migrate_beneath(args) -> int:
               "throughline-ratify), or `tl -C <graph> check` to list them:")
         for root, uids in waiting:
             print(f"  {root}  {len(uids)} item(s)")
-    return FINDINGS if failed else OK
+    # What a migrated graph still holds untyped replaces what the survey read
+    # (SR-0350); a graph not migrated is reported as the survey found it.
+    untyped = {f.root: f.untyped for f in found if f.untyped}
+    for o in outcomes:
+        if o.migrated:
+            untyped.pop(o.found.root, None)
+            if o.untyped:
+                untyped[o.found.root] = o.untyped
+    _print_untyped_beneath(untyped)
+    return FINDINGS if failed or untyped else OK
+
+
+def _print_untyped_beneath(untyped: dict) -> None:
+    """Each graph holding a register that declares no item type and that
+    migration cannot type (SR-0350), with its prefixes."""
+    if not untyped:
+        return
+    print(f"{len(untyped)} graph(s) hold a register that declares no item type, so "
+          "`tl new` there is refused without --type — declare each with "
+          "`tl -C <graph> register type <PREFIX> <type>` (SR-0350):")
+    for root, prefixes in untyped.items():
+        print(f"  {root}  {', '.join(prefixes)}")
 
 
 def _print_unmarked(unmarked) -> None:

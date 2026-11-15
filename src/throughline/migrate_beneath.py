@@ -19,7 +19,7 @@ from .sources import schema_source
 from .storage import (CONFIG_NAME, EARLIER_FORMAT_VERSION, FORMAT_VERSION,
                       ProjectError, _declares_gql, _read_format_version, borrowed_statuses_to_retire,
                       load_project, migrate_project,
-                      unsigned_agreement_statuses)
+                      unsigned_agreement_statuses, untyped_registers)
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,9 @@ class Found:
     retires: tuple[str, ...] = ()
     # Its filters are GQL below the format version that says so (SR-0346).
     unmarked: bool = False
+    # The prefixes of its registers that declare no item type and that migration
+    # cannot type (SR-0350); read only where its format is one this Tool reads.
+    untyped: tuple[str, ...] = ()
 
     @property
     def behind(self) -> bool:
@@ -71,9 +74,11 @@ def _found(root: Path) -> Found:
         declared = _read_format_version(config, root)
         unmarked = _declares_gql(config) and \
             EARLIER_FORMAT_VERSION <= declared < FORMAT_VERSION
+        readable = not unmarked and declared in (EARLIER_FORMAT_VERSION, FORMAT_VERSION)
         return Found(root, repository, declared,
                      retires=() if unmarked else _retires(root, config, declared),
-                     unmarked=unmarked)
+                     unmarked=unmarked,
+                     untyped=_untyped(root) if readable else ())
     except (OSError, ValueError, ProjectError) as e:
         return Found(root, repository, None, str(e).splitlines()[0])
 
@@ -95,6 +100,16 @@ def _retires(root: Path, config: dict, declared: int) -> tuple[str, ...]:
         return ()
 
 
+def _untyped(root: Path) -> tuple[str, ...]:
+    """The prefixes of the registers here that declare no item type and that
+    migration cannot type (SR-0350). Writes nothing; a graph that cannot be formed
+    is `tl check`'s to report."""
+    try:
+        return tuple(reg.prefix for reg in untyped_registers(load_project(root)))
+    except ProjectError:
+        return ()
+
+
 def skip_reason(found: Found) -> str | None:
     """Why ``--apply`` must leave this graph alone, or None to migrate it."""
     if found.repository is None:
@@ -112,6 +127,8 @@ class Outcome:
     found: Found
     skipped: str | None = None   # why it was left alone
     failed: str | None = None    # why its migration failed
+    # Its registers still declaring no item type once migrated (SR-0350).
+    untyped: tuple[str, ...] = ()
 
     @property
     def migrated(self) -> bool:
@@ -132,10 +149,10 @@ def apply(graphs: list[Found]) -> list[Outcome]:
             outcomes.append(Outcome(found, skipped=reason))
             continue
         try:
-            migrate_project(found.root)
+            result = migrate_project(found.root)
         except Exception as e:  # noqa: BLE001 - one graph's failure must not stop the rest
             outcomes.append(Outcome(found, failed=(str(e).splitlines() or
                                                    [type(e).__name__])[0]))
             continue
-        outcomes.append(Outcome(found))
+        outcomes.append(Outcome(found, untyped=tuple(p for p, _ in result.untyped)))
     return outcomes

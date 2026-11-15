@@ -458,8 +458,7 @@ def item_type_for(project, prefix: str, explicit: str | None) -> str:
         return reg.type
     raise GroundingError(
         f"register '{prefix}' declares no item type — pass --type, or declare "
-        f"one with `type: <type>` in {reg.path}/.register.yml (`tl migrate` adds "
-        "it where the register's items agree on one)")
+        f"the one it holds with `tl register type {prefix} <type>` (SR-0349)")
 
 
 def check_key(key: str) -> str:
