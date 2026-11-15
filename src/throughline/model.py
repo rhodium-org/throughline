@@ -337,6 +337,14 @@ class Project:
         this project's own file declares."""
         return self.config if self.schema_config is None else self.schema_config
 
+    @property
+    def filter_language(self) -> str:
+        """The language this project's filters are in (SR-0337), read from the
+        configuration without forming the schema, so a filter that asks nothing
+        of the schema never has one formed for it."""
+        declared = (self.formed_config.get("project") or {}).get("filter_language")
+        return declared if declared in ("gql", "python") else "python"
+
     def shell(self, path: Path | None = None) -> "Project":
         """An empty project with this one's configuration and schema, for a view
         or a union built over it."""

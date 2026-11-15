@@ -19,7 +19,7 @@ This list **is** the compatibility surface NFR-0011 names for the library (SR-02
 
 ### Identity of an item
 
-`UID_RE` · `parse_uid` · `format_uid` · `next_uid` · `collisions` · `Index` · `fingerprint` · `revision`
+`UID_RE` · `UidError` · `parse_uid` · `format_uid` · `next_uid` · `collisions` · `Index` · `fingerprint` · `revision`
 
 ### The schema a project declares
 

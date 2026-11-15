@@ -297,10 +297,27 @@ def _describe_requirement(req) -> str:
     return " and ".join(parts)
 
 
+_CTX_GQL_FILTERS = """\
+
+**Filters in this project are GQL search conditions** (`filter_language = "gql"`), \
+in its coverage rules, in `tl query` and in the `tl:` markers of its documents. The \
+item under test is `item`: `item.type = 'requirement' AND item.status <> 'deleted'`; \
+`item.priority IN ['must', 'should']`; `item.text CONTAINS 'shall'`; \
+`item.priority IS NULL`; `item.signed AND NOT item.stale`; a link is tested with \
+`EXISTS { (item)<-[:verifies]-() }` or `EXISTS { (item)-[:implements]->() }`. \
+Equality is `=`, never `==`; not equal is `<>`. An attribute named like a field is \
+`item.attrs.<name>`. Inside a document marker write a link as `-[]->`, never `-->`, \
+which would end the marker."""
+
+
 def _ctx_coverage(schema, inheritance=None) -> str:
     out = ["## Coverage rules\n"]
     if not schema.coverage:
         out.append("_No `[[rules.coverage]]` declared._")
+        # Said only where it holds, so a project in the earlier language is
+        # briefed exactly as it was (SR-0190).
+        if schema.filter_language == "gql":
+            out.append(_CTX_GQL_FILTERS)
         return "\n".join(out)
     out.append("Each rule requires the matching items to have the stated link "
                "(unmet → a `coverage` finding). They are numbered as "
@@ -318,6 +335,8 @@ def _ctx_coverage(schema, inheritance=None) -> str:
             continue
         pos += 1
         out.append(f"{pos}. {line}")
+    if schema.filter_language == "gql":
+        out.append(_CTX_GQL_FILTERS)
     return "\n".join(out)
 
 

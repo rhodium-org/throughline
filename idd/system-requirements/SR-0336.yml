@@ -1,6 +1,6 @@
 uid: SR-0336
 type: system_requirement
-status: ratified
+status: implemented
 title: A filter is a GQL search condition over one item
 text: 'Where a project declares GQL as its filter language (the next requirement),
   a filter shall be a search condition of ISO/IEC 39075:2024 in which the item under

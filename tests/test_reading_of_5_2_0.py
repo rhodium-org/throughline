@@ -890,3 +890,55 @@ def test_a_well_formed_matrix_argument_still_renders(tmp_path, arg):
     project = load_project(_demo(tmp_path))
     out = inject_text(project, f"<!-- tl:matrix {arg} -->\n<!-- tl:end -->\n")
     assert "REQ-0001" in out
+
+
+# ===========================================================================
+# Older issues, checked against 5.8.0 and still there.
+# ===========================================================================
+
+def test_the_refusal_parse_attrs_raises_is_a_name_the_package_exports():
+    """SR-0224: the exported functions raise the Tool's own kinds of error, and a
+    caller relying only on exported names can catch them (issue 67)."""
+    import throughline
+    assert "UidError" in throughline.__all__
+    schema = throughline.Schema.from_config({"types": {"requirement": {}}})
+    with pytest.raises(throughline.UidError):
+        throughline.parse_attrs(schema, "requirement", ["bogus=1"], command="amend",
+                                declared_only=True)
+
+
+def test_nothing_is_allocated_under_a_prefix_two_registers_claim(tmp_path, capsys):
+    """SR-0101: a clash of prefixes fails fast rather than corrupt the graph.
+    `tl check` failed, but `tl new` went on numbering from whichever folder
+    sorted first, without sight of the other's items (issue 142)."""
+    root = _demo(tmp_path)
+    twin = root / "more-requirements"
+    twin.mkdir()
+    (twin / ".register.yml").write_text("prefix: REQ\ndigits: 4\n", encoding="utf-8")
+    before = sorted(p.name for p in root.rglob("REQ-*.yml"))
+    capsys.readouterr()
+
+    assert _cli(["-C", root, "new", "REQ", "--title", "x", "--no-interactive"]) == 2
+
+    assert "declared by 2 registers" in _said(capsys)
+    assert sorted(p.name for p in root.rglob("REQ-*.yml")) == before
+
+
+def test_an_item_that_leaves_the_tombstone_status_carries_no_deletion_record(tmp_path):
+    """SR-0012, SR-0268: the deletion record is a tombstone's. `tl status` moved an
+    unsigned tombstone out and left the record on a live item, which then read as
+    both at once (issue 119)."""
+    root = _demo(tmp_path)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text(encoding="utf-8").replace(
+        'rejected    = ["proposed", "deleted"]',
+        'rejected    = ["proposed", "deleted"]\ndeleted     = ["deferred"]'),
+        encoding="utf-8")
+    assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
+    assert _cli(["-C", root, "delete", "REQ-0001", "--reason", "gone"]) == 0
+    assert load_project(root).get("REQ-0001").deleted is not None
+
+    assert _cli(["-C", root, "status", "REQ-0001", "deferred"]) == 0
+
+    item = load_project(root).get("REQ-0001")
+    assert item.status == "deferred" and item.deleted is None

@@ -1483,6 +1483,19 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
     schema_config, inheritance = schema_inheritance(root, config, base=base)
     project = Project(path=root, config=config, schema_config=schema_config,
                       inheritance=inheritance)
+    # A project's filters are all in one language (SR-0337), and a follower's
+    # coverage rules include its schema source's, so the two must agree.
+    if inheritance is not None:
+        theirs = (inheritance.source_config.get("project") or {}).get(
+            "filter_language") or "python"
+        inherited = ((inheritance.source_config.get("rules") or {}).get("coverage"))
+        if inherited and theirs != project.filter_language:
+            raise ProjectError(
+                f"invalid configuration in {cfg_file}: its filters are in "
+                f"{project.filter_language}, and the coverage rules it takes from "
+                f"its schema source '{inheritance.namespace}' are in {theirs} — a "
+                "project's filters are in one language (SR-0337); set "
+                f'filter_language = "{theirs}" under [project]')
     # Build + validate now, so bad config fails fast (SR-0082). A schema whose
     # declarations are items (SR-0285) is judged again once they are read, so a
     # refusal that those items settle waits for them.
@@ -2076,6 +2089,9 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
         "[project]",
         f"name = {_toml_string(name)}",
         f"format_version = {FORMAT_VERSION}",
+        # The standard's language, since its coverage rules are this graph's too
+        # and a project's filters are all in one (SR-0337).
+        f'filter_language = "{standard.filter_language}"',
         "",
         "# The standard this graph follows: its item types, attributes, links,",
         "# statuses and rules are this graph's schema (SR-0275). Declare here only",
@@ -2207,6 +2223,10 @@ _DEFAULT_CONFIG = '''\
 [project]
 name = "{name}"
 format_version = {format_version}
+# The language this project's filters are in, in its coverage rules and its
+# documents (SR-0337): a GQL search condition over the item, as in
+# item.type = 'requirement' AND item.status <> 'deleted' (SR-0336).
+filter_language = "gql"
 
 # Root item types may exist ungrounded; everything else must reach a root
 # through a grounding link (the scope-avalanche grounding layer). A non_goal is
@@ -2293,7 +2313,7 @@ rejected    = ["proposed", "deleted"]
 
 # Coverage: every live requirement should be verified by a test.
 [[rules.coverage]]
-filter = "type == 'requirement' and status != 'deleted'"
+filter = "item.type = 'requirement' AND item.status <> 'deleted'"
 needs = "incoming:verifies"
 severity = "warning"
 '''
@@ -2334,24 +2354,24 @@ Delete anything here you do not need — the starter is a runway, not a fixture.
 
 ## Requirements
 
-<!-- tl:table type == 'requirement' -->
+<!-- tl:table item.type = 'requirement' -->
 <!-- tl:end -->
 
 ## Non-functional requirements
 
-<!-- tl:table type == 'nfr' -->
+<!-- tl:table item.type = 'nfr' -->
 <!-- tl:end -->
 
 ## Non-goals
 
-<!-- tl:table type == 'non_goal' -->
+<!-- tl:table item.type = 'non_goal' -->
 <!-- tl:end -->
 
 ## Traceability
 
 Each requirement, what it grounds up to, and what verifies it.
 
-<!-- tl:matrix type == 'requirement' -->
+<!-- tl:matrix item.type = 'requirement' -->
 <!-- tl:end -->
 '''
 
