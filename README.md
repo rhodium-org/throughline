@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-302
+305
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 45
@@ -137,7 +137,8 @@ detect items that "violate" a non-goal — that judgement stays with a human.
 ```
 tl init [--name NAME]                         # scaffold a project
 tl init --from-schema <url|path> [--ref REF] [--namespace NS]  # a graph that follows a standard
-tl register new <PREFIX> <dir> [--parent P]   # add a register
+tl register new <PREFIX> <dir> --type T [--parent P]  # add a register holding T, which `tl new` gives items born there
+tl register type <PREFIX> <type>             # declare the item type a register holds (SR-0349)
 tl new <PREFIX> [--uid U] [--type T] [--ground UID] [--key UUID4]  # allocate + create (grounded at birth); a held key creates nothing
 tl link <SRC> <DST> --type <kind> [--stamp]   # add a typed link
 tl delete <UID> --reason "…"                  # propose a deletion: a tombstone a human ratifies (never erased)

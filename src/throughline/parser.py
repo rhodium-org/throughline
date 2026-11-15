@@ -278,9 +278,16 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
     d.add_argument("--digits", type=int, default=4)
     d.add_argument("--parent", default=None)
     d.add_argument("--type", default=None,
-                   help="the item type the register holds; `tl new` gives it to "
-                        "items born there when no --type is named")
+                   help="the item type the register holds, which `tl new` gives "
+                        "items born there; required, never defaulted (SR-0351)")
     d.set_defaults(func=handlers.get("cmd_register_new"))
+    d = dsub.add_parser("type", help="declare the item type an existing register "
+                                     "holds, which `tl new` gives items born there "
+                                     "(SR-0349)")
+    d.add_argument("prefix")
+    d.add_argument("item_type", metavar="type",
+                   help="an item type the project declares or one of its items holds")
+    d.set_defaults(func=handlers.get("cmd_register_type"))
 
     _add_schema_parser(sub, handlers)
 

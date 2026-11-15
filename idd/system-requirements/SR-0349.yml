@@ -1,0 +1,40 @@
+uid: SR-0349
+type: system_requirement
+status: ratified
+title: A person declares the item type of a register that already exists
+text: The Tool shall declare, on a person's command, the item type an existing register
+  holds, replacing any type it declared before, and shall name each live item of
+  the register whose type differs from it. It shall refuse a prefix no register owns
+  and, where the project declares its item types, a type it neither declares nor
+  finds on any of its live items. Wherever the Tool tells a person that a register
+  declares no item type, it shall name this command with that register's prefix.
+rationale: |-
+  Found 15 November 2026 shaping rhodium-org/propertyqr with tl:shape under 5.10.0: the shape script made its registers with `tl register new` and no `--type`, so `tl new INT` was refused, and `tl migrate` (SR-0241) types only a register the Tool laid down or one whose items agree, so every empty register stayed untyped. The one remedy left was the one the refusal named, a hand edit of the `.register.yml`, which the agent brief forbids in the same breath. A type nothing declares and no item holds is most likely a misspelling, which a register would then hand to every item born in it; a type older graphs use without declaring it (intent, test) is still accepted, because items there already hold it.
+
+  Who pays: nobody; a new command, and a refusal that now names it.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+  stamp: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T18:19:42Z'
+  fingerprint: sha256:621faf8fa76f5a69f19bd5a298ead90882d6cb212ba2a7e3235c69828ccc382b
+  content:
+    type: system_requirement
+    text: The Tool shall declare, on a person's command, the item type an existing
+      register holds, replacing any type it declared before, and shall name each
+      live item of the register whose type differs from it. It shall refuse a prefix
+      no register owns and, where the project declares its item types, a type it
+      neither declares nor finds on any of its live items. Wherever the Tool tells
+      a person that a register declares no item type, it shall name this command
+      with that register's prefix.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

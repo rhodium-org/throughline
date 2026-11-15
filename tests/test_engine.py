@@ -376,7 +376,7 @@ def test_registers_with_no_items_warn_rather_than_fail(tmp_path):
     still SR-0146's error, tested above."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
     p = load_project(str(root))
     assert next(p.items(), None) is None
     findings = validate(p, strict=False)
@@ -2209,8 +2209,8 @@ def test_a_refused_cascade_does_not_exit_clean(tmp_path, capsys):
         'proposed = ["ratified", "rejected", "deleted"]\n'
         'ratified = ["suspect", "rejected", "deleted"]\n'
         'rejected = ["deleted"]\n', encoding="utf-8")
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "FR", "features", "--type", "requirement"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",
@@ -2690,8 +2690,8 @@ def _scaffold(tmp_path) -> Path:
     starter (SR-0100)."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "FR", "features", "--type", "requirement"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     return root
@@ -3137,9 +3137,9 @@ def test_register_new_refuses_duplicate_prefix(tmp_path):
     register's items."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system", "--type", "requirement"]) == 0
     # a second register reusing prefix SR into a different folder is refused
-    assert _cli(["-C", str(root), "register", "new", "SR", "system2"]) == 2  # USAGE
+    assert _cli(["-C", str(root), "register", "new", "SR", "system2", "--type", "requirement"]) == 2  # USAGE
     assert not (root / "system2" / ".register.yml").exists()   # nothing written
 
 
@@ -3177,7 +3177,7 @@ def _make_legacy_v1_project(root):
     manifest holding one item, and format_version = 1 — exactly what any released
     tl (0.1.0-0.1.4) wrote before the register rename (SR-0102)."""
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system", "--type", "requirement"]) == 0
     assert _cli(["-C", str(root), "new", "SR", "--type", "system_requirement",
                  "--no-interactive", "--title", "legacy item"]) == 0
     reg = root / "system"
@@ -3321,7 +3321,7 @@ def test_infer_absent_field_from_v2_layout_routes_to_migrate(tmp_path):
     NFR-0010). `tl migrate` then upgrades it to the current major."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "SR", "system"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "SR", "system", "--type", "requirement"]) == 0
     _set_format_version(root, None)
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
@@ -3756,7 +3756,7 @@ def test_migrate_declares_the_vocabularies_a_project_left_open(tmp_path):
     unbuildable, so the declaration changes nothing about what the graph admits."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     cfg = root / "throughline.toml"
@@ -4350,7 +4350,7 @@ def test_register_new_rejects_single_char_prefix(tmp_path, capsys):
     `register new` must reject it up front rather than accept it and corrupt
     numbering (SR-0140)."""
     root = _scaffold(tmp_path)
-    assert _cli(["-C", str(root), "register", "new", "R", "risks"]) == 2
+    assert _cli(["-C", str(root), "register", "new", "R", "risks", "--type", "requirement"]) == 2
     err = capsys.readouterr().err
     assert "not a valid UID prefix" in err and "doc 06" in err
     # The register was not created.
@@ -4360,7 +4360,7 @@ def test_register_new_rejects_single_char_prefix(tmp_path, capsys):
 def test_register_new_accepts_two_char_prefix(tmp_path):
     """The shortest legal prefix (two chars) is accepted (SR-0140)."""
     root = _scaffold(tmp_path)
-    assert _cli(["-C", str(root), "register", "new", "RK", "risks"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "RK", "risks", "--type", "requirement"]) == 0
 
 
 def test_new_machine_origin_is_born_proposed(tmp_path):

@@ -32,8 +32,8 @@ def _scaffold(tmp_path) -> Path:
     one whose change does not."""
     root = tmp_path / "proj"
     assert _cli(["-C", str(root), "init", "--name", "t", "--bare"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "INT", "vision"]) == 0
-    assert _cli(["-C", str(root), "register", "new", "FR", "features"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "INT", "vision", "--type", "intent"]) == 0
+    assert _cli(["-C", str(root), "register", "new", "FR", "features", "--type", "requirement"]) == 0
     assert _cli(["-C", str(root), "new", "INT", "--type", "intent",
                  "--title", "why"]) == 0
     assert _cli(["-C", str(root), "new", "FR", "--type", "requirement",

@@ -13,7 +13,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UID | Title | Implements (incoming) |
 |---|---|---|
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0239, SR-0249 |
-| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326 |
+| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326, SR-0349, SR-0350, SR-0351 |
 | UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271, SR-0344, SR-0347 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188, SR-0270, SR-0343 |
@@ -56,7 +56,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
 | UR-0043 | A graph that follows a standard is started with one command | SR-0283 |
 | UR-0044 | A standard declares its followers' shape as items, and tl check can check followers against it | SR-0285, SR-0286, SR-0287, SR-0288, SR-0289, SR-0290, SR-0291, SR-0292, SR-0293, SR-0294, SR-0295, SR-0296, SR-0299, SR-0320, SR-0321 |
-| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0316 |
+| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0316, SR-0350 |
 | UR-0046 | Proposed until a person signs it | SR-0305, SR-0306, SR-0307, SR-0308, SR-0309, SR-0310, SR-0311, SR-0312, SR-0313, SR-0314, SR-0315, SR-0317, SR-0318, SR-0319 |
 | UR-0047 | A standard's guidance for AI agents arrives with every graph that follows it | SR-0322, SR-0323 |
 | UR-0048 | A release is shown to leave existing graphs as they were, or to say what it changes | SR-0334 |

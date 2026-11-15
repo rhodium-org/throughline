@@ -849,16 +849,82 @@ def _backfill_register_types(root: Path) -> dict[str, str]:
     for reg in project.registers.values():
         if reg.type:
             continue
-        want = _SEEDED_REGISTER_TYPES.get((reg.prefix, reg.title))
+        want = _wanted_register_type(reg)
         if want is None:
-            kinds = {i.type for i in reg.items.values() if not i.is_deleted}
-            if len(kinds) != 1:
-                continue
-            want = kinds.pop()
+            continue
         reg.type = want
         write_manifest(reg)
         written[reg.prefix] = want
     return written
+
+
+def _wanted_register_type(reg) -> str | None:
+    """The type migration declares on ``reg`` when it declares none (SR-0241): the
+    laid-down type for a register `tl init` laid down, else the one type its live
+    items share, else None — an empty register, or one whose items differ, does
+    not say what it is for."""
+    want = _SEEDED_REGISTER_TYPES.get((reg.prefix, reg.title))
+    if want is not None:
+        return want
+    kinds = {i.type for i in reg.items.values() if not i.is_deleted}
+    return kinds.pop() if len(kinds) == 1 else None
+
+
+def untyped_registers(project) -> list:
+    """The registers that declare no item type and that migration cannot type
+    (SR-0350), by prefix. `tl new` there needs --type until a person declares one
+    with `tl register type`. Writes nothing."""
+    return sorted((reg for reg in project.registers.values()
+                   if not reg.type and _wanted_register_type(reg) is None),
+                  key=lambda reg: reg.prefix)
+
+
+def check_register_type(project, item_type: str | None) -> None:
+    """Refuse a register type that is missing, or that the project neither
+    declares nor finds on a live item (SR-0349, SR-0351). Item types are not a
+    closed vocabulary, so a type older graphs use undeclared (intent, test) is
+    accepted where items hold it; one nothing knows is most likely a misspelling,
+    which the register would hand to every item born in it. Never a default:
+    guessing is what SR-0241 removed."""
+    declared = set(project.schema.types)
+    held = {i.type for r in project.registers.values()
+            for i in r.items.values() if not i.is_deleted}
+    known = ", ".join(sorted(declared | held)) or "none"
+    if not item_type:
+        raise ProjectError(f"a register is made with the item type it holds — pass "
+                           f"--type <type>; the types here are {known} (SR-0351)")
+    # A project that declares no item types takes any name as one.
+    if declared and item_type not in declared and item_type not in held:
+        raise ProjectError(f"'{item_type}' is not an item type this project declares "
+                           f"or any of its items holds — the types are {known}; "
+                           f"declare it first with `tl schema type add {item_type} "
+                           "--because <why>`")
+
+
+def declare_register_type(project, prefix: str, item_type: str) -> tuple[str | None, list[str]]:
+    """Declare the item type the register owning ``prefix`` holds (SR-0349),
+    replacing any it declared, and write its manifest. Returns the type it
+    declared before (None when none) and the live items there of another type,
+    which `tl check` warns of. Declaring the type it already holds writes nothing.
+
+    Refuses a prefix no register owns, and a type the project neither declares nor
+    finds on a live item: item types are not a closed vocabulary, so a type older
+    graphs use undeclared (intent, test) is accepted where items hold it, but one
+    nothing knows is most likely a misspelling, which the register would hand to
+    every item born in it."""
+    reg = project.registers.get(prefix)
+    if reg is None:
+        known = ", ".join(sorted(project.registers)) or "none"
+        raise ProjectError(f"no register with prefix '{prefix}' — the registers "
+                           f"here are {known}")
+    check_register_type(project, item_type)
+    previous = reg.type
+    if previous != item_type:
+        reg.type = item_type
+        write_manifest(reg)
+    differing = sorted(uid for uid, i in reg.items.items()
+                       if not i.is_deleted and i.type != item_type)
+    return previous, differing
 
 
 def _remove_withdrawn_source_keys(root: Path) -> tuple[str, ...]:
@@ -1324,6 +1390,9 @@ class MigrationResult(NamedTuple):
     # out of them (SR-0313).
     retired_statuses: tuple[str, ...] = ()
     moved: Mapping[str, str] = _NO_STRINGS
+    # Each register still declaring no item type after the repairs, as
+    # ``(prefix, folder relative to the project)`` (SR-0350).
+    untyped: tuple[tuple[str, str], ...] = ()
 
 
 def migrate_project(path: str | Path, *,
@@ -1383,7 +1452,27 @@ def migrate_project(path: str | Path, *,
                            result.contents, result.unprovable, result.registers,
                            result.lifted,
                            result.withdrawn, result.inherited,
-                           result.retired_statuses, result.moved)
+                           result.retired_statuses, result.moved,
+                           _untyped_after(root))
+
+
+def _untyped_after(root: Path) -> tuple[tuple[str, str], ...]:
+    """The registers still declaring no item type once migration has run
+    (SR-0350), each with its folder as it sits in the project. A project that does
+    not load is `tl check`'s to report, so it names none."""
+    try:
+        project = load_project(root)
+    except ProjectError:
+        return ()
+    return tuple((reg.prefix, _relative_folder(root, reg.path))
+                 for reg in untyped_registers(project))
+
+
+def _relative_folder(root: Path, path) -> str:
+    try:
+        return Path(path).resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
 
 
 # ------------------------------------------------------------------- YAML dump
@@ -2422,6 +2511,8 @@ def create_register(project, prefix: str, directory, *, title: str | None = None
     """Add a register — the prefix-owning collection a UID namespace belongs to
     (SR-0011, SR-0102) — and write its manifest.
 
+    It is made with the item type it holds, never a default (SR-0351).
+
     The prefix must satisfy the UID grammar (SR-0140): one that does not would be
     accepted here and then break allocation for every item it owns. It must also be
     unused, because a prefix owns a namespace across the whole project (SR-0101)
@@ -2438,6 +2529,7 @@ def create_register(project, prefix: str, directory, *, title: str | None = None
         raise ProjectError(f"prefix '{prefix}' is already used by the register at "
                            f"{existing.path} — prefixes must be unique across the "
                            "project")
+    check_register_type(project, item_type)
     reg_dir = root / directory
     # A register the loader will not read would take its items out of the graph
     # without a word, so it is refused where it would be made (SR-0239).

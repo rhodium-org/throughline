@@ -1,0 +1,36 @@
+uid: SR-0351
+type: system_requirement
+status: ratified
+title: A register is made with the item type it holds
+text: 'The Tool shall refuse to create a register unless it is told the item type
+  the register holds, and shall hold that type to the rule it holds a type declared
+  on an existing register to: where the project declares its item types, one it declares
+  or one of its live items holds. It shall never default the type.'
+rationale: |-
+  Asked by the operator on 15 November 2026 with SR-0349: a register made without a type is only found wanting at the first `tl new` in it, often in a script or a skill far from where it was made, as tl:shape's registers were. A default would be the guess SR-0241 removed, when every `tl new TEST` became a requirement. A type held by more than one register stays allowed: aws-supplier-handover holds requirements in two registers and throughline-world's films graph tests in two, on purpose. A duplicate prefix or folder is already refused where the register is made.
+
+  Who pays: every caller of `tl register new` without --type, which is now refused (exit 2) until it names one; a type no item holds must first be declared with `tl schema type add`.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+  stamp: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-15T18:19:50Z'
+  fingerprint: sha256:09a609cbb46980ce6e9f19d0c6e3777895a100acc7736bfa0990a91d727468df
+  content:
+    type: system_requirement
+    text: 'The Tool shall refuse to create a register unless it is told the item
+      type the register holds, and shall hold that type to the rule it holds a type
+      declared on an existing register to: where the project declares its item types,
+      one it declares or one of its live items holds. It shall never default the
+      type.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must

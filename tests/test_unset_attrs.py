@@ -45,9 +45,10 @@ def graph(tmp_path) -> Path:
     assert _cli(["-C", root, "new", "REQ", "--title", "R", "--text", "T.",
                  "--origin", "ai", "--attr", "priority=must", "--ground", "INT-0001",
                  "--no-interactive"]) == 0
-    assert _cli(["-C", root, "register", "new", "MIT", "mitigations"]) == 0
     assert _cli(["-C", root, "schema", "type", "add", "mitigation",
                  "--because", "t"]) == 0
+    assert _cli(["-C", root, "register", "new", "MIT", "mitigations",
+                 "--type", "mitigation"]) == 0
     assert _cli(["-C", root, "schema", "attr", "add", "mitigation", "letter",
                  "--kind", "enum", "--values", "S,T", "--required",
                  "--because", "t"]) == 0
