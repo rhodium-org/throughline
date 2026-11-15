@@ -27,6 +27,12 @@ file the set had touched. Everything the set creates or changes is recorded
 with a machine origin, so it enters the lifecycle as proposed and a person still
 decides (SR-0092).
 
+An item created earlier in the set is named by its label wherever an operation
+names an item: the item it acts on, a link or unlink's target, or a new item's
+link (SR-0352). Each operation is judged against the graph as the set has built it
+so far, so in a project that declares sources the union the set was handed learns
+of every item the set writes, as it writes it.
+
 A set may be applied more than once and changes the graph once (SR-0280, SR-0281).
 A ``new`` operation may carry a ``key``, a UUID version 4 recorded on the item it
 creates; where a live item already carries that key the operation creates nothing,
@@ -47,6 +53,7 @@ from pathlib import Path
 from typing import Callable
 
 from .fingerprint import fingerprint, revision
+from .graph import Index
 from .grounding import GroundingError, refuse_undeclared_link_type, set_status
 from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
                     new_item, parse_attrs)
@@ -112,7 +119,10 @@ the export gave for it (the `revision` field of the item in `tl dump`). Any
 change to the item since the export — its text, title, rationale, links,
 status or any attribute — refuses the set, so a change is never written over a
 newer one. An item created earlier in the same set is named by its label,
-written "$label", and carries no revision.
+written "$label", and carries no revision. A label may stand wherever an item
+is named: an operation's "uid", a link or unlink's "target", or a "target" in a
+new item's "links". It names only an item created earlier in the set, never
+one created later.
 
 Everything the set creates or changes is recorded with origin "ai" and waits
 as proposed: a person decides afterwards. Decisions — ratify, withdraw,
@@ -383,6 +393,28 @@ def _ai_origin(schema) -> str:
     return "ai" if "ai" in origins else sorted(origins)[0]
 
 
+def _with_item(view: GroundingView, item: Item) -> GroundingView:
+    """``view`` with ``item`` as it now stands (SR-0352): found under its UID, and
+    its outgoing edges the links it now carries, each to the key ``view`` finds
+    its target under, so the index and the lookup still name one edge the same
+    way (SR-0212). It is how a set judges an operation over a wider graph after an
+    earlier operation of the same set wrote ``item``."""
+    index = view.index
+    edges = []
+    for link in item.links:
+        found = view.find(link.target)
+        edges.append((found.uid if found is not None else link.target, link.type))
+    items = dict(index.items)
+    items[item.uid] = item
+    index = Index(items=items, forward=index.forward, backward=index.backward) \
+        .with_edges(item.uid, remove=index.forward.get(item.uid, []), add=edges)
+    find = view.find
+
+    def lookup(target: str) -> Item | None:
+        return item if target == item.uid else find(target)
+    return GroundingView(index, lookup)
+
+
 def apply_change_set(project, operations: list[dict], *,
                      view: GroundingView | None = None,
                      find: Callable[[str], Item | None] | None = None,
@@ -398,8 +430,10 @@ def apply_change_set(project, operations: list[dict], *,
     every file and refuses the set the same way. ``view`` and ``find`` let a
     program that grounds over a wider graph than the one it writes — a union with
     its sources — judge links and find targets there (SR-0212); left out, they are
-    the project's own. A ``dry_run`` checks and carries out the set, reports it,
-    and then restores every file."""
+    the project's own. Each item an operation writes is written into that view
+    too, so a later operation in the set judges against the graph as the set has
+    built it, and may name the item by its label (SR-0352). A ``dry_run`` checks
+    and carries out the set, reports it, and then restores every file."""
     schema = project.schema
     find = find or project.get
     root = Path(project.path)
@@ -541,6 +575,17 @@ def apply_change_set(project, operations: list[dict], *,
     roles = schema.status_roles or {}
     initial, proposed = roles.get("initial"), roles.get("proposed")
 
+    def built() -> GroundingView:
+        """The graph as the set has built it so far: the view handed in, kept up
+        to date with every item the set has written (SR-0352), or, with none
+        handed in, the project's own graph as it now stands."""
+        return view if view is not None else own_view(project)
+
+    def wrote(uid: str) -> None:
+        nonlocal view
+        if view is not None:
+            view = _with_item(view, project.get(uid))
+
     def put_forward(item: Item) -> None:
         """Move an item the set changed out of the initial status into proposed,
         as an item the set creates is born (SR-0252): machine-authored content
@@ -561,6 +606,7 @@ def apply_change_set(project, operations: list[dict], *,
         write_item(item, project.register_of(item.uid))
         if item.uid not in changed and item.uid not in created:
             changed.append(item.uid)
+        wrote(item.uid)
 
     try:
         for i, op in enumerate(operations, start=1):
@@ -603,7 +649,7 @@ def apply_change_set(project, operations: list[dict], *,
                 for l in op.get("links", []):
                     refuse_undeclared_link_type(schema, l["type"])
                     target = resolve(l["target"])
-                    parent = (view or own_view(project)).find(target)   # none: a link out
+                    parent = built().find(target)   # none: a link out
                     item.links.append(Link(
                         target=target, type=l["type"],
                         stamp=fingerprint(parent, schema) if parent is not None
@@ -612,6 +658,7 @@ def apply_change_set(project, operations: list[dict], *,
                 if "label" in op:
                     labels[op["label"]] = item.uid
                 created.append(item.uid)
+                wrote(item.uid)
                 result.operations.append(OperationResult(
                     i, kind, item.uid, "created", path.relative_to(root).as_posix()))
                 continue
@@ -629,6 +676,7 @@ def apply_change_set(project, operations: list[dict], *,
                 write_item(item, project.register_of(uid))
                 if uid not in changed and uid not in created:
                     changed.append(uid)
+                wrote(uid)
                 moved = [c for c in outcome.changed if c != "origin"]
                 result.operations.append(OperationResult(
                     i, kind, uid, "amended", ", ".join(moved) or "nothing moved"))

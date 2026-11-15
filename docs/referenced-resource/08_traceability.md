@@ -49,7 +49,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223, SR-0329 |
 | UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234, SR-0266 |
 | UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0236, SR-0238, SR-0240, SR-0247, SR-0332, SR-0345 |
-| UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253 |
+| UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253, SR-0352 |
 | UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265, SR-0342 |
 | UR-0040 | A ratification record says when it was given | SR-0256 |
 | UR-0041 | A graph that follows a standard declares only what it adds | SR-0275, SR-0276, SR-0277, SR-0278, SR-0279 |
