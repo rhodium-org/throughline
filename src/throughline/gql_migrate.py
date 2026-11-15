@@ -12,8 +12,12 @@ the project's own items, to select what the original selects.
 The rewriting is mechanical, because the earlier grammar is closed (SR-0104), but
 the two languages differ where a property is absent: ``attrs.get('p') != 'x'``
 selects an item with no ``p`` and ``item.p <> 'x'`` does not, so that one is
-written ``item.p IS NULL OR item.p <> 'x'``. The check on the project's items is
-what catches a difference this module did not foresee.
+written ``item.p IS NULL OR item.p <> 'x'``. They differ too in what trimming
+removes: ``strip()`` takes every kind of white space from both ends, and TRIM, as
+the standard gives it with no trim character, takes spaces only, so ``strip()``
+is written TRIM and selects differently where a text is edged with a tab or a
+line break. The check on the project's items stops the move where that, or a
+difference this module did not foresee, changes what a filter selects.
 """
 from __future__ import annotations
 
