@@ -388,6 +388,13 @@ attribute named like a field is `item.attrs.<name>`. Inside a document marker
 write a link as `-[]->`, since `-->` would end the marker. A filter is read by
 tl's own parser and is never run as code.
 
+Text and lists are as the standard gives them. In a character string a backslash
+escapes `\\`, `\'`, `\"`, `` \` ``, `\t`, `\b`, `\n`, `\r` and `\f`, and names a
+character as `\u0041` (four hexadecimal digits) or `\U01F600` (six); any other
+backslash sequence is refused. `TRIM` removes spaces from both ends and leaves a
+tab or a line break. `SIZE` is the number of members of a list, as in
+`SIZE(item.signers) > 1`, and is refused on a text.
+
 The language is the project's, set by `filter_language = "gql"` under
 `[project]`. A project that says nothing is read in the earlier language
 (`type == 'requirement' and status != 'deleted'`), exactly as before, and moves

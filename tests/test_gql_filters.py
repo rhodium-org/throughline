@@ -81,7 +81,6 @@ def sel(expr: str) -> list[str]:
     ("item.score > -1", ["FR-1"]),
     ("'security' IN item.tags", ["FR-1"]),
     ("SIZE(item.tags) = 2", ["FR-1"]),
-    ("SIZE(item.title) = 3", ["INT-1"]),
     ("item.priority IS NULL", ["FR-2", "INT-1", "TST-1"]),
     ("item.priority IS NOT NULL", ["FR-1"]),
     ("COALESCE(item.priority, 'none') = 'none'", ["FR-2", "INT-1", "TST-1"]),
@@ -145,6 +144,68 @@ def test_the_item_s_standing_is_read_as_properties():
     assert sel("item.signed") == []
     assert sel("NOT item.signed") == ["FR-1", "FR-2", "INT-1", "TST-1"]
     assert sel("'Ada' IN item.signers") == []
+
+
+# ----------------------------------------------- as the standard gives them
+
+@pytest.mark.parametrize("literal, text", [
+    (r"'a\\b'", "a\\b"), (r"'a\'b'", "a'b"), (r"""'a\"b'""", 'a"b'),
+    (r"'a\`b'", "a`b"), (r"'a\tb'", "a\tb"), (r"'a\bb'", "a\bb"),
+    (r"'a\nb'", "a\nb"), (r"'a\rb'", "a\rb"), (r"'a\fb'", "a\fb"),
+    (r"'\u0041'", "A"), (r"'\u00e9x'", "\u00e9x"), (r"'\U01F600'", "\U0001F600"),
+    (r'"\u0041\r"', "A\r"),
+])
+def test_an_escaped_character_means_what_the_standard_gives_it(literal, text):
+    """SR-0336: a character string literal of ISO/IEC 39075:2024. Its escaped
+    characters are \\\\ \\' \\" \\` \\t \\b \\n \\r \\f, \\uXXXX and \\UXXXXXX."""
+    from throughline.gql import _tokens
+    check_condition(f"item.title = {literal}")
+    assert [t[1] for t in _tokens(f"item.title = {literal}") if t[0] == "string"] == [text]
+
+
+@pytest.mark.parametrize("literal, named", [
+    (r"'a\qb'", r"\\q"), (r"'a\ b'", r"\\ "), (r"'\x41'", r"\\x"),
+    (r"'\u00g1'", r"\\u"), (r"'\u41'", r"\\u"), (r"'\U0041'", r"\\U"),
+    (r"'\UFFFFFF'", r"\\U"), (r"'\0'", r"\\0"),
+])
+def test_any_other_backslash_sequence_is_refused_by_name(literal, named):
+    """SR-0336: never read as some other character. In 5.9.0 '\\r' was the
+    letter r and '\\u0041' the text u0041."""
+    with pytest.raises(FilterError, match=named):
+        check_condition(f"item.title = {literal}")
+
+
+def test_a_backslash_that_ends_the_text_does_not_close_the_string():
+    with pytest.raises(FilterError, match="not closed"):
+        check_condition("item.title = 'a\\")
+
+
+def test_trim_removes_spaces_and_nothing_else():
+    """SR-0336: TRIM with no trim character removes U+0020 from both ends. A
+    tab or a line break stays."""
+    assert sel("TRIM('  Why  ') = item.title") == ["INT-1"]
+    assert sel(r"TRIM('\tWhy\t') = item.title") == []
+    assert sel(r"TRIM(' \tWhy\n ') = '\tWhy\n' AND item.uid = 'INT-1'") == ["INT-1"]
+
+
+@pytest.mark.parametrize("expr", [
+    "SIZE(item.title) = 3", "SIZE('abc') = 3", "SIZE(LOWER(item.title)) = 3",
+    "SIZE(TRIM(item.text)) > 0", "SIZE(item.uid) > 0",
+])
+def test_size_of_a_text_is_refused_by_name(expr):
+    """SR-0336: SIZE is the number of members of a list. In 5.9.0 it gave a
+    text's length."""
+    with pytest.raises(FilterError, match="SIZE.*list"):
+        check_condition(expr)
+
+
+def test_size_of_an_attribute_that_holds_a_text_is_unknown():
+    """What an attribute holds is known only item by item: a text there gives
+    unknown, as LOWER of a list does, and never its length."""
+    check_condition("SIZE(item.priority) = 4")
+    assert sel("SIZE(item.priority) = 4") == []
+    assert sel("SIZE(item.priority) IS NULL AND item.uid = 'FR-1'") == ["FR-1"]
+    assert sel("SIZE(item.tags) = 2") == ["FR-1"]
 
 
 # ------------------------------------------------------------------- refused

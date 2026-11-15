@@ -47,7 +47,13 @@ _TOKEN = re.compile(r"""
     | (?P<name>[A-Za-z][A-Za-z0-9_]*)
     | (?P<symbol><>|<=|>=|[=<>()\[\]{},.:\-])
 """, re.VERBOSE)
-_ESCAPES = {"n": "\n", "t": "\t", "\\": "\\", "'": "'", '"': '"'}
+# The standard's <escaped character>, and the hex digits its two Unicode forms take.
+_ESCAPES = {"\\": "\\", "'": "'", '"': '"', "`": "`", "t": "\t", "b": "\b",
+            "n": "\n", "r": "\r", "f": "\f"}
+_UNICODE = {"u": 4, "U": 6}
+_TEXT_FIELDS = frozenset({"uid", "type", "status", "register", "title", "text",
+                          "rationale"})
+_TEXT_FUNCTIONS = frozenset({"LOWER", "UPPER", "TRIM"})
 
 
 def _refuse(message: str, expr: str, at: int | None = None) -> FilterError:
@@ -105,8 +111,8 @@ def _string(expr: str, start: int) -> tuple[str, int]:
     while i < len(expr):
         ch = expr[i]
         if ch == "\\" and i + 1 < len(expr):
-            out.append(_ESCAPES.get(expr[i + 1], expr[i + 1]))
-            i += 2
+            char, i = _escaped(expr, i)
+            out.append(char)
         elif ch == quote:
             if expr[i + 1:i + 2] == quote:
                 out.append(quote)
@@ -117,6 +123,34 @@ def _string(expr: str, start: int) -> tuple[str, int]:
             out.append(ch)
             i += 1
     raise _refuse("a character string is not closed", expr, start)
+
+
+def _escaped(expr: str, at: int) -> tuple[str, int]:
+    """The character the backslash sequence at ``at`` stands for and the index
+    after it. Any sequence the standard does not give is refused by name: read
+    as some other character, it would make a filter mean what nobody wrote."""
+    mark = expr[at + 1]
+    if mark in _ESCAPES:
+        return _ESCAPES[mark], at + 2
+    digits = _UNICODE.get(mark)
+    if digits:
+        code = expr[at + 2:at + 2 + digits]
+        if len(code) == digits and all(c in "0123456789abcdefABCDEF" for c in code) \
+                and int(code, 16) <= 0x10FFFF:
+            return chr(int(code, 16)), at + 2 + digits
+        raise _refuse(f"'\\{mark}' in a character string is followed by {digits} "
+                      "hexadecimal digits naming a character, as in "
+                      + ("'\\u0041'" if mark == "u" else "'\\U01F600'"), expr, at)
+    raise _refuse(f"'\\{mark}' is not an escaped character: those are \\\\ \\' \\\" "
+                  "\\` \\t \\b \\n \\r \\f, \\uXXXX and \\UXXXXXX", expr, at)
+
+
+def _is_text(node) -> bool:
+    """Whether ``node`` is a text for certain, whatever the item: a character
+    string, a field that is always text, or a function that gives one."""
+    return (node[0] == "lit" and isinstance(node[1], str)) \
+        or (node[0] == "prop" and len(node[2]) == 1 and node[2][0] in _TEXT_FIELDS) \
+        or (node[0] == "func" and node[1] in _TEXT_FUNCTIONS)
 
 
 class _Parser:
@@ -256,6 +290,10 @@ class _Parser:
             self.expect("symbol", ")", f"a closing parenthesis after {name}'s arguments")
             if name != "COALESCE" and len(args) != 1:
                 raise _refuse(f"{name} takes one argument", self.expr, at)
+            if name == "SIZE" and _is_text(args[0]):
+                raise _refuse("SIZE is the number of members of a list, and this "
+                              "is a text: a filter has no function for a text's "
+                              "length", self.expr, at)
             return ("func", name, args)
         if not self.at("symbol", "."):
             if word == ITEM or word == self.other:
@@ -458,10 +496,12 @@ def _call(name: str, args: list):
         return next((a for a in args if a is not None), None)
     value = args[0]
     if name == "SIZE":
-        return len(value) if isinstance(value, (str, list, tuple)) else None
+        return len(value) if isinstance(value, (list, tuple)) else None
     if not isinstance(value, str):
         return None
-    return {"LOWER": value.lower(), "UPPER": value.upper(), "TRIM": value.strip()}[name]
+    if name == "TRIM":      # no trim character given: spaces, and only spaces
+        return value.strip(" ")
+    return value.lower() if name == "LOWER" else value.upper()
 
 
 def _exists(node, env: dict) -> bool:
