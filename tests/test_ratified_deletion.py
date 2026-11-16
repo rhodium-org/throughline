@@ -165,7 +165,10 @@ def test_restore_is_refused_once_the_tombstone_stands(graph, capsys):
     assert _cli(["-C", graph, "delete", "REQ-0001", "--reason", "superseded"]) == 0
     assert _cli(["-C", graph, "ratify", "REQ-0001", "--by", "Ada"]) == 0
     assert _cli(["-C", graph, "restore", "REQ-0001"]) != 0
-    assert "permanent (SR-0093)" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "permanent while its signature stands (SR-0268)" in err
+    assert "`tl withdraw REQ-0001 --reason <why> --by <who>`" in err
+    assert "`tl restore REQ-0001` then brings the item back" in err
     assert _cli(["-C", graph, "delete", "REQ-0003", "--reason", "dropped"]) == 0
     assert _cli(["-C", graph, "restore", "REQ-0003"]) != 0
     assert "retired outright" in capsys.readouterr().err

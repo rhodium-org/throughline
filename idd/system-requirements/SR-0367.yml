@@ -1,0 +1,21 @@
+uid: SR-0367
+type: system_requirement
+status: proposed
+title: tl init writes any project name as valid configuration
+text: tl init shall write the name it is given so that the configuration reads back
+  with that name, whatever characters the name holds.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. tl init --name with a double quote or a backslash wrote a configuration
+  that was not TOML, and ended in a traceback reading it back.
+normative: true
+links:
+- target: UR-0020
+  type: implements
+  stamp: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e
+- target: SR-0100
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai

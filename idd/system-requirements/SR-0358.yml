@@ -1,0 +1,21 @@
+uid: SR-0358
+type: system_requirement
+status: proposed
+title: tl dump refuses an output file it cannot write
+text: Where the file named by tl dump -o cannot be written, the Tool shall refuse
+  in one line naming the file and the reason, with the exit status of a usage error,
+  in a project that declares sources as in one that does not.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. tl dump -o into a folder that is not there ended in a traceback.
+normative: true
+links:
+- target: UR-0015
+  type: implements
+  stamp: sha256:12e5411c13dd4a0d3af1e4ef5211bda7029deb57e1e4c1924bc35193b88a9033
+- target: SR-0055
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai

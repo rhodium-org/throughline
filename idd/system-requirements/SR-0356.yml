@@ -1,0 +1,37 @@
+uid: SR-0356
+type: system_requirement
+status: proposed
+title: A command that changes several files writes all of them or none
+text: 'A command that changes more than one file shall decide every change before
+  it writes any, and shall leave every file as it was where one of them cannot be
+  written or a later item is refused: tl ratify, tl withdraw, tl invalidate and tl
+  review over several items; the ratification of a deletion with the dependents it
+  marks suspect; tl schema attr remove --unset with the configuration and the items;
+  tl migrate --to-gql with the configuration and the documents; and tl resolve. It
+  shall say an item was changed only once the item is written. A tl schema edit shall
+  be read back from the edited text before the text is written, and refused, writing
+  nothing, where it would not read back as the change that was asked for.'
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. A run over several items wrote each as it went, so a refusal or a full
+  disk at the third left two signed and said so; tl schema attr remove --unset wrote
+  the configuration and then the items one by one. Decided: one writer that stages
+  every file beside its target and moves them into place together, putting back what
+  it replaced if a move fails. Rejected: leaving the order of writes as the guarantee,
+  which is none once any write can fail. tl apply already restores what it changed
+  (SR-0252) and is left as it is. Who pays: on a terminal, items confirmed one by
+  one are written together when the run ends, so a run interrupted before its end
+  has signed nothing.'
+normative: true
+links:
+- target: UR-0007
+  type: implements
+  stamp: sha256:a142dc26e095a614394ccaabb32235f72c3d8928efa386fdf10fc720f4eed001
+- target: SR-0199
+  type: relates
+- target: SR-0206
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

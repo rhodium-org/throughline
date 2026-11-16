@@ -9,6 +9,8 @@ storage layer so the on-disk format stays deterministic (SR-0072).
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import re
@@ -141,7 +143,9 @@ from .storage import (
     declare_register_type,
     load_project_at_ref,
     migrate_project,
+    project_snapshot,
     write_item,
+    write_items,
     write_manifest,
 )
 from .uid import (PREFIX_GRAMMAR, UidError, next_uid, number_refusal, parse_uid,
@@ -310,10 +314,11 @@ def cmd_init(args) -> int:
               "edit or delete freely; run `tl check` and `tl docs` to explore.")
     elif made_defaults:
         print("created the default registers (INT/REQ/NFR/NG/TEST) — add items with "
-              "`tl new <PREFIX>`; pass --demo next time for a worked example.")
+              "`tl new <PREFIX>`; leave out --no-demo next time for a worked example.")
     else:
         print("wrote only throughline.toml — add registers with `tl register new`, "
-              "or re-init with --defaults for the standard registers.")
+              "or init again without --bare or --no-defaults for the standard "
+              "registers.")
     return OK
 
 
@@ -692,7 +697,13 @@ def cmd_schema_attr_remove(args) -> int:
                 refusal = attribute_removal_refusal(after, it, args.name)
                 if refusal is not None:
                     return _err(f"{refusal} — nothing was changed")
-        result = schema_ops.apply_change(root, change, args.because)
+        # The configuration and the items that carried the attribute are written
+        # together or not at all (SR-0356).
+        if args.unset and carriers:
+            schema_ops.unset_from(carriers, args.name)
+        result = schema_ops.apply_change(
+            root, change, args.because,
+            items=carriers if args.unset else ())
     except (schema_ops.SchemaOpError, ProjectError, SchemaError) as e:
         return _err(str(e))
     if isinstance(result, schema_ops.Refusal):
@@ -701,7 +712,6 @@ def cmd_schema_attr_remove(args) -> int:
     print(f"{result} — {root / CONFIG_NAME} updated")
     uids = " ".join(it.uid for it in carriers)
     if args.unset and carriers:
-        schema_ops.unset_from(carriers, args.name)
         print(f"  removed '{args.name}' from {len(carriers)} item(s): {uids}")
     elif carriers:
         print(f"  {len(carriers)} item(s) still carry '{args.name}': {uids}")
@@ -769,14 +779,28 @@ def _interactive() -> bool:
         return False
 
 
+def _ask(question: str) -> str | None:
+    """Put ``question`` to the person at the terminal and return the answer,
+    stripped, or None at end of input. The question is written to stderr, where
+    every list a prompt follows is written, so stdout carries only a command's
+    result (SR-0120); `input()` given a prompt would write it to stdout."""
+    print(question, end="", file=sys.stderr, flush=True)
+    try:
+        return input().strip()
+    except EOFError:
+        return None
+
+
 def _pick_item(project, purpose: str, *, allow=None) -> str | None:
     """Type-then-item selector for a command invoked without a UID (SR-0121). Lists
     live items grouped by type, then the chosen type's items by UID and title, so the
     user recognises the item rather than recalling its identifier. Returns the chosen
     UID, or None when the user cancels or nothing is selectable. Non-blocking: an
     empty answer or EOF cancels cleanly (the grounding-picker convention)."""
+    # Live items, unless the caller says which it means: `tl restore` chooses
+    # among tombstones, which no other command offers (SR-0359).
     items = [it for it in project.items()
-             if not it.is_deleted and (allow is None or allow(it))]
+             if (allow(it) if allow is not None else not it.is_deleted)]
     if not items:
         print("no items to choose from.", file=sys.stderr)
         return None
@@ -807,9 +831,8 @@ def _choose(options: list, noun: str):
     """Read a 1-based selection from ``options`` off an interactive prompt. Empty
     input, 'c', or EOF cancels and returns None; an unrecognised entry also cancels
     rather than looping, so the picker never traps the user (SR-0121)."""
-    try:
-        raw = input(f"{noun} number, or [c]ancel [c]: ").strip()
-    except EOFError:
+    raw = _ask(f"{noun} number, or [c]ancel [c]: ")
+    if raw is None:
         return None
     if not raw or raw.lower() == "c":
         return None
@@ -853,9 +876,8 @@ def _resolve_value(value, purpose: str, flag: str, *, options=None, default=None
         for i, o in enumerate(options, 1):
             print(f"  {i:>2}. {o}", file=sys.stderr)
     hint = f" [{default}]" if default else ""
-    try:
-        raw = input(f"{purpose}{hint}: ").strip()
-    except EOFError:
+    raw = _ask(f"{purpose}{hint}: ")
+    if raw is None:
         return None
     if not raw:
         return default  # None when no default -> treated as a cancel by the caller
@@ -1030,7 +1052,7 @@ def cmd_delete(args) -> int:
         return _err(str(e))
     if done is None:
         if retired(project.get(uid), project.schema):
-            print(f"{uid} is already deleted — its tombstone is permanent and was "
+            print(f"{uid} is already deleted — its tombstone stands and was "
                   "left unchanged (SR-0093)")
         else:
             print(f"{uid} is already proposed for deletion — `tl ratify {uid}` "
@@ -1059,8 +1081,11 @@ def cmd_restore(args) -> int:
         project = load_project(args.path)
     except ProjectError as e:
         return _err(str(e))
+    # A tombstone that stands is not offered: there is no proposal to decline
+    # (SR-0268), and offering it would end in a refusal.
     uid = _resolve_uid(project, args.uid, "restore", "UID",
-                       allow=lambda it: it.is_deleted)
+                       allow=lambda it: it.is_deleted
+                       and not retired(it, project.schema))
     if uid is None:
         return USAGE
     try:
@@ -1097,7 +1122,10 @@ def cmd_resolve(args) -> int:
         for path in result.other_conflicts:
             print(f"  still in conflict (not a UID collision): {path}")
         if result.signatures and not args.dry_run:
-            apply_resolution(result)
+            try:
+                apply_resolution(result)
+            except CollisionError as e:
+                return _err(str(e))
             print("staged — run `tl check`, then `git commit` to finish the merge")
         return OK
     kept = "ours" if result.keep == OURS else "theirs"
@@ -1116,7 +1144,10 @@ def cmd_resolve(args) -> int:
         print(f"  {Path(path).stem} in {graph} is itself a UID collision; its links "
               f"follow when you run `tl -C {graph} resolve`")
     if not args.dry_run:
-        apply_resolution(result)
+        try:
+            apply_resolution(result)
+        except CollisionError as e:
+            return _err(str(e))
 
     # What the tool cannot carry across, said rather than left to be discovered.
     for move in result.moves:
@@ -1165,8 +1196,10 @@ def cmd_review(args) -> int:
         moved = review_items(project, uids, all_items=args.all_clean)
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
-    for item in moved:
-        write_item(item, project.register_of(item.uid))
+    try:
+        write_items(project, moved)
+    except OSError as e:
+        return _err(f"cannot write {e.filename}: {e.strerror} — nothing was written")
     print(f"marked {len(moved)} item(s) reviewed at current content")
     return OK
 
@@ -1272,6 +1305,9 @@ def _apply_with(args, project, *, view=None, find=None) -> int:
             text = Path(args.file).read_text(encoding="utf-8")
         except OSError as e:
             return _err(f"cannot read {args.file}: {e}")
+        except UnicodeDecodeError as e:
+            return _err(f"cannot read {args.file} as a change set: it is not UTF-8 "
+                        f"text — {e.reason} at byte {e.start}")
     try:
         operations = parse_change_set(text)
         result = apply_change_set(project, operations, view=view, find=find,
@@ -1367,6 +1403,21 @@ def cmd_query(args) -> int:
     return OK
 
 
+def _emit_dump(text: str, output: str | None) -> int:
+    """Print the dump, or write it to ``output``, refused in one line where that
+    file cannot be written (SR-0358)."""
+    if not output:
+        print(text)
+        return OK
+    try:
+        Path(output).write_text(text + "\n", encoding="utf-8")
+    except OSError as e:
+        return _err(f"cannot write {output}: {e.strerror or e} — nothing was "
+                    "written")
+    print(f"wrote {output}", file=sys.stderr)
+    return OK
+
+
 def cmd_dump(args) -> int:
     """Export the whole project as one documented JSON structure (SR-0055).
 
@@ -1378,12 +1429,7 @@ def cmd_dump(args) -> int:
         return _err(str(e))
     data = build_dump(project, _version())
     text = json.dumps(data, indent=2, default=str, sort_keys=False)
-    if args.output:
-        Path(args.output).write_text(text + "\n", encoding="utf-8")
-        print(f"wrote {args.output}", file=sys.stderr)
-    else:
-        print(text)
-    return OK
+    return _emit_dump(text, args.output)
 
 
 def _print_coverage(rules, fmt: str, scope: str = "") -> int:
@@ -1430,7 +1476,9 @@ def cmd_diff(args) -> int:
     def state(ref):
         if ref is None:
             return load_project(args.path), None
-        return load_project_at_ref(args.path, ref)
+        return load_project_at_ref(
+            args.path, ref, to=f"read the graph as it stood at {ref}: `tl diff` "
+                               "compares git revisions")
     try:
         was, was_sha = state(args.frm)
         now, now_sha = state(args.to)
@@ -1709,11 +1757,8 @@ def _confirm(question: str) -> bool:
     it needs to say. Silence, EOF and anything unrecognised all decline — the
     default must never be the irreversible answer.
     """
-    try:
-        raw = input(f"{question} [y/N]: ").strip().lower()
-    except EOFError:
-        return False
-    return raw in ("y", "yes")
+    raw = _ask(f"{question} [y/N]: ")
+    return raw is not None and raw.lower() in ("y", "yes")
 
 
 _UNSEEN_CHANGE = (
@@ -1802,6 +1847,8 @@ def cmd_ratify(args) -> int:
         if by is None:
             return USAGE
     rc = OK
+    changed: list = []                  # every item this run signs or marks
+    said: list = []                     # (stream, line), said once all is written
     for item in items:
         uid = item.uid
         change = changes[uid]
@@ -1854,50 +1901,68 @@ def cmd_ratify(args) -> int:
         try:
             item = ratify(project, uid, by=by, index=idx, by_id=by_id,
                           replacing=args.replacing, role=role, cascade=cascade)
-        except IdentityError as e:
-            return _err(str(e))
-        except (ProjectError, GroundingError, SchemaError) as e:
-            return _err(str(e))
-        write_item(item, project.register_of(item.uid))
+        except (IdentityError, ProjectError, GroundingError, SchemaError) as e:
+            # Nothing has been written (SR-0356): every item is signed in memory,
+            # and the files are written together once the last one is.
+            return _err(str(e) if not changed
+                        else f"{e} — nothing in this run was ratified")
+        changed.append(item)
         signed = latest(item)
         where = standing(item, schema)
         # "ratified" only when the item now counts as such (SR-0260); a signature
         # that leaves the item short of what its kind requires says so.
         if item.is_deleted:
-            rc = _report_retirement(project, uid, signed, where, cascade) or rc
+            rc = _report_retirement(project, uid, signed, where, cascade,
+                                    changed, said) or rc
         elif where.met:
-            print(f"{uid} ratified by {describe(signed)}")
+            said.append((sys.stdout, f"{uid} ratified by {describe(signed)}"))
         else:
-            print(f"{uid} signed by {describe(signed)} — {where.describe()}; "
-                  "not yet ratified")
+            said.append((sys.stdout, f"{uid} signed by {describe(signed)} — "
+                         f"{where.describe()}; not yet ratified"))
+    return _write_and_say(project, changed, said, rc)
+
+
+def _write_and_say(project, changed: list, said: list, rc: int) -> int:
+    """Write every item a run changed, or none (SR-0356), and only then say what
+    was done: a line about an item that was not written would be untrue."""
+    try:
+        write_items(project, changed)
+    except (OSError, ProjectError) as e:
+        why = getattr(e, "strerror", None) or str(e)
+        where = getattr(e, "filename", None)
+        return _err(f"cannot write {where or 'the items'}: {why} — nothing was "
+                    "written")
+    for stream, line in said:
+        if stream is sys.stderr:
+            sys.stdout.flush()
+        print(line, file=stream)
     return rc
 
 
-def _report_retirement(project, uid: str, signed: dict, where, cascade: Cascade) -> int:
-    """Write and report what ratifying a deletion did (SR-0269, SR-0270): the
-    dependents the cascade marked suspect, and the ones its lifecycle refused —
-    reported as `tl invalidate` reports them, so a cascade that did not fully
-    happen never reads as one that did (SR-0173)."""
+def _report_retirement(project, uid: str, signed: dict, where, cascade: Cascade,
+                       changed: list, said: list) -> int:
+    """What ratifying a deletion did (SR-0269, SR-0270): the dependents the
+    cascade marked suspect, added to ``changed`` for the caller to write with the
+    tombstone, and the ones its lifecycle refused — reported as `tl invalidate`
+    reports them, so a cascade that did not fully happen never reads as one that
+    did (SR-0173). The lines are added to ``said``."""
+    out, err = sys.stdout, sys.stderr
     if not where.met:
-        print(f"{uid} deletion signed by {describe(signed)} — {where.describe()}; "
-              "not yet retired")
+        said.append((out, f"{uid} deletion signed by {describe(signed)} — "
+                     f"{where.describe()}; not yet retired"))
         return OK
-    for dep in cascade.marked:
-        write_item(project.get(dep), project.register_of(dep))
-    print(f"{uid} deletion ratified by {describe(signed)} — retired; "
-          f"{len(cascade.marked)} dependent(s) marked suspect")
-    for dep in cascade.marked:
-        print(f"  {dep}")
+    changed.extend(project.get(dep) for dep in cascade.marked)
+    said.append((out, f"{uid} deletion ratified by {describe(signed)} — retired; "
+                 f"{len(cascade.marked)} dependent(s) marked suspect"))
+    said.extend((out, f"  {dep}") for dep in cascade.marked)
     if cascade.refused:
-        sys.stdout.flush()
-        print(f"{len(cascade.refused)} dependent(s) could not be marked suspect:",
-              file=sys.stderr)
-        for r in cascade.refused:
-            print(f"  {r.uid}: {r.frm} -> {r.to} is not a declared transition",
-                  file=sys.stderr)
-        print("their grounding rests on an item that is now retired and nothing "
-              "records it; declare the move under [transitions] to close the gap",
-              file=sys.stderr)
+        said.append((err, f"{len(cascade.refused)} dependent(s) could not be "
+                     "marked suspect:"))
+        said.extend((err, f"  {r.uid}: {r.frm} -> {r.to} is not a declared "
+                     "transition") for r in cascade.refused)
+        said.append((err, "their grounding rests on an item that is now retired "
+                     "and nothing records it; declare the move under [transitions] "
+                     "to close the gap"))
         return FINDINGS
     return OK
 
@@ -1914,9 +1979,11 @@ def cmd_invalidate(args) -> int:
         result = invalidate(project, target, reason=args.reason or "")
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
-    write_item(project.get(target), project.register_of(target))
-    for uid in result.marked:
-        write_item(project.get(uid), project.register_of(uid))
+    try:
+        write_items(project, [project.get(target),
+                              *(project.get(uid) for uid in result.marked)])
+    except OSError as e:
+        return _err(f"cannot write {e.filename}: {e.strerror} — nothing was written")
     print(f"{target} invalidated; {len(result.marked)} dependent(s) marked suspect")
     for uid in result.marked:
         print(f"  {uid}")
@@ -1978,8 +2045,11 @@ def cmd_withdraw(args) -> int:
         return _err(str(e))
     except (ProjectError, GroundingError, SchemaError) as e:
         return _err(str(e))
+    try:
+        write_items(project, items)
+    except OSError as e:
+        return _err(f"cannot write {e.filename}: {e.strerror} — nothing was written")
     for item in items:
-        write_item(item, project.register_of(item.uid))
         whose = item.withdrawals[-1].get(W_OF)
         where = standing(item, project.schema)
         after = (f"still ratified, {where.describe()}" if where.met
@@ -2319,12 +2389,7 @@ def _composed_dump(args) -> int:
         data["composition"] = dump_composition(res, view, local=False)
 
     text = json.dumps(data, indent=2, default=str, sort_keys=False)
-    if args.output:
-        Path(args.output).write_text(text + "\n", encoding="utf-8")
-        print(f"wrote {args.output}", file=sys.stderr)
-    else:
-        print(text)
-    return OK
+    return _emit_dump(text, args.output)
 
 
 def _composed_docs(args) -> int:
@@ -2482,12 +2547,32 @@ def _composed_ratify(args) -> int:
     index = Index.build(union.project)
     by_id = getattr(args, "by_id", None)
     role = getattr(args, "role", None)
-    for uid in uids:
-        obstacle = ratification_obstacle(consumer.schema, index, consumer.get(uid),
-                                         replacing=getattr(args, "replacing", False),
-                                         by=by, by_id=by_id)
+    replacing = getattr(args, "replacing", False)
+    named, uids = uids, []
+    passed_over: list[str] = []
+    for uid in named:
+        item = consumer.get(uid)
+        obstacle = ratification_obstacle(consumer.schema, index, item,
+                                         replacing=replacing, by=by, by_id=by_id)
         if obstacle is not None:
-            return _err(obstacle + (" — nothing in this run was ratified" if len(uids) > 1 else ""))
+            # One of several that this person has already signed, unchanged since,
+            # is said and passed over, as it is in a project with no sources
+            # (SR-0342, SR-0363); it is no reason to refuse the rest.
+            own = None if len(named) == 1 or replacing else own_signature_standing(
+                consumer.schema, index, item, by=by, by_id=by_id)
+            if own is not None:
+                passed_over.append(f"{uid} is already signed by {describe(own)} and "
+                                   "has not changed since: left as it is")
+                continue
+            return _err(obstacle + (" — nothing in this run was ratified"
+                                    if len(named) > 1 else ""))
+        uids.append(uid)
+    for line in passed_over:
+        print(line, file=sys.stderr)
+    if not uids:
+        print("every item named is already signed and unchanged: nothing was signed",
+              file=sys.stderr)
+        return OK
     # Signed links that moved go in the path of the new signature (SR-0246). Only
     # those: this command has always re-signed moved content unshown, tools built
     # on it rely on that, and a project that declares no signed links must behave
@@ -2502,6 +2587,9 @@ def _composed_ratify(args) -> int:
             if uid in changes and not getattr(args, "accept_change", False):
                 return _err(_UNSEEN_CHANGE.format(
                     uid=uid, who=names(consumer.get(uid)) or "a human"))
+    rc = OK
+    changed: list = []
+    said: list = []
     for uid in uids:
         if interactive and uid in changes:
             for line in render_change(
@@ -2513,27 +2601,38 @@ def _composed_ratify(args) -> int:
             if not _confirm(f"ratify {uid} as {by}?"):
                 print(f"{uid} not ratified", file=sys.stderr)
                 continue
+        # The dependents a retirement marks are the consumer's own: a borrowed
+        # item is never written (NG-0008), and the walk is made over the graph
+        # the items are written to (SR-0270, SR-0363).
+        cascade = Cascade()
         try:
             item = ratify(consumer, uid, by, index=index, by_id=by_id,
-                          replacing=getattr(args, "replacing", False), role=role)
-        except IdentityError as e:
-            return _err(str(e))
-        except GroundingError as e:
-            return _err(str(e))
-        write_item(item, consumer.register_of(uid))
+                          replacing=replacing, role=role, cascade=cascade)
+        except (IdentityError, GroundingError) as e:
+            return _err(str(e) if not changed
+                        else f"{e} — nothing in this run was ratified")
+        changed.append(item)
         signed = latest(item)
         where = standing(item, consumer.schema)
-        if where.met:
-            print(f"{uid} ratified by {describe(signed)}")
+        if item.is_deleted:
+            rc = _report_retirement(consumer, uid, signed, where, cascade,
+                                    changed, said) or rc
+        elif where.met:
+            said.append((sys.stdout, f"{uid} ratified by {describe(signed)}"))
         else:
-            print(f"{uid} signed by {describe(signed)} — {where.describe()}; "
-                  "not yet ratified")
-    return OK
+            said.append((sys.stdout, f"{uid} signed by {describe(signed)} — "
+                         f"{where.describe()}; not yet ratified"))
+    return _write_and_say(consumer, changed, said, rc)
 
 
 def _migrate_beneath(args) -> int:
     """Every graph beneath the given paths: listed (SR-0301), or migrated where it
     is safe to rewrite (SR-0302..SR-0304). Nothing is ever committed."""
+    # A path that is not there holds no graphs, and its parent's are not the
+    # ones asked for (SR-0368): refused before anything is searched.
+    for given in args.beneath:
+        if not Path(given).exists():
+            return _err(f"--beneath {given}: no such file or directory")
     found = migrate_beneath.survey(args.beneath)
     behind = [f for f in found if f.behind]
     unmarked = [f for f in found if f.unmarked]
@@ -2562,6 +2661,7 @@ def _migrate_beneath(args) -> int:
     outcomes = migrate_beneath.apply(behind)
     skipped = [o for o in outcomes if o.skipped]
     failed = [o for o in outcomes if o.failed]
+    undone = [o for o in outcomes if o.undone]
     if skipped:
         print(f"skipped {len(skipped)} graph(s):")
         for o in skipped:
@@ -2570,6 +2670,16 @@ def _migrate_beneath(args) -> int:
         print(f"failed to migrate {len(failed)} graph(s):")
         for o in failed:
             print(f"  {o.found.root} — {o.failed}")
+        # All of them or none (SR-0304): what this run had already migrated is
+        # back as it stood, and the graphs after the failure were not reached.
+        if undone:
+            print(f"put back {len(undone)} graph(s) this run had migrated before "
+                  "it, as they stood:")
+            for o in undone:
+                print(f"  {o.found.root}")
+        print("nothing was migrated — mend the graph that failed, or migrate the "
+              "others one at a time with `tl -C <graph> migrate`")
+        return FINDINGS
     by_repo: dict[Path, int] = {}
     for o in outcomes:
         if o.migrated:
@@ -2687,42 +2797,62 @@ def _composed_migrate(args) -> int:
     can only add."""
     if getattr(args, "to_gql", False):
         return _migrate_filters(args)
-    rc = _migrate_alone(args)
-    if rc != OK or getattr(args, "beneath", None):
+    if getattr(args, "beneath", None) or getattr(args, "apply", False):
         # Over many graphs each is migrated alone (SR-0304): the -C project's
         # sources have nothing to say about them.
-        return rc
+        return _migrate_alone(args)
 
-    # The project is loadable from here — the repair has upgraded it if it needed it.
-    consumer, sources = _declared_sources(args)
-    if consumer is None:  # pragma: no cover - cmd_migrate would have failed first
-        return sources
-    if not sources:
-        _advise_signing(args.path)
-        _advise_filters(args.path)
-        return OK
-
-    res, union, rc = _resolve_union(consumer, sources, args.path)
-    if rc is not None:
-        return rc
-
+    # Both passes or neither (SR-0355): what the first wrote is put back, and
+    # what it would have reported is not said, where the second cannot be made.
+    if not (Path(args.path) / CONFIG_NAME).is_file():
+        return _migrate_alone(args)            # refused there: no project to walk
     try:
-        bound = migrate_project(args.path,
-                                index=Index.build(union.project)).bound
-    except ProjectError as e:  # pragma: no cover - the first pass proved it migrates
-        return _err(str(e))
+        snapshot = project_snapshot(Path(args.path))
+    except OSError as e:
+        return _err(f"cannot read the project at {args.path}: {e.strerror or e}")
+    said = io.StringIO()
+    with contextlib.redirect_stdout(said):
+        rc = _migrate_alone(args)
+    if rc not in (OK, FINDINGS):
+        return rc
 
-    # Reported separately: what distinguishes these records is *why* they could be
-    # completed — the composition justified an item the consumer's own graph could
-    # not.
-    if bound:
-        print(f"bound {len(bound)} further ratification record(s) whose item is "
-              "grounded through a composed source, and so could not be justified "
-              "by this graph alone:")
-        for uid, stamp in bound.items():
-            print(f"  {uid} = {stamp}")
+    def undo(code: int) -> int:
+        snapshot.restore()
+        print("tl: the migration was not finished, so the project was put back as "
+              "it stood — nothing was migrated", file=sys.stderr)
+        return code
+
+    # The project is loadable from here — the repair has upgraded it if it needed
+    # it. A register left untyped is a finding, not a failure (SR-0350): the
+    # union's pass and the advice follow it all the same (SR-0366).
+    consumer, sources = _declared_sources(args)
+    if consumer is None:
+        return undo(sources)
+    if sources:
+        res, union, failed = _resolve_union(consumer, sources, args.path)
+        if failed is not None:
+            return undo(failed)
+        try:
+            bound = migrate_project(args.path,
+                                    index=Index.build(union.project)).bound
+        except ProjectError as e:
+            _err(str(e))
+            return undo(USAGE)
+    sys.stdout.write(said.getvalue())
+    if sources:
+        # Reported separately: what distinguishes these records is *why* they
+        # could be completed — the composition justified an item the consumer's
+        # own graph could not.
+        if bound:
+            print(f"bound {len(bound)} further ratification record(s) whose item is "
+                  "grounded through a composed source, and so could not be "
+                  "justified by this graph alone:")
+            for uid, stamp in bound.items():
+                print(f"  {uid} = {stamp}")
     _advise_signing(args.path)
-    return OK
+    if not sources:
+        _advise_filters(args.path)
+    return rc
 
 
 def _composed_link(args) -> int:

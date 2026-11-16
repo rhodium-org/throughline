@@ -140,15 +140,30 @@ def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
         raise GroundingError(f"'{to}' is not a declared status")
     if not deleting:
         refuse_tombstone_status(schema, to)
+    # No status change leaves the tombstone status (SR-0360), whatever the
+    # project's transitions say and where it declares none: a deletion is undone
+    # by declining it, which returns the item to the status it held and is refused
+    # while a signature stands on it (SR-0268). Asked before the transitions, so
+    # the refusal names the way out, not a missing edge.
+    if not deleting and item.is_deleted and to != item.status:
+        raise GroundingError(
+            f"{item.uid} is deleted, and no status change brings a deleted item "
+            f"back: `tl restore {item.uid}` declines a deletion nobody has signed, "
+            "and returns the item to the status it held")
     refusal = transition_refusal(schema, item, to)
     if refusal is not None:
         raise GroundingError(refusal)
-    # An item that leaves the tombstone status is no tombstone, so the record of
-    # its deletion goes with the status, as it does when a deletion is declined
-    # (SR-0012, SR-0268). Left behind, the item reads as live and deleted at once.
-    if not deleting and item.is_deleted and to != item.status:
-        item.deleted = None
     item.status = to
+
+
+def tombstone_refusal(uid: str) -> str:
+    """What every refusal to change a tombstone says (SR-0093, SR-0268). A
+    deletion is not permanent for being a deletion: one nobody has signed is
+    declined with `tl restore`, and a signed one is permanent while its signature
+    stands, which is why the refusal names the way back and promises no more."""
+    return (f"{uid} is deleted, and a tombstone is not changed (SR-0093) — "
+            f"`tl restore {uid}` brings back an item whose deletion nobody has "
+            "signed")
 
 
 def refuse_tombstone_status(schema, status: str | None) -> None:
@@ -224,6 +239,15 @@ def is_flagged_ambiguous(item: Item) -> bool:
     return item.attrs.get(AMBIGUOUS_ATTR) is True
 
 
+def suspect_reasons(item: Item) -> list:
+    """The list ``item`` records its reasons for suspicion in, made where the
+    item holds none: the key written with no value is the same as absent."""
+    held = item.attrs.get("suspect_reasons")
+    if held is None:
+        held = item.attrs["suspect_reasons"] = []
+    return held
+
+
 def ambiguity_report(item: Item) -> str:
     """What check reports for ``item``'s ambiguity flag. `tl clarify` copies this
     into its record, so the record holds the words the person removing the flag was
@@ -232,7 +256,7 @@ def ambiguity_report(item: Item) -> str:
     A flag raised when the item was created carries no reason (SR-0223), which left
     the author nothing to act on, so the report names the gap and the operation that
     fills it (SR-0222)."""
-    recorded = "; ".join(item.attrs.get("suspect_reasons", []))
+    recorded = "; ".join(item.attrs.get("suspect_reasons") or [])
     return recorded or (
         f"flagged ambiguous with no reason recorded — `tl flag {item.uid} "
         "--reason ...` records one")
@@ -709,7 +733,7 @@ def cascade_suspicion(project, idx: Index, uid: str, note: str, *,
             result.refused.append(Refusal(aid, dep.status, suspect))
             continue
         dep.status = suspect
-        reasons = dep.attrs.setdefault("suspect_reasons", [])
+        reasons = suspect_reasons(dep)
         reasons.append(note)
         result.marked.append(aid)
     return result
@@ -859,7 +883,7 @@ def withdraw(project, uids, *, by: str, reason: str,
         item.withdrawals.append(record)
         if moves:
             set_status(schema, item, suspect)
-            item.attrs.setdefault("suspect_reasons", []).append(
+            suspect_reasons(item).append(
                 f"ratification by {entry.get(BY)} withdrawn by {by}: {reason}")
         items.append(item)
     return items
@@ -874,7 +898,7 @@ def clarification_refusal(project, uid: str) -> str | None:
     if item is None:
         return f"{uid} does not exist"
     if item.is_deleted:
-        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+        return tombstone_refusal(uid)
     if not is_flagged_ambiguous(item):
         return f"{uid} carries no ambiguity flag to remove"
     return None
@@ -922,7 +946,7 @@ def flag_refusal(project, uid: str) -> str | None:
     if item is None:
         return f"{uid} does not exist"
     if item.is_deleted:
-        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+        return tombstone_refusal(uid)
     return None
 
 
@@ -951,7 +975,7 @@ def flag(project, uid: str, *, by: str, reason: str) -> Item:
         raise GroundingError(refusal)
     item = project.get(uid)
     item.attrs[AMBIGUOUS_ATTR] = True
-    item.attrs.setdefault("suspect_reasons", []).append(
+    suspect_reasons(item).append(
         f"flagged ambiguous by {by}: {reason}")
     return item
 

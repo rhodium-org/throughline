@@ -1,0 +1,30 @@
+uid: SR-0363
+type: system_requirement
+status: proposed
+title: Ratifying in a project with sources passes over and retires as it does alone
+text: In a project that declares sources, tl ratify of several items shall pass over
+  an item the person has already signed, unchanged since, and sign the rest, as SR-0342
+  requires; and tl ratify of a proposed deletion with dependents shall sign it and
+  mark the project's own dependents suspect, as SR-0270 requires. Neither shall be
+  refused because the project has sources.
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. The command took a second path in a project with sources: one item already
+  signed refused the whole run, and a deletion with dependents was always refused
+  with the words a library gives a caller that passes no cascade. Only the project''s
+  own items are marked: a borrowed item is never written (NG-0008).'
+normative: true
+links:
+- target: UR-0037
+  type: implements
+  stamp: sha256:e0f8d104325a950c3ac9b96d33840991fd5f9163a36e84f9c11a0abef6c2ca22
+- target: SR-0342
+  type: relates
+- target: SR-0270
+  type: relates
+- target: SR-0151
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

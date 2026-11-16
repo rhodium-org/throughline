@@ -54,7 +54,8 @@ from typing import Callable
 
 from .fingerprint import fingerprint, revision
 from .graph import Index
-from .grounding import GroundingError, refuse_undeclared_link_type, set_status
+from .grounding import (GroundingError, refuse_undeclared_link_type, set_status,
+                        tombstone_refusal)
 from .items import (amend_item, check_key, delete_item, item_type_for, keyed_item,
                     new_item, parse_attrs)
 from .links import GroundingView, LinkError, add_link, own_view, remove_link
@@ -162,7 +163,9 @@ The five operations:
 
 Applying a set twice changes the graph once: an operation whose result the
 graph already holds (a link already there, an amend whose fields already read
-so, a delete of a deleted item) is skipped and reported as already applied.
+so, a delete of a deleted item) is skipped and reported as already applied. A
+link with "stamp": true is already there only while its stamp is the target's
+fingerprint: where the target has changed since, the link is stamped again.
 
 Rules: no other keys; a "uid", "target" or "label" is written exactly; every
 value is a string except "attrs" (strings, numbers, booleans, or a list of strings
@@ -475,7 +478,7 @@ def apply_change_set(project, operations: list[dict], *,
         elif op["op"] == "delete" and item.is_deleted:
             held.add(i)
         elif item.is_deleted:
-            problems.append(f"{name}: {uid} is deleted — a tombstone is permanent")
+            problems.append(f"{name}: {tombstone_refusal(uid)}")
         elif holds(op, item):
             held.add(i)
             key, now = version(op, item)
@@ -498,10 +501,19 @@ def apply_change_set(project, operations: list[dict], *,
             target = resolved(op["target"])
             if target is None:
                 return False
-            there = any(l.target == target and (op.get("type") is None
-                                                or l.type == op["type"])
-                        for l in item.links)
-            return there if kind == "link" else not there
+            same = [l for l in item.links
+                    if l.target == target and (op.get("type") is None
+                                               or l.type == op["type"])]
+            if kind == "unlink":
+                return not same
+            # A link that asks for a stamp is held only while the stamp is the
+            # target's fingerprint (SR-0365): where the target has moved, the
+            # operation is carried out and the link stamped again.
+            if same and op.get("stamp"):
+                dst = find(target)
+                now = fingerprint(dst, schema) if dst is not None else None
+                return all(l.stamp == now for l in same)
+            return bool(same)
         if kind == "amend":
             for field_name in ("title", "text", "rationale"):
                 if field_name in op and getattr(item, field_name) != op[field_name]:
@@ -703,7 +715,7 @@ def apply_change_set(project, operations: list[dict], *,
                      else "retired" if done.outright else "deletion proposed"),
                     op.get("reason", "")))
     except (GroundingError, LinkError, UidError, SchemaError, ProjectError,
-            ValueError) as e:
+            ValueError, OSError) as e:
         _restore(root, before)
         raise ChangeSetError([f"#{i} {kind} {op.get('uid', op.get('register', ''))}: "
                               f"{e}"]) from None

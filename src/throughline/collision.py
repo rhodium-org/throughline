@@ -40,6 +40,7 @@ from types import SimpleNamespace
 
 import yaml
 
+from .atomic import write_all
 from .resolvers import ResolverError, resolve_source
 from .signed_links import LINKS_ATTR
 from .sources import SourceError, parse_sources
@@ -116,20 +117,62 @@ class Plan:
 
 # --------------------------------------------------------------------- git plumbing
 
-def _git(top: Path, *args: str, check: bool = True) -> str | None:
-    done = subprocess.run(["git", "-C", str(top), *args],
-                          capture_output=True, text=True)
+def _git_bytes(top: Path, *args: str, check: bool = True) -> bytes | None:
+    done = subprocess.run(["git", "-C", str(top), *args], capture_output=True)
     if done.returncode != 0:
         if check:
+            said = done.stderr.decode("utf-8", errors="replace").strip()
             raise CollisionError(f"git {' '.join(args)} failed: "
-                                 f"{done.stderr.strip() or done.returncode}")
+                                 f"{said or done.returncode}")
         return None
     return done.stdout
 
 
+def _git(top: Path, *args: str, check: bool = True) -> str | None:
+    """What a git command printed. Read as UTF-8 with nothing translated, and a
+    byte that is not UTF-8 shown as the replacement character: this is for what
+    is only reported (a path, a commit subject, a line of prose), never for an
+    item file, which :func:`_show` reads and refuses (SR-0357)."""
+    out = _git_bytes(top, *args, check=check)
+    return None if out is None else out.decode("utf-8", errors="replace")
+
+
+def _text(data: bytes, where: str) -> str:
+    """``data`` as the text of an item or manifest, line endings as they are
+    (SR-0364), refused where it is not UTF-8 (SR-0357): a file the Tool may have
+    to rewrite is never read by guessing at its bytes."""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise CollisionError(
+            f"{where} is not UTF-8 text ({e.reason} at byte {e.start}), so it "
+            "cannot be read — correct the file, then run tl resolve again") from e
+
+
+_STAGES = {"1": "the merge base", "2": "ours", "3": "theirs"}
+
+
+def _where(spec: str) -> str:
+    """A blob's ``rev:path`` or ``:stage:path`` as a reader is told of it."""
+    if spec.startswith(":"):
+        stage, _, path = spec[1:].partition(":")
+        return f"{path} ({_STAGES.get(stage, stage)})"
+    rev, _, path = spec.partition(":")
+    return f"{path} (at {rev})"
+
+
 def _show(top: Path, spec: str) -> str | None:
     """A blob by ``rev:path`` or ``:stage:path``, or None when it is absent."""
-    return _git(top, "show", spec, check=False)
+    out = _git_bytes(top, "show", spec, check=False)
+    return None if out is None else _text(out, _where(spec))
+
+
+def _read(top: Path, rel: str) -> str:
+    """The working tree's file at ``rel``, as :func:`_show` reads a blob."""
+    try:
+        return _text((top / rel).read_bytes(), rel)
+    except OSError as e:
+        raise CollisionError(f"cannot read {rel}: {e.strerror or e}") from e
 
 
 def _rev(top: Path, name: str) -> str | None:
@@ -209,8 +252,8 @@ def _path_sources(root: Path) -> list[tuple[str, dict[str, str], Path]]:
     try:
         config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
         sources = parse_sources(SimpleNamespace(config=config), withdrawn="ignore")
-    except (OSError, tomllib.TOMLDecodeError, SourceError):
-        return []
+    except (OSError, ValueError, SourceError):
+        return []                     # not TOML, or not UTF-8: no sources to read
     out = []
     for src in sources:
         if src.path is None:
@@ -277,14 +320,29 @@ def _rel(top: Path, root: Path) -> str:
 
 # ----------------------------------------------------------------- text rewriting
 
-def _load(text: str | None) -> dict:
+def _load(text: str | None, where: str = "an item file") -> dict:
+    """The mapping an item or manifest file holds; empty where it holds none.
+    Text that is not YAML is no item (a file still carrying conflict markers is
+    not), but a value YAML recognises and cannot build, such as a date that is
+    not in the calendar, is refused by name (SR-0357): the file was meant as an
+    item, and reading it as empty would move nothing it links to."""
     if text is None:
         return {}
     try:
         data = _load_yaml(text)
     except yaml.YAMLError:
         return {}
+    except (ValueError, RecursionError) as e:
+        why = " ".join(str(e).split()) or type(e).__name__
+        raise CollisionError(
+            f"{where} holds a value that cannot be read ({why}) — correct the "
+            "file, then run tl resolve again") from e
     return data if isinstance(data, dict) else {}
+
+
+def _item(top: Path, spec: str) -> dict:
+    """The mapping the blob at ``spec`` holds."""
+    return _load(_show(top, spec), _where(spec))
 
 
 def _targets(data: dict) -> list[str]:
@@ -295,7 +353,9 @@ def _targets(data: dict) -> list[str]:
             if isinstance(ln, dict) and isinstance(ln.get("target"), str)]
 
 
-_UID_LINE = re.compile(r"^(uid:[ \t]*)(['\"]?)([A-Z][A-Z0-9]*-[0-9]+)\2([ \t]*)$",
+# The line ending is kept with the line (SR-0364): `$` stops before a line feed
+# but not before the carriage return of a CRLF ending.
+_UID_LINE = re.compile(r"^(uid:[ \t]*)(['\"]?)([A-Z][A-Z0-9]*-[0-9]+)\2([ \t]*\r?)$",
                        re.MULTILINE)
 _TARGET = re.compile(r"^(\s*(?:-\s+)?target:[ \t]*)(['\"]?)"
                      r"((?:[a-z][a-z0-9_-]*:)*[A-Z][A-Z0-9]*-[0-9]+)\2([ \t]*)$")
@@ -322,7 +382,7 @@ def rewrite(text: str, mapping: dict[str, str], *, uid: str | None = None,
 
     The edit is made on the text so the file keeps its exact layout, and then
     proven on the parse: anything other than the intended change is refused."""
-    before = _load(text)
+    before = _load(text, where or "an item file")
     lines = text.splitlines(keepends=True)
     out: list[str] = []
     in_links = False
@@ -356,18 +416,32 @@ def _register(top: Path, directory: str, revs: list[str]) -> tuple[str, int, set
     """(prefix, digits, reserved) for the register in ``directory``, read from the
     working tree or, failing that, from whichever side has the manifest."""
     rel = f"{directory}/{MANIFEST_NAME}"
-    texts = [(top / rel).read_text(encoding="utf-8")
-             if (top / rel).is_file() else None]
-    texts += [_show(top, f"{rev}:{rel}") for rev in revs]
+    texts = [(rel, _read(top, rel) if (top / rel).is_file() else None)]
+    texts += [(f"{rev}:{rel}", _show(top, f"{rev}:{rel}")) for rev in revs]
     reserved: set[int] = set()
     prefix, digits = None, 4
-    for text in texts:
-        data = _load(text)
+    for where, text in texts:
+        data = _load(text, where)
         if not data.get("prefix"):
             continue
         prefix = prefix or str(data["prefix"])
-        digits = int(data.get("digits", digits) or digits)
-        reserved |= {int(n) for n in data.get("reserved") or [] if str(n).isdigit()}
+        # Refused, not guessed at (SR-0357): the number of a renumbered item is
+        # written with these digits, and may be none of these reserved ones.
+        width = data.get("digits")
+        if width is not None:
+            if isinstance(width, bool) or not isinstance(width, int) or width < 1:
+                raise CollisionError(
+                    f"{where}: 'digits' is {width!r}, not a whole number of digits "
+                    "— correct the manifest, then run tl resolve again")
+            digits = width
+        held = data.get("reserved")
+        if held is not None:
+            if not isinstance(held, list) or any(
+                    isinstance(n, bool) or not isinstance(n, int) for n in held):
+                raise CollisionError(
+                    f"{where}: 'reserved' is {held!r}, not a list of numbers — "
+                    "correct the manifest, then run tl resolve again")
+            reserved |= set(held)
     if prefix is None:
         raise CollisionError(f"{directory} has no register manifest")
     return prefix, digits, reserved
@@ -415,7 +489,9 @@ def _merge_signatures(top: Path, path: str) -> SignatureMerge | None:
     list (SR-0265), or ``None`` where it reaches any other field. Every entry
     from both sides is kept, one per signer: where one person signed on both
     sides, the later signature stands."""
-    ours, theirs = _load(_show(top, f":2:{path}")), _load(_show(top, f":3:{path}"))
+    ours_text = _show(top, f":2:{path}")
+    ours = _load(ours_text, _where(f":2:{path}"))
+    theirs = _item(top, f":3:{path}")
     if not ours or not theirs:
         return None
     rest = lambda data: {k: v for k, v in data.items() if k != _SIGNATURES}  # noqa: E731
@@ -432,8 +508,11 @@ def _merge_signatures(top: Path, path: str) -> SignatureMerge | None:
     merged = dict(ours)
     merged[_SIGNATURES] = entries
     from .storage import _dump_yaml
+    text = _dump_yaml(merged)
+    if "\r\n" in (ours_text or ""):
+        text = text.replace("\n", "\r\n")          # as the file was (SR-0364)
     return SignatureMerge(
-        path=path, text=_dump_yaml(merged),
+        path=path, text=text,
         kept=[f"{e.get('by') or _signer(e)} ({e.get('at') or 'no date'})"
               for e in entries])
 
@@ -566,7 +645,7 @@ def plan(project_path: str | Path, *, keep: str | None = None,
             cunmerged = _unmerged(top, cscope)
             pending = {p for p, st in cunmerged.items() if st == {2, 3}}
             for path in sorted(pending & set(_changed(top, base, moved_rev, cscope))):
-                if set(_targets(_load(_show(top, f"{moved_rev}:{path}")))) & set(qualified):
+                if set(_targets(_item(top, f"{moved_rev}:{path}"))) & set(qualified):
                     result.deferred.append((cscope or ".", path))
             result.relinks += _relinks(top, result, cscope, qualified, cunmerged,
                                        pending, moved, graph=cscope or ".")
@@ -608,15 +687,15 @@ def _relinks(top: Path, result: Plan, scope: str, mapping: dict[str, str],
     for path in sorted(set(_changed(top, result.base, result.moved_rev, scope)) - collided):
         if not path.endswith(".yml") or Path(path).name == MANIFEST_NAME:
             continue
-        hits = sorted(set(_targets(_load(_show(top, f"{result.moved_rev}:{path}"))))
+        hits = sorted(set(_targets(_item(top, f"{result.moved_rev}:{path}")))
                       & set(mapping))
         if not hits:
             continue
         where = moved.get(path, path)
         if path not in moved:
-            theirs_too = set(_targets(_load(_show(top, f"{result.base}:{path}"))))
+            theirs_too = set(_targets(_item(top, f"{result.base}:{path}")))
             if path in kept_changed:
-                theirs_too |= set(_targets(_load(_show(top, f"{result.kept_rev}:{path}"))))
+                theirs_too |= set(_targets(_item(top, f"{result.kept_rev}:{path}")))
             clash = sorted(theirs_too & set(hits))
             if clash:
                 raise CollisionError(
@@ -630,7 +709,7 @@ def _relinks(top: Path, result: Plan, scope: str, mapping: dict[str, str],
         work = top / where
         if not work.is_file():
             continue                      # the kept side deleted it; nothing to relink
-        text, count = rewrite(work.read_text(encoding="utf-8"), mapping, where=where)
+        text, count = rewrite(_read(top, where), mapping, where=where)
         if count:
             signed = {t for _, t in _signed(text)}
             out.append(Relink(path=where, text=text, count=count,
@@ -693,17 +772,22 @@ def _what_cannot_move(top: Path, result: Plan, mapping: dict[str, str]) -> None:
 def apply(result: Plan) -> list[str]:
     """Write and stage the planned resolution; returns the paths staged. The
     merge is left for the author to check and commit."""
-    staged: list[str] = []
+    # Every file or none (SR-0356), each with the line endings it was read with
+    # (SR-0364).
+    files: dict[Path, bytes] = {}
     for move in result.moves:
-        (result.top / move.path).write_text(move.kept_text, encoding="utf-8")
-        (result.top / move.new_path).write_text(move.moved_text, encoding="utf-8")
-        staged += [move.path, move.new_path]
+        files[result.top / move.path] = move.kept_text.encode("utf-8")
+        files[result.top / move.new_path] = move.moved_text.encode("utf-8")
     for relink in result.relinks:
-        (result.top / relink.path).write_text(relink.text, encoding="utf-8")
-        staged.append(relink.path)
+        files[result.top / relink.path] = relink.text.encode("utf-8")
     for merged in result.signatures:
-        (result.top / merged.path).write_text(merged.text, encoding="utf-8")
-        staged.append(merged.path)
+        files[result.top / merged.path] = merged.text.encode("utf-8")
+    try:
+        write_all(files)
+    except OSError as e:
+        raise CollisionError(f"cannot write {e.filename or 'the resolution'}: "
+                             f"{e.strerror or e} — nothing was written") from e
+    staged = [p.relative_to(result.top).as_posix() for p in files]
     if staged:
         _git(result.top, "add", "--", *staged)
     if result.moves:

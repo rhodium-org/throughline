@@ -1,0 +1,34 @@
+uid: SR-0355
+type: system_requirement
+status: proposed
+title: A migration that cannot be finished leaves the project as it found it
+text: Where tl migrate cannot finish, because a step refuses part-way or, in a project
+  that declares sources, the sources cannot be resolved for the pass made over the
+  union, it shall leave every file of the project as it was before the command ran,
+  report none of what it had done, and say that nothing was migrated.
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. A migration is a sequence of steps that each rewrite the tree: a format-1
+  project with one register holding a manifest under both names was left with its
+  other manifests renamed, and a format-3 project whose source was missing was left
+  migrated by the first pass and refused by the second. Decided: remember what the
+  steps may rewrite (the configuration, and every file of each register folder) before
+  the first, and put it back where one fails. Rejected: rewriting each step to plan
+  in memory, which is every repair written again for no difference a keeper could
+  see; and migrating a copy, since the repairs read the project''s git history where
+  it lies. The process being killed between two writes is not covered. Who pays:
+  a project whose source cannot be reached is no longer migrated at all, where its
+  own pass used to be kept; its keeper restores the source and runs the command again.'
+normative: true
+links:
+- target: UR-0015
+  type: implements
+  stamp: sha256:12e5411c13dd4a0d3af1e4ef5211bda7029deb57e1e4c1924bc35193b88a9033
+- target: SR-0137
+  type: relates
+- target: SR-0153
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

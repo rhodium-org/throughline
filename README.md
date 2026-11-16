@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-305
+320
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 45
@@ -345,7 +345,10 @@ demo and the self-host graph are gated in CI and by the pre-commit hook.
 - **delete** — propose a deletion. The file stays as a tombstone and `check`
   reports it `unratified` until a human ratifies it; meanwhile the item is still
   live scope, so nothing downstream changes. An item nobody signed, with no signed
-  dependent, is retired outright. `restore` declines a proposed deletion.
+  dependent, is retired outright. `restore` declines a proposed deletion. A
+  signed deletion is permanent while its signature stands: one signed in error
+  is undone by `withdraw`, which removes that signature, and then `restore`. No
+  status change brings a deleted item back.
 - **invalidate** — falsify an assumption (or any node): it is rejected and every
   transitive dependent is marked `suspect` (its blast radius).
 - **withdraw** — set aside a signature that should no longer stand (wrong name,

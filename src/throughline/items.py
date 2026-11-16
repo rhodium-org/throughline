@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from .fingerprint import fingerprint
 from .grounding import (
+    tombstone_refusal,
     refuse_tombstone_status, refuse_undeclared_link_type,
     AMBIGUOUS_ATTR,
     GroundingError,
@@ -216,7 +217,7 @@ def amend_item(project, uid: str, *, title: str | None = None,
     if item is None:
         raise GroundingError(f"{uid} does not exist")
     if retired(item, project.schema):
-        raise GroundingError(f"{uid} is deleted — a tombstone is permanent (SR-0093)")
+        raise GroundingError(tombstone_refusal(uid))
     if item.is_deleted:
         raise GroundingError(
             f"{uid} is proposed for deletion — `tl restore {uid}` first to change "
@@ -328,9 +329,9 @@ def delete_item(project, uid: str, *, reason: str = "unspecified") -> Deletion |
     unless nothing signed is undone, when the item is retired outright (SR-0272).
     None when it was already a tombstone.
 
-    A tombstone is permanent, and so is what it records, so an item already retired
-    is left exactly as it stands rather than gaining a second date and reason over
-    the first; a tombstone still proposed is left as proposed. The item is changed
+    A tombstone that stands is left exactly as it is, and so is what it records,
+    rather than gaining a second date and reason over the first; a tombstone still
+    proposed is left as proposed. The item is changed
     and returned to the caller to write."""
     item = project.get(uid)
     if item is None:
@@ -372,8 +373,10 @@ def restore_item(project, uid: str) -> Item:
     """Return a proposed deletion to the status the item held (SR-0268): the
     deletion record goes, the status comes back, and no signature is touched —
     the item's own signatures still cover its content. Refused once the tombstone
-    stands (SR-0093): a ratified deletion is withdrawn with `tl withdraw` first,
-    and an outright retirement is permanent. The item is changed and returned to
+    stands (SR-0268): a signed deletion is permanent while its signature stands,
+    so one signed in error has that signature withdrawn first (`tl withdraw`) and
+    is then declined here, the only way such a deletion is undone; an outright
+    retirement had no proposal to decline. The item is changed and returned to
     the caller to write."""
     item = project.get(uid)
     if item is None:
@@ -384,12 +387,13 @@ def restore_item(project, uid: str) -> Item:
     if record.get(OUTRIGHT):
         raise GroundingError(
             f"{uid} was retired outright — nothing signed was undone, so there is "
-            "no proposal to decline; a tombstone is permanent (SR-0093)")
+            "no proposal to decline, and the tombstone stands (SR-0268)")
     if retired(item, project.schema):
         raise GroundingError(
-            f"{uid}'s deletion is ratified by {names(item)} — a tombstone is "
-            f"permanent (SR-0093); `tl withdraw {uid}` removes a signature that "
-            "should not stand")
+            f"{uid}'s deletion is ratified by {names(item)} — a signed deletion "
+            "is permanent while its signature stands (SR-0268). If it was signed in "
+            f"error, `tl withdraw {uid} --reason <why> --by <who>` removes the "
+            f"signature, and `tl restore {uid}` then brings the item back")
     was = record.get("from")
     if not isinstance(was, str) or not was:
         raise GroundingError(

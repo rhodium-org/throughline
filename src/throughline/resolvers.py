@@ -253,8 +253,8 @@ def _sparse_patterns(root: Path, subdir: str) -> list[str]:
     if config.is_file():
         try:
             paths = (tomllib.loads(config.read_text(encoding="utf-8")).get("docs") or {}).get("paths") or []
-        except (tomllib.TOMLDecodeError, OSError):
-            paths = []
+        except (tomllib.TOMLDecodeError, UnicodeDecodeError, OSError):
+            paths = []                    # refused by name when the source is loaded
         for doc in paths:
             if not isinstance(doc, str) or not doc.strip():
                 continue
