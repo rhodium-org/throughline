@@ -239,6 +239,15 @@ def is_flagged_ambiguous(item: Item) -> bool:
     return item.attrs.get(AMBIGUOUS_ATTR) is True
 
 
+def suspect_reasons(item: Item) -> list:
+    """The list ``item`` records its reasons for suspicion in, made where the
+    item holds none: the key written with no value is the same as absent."""
+    held = item.attrs.get("suspect_reasons")
+    if held is None:
+        held = item.attrs["suspect_reasons"] = []
+    return held
+
+
 def ambiguity_report(item: Item) -> str:
     """What check reports for ``item``'s ambiguity flag. `tl clarify` copies this
     into its record, so the record holds the words the person removing the flag was
@@ -247,7 +256,7 @@ def ambiguity_report(item: Item) -> str:
     A flag raised when the item was created carries no reason (SR-0223), which left
     the author nothing to act on, so the report names the gap and the operation that
     fills it (SR-0222)."""
-    recorded = "; ".join(item.attrs.get("suspect_reasons", []))
+    recorded = "; ".join(item.attrs.get("suspect_reasons") or [])
     return recorded or (
         f"flagged ambiguous with no reason recorded — `tl flag {item.uid} "
         "--reason ...` records one")
@@ -724,7 +733,7 @@ def cascade_suspicion(project, idx: Index, uid: str, note: str, *,
             result.refused.append(Refusal(aid, dep.status, suspect))
             continue
         dep.status = suspect
-        reasons = dep.attrs.setdefault("suspect_reasons", [])
+        reasons = suspect_reasons(dep)
         reasons.append(note)
         result.marked.append(aid)
     return result
@@ -874,7 +883,7 @@ def withdraw(project, uids, *, by: str, reason: str,
         item.withdrawals.append(record)
         if moves:
             set_status(schema, item, suspect)
-            item.attrs.setdefault("suspect_reasons", []).append(
+            suspect_reasons(item).append(
                 f"ratification by {entry.get(BY)} withdrawn by {by}: {reason}")
         items.append(item)
     return items
@@ -966,7 +975,7 @@ def flag(project, uid: str, *, by: str, reason: str) -> Item:
         raise GroundingError(refusal)
     item = project.get(uid)
     item.attrs[AMBIGUOUS_ATTR] = True
-    item.attrs.setdefault("suspect_reasons", []).append(
+    suspect_reasons(item).append(
         f"flagged ambiguous by {by}: {reason}")
     return item
 

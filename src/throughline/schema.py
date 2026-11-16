@@ -331,7 +331,16 @@ def check_shape(config: dict) -> None:
                 if rule.get(key) is not None and not isinstance(rule[key], str):
                     raise SchemaError(f"coverage rule {n} {key} must be text, not "
                                       f"{_article(rule[key])}")
-    _is_names(_is_table(config.get("docs"), "[docs]").get("paths"), "[docs] paths")
+    paths = _is_table(config.get("docs"), "[docs]").get("paths")
+    _is_names(paths, "[docs] paths")
+    for pattern in paths or []:
+        # A document is found by a pattern relative to the project; an empty one
+        # or an absolute one is no pattern the search can take.
+        if not pattern.strip():
+            raise SchemaError("[docs] paths holds an empty pattern")
+        if pattern.startswith(("/", "\\")) or (len(pattern) > 1 and pattern[1] == ":"):
+            raise SchemaError(f"[docs] paths holds {shown(pattern)}, an absolute "
+                              "path: a document is named relative to the project")
 
 @dataclass(frozen=True)
 class AttrSpec:

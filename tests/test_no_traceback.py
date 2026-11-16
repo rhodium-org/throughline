@@ -345,6 +345,9 @@ _FOUND: set[str] = {
     "vision/INT-0001.yml::alias-loop",
     "vision/INT-0001.yml::no-such-day",
     "vision/INT-0001.yml::text::3",
+    # Found by the whole run over this release before it was made.
+    "throughline.toml::docs.paths.0::6",
+    "requirements/REQ-0003.yml::attrs.suspect_reasons::0",
 }
 
 
@@ -364,12 +367,20 @@ _NAMED = {
         "throughline.toml as a project's configuration: it is not UTF-8 text"),
     "configuration-table-is-a-list": (
         "throughline.toml", lambda raw: b'links = ["relates"]\n'
-        + raw.replace(b"[links]\n", b"[links_was]\n"),
+        + raw.replace(b"[links]", b"[links_was]"),
         "[links] must be a table, not a list"),
     "configuration-names-are-not-a-list": (
         "throughline.toml", lambda raw: raw.replace(
             b'root_types = [', b'root_types = "intent"\nwas = ['),
         "[grounding] root_types must be a list of names, not a string"),
+    "document-pattern-empty": (
+        "throughline.toml", lambda raw: raw.replace(
+            b'paths = ["docs/*.md"]', b'paths = [""]'),
+        "[docs] paths holds an empty pattern"),
+    "document-pattern-absolute": (
+        "throughline.toml", lambda raw: raw.replace(
+            b'paths = ["docs/*.md"]', b'paths = ["/srv/docs/*.md"]'),
+        "an absolute path: a document is named relative to the project"),
     "item-not-utf8": (
         "requirements/REQ-0001.yml", lambda raw: raw + b"note: caf\xe9\n",
         "REQ-0001.yml as an item: it is not UTF-8 text"),
