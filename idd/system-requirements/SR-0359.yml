@@ -1,0 +1,25 @@
+uid: SR-0359
+type: system_requirement
+status: proposed
+title: tl restore offers the deletions that can be declined
+text: Run with no UID on a terminal, tl restore shall offer the tombstones whose
+  deletion nobody has signed and that were not retired outright, and no other item.
+  The picker of every other command shall offer no tombstone.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. The picker left tombstones out for every command and tl restore then
+  asked it for tombstones only, so it offered nothing. A tombstone that stands is
+  not offered because choosing it could only end in a refusal (SR-0268).
+normative: true
+links:
+- target: UR-0002
+  type: implements
+  stamp: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7
+- target: SR-0121
+  type: refines
+- target: SR-0268
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai

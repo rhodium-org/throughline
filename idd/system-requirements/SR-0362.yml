@@ -1,0 +1,19 @@
+uid: SR-0362
+type: system_requirement
+status: proposed
+title: tl --help says what the program is
+text: tl --help shall describe the program in a sentence written for the person reading
+  the help, not with the documentation of the module that builds the command line.
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. It read: The shape of the command line: every command, its arguments
+  and its help.'
+normative: true
+links:
+- target: UR-0020
+  type: implements
+  stamp: sha256:7b3b500e08392e0f4d829feaaa45c82138684a7d51ca0a1ce747defc3c76596e
+attrs:
+  priority: should
+  verification: test
+  origin: ai

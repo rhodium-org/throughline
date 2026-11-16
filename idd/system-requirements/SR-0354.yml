@@ -1,0 +1,41 @@
+uid: SR-0354
+type: system_requirement
+status: proposed
+title: A file a project holds never ends a command in an unhandled error
+text: 'Every command that reads a project shall refuse, in one line that names the
+  file and what is wrong with it, with its usual exit status for a refusal and writing
+  nothing, where: the configuration is not UTF-8 text, is not TOML, or holds a table
+  or a list of names where the schema is built from another kind of value; an item
+  or manifest file is not UTF-8 text, holds a value YAML recognises and cannot build
+  (a date that is not in the calendar), holds a value that contains itself, or holds
+  a list or a mapping under a key the Tool reads as one value; or a document it renders
+  is not UTF-8 text. No such file shall stop a command with an unhandled error.'
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. tl stopped with a Python traceback on a configuration that was not TOML,
+  on files that were not UTF-8, on a date such as 2026-13-45, and on about 1,400
+  variants of a graph with a value of the wrong kind. SR-0324 refuses a file that
+  is not YAML, not a mapping or without a uid, and SR-0134 turns a malformed link
+  or record into a finding; neither reaches a file that parses and holds the wrong
+  kind of value, or a configuration. Decided: refuse as the file is read, in the
+  one reader each kind of file has, so no command meets the value. Rejected: catching
+  every error where the command line dispatches, which would hide the Tool''s own
+  faults as refusals; and refusing a scalar of another kind than the Tool writes
+  (a title YAML read as a number), which graphs hold today and every command but
+  tl docs already read. Who pays: a project holding such a file is refused by every
+  command until the file is corrected, where some commands answered before; a test
+  mutates the Tool''s own fixtures one value at a time and runs every command over
+  each.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+  stamp: sha256:d6b8e3d3df4f70a813778c3c4c46b383ed1539ca61d524e53d5eb2dc15f675f8
+- target: SR-0324
+  type: refines
+- target: SR-0134
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai

@@ -1,0 +1,30 @@
+uid: SR-0357
+type: system_requirement
+status: proposed
+title: tl resolve refuses a file it cannot read
+text: tl resolve shall refuse, in one line that names the file and writing nothing,
+  where an item or manifest file it reads is not UTF-8 text or holds a value YAML
+  recognises and cannot build, or a register manifest's digits is not a whole number
+  of one or more or its reserved is not a list of whole numbers. What it only reports
+  and never rewrites, prose and the subjects of commits, it shall read whatever the
+  encoding.
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. tl resolve stopped with a traceback on each: a manifest with digits:
+  many or reserved: 7, a file of the moved side that was not UTF-8, an item holding
+  2026-13-45. A number written with the wrong digits, or one the manifest reserved,
+  is a UID nobody can take back once merged, so the manifest is refused and not guessed
+  at. Rejected: refusing a merge because a text file beside the graph is in another
+  encoding; such a file is only searched for mentions of the moved UID, and both
+  other builds carry on past it.'
+normative: true
+links:
+- target: UR-0026
+  type: implements
+  stamp: sha256:26c11d6feeecd5e5004c45eb6cddcb52c951858d462d1642c237f546643d4bcc
+- target: SR-0248
+  type: refines
+attrs:
+  priority: must
+  verification: test
+  origin: ai
