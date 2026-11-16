@@ -10,15 +10,15 @@ linked worktree (SR-0303) — and commits nothing (SR-0304).
 """
 from __future__ import annotations
 
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 from . import discovery
+from .schema import SchemaError
 from .sources import schema_source
 from .storage import (CONFIG_NAME, EARLIER_FORMAT_VERSION, FORMAT_VERSION,
                       ProjectError, _declares_gql, _read_format_version, borrowed_statuses_to_retire,
-                      load_project, migrate_project,
+                      load_project, migrate_project, project_snapshot, read_config,
                       unsigned_agreement_statuses, untyped_registers)
 
 
@@ -70,7 +70,7 @@ def survey(paths: list[str | Path]) -> list[Found]:
 def _found(root: Path) -> Found:
     repository = discovery.repository_of(root)
     try:
-        config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
+        config = read_config(root / CONFIG_NAME)
         declared = _read_format_version(config, root)
         unmarked = _declares_gql(config) and \
             EARLIER_FORMAT_VERSION <= declared < FORMAT_VERSION
@@ -130,17 +130,22 @@ class Outcome:
     # Its registers still declaring no item type once migrated (SR-0350).
     untyped: tuple[str, ...] = ()
 
+    # Migrated, then put back as it stood because a later graph failed (SR-0304).
+    undone: bool = False
+
     @property
     def migrated(self) -> bool:
-        return self.skipped is None and self.failed is None
+        return self.skipped is None and self.failed is None and not self.undone
 
 
 def apply(graphs: list[Found]) -> list[Outcome]:
     """Migrate each graph that is due (behind the current format, or holding a
-    status to retire, SR-0316) and safe to rewrite,
-    carrying on past any that fails (SR-0304). Sources are not resolved: the
-    migration is the one a graph gets alone, which is lossless and offline."""
+    status to retire, SR-0316) and safe to rewrite, all of them or none
+    (SR-0304): where one fails, every graph this run migrated before it is put
+    back as it stood, and each is reported as undone. Sources are not resolved:
+    the migration is the one a graph gets alone, which is lossless and offline."""
     outcomes: list[Outcome] = []
+    done: list[tuple[int, object]] = []        # (index in outcomes, its snapshot)
     for found in graphs:
         if not found.due:
             continue
@@ -148,11 +153,16 @@ def apply(graphs: list[Found]) -> list[Outcome]:
         if reason is not None:
             outcomes.append(Outcome(found, skipped=reason))
             continue
+        snapshot = project_snapshot(found.root)
         try:
             result = migrate_project(found.root)
-        except Exception as e:  # noqa: BLE001 - one graph's failure must not stop the rest
+        except (ProjectError, SchemaError, OSError, ValueError) as e:
             outcomes.append(Outcome(found, failed=(str(e).splitlines() or
                                                    [type(e).__name__])[0]))
-            continue
+            for at, earlier in done:
+                earlier.restore()
+                outcomes[at] = Outcome(outcomes[at].found, undone=True)
+            return outcomes
+        done.append((len(outcomes), snapshot))
         outcomes.append(Outcome(found, untyped=tuple(p for p, _ in result.untyped)))
     return outcomes

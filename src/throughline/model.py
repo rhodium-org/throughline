@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .schema import SHIPPED_TOMBSTONE, Schema, kind_name
+from .schema import SHIPPED_TOMBSTONE, Schema, kind_name, shown
 from .signatures import RATIFICATIONS, WITHDRAWALS, lift_legacy
 
 if TYPE_CHECKING:
@@ -27,6 +27,69 @@ CORE_FIELDS = [
     RATIFICATIONS, WITHDRAWALS, "reviewed",
     "created", "modified", "deleted", "key",
 ]
+
+
+class ShapeError(ValueError):
+    """A file holds, under a key the Tool reads, a value of a kind that key never
+    holds (SR-0354). Raised as the file is read, so nothing built from it meets
+    the value."""
+
+
+def _a(value) -> str:
+    kind = kind_name(value)
+    return f"an {kind}" if kind[0] in "aeiou" else f"a {kind}"
+
+
+def _plain(value) -> bool:
+    return not isinstance(value, (list, dict))
+
+
+def _number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _mapping(value) -> bool:
+    return isinstance(value, dict)
+
+
+def _list(value) -> bool:
+    return isinstance(value, list)
+
+
+# What each key of an item file holds, where the Tool reads it as one value. A
+# scalar of another kind than the Tool writes (a title YAML read as a number, a
+# flag written 1) is read as it always was; a list or a mapping where one value
+# belongs is what no command can use. A key left out, or written with no value,
+# is the same as absent.
+_ONE = (_plain, "one value")
+_ITEM_SHAPE = {
+    "status": _ONE, "title": _ONE, "text": _ONE, "rationale": _ONE, "key": _ONE,
+    "normative": _ONE, "derived": _ONE, "order": _ONE, "reviewed": _ONE,
+    "created": _ONE, "modified": _ONE, "deleted": (_mapping, "a mapping"),
+}
+_LINK_SHAPE = {"type": _ONE, "stamp": _ONE}
+# A signature or a withdrawal (SR-0254): who, when, in what role. What it was
+# given over (its content, links and files) is `check`'s to judge (SR-0217).
+_RECORD_SHAPE = {key: _ONE for key in (
+    "by", "id", "role", "at", "fingerprint", "revision", "supersedes", "of",
+    "reason")}
+_DELETED_SHAPE = {key: _ONE for key in ("date", "reason", "fingerprint", "from",
+                                        "outright")}
+
+
+def _texts(value) -> bool:
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+
+_ATTR_SHAPE = {"origin": _ONE, "suspect_reasons": (_texts, "a list of text")}
+
+
+def _refuse_shape(d: dict, shape: dict, where: str = "") -> None:
+    for key, (holds, wanted) in shape.items():
+        value = d.get(key)
+        if value is not None and not holds(value):
+            raise ShapeError(f"{where}'{key}' must be {wanted}, and is "
+                             f"{_a(value)} ({shown(value)})")
 
 
 @dataclass
@@ -162,6 +225,31 @@ class Item:
 
     @classmethod
     def from_dict(cls, d: dict, path: Path | None = None) -> "Item":
+        """The item ``d`` holds. A structure that can be read around (a link with
+        no target, an entry that is no mapping) is read around and named for
+        `check` (SR-0134); a value of a kind its key never holds raises
+        :class:`ShapeError` (SR-0354), since no finding could say what the item
+        was meant to be."""
+        _refuse_shape(d, _ITEM_SHAPE)
+        if isinstance(d.get("deleted"), dict):
+            _refuse_shape(d["deleted"], _DELETED_SHAPE, "deleted: ")
+        for name in (RATIFICATIONS, WITHDRAWALS):
+            for n, entry in enumerate(d.get(name) or [] if isinstance(d.get(name), list)
+                                      else [], start=1):
+                if isinstance(entry, dict):
+                    _refuse_shape(entry, _RECORD_SHAPE, f"{name} entry #{n}: ")
+        for n, entry in enumerate(d.get("links") or [] if isinstance(d.get("links"), list)
+                                  else [], start=1):
+            if isinstance(entry, dict):
+                _refuse_shape(entry, _LINK_SHAPE, f"link entry #{n}: ")
+        if isinstance(d.get("attrs"), dict):
+            for name in d["attrs"]:
+                if not isinstance(name, str):
+                    raise ShapeError(f"attrs: the attribute name {name!r} must be "
+                                     f"text, and is {_a(name)}")
+            # The attributes the Tool itself reads and writes; what a project
+            # declares for its own is `check`'s to judge (SR-0020).
+            _refuse_shape(d["attrs"], _ATTR_SHAPE, "attrs: ")
         links, load_errors = cls._parse_links(d.get("links", []) or [])
         attrs = d.get("attrs", {}) or {}
         if not isinstance(attrs, dict):
@@ -254,9 +342,23 @@ class Register:
     def from_manifest(cls, d: dict, path: Path | None = None) -> "Register":
         known = {"prefix", "digits", "title", "type", "parent", "reserved",
                  "sections"}
+        if not isinstance(d.get("prefix"), str) or not d["prefix"]:
+            raise ShapeError("it holds no 'prefix'")
+        _refuse_shape(d, {"title": _ONE, "type": _ONE, "parent": _ONE,
+                          "sections": (_list, "a list")})
+        digits = d.get("digits")
+        if digits is not None and (not _number(digits) or isinstance(digits, float)
+                                   or digits < 1):
+            raise ShapeError("'digits' must be a whole number of digits, and is "
+                             f"{digits!r}")
+        reserved = d.get("reserved")
+        if reserved is not None and (not _list(reserved) or any(
+                not _number(n) or isinstance(n, float) for n in reserved)):
+            raise ShapeError("'reserved' must be a list of numbers, and is "
+                             f"{reserved!r}")
         return cls(
             prefix=d["prefix"], title=d.get("title", ""), type=d.get("type"),
-            digits=d.get("digits", 4), parent=d.get("parent"),
+            digits=4 if digits is None else digits, parent=d.get("parent"),
             reserved=d.get("reserved", []) or [], sections=d.get("sections", []) or [],
             path=path, extra={k: v for k, v in d.items() if k not in known},
         )

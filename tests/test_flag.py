@@ -149,7 +149,7 @@ def test_flag_refuses_a_tombstone(graph, capsys):
     assert _cli(["-C", graph, "delete", "REQ-0001", "--reason", "gone"]) == 0
     capsys.readouterr()
     assert _cli(["-C", graph, "flag", "REQ-0001", "--reason", "r", "--by", "A"]) == 2
-    assert "tombstone is permanent" in capsys.readouterr().err
+    assert "a tombstone is not changed" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("argv, says", [

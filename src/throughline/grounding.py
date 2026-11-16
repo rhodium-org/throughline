@@ -140,15 +140,30 @@ def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
         raise GroundingError(f"'{to}' is not a declared status")
     if not deleting:
         refuse_tombstone_status(schema, to)
+    # No status change leaves the tombstone status (SR-0360), whatever the
+    # project's transitions say and where it declares none: a deletion is undone
+    # by declining it, which returns the item to the status it held and is refused
+    # while a signature stands on it (SR-0268). Asked before the transitions, so
+    # the refusal names the way out, not a missing edge.
+    if not deleting and item.is_deleted and to != item.status:
+        raise GroundingError(
+            f"{item.uid} is deleted, and no status change brings a deleted item "
+            f"back: `tl restore {item.uid}` declines a deletion nobody has signed, "
+            "and returns the item to the status it held")
     refusal = transition_refusal(schema, item, to)
     if refusal is not None:
         raise GroundingError(refusal)
-    # An item that leaves the tombstone status is no tombstone, so the record of
-    # its deletion goes with the status, as it does when a deletion is declined
-    # (SR-0012, SR-0268). Left behind, the item reads as live and deleted at once.
-    if not deleting and item.is_deleted and to != item.status:
-        item.deleted = None
     item.status = to
+
+
+def tombstone_refusal(uid: str) -> str:
+    """What every refusal to change a tombstone says (SR-0093, SR-0268). A
+    deletion is not permanent for being a deletion: one nobody has signed is
+    declined with `tl restore`, and a signed one is permanent while its signature
+    stands, which is why the refusal names the way back and promises no more."""
+    return (f"{uid} is deleted, and a tombstone is not changed (SR-0093) — "
+            f"`tl restore {uid}` brings back an item whose deletion nobody has "
+            "signed")
 
 
 def refuse_tombstone_status(schema, status: str | None) -> None:
@@ -874,7 +889,7 @@ def clarification_refusal(project, uid: str) -> str | None:
     if item is None:
         return f"{uid} does not exist"
     if item.is_deleted:
-        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+        return tombstone_refusal(uid)
     if not is_flagged_ambiguous(item):
         return f"{uid} carries no ambiguity flag to remove"
     return None
@@ -922,7 +937,7 @@ def flag_refusal(project, uid: str) -> str | None:
     if item is None:
         return f"{uid} does not exist"
     if item.is_deleted:
-        return f"{uid} is deleted — a tombstone is permanent (SR-0093)"
+        return tombstone_refusal(uid)
     return None
 
 

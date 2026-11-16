@@ -31,6 +31,7 @@ import functools
 import inspect
 import re
 from dataclasses import dataclass
+import tomllib
 from pathlib import Path
 from typing import Callable
 
@@ -38,7 +39,9 @@ from .grounding import attribute_owner
 from .inherit import InheritanceError, declarations, describe, merge
 from .model import Item, Project
 from .schema import Schema, SchemaError
-from .storage import CONFIG_NAME, ProjectError, load_project, read_baseline, write_item
+from .atomic import write_all
+from .storage import (CONFIG_NAME, ProjectError, _item_file, load_project,
+                      read_baseline)
 from .tomledit import TomlDocument, TomlEditError
 from .validate import ERROR, Finding, validate
 
@@ -193,9 +196,23 @@ def _key(f: Finding) -> tuple[str, str, str]:
 
 # ------------------------------------------------------------------- applying
 
-def apply_change(root: Path, change: Change, because: str) -> Refusal | str:
+def _pruned(value):
+    """``value`` without its empty tables: a table an edit emptied may stay in
+    the file or go, and says the same either way."""
+    if not isinstance(value, dict):
+        return value
+    kept = {k: _pruned(v) for k, v in value.items()}
+    return {k: v for k, v in kept.items() if v != {}}
+
+
+def apply_change(root: Path, change: Change, because: str, *,
+                 items: list[Item] | tuple = ()) -> Refusal | str:
     """Validate, pre-flight, and write ``change``. Returns the description on
-    success or a :class:`Refusal` that left the file untouched."""
+    success or a :class:`Refusal` that left the file untouched.
+
+    ``items`` are items the caller has changed in memory because of the change
+    (an attribute withdrawn from the items that carried it): they are written
+    with the configuration or not at all (SR-0356)."""
     project = load_project(root)
     formed = None
     inheritance = project.inheritance
@@ -234,7 +251,28 @@ def apply_change(root: Path, change: Change, because: str) -> Refusal | str:
         change.edit(doc, because)
     except TomlEditError as e:
         raise SchemaOpError(f"cannot edit {cfg_file} safely: {e}") from e
-    cfg_file.write_text(doc.text(), encoding="utf-8")
+    # The edit is made on the text, so it is proved on the parse before anything
+    # is written (SR-0356): a file the Tool could not read back, or one that says
+    # something other than the change asked for, is never left behind.
+    text = doc.text()
+    try:
+        written = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as e:
+        raise SchemaOpError(f"cannot edit {cfg_file} safely: the edit would leave "
+                            f"it unreadable ({e}) — nothing was written") from e
+    if _pruned(written) != _pruned(change.config):
+        raise SchemaOpError(f"cannot edit {cfg_file} safely: the edit would not "
+                            "leave the configuration this change asks for — "
+                            "nothing was written")
+    files: dict[Path, str] = {cfg_file: text}
+    for item in items:
+        path, body = _item_file(item, None)
+        files[path] = body
+    try:
+        write_all(files)
+    except OSError as e:
+        raise SchemaOpError(f"cannot write {e.filename}: {e.strerror} — nothing "
+                            "was written") from e
     return change.description
 
 
@@ -679,11 +717,11 @@ def attr_values_unset(project: Project, itype: str, name: str) -> Change:
 
 
 def unset_from(items: list[Item], name: str) -> list[str]:
-    """Remove ``name`` from each of ``items`` and write them. The caller has
-    already asked `attribute_removal_refusal` of every one (SR-0206)."""
+    """Remove ``name`` from each of ``items`` in memory, for :func:`apply_change`
+    to write with the configuration (SR-0356). The caller has already asked
+    `attribute_removal_refusal` of every one (SR-0206)."""
     for it in items:
-        del it.attrs[name]
-        write_item(it)
+        it.attrs.pop(name, None)
     return [it.uid for it in items]
 
 

@@ -260,8 +260,8 @@ def _scan_refs(project, *, publishing_only: bool = False,
                 continue
             try:
                 text = p.read_text(encoding="utf-8")
-            except OSError:
-                continue
+            except (OSError, UnicodeDecodeError):
+                continue              # `tl docs` reports a document it cannot read
             for m in _BLOCK.finditer(text):
                 kind, arg = m.group("kind").lower(), m.group("arg").strip()
                 d = _REGISTRY.get(kind)
@@ -941,7 +941,11 @@ def inject_documents(project, paths=None, *, resolver=None) -> list[DocumentRend
     """
     renders: list[DocumentRender] = []
     for path in document_paths(project, paths):
-        original = path.read_text(encoding="utf-8")
+        try:
+            original = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as e:
+            raise InjectError(f"cannot read {path} as a document: it is not UTF-8 "
+                              f"text — {e.reason} at byte {e.start}") from e
         if not has_markers(original):
             continue
         renders.append(DocumentRender(path=path, original=original,

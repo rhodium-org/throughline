@@ -924,10 +924,11 @@ def test_nothing_is_allocated_under_a_prefix_two_registers_claim(tmp_path, capsy
     assert sorted(p.name for p in root.rglob("REQ-*.yml")) == before
 
 
-def test_an_item_that_leaves_the_tombstone_status_carries_no_deletion_record(tmp_path):
-    """SR-0012, SR-0268: the deletion record is a tombstone's. `tl status` moved an
-    unsigned tombstone out and left the record on a live item, which then read as
-    both at once (issue 119)."""
+def test_no_status_change_leaves_the_tombstone_status(tmp_path, capsys):
+    """SR-0360: `tl status` moved an unsigned tombstone out and left the record on
+    a live item, which then read as both at once (issue 119); the move then took
+    the record with it. It is refused now, whatever the transitions declare: a
+    deletion is undone by `tl restore`, which returns the status the item held."""
     root = _demo(tmp_path)
     cfg = root / "throughline.toml"
     cfg.write_text(cfg.read_text(encoding="utf-8").replace(
@@ -936,9 +937,13 @@ def test_an_item_that_leaves_the_tombstone_status_carries_no_deletion_record(tmp
         encoding="utf-8")
     assert _cli(["-C", root, "ratify", "REQ-0001", "--by", "Ada"]) == 0
     assert _cli(["-C", root, "delete", "REQ-0001", "--reason", "gone"]) == 0
-    assert load_project(root).get("REQ-0001").deleted is not None
+    before = (root / "requirements" / "REQ-0001.yml").read_bytes()
+    capsys.readouterr()
 
-    assert _cli(["-C", root, "status", "REQ-0001", "deferred"]) == 0
+    assert _cli(["-C", root, "status", "REQ-0001", "deferred"]) == 2
+    assert "`tl restore REQ-0001`" in capsys.readouterr().err
+    assert (root / "requirements" / "REQ-0001.yml").read_bytes() == before
 
+    assert _cli(["-C", root, "restore", "REQ-0001"]) == 0
     item = load_project(root).get("REQ-0001")
-    assert item.status == "deferred" and item.deleted is None
+    assert item.status == "ratified" and item.deleted is None
