@@ -77,6 +77,14 @@ _DELETED_SHAPE = {key: _ONE for key in ("date", "reason", "fingerprint", "from",
                                         "outright")}
 
 
+def _as_text(value):
+    """A value the Tool reads as text, as text: YAML reads an unquoted 404 or
+    2026-01-01 as a number or a date, and the fingerprint has always taken such
+    a value as the text it was written as, so every other reader does too
+    (SR-0354). Absent stays absent."""
+    return value if value is None or isinstance(value, str) else str(value)
+
+
 def _texts(value) -> bool:
     return isinstance(value, list) and all(isinstance(v, str) for v in value)
 
@@ -202,8 +210,12 @@ class Item:
             if not isinstance(target, str) or not target:
                 errors.append(f"link entry #{i} missing required key 'target'")
                 continue
-            links.append(Link(target=target, type=l.get("type", "relates"),
-                              stamp=l.get("stamp")))
+            kind = _as_text(l.get("type", "relates"))
+            if not kind:
+                errors.append(f"link entry #{i} has an empty 'type'")
+                continue
+            links.append(Link(target=target, type=kind,
+                              stamp=_as_text(l.get("stamp"))))
         return links, errors
 
     @staticmethod
@@ -267,16 +279,17 @@ class Item:
         withdrawals, errs = cls._parse_records(d.get(WITHDRAWALS), WITHDRAWALS)
         load_errors += errs
         item = cls(
-            uid=d["uid"], type=d["type"], status=d.get("status", "draft"),
-            title=d.get("title", ""), text=d.get("text", ""),
-            rationale=d.get("rationale", ""),
+            uid=d["uid"], type=d["type"],
+            status=_as_text(d.get("status", "draft")),
+            title=_as_text(d.get("title", "")), text=_as_text(d.get("text", "")),
+            rationale=_as_text(d.get("rationale", "")),
             normative=d.get("normative", True), derived=d.get("derived", False),
             order=d.get("order"), links=links, attrs=attrs,
             ratifications=lifted + ratifications,
             withdrawals=withdrawn + withdrawals,
             reviewed=d.get("reviewed"), created=d.get("created"),
             modified=d.get("modified"), deleted=d.get("deleted"),
-            key=d.get("key"),
+            key=_as_text(d.get("key")),
             extra={k: v for k, v in d.items() if k not in CORE_FIELDS},
             _path=path,
         )
@@ -357,8 +370,9 @@ class Register:
             raise ShapeError("'reserved' must be a list of numbers, and is "
                              f"{reserved!r}")
         return cls(
-            prefix=d["prefix"], title=d.get("title", ""), type=d.get("type"),
-            digits=4 if digits is None else digits, parent=d.get("parent"),
+            prefix=d["prefix"], title=_as_text(d.get("title", "")),
+            type=_as_text(d.get("type")),
+            digits=4 if digits is None else digits, parent=_as_text(d.get("parent")),
             reserved=d.get("reserved", []) or [], sections=d.get("sections", []) or [],
             path=path, extra={k: v for k, v in d.items() if k not in known},
         )

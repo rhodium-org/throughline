@@ -9,7 +9,10 @@ text: 'Every command that reads a project shall refuse, in one line that names t
   or manifest file is not UTF-8 text, holds a value YAML recognises and cannot build
   (a date that is not in the calendar), holds a value that contains itself, or holds
   a list or a mapping under a key the Tool reads as one value; or a document it renders
-  is not UTF-8 text. No such file shall stop a command with an unhandled error.'
+  is not UTF-8 text. A number, a date or a boolean under a key the Tool reads as
+  text (a status, a title, a text, a rationale, a key, a link''s type) shall be read
+  as the text it was written as, which is how the fingerprint reads it. No such file
+  shall stop a command with an unhandled error.'
 rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
   specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
   on 6.0.0. tl stopped with a Python traceback on a configuration that was not TOML,

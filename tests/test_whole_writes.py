@@ -112,7 +112,9 @@ def test_a_migration_that_fails_part_way_leaves_the_project_as_it_was(tmp_path, 
     root = _format_1(tmp_path / "p")
     before = _tree(root)
     assert _cli(["-C", root, "migrate"]) == 2
-    assert "already exists" in capsys.readouterr().err
+    got = capsys.readouterr()
+    assert "already exists" in got.err and "nothing was migrated" in got.err
+    assert got.err.count("\n") == 1 and "migrated project" not in got.out
     assert _tree(root) == before
     with pytest.raises(ProjectError):
         migrate_project(root)
@@ -225,6 +227,19 @@ def test_a_schema_edit_that_would_not_read_back_is_not_written(tmp_path, monkeyp
     assert _cli(["-C", root, "schema", "status", "add", "parked",
                  "--because", "wanted"]) == 2
     assert "nothing was written" in capsys.readouterr().err
+    assert _tree(root) == before
+
+
+def test_a_schema_edit_the_editor_cannot_make_is_refused_in_one_line(tmp_path, capsys):
+    """SR-0354: a type named with a quote stopped `tl schema type add` on an
+    assertion (found on 6.0.0 by running every schema command over odd names)."""
+    root = _demo(tmp_path / "p")
+    before = _tree(root)
+    capsys.readouterr()
+    assert _cli(["-C", root, "schema", "type", "add", 'a"b', "--non-normative",
+                 "--because", "why"]) == 2
+    err = capsys.readouterr().err
+    assert "cannot edit" in err and err.count("\n") == 1
     assert _tree(root) == before
 
 

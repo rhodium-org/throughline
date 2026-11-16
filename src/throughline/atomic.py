@@ -93,20 +93,25 @@ class Snapshot:
     def _hold(self, path: Path) -> None:
         self._held[path] = path.read_bytes() if path.is_file() else None
 
-    def restore(self) -> None:
-        """Put every remembered file back as it stood."""
+    def restore(self) -> int:
+        """Put every remembered file back as it stood. Returns how many files
+        had changed, so a caller can say whether anything was undone."""
+        changed = 0
         for folder in self._folders:
             if not folder.is_dir():
                 continue
             for path in folder.glob(self._pattern):
                 if path not in self._held and path.is_file():
                     path.unlink()
+                    changed += 1
         for path, was in self._held.items():
             now = path.read_bytes() if path.is_file() else None
             if now != was:
                 if was is not None:
                     path.parent.mkdir(parents=True, exist_ok=True)
                 _put_back(path, was)
+                changed += 1
+        return changed
 
 
 __all__ = ["STAGED", "Snapshot", "write_all"]

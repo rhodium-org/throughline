@@ -14,10 +14,13 @@ The damage is enumerated, not drawn at random, so a failure names its case and
 runs again the same. A plain run takes every case that ever found a fault and a
 fixed sample of the rest; ``TL_FUZZ=all`` runs every case, and ``TL_FUZZ=3/8``
 the fourth of eight equal parts of them, so the whole can be run side by side.
+``TL_FUZZ=@FILE`` runs the cases FILE lists, one a line, and ``TL_FUZZ_LOG=FILE``
+writes each fault to FILE as it is found.
 """
 from __future__ import annotations
 
 import copy
+import functools
 import os
 import shutil
 import tomllib
@@ -31,7 +34,7 @@ import yaml
 from throughline.cli import main as cli_main
 
 # One in this many of the enumerated cases runs by default.
-_SAMPLE = 300
+_SAMPLE = 500
 
 # Values of every kind a file can hold, tried wherever one of another kind stood.
 _WRONG = [None, 7, -3, 1.5, True, "x", "", [], ["x"], [7], [None], {}, {"a": 1},
@@ -260,8 +263,15 @@ def _faults(root: Path, graph: str, tmp: Path, rel: str, body: bytes) -> list[st
     return faults
 
 
+@functools.cache
+def _listed(path: str) -> frozenset[str]:
+    return frozenset(Path(path).read_text(encoding="utf-8").split("\n"))
+
+
 def _chosen(label: str) -> bool:
     asked = os.environ.get("TL_FUZZ", "")
+    if asked.startswith("@"):                   # the cases a file lists, one a line
+        return label in _listed(asked[1:])
     if asked == "all" or label in _FOUND:
         return True
     part, _, parts = asked.partition("/")       # one part of several, e.g. 3/8
@@ -284,13 +294,58 @@ def test_no_damaged_file_ends_a_command_in_a_traceback(name, made, tmp_path, cap
         capsys.readouterr()
         if faults:
             found[label] = faults
+            if os.environ.get("TL_FUZZ_LOG"):        # said as found, in a long run
+                with open(os.environ["TL_FUZZ_LOG"], "a", encoding="utf-8") as log:
+                    log.write(f"{name} {label}\n    " + "\n    ".join(faults) + "\n")
     report = "\n".join(f"{label}\n    " + "\n    ".join(faults)
                        for label, faults in sorted(found.items()))
     assert not found, f"{len(found)} damaged file(s) ended a command in a traceback:\n{report}"
 
 
-# Every case that has found a fault, kept so a plain run always tries it again.
-_FOUND: set[str] = set()
+# One case for each place tl 6.0.0 stopped with an unhandled error, taken from a
+# twenty-fifth of the cases run over it (134 of about 540 damaged files stopped
+# a command, at 49 places), kept so a plain run always tries each again. A case
+# that finds a fault in a later release is added here with its fix.
+_FOUND: set[str] = {
+    "app/requirements/.register.yml::digits::5",
+    "app/requirements/REQ-0001.yml::status::11",
+    "app/throughline.toml::rules.coverage::4",
+    "app/throughline.toml::status::10",
+    "app/throughline.toml::status::16",
+    "app/throughline.toml::transitions.deferred::3",
+    "app/throughline.toml::types::8",
+    "lib/throughline.toml::links::1",
+    "lib/throughline.toml::project::3",
+    "lib/throughline.toml::status.roles::13",
+    "requirements/REQ-0001.yml::links.0.type::1",
+    "requirements/REQ-0002.yml::deleted::16",
+    "requirements/REQ-0003.yml::attrs.suspect_reasons.0::7",
+    "requirements/REQ-0003.yml::links.0.type::10",
+    "requirements/REQ-0003.yml::title::2",
+    "std/throughline.toml::grounding.ai_origins::1",
+    "std/throughline.toml::grounding.delivery_roots.3::2",
+    "std/throughline.toml::grounding.delivery_roots::2",
+    "std/throughline.toml::grounding.root_types.0::13",
+    "std/throughline.toml::grounding::1",
+    "std/throughline.toml::rules.coverage.0.filter::13",
+    "std/throughline.toml::status.roles.suspect::13",
+    "std/throughline.toml::status.roles.tombstone::7",
+    "std/throughline.toml::status.values.7::12",
+    "std/throughline.toml::status::16",
+    "std/throughline.toml::transitions.deferred.0::14",
+    "std/throughline.toml::types.non_goal.attrs::3",
+    "std/throughline.toml::types.requirement::4",
+    "throughline.toml::docs.paths::1",
+    "throughline.toml::docs::4",
+    "throughline.toml::grounding.ground_link_types.0::8",
+    "throughline.toml::links.types.7::13",
+    "throughline.toml::rules::1",
+    "throughline.toml::status.values.0::10",
+    "throughline.toml::transitions::16",
+    "vision/INT-0001.yml::alias-loop",
+    "vision/INT-0001.yml::no-such-day",
+    "vision/INT-0001.yml::text::3",
+}
 
 
 # ------------------------------------------- the refusals, by name (SR-0354)
@@ -389,3 +444,32 @@ def test_a_document_that_is_not_utf8_is_refused_by_the_command_that_renders_it(
         assert err.count("\n") == 1
     assert _cli(["-C", work, "check"]) in (0, 1)        # the gate still answers
     assert _tree(work) == before
+
+
+def test_a_number_or_a_date_where_text_is_read_is_read_as_its_text(made, tmp_path, capsys):
+    """SR-0354: YAML reads an unquoted 404 as a number. tl docs stopped on such
+    a title; every other command read it, and the fingerprint took it as text."""
+    from throughline.fingerprint import fingerprint
+    from throughline.storage import load_project
+    root, _graph, _cases = made["alone"]
+    work = tmp_path / "w"
+    shutil.copytree(root, work)
+    path = work / "requirements" / "REQ-0003.yml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    as_text = dict(data, title="404", text="2026-01-01", rationale="12.5")
+    path.write_text(yaml.safe_dump(as_text, sort_keys=False), encoding="utf-8")
+    project = load_project(work)
+    quoted = fingerprint(project.get("REQ-0003"), project.schema)
+
+    path.write_text(yaml.safe_dump(as_text, sort_keys=False)
+                    .replace("'404'", "404").replace("'2026-01-01'", "2026-01-01")
+                    .replace("'12.5'", "12.5"), encoding="utf-8")
+    assert yaml.safe_load(path.read_text(encoding="utf-8"))["title"] == 404
+    project = load_project(work)
+    item = project.get("REQ-0003")
+    assert (item.title, item.text, item.rationale) == ("404", "2026-01-01", "12.5")
+    assert fingerprint(item, project.schema) == quoted
+    for argv in (["check"], ["docs"], ["context", "REQ-0003"], ["dump"], ["query"],
+                 ["trace", "REQ-0003"], ["amend", "REQ-0003", "--rationale", "why"]):
+        assert _cli(["-C", work, *argv]) in (0, 1), argv
+    capsys.readouterr()

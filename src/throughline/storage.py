@@ -1491,6 +1491,13 @@ def migrate_project(path: str | Path, *,
     snapshot = project_snapshot(root)
     try:
         return _migrate_project(root, cfg_file, config, index)
+    except ProjectError as e:
+        if snapshot.restore() and not isinstance(e, FormatError):
+            # Said where something had been written, so the refusal is not read
+            # as a migration that stopped half-way.
+            raise ProjectError(f"{e} — the project was put back as it stood, and "
+                               "nothing was migrated") from e
+        raise
     except BaseException:
         snapshot.restore()
         raise
