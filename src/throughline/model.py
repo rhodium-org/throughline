@@ -280,7 +280,8 @@ class Item:
         load_errors += errs
         item = cls(
             uid=d["uid"], type=d["type"],
-            status=_as_text(d.get("status", "draft")),
+            # Written with no value, a status is the one an absent key gives.
+            status=_as_text(d.get("status")) or "draft",
             title=_as_text(d.get("title", "")), text=_as_text(d.get("text", "")),
             rationale=_as_text(d.get("rationale", "")),
             normative=d.get("normative", True), derived=d.get("derived", False),

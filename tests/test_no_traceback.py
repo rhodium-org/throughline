@@ -348,6 +348,7 @@ _FOUND: set[str] = {
     # Found by the whole run over this release before it was made.
     "throughline.toml::docs.paths.0::6",
     "requirements/REQ-0003.yml::attrs.suspect_reasons::0",
+    "app/requirements/REQ-0001.yml::status::0",
 }
 
 
