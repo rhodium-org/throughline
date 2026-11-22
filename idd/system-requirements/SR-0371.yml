@@ -1,6 +1,6 @@
 uid: SR-0371
 type: system_requirement
-status: proposed
+status: ratified
 title: tl doctor says what Python runs tl and how tl was installed
 text: tl doctor shall print the tl version, the Python version and executable running
   it, the interpreter its environment was made from and whether uv manages that interpreter,
@@ -22,3 +22,18 @@ attrs:
   priority: could
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:09:10Z'
+  fingerprint: sha256:a3db790c309b682a28fa112223e37eb8ad9a70f1b1b7c72836ee9e961848197a
+  content:
+    type: system_requirement
+    text: tl doctor shall print the tl version, the Python version and executable
+      running it, the interpreter its environment was made from and whether uv manages
+      that interpreter, and which installer made the environment (uv tool, pipx,
+      another virtual environment, or none it can tell), with that installer's command
+      to rebuild the environment on a new Python, and shall exit 0.
+    normative: true
+    derived: false
+    attrs:
+      priority: could

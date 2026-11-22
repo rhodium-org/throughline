@@ -1,6 +1,6 @@
 uid: SR-0370
 type: system_requirement
-status: proposed
+status: ratified
 title: Every supported Python minor release is tested and declared
 text: CI shall run the tests on every Python minor release from the declared floor
   to the newest released (3.11 to 3.14 today), and the trove classifiers shall name
@@ -19,3 +19,16 @@ attrs:
   priority: should
   verification: inspection
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:09:10Z'
+  fingerprint: sha256:f28bffab7604d5075e242ca2ffb416f7d41c42cc948e1cae4c75fd821d727a05
+  content:
+    type: system_requirement
+    text: CI shall run the tests on every Python minor release from the declared
+      floor to the newest released (3.11 to 3.14 today), and the trove classifiers
+      shall name exactly those releases.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

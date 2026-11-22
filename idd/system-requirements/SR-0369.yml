@@ -1,6 +1,6 @@
 uid: SR-0369
 type: system_requirement
-status: proposed
+status: ratified
 title: The install instructions survive an operating system's Python upgrade
 text: The README's install section shall recommend uv tool install with a uv-managed
   Python, keep pipx as an alternative, and carry a section on bad interpreter after
@@ -23,3 +23,17 @@ attrs:
   priority: should
   verification: inspection
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:09:09Z'
+  fingerprint: sha256:c9f3c4e22353a39fca3c68185240f6609488be00e2b4c476b57164b0d7bbbc2d
+  content:
+    type: system_requirement
+    text: The README's install section shall recommend uv tool install with a uv-managed
+      Python, keep pipx as an alternative, and carry a section on bad interpreter
+      after a Python upgrade that says why it happens and gives, for each installer,
+      the one command that rebuilds the environment.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
