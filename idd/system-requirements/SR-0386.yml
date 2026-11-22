@@ -1,6 +1,6 @@
 uid: SR-0386
 type: system_requirement
-status: ratified
+status: implemented
 title: tl check says when migrating would turn on the built axis
 text: Where a project names no built role and declares the statuses implemented and
   verified, tl check shall end with one line saying that tl migrate would bind the
@@ -38,3 +38,7 @@ ratifications:
     derived: false
     attrs:
       priority: should
+implementations:
+- at: '2026-11-22T12:49:22Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: 0f21cfb3daf5afbf8fc001abf964b9fd2d1e1c55
