@@ -1,6 +1,6 @@
 uid: SR-0383
 type: system_requirement
-status: ratified
+status: implemented
 title: tl migrate dates the built work a graph already holds
 text: 'For an item in a built status with no implementations list, tl migrate shall
   write one entry dated from the first commit in which the item entered that status,
@@ -38,3 +38,7 @@ ratifications:
     attrs:
       priority: should
   revision: 84920ea597fdff19aca75aeb475c3a4d99827586
+implementations:
+- at: '2026-11-22T12:30:26Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30

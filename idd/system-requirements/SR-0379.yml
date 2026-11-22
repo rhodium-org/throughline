@@ -1,6 +1,6 @@
 uid: SR-0379
 type: system_requirement
-status: ratified
+status: implemented
 title: An item may be built before it is signed
 text: The lifecycle tl init writes, and every standard this repository publishes,
   shall allow proposed to move to implemented. tl migrate shall add that move to
@@ -38,3 +38,7 @@ ratifications:
     attrs:
       priority: should
   revision: 84920ea597fdff19aca75aeb475c3a4d99827586
+implementations:
+- at: '2026-11-22T12:30:25Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30
