@@ -1,6 +1,6 @@
 uid: SR-0355
 type: system_requirement
-status: proposed
+status: ratified
 title: A migration that cannot be finished leaves the project as it found it
 text: Where tl migrate cannot finish, because a step refuses part-way or, in a project
   that declares sources, the sources cannot be resolved for the pass made over the
@@ -32,3 +32,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:10Z'
+  fingerprint: sha256:1d6fe5d1fdb174589c7b856a02777a232fbff2f09abc357571f625e3efdea436
+  content:
+    type: system_requirement
+    text: Where tl migrate cannot finish, because a step refuses part-way or, in
+      a project that declares sources, the sources cannot be resolved for the pass
+      made over the union, it shall leave every file of the project as it was before
+      the command ran, report none of what it had done, and say that nothing was
+      migrated.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

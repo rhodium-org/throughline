@@ -1,6 +1,6 @@
 uid: SR-0362
 type: system_requirement
-status: proposed
+status: ratified
 title: tl --help says what the program is
 text: tl --help shall describe the program in a sentence written for the person reading
   the help, not with the documentation of the module that builds the command line.
@@ -17,3 +17,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:13Z'
+  fingerprint: sha256:49a7aa2ff0e29049cc58b64586df0ec1992795154c6f1e6f1fe53f781f02ca3a
+  content:
+    type: system_requirement
+    text: tl --help shall describe the program in a sentence written for the person
+      reading the help, not with the documentation of the module that builds the
+      command line.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

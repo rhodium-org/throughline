@@ -1,6 +1,6 @@
 uid: SR-0365
 type: system_requirement
-status: proposed
+status: ratified
 title: A change set stamps a stale link again
 text: A link operation that asks for a stamp, on a link the item already holds, shall
   count as already applied only while that link's stamp is the fingerprint of its
@@ -21,3 +21,17 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:15Z'
+  fingerprint: sha256:caa22bf7c0484e22868014851b30903302416839d70bb6c6742ac5f59b32c0bc
+  content:
+    type: system_requirement
+    text: A link operation that asks for a stamp, on a link the item already holds,
+      shall count as already applied only while that link's stamp is the fingerprint
+      of its target. Otherwise tl apply shall stamp the link again and report it
+      restamped.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

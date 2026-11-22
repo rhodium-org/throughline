@@ -1,6 +1,6 @@
 uid: SR-0363
 type: system_requirement
-status: proposed
+status: ratified
 title: Ratifying in a project with sources passes over and retires as it does alone
 text: In a project that declares sources, tl ratify of several items shall pass over
   an item the person has already signed, unchanged since, and sign the rest, as SR-0342
@@ -28,3 +28,18 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:14Z'
+  fingerprint: sha256:c9af944a40c0609c4563668bba2389fb0fa6ec9311c8a908076a73501b404ce9
+  content:
+    type: system_requirement
+    text: In a project that declares sources, tl ratify of several items shall pass
+      over an item the person has already signed, unchanged since, and sign the rest,
+      as SR-0342 requires; and tl ratify of a proposed deletion with dependents shall
+      sign it and mark the project's own dependents suspect, as SR-0270 requires.
+      Neither shall be refused because the project has sources.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

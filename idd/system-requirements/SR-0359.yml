@@ -1,6 +1,6 @@
 uid: SR-0359
 type: system_requirement
-status: proposed
+status: ratified
 title: tl restore offers the deletions that can be declined
 text: Run with no UID on a terminal, tl restore shall offer the tombstones whose
   deletion nobody has signed and that were not retired outright, and no other item.
@@ -23,3 +23,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:12Z'
+  fingerprint: sha256:773f4e2cb1f8aa97b3ce3d4402e5fddf2b8f83341186e44cdeaf4318f302d8f2
+  content:
+    type: system_requirement
+    text: Run with no UID on a terminal, tl restore shall offer the tombstones whose
+      deletion nobody has signed and that were not retired outright, and no other
+      item. The picker of every other command shall offer no tombstone.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

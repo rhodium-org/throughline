@@ -1,6 +1,6 @@
 uid: SR-0357
 type: system_requirement
-status: proposed
+status: ratified
 title: tl resolve refuses a file it cannot read
 text: tl resolve shall refuse, in one line that names the file and writing nothing,
   where an item or manifest file it reads is not UTF-8 text or holds a value YAML
@@ -28,3 +28,19 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:11Z'
+  fingerprint: sha256:616b31baff98ae17623c9ac45231c3c4d53460b6c06b280ffa31a36ca280552b
+  content:
+    type: system_requirement
+    text: tl resolve shall refuse, in one line that names the file and writing nothing,
+      where an item or manifest file it reads is not UTF-8 text or holds a value
+      YAML recognises and cannot build, or a register manifest's digits is not a
+      whole number of one or more or its reserved is not a list of whole numbers.
+      What it only reports and never rewrites, prose and the subjects of commits,
+      it shall read whatever the encoding.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

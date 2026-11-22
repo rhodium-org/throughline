@@ -1,6 +1,6 @@
 uid: SR-0361
 type: system_requirement
-status: proposed
+status: ratified
 title: A refusal to read a revision says what the command was asked to do
 text: Where a command that reads the graph at a git revision is run outside a git
   work tree, its refusal shall say what that command does with the revision. tl diff
@@ -20,3 +20,16 @@ attrs:
   priority: should
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:13Z'
+  fingerprint: sha256:bdec829b9a783d377fdd9bda4067a01355bf4eb804bdea878cca041f6fd8cec4
+  content:
+    type: system_requirement
+    text: Where a command that reads the graph at a git revision is run outside a
+      git work tree, its refusal shall say what that command does with the revision.
+      tl diff shall not be refused in the words for rendering a document.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

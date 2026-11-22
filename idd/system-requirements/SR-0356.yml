@@ -1,6 +1,6 @@
 uid: SR-0356
 type: system_requirement
-status: proposed
+status: ratified
 title: A command that changes several files writes all of them or none
 text: 'A command that changes more than one file shall decide every change before
   it writes any, and shall leave every file as it was where one of them cannot be
@@ -35,3 +35,23 @@ attrs:
   priority: must
   verification: test
   origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:10Z'
+  fingerprint: sha256:65d45ab2d561a3cd889b564e3d2f70c37e83e0be389b67ae2a1de24acab28413
+  content:
+    type: system_requirement
+    text: 'A command that changes more than one file shall decide every change before
+      it writes any, and shall leave every file as it was where one of them cannot
+      be written or a later item is refused: tl ratify, tl withdraw, tl invalidate
+      and tl review over several items; the ratification of a deletion with the dependents
+      it marks suspect; tl schema attr remove --unset with the configuration and
+      the items; tl migrate --to-gql with the configuration and the documents; and
+      tl resolve. It shall say an item was changed only once the item is written.
+      A tl schema edit shall be read back from the edited text before the text is
+      written, and refused, writing nothing, where it would not read back as the
+      change that was asked for.'
+    normative: true
+    derived: false
+    attrs:
+      priority: must
