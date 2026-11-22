@@ -497,6 +497,12 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                    help="append this item's neighbourhood to the brief")
     s.set_defaults(func=handlers.get("cmd_context"))
 
+    s = sub.add_parser(
+        "doctor",
+        help="say which Python runs tl, how tl was installed, and the command that "
+             "rebuilds it after the operating system upgrades its Python (SR-0371)")
+    s.set_defaults(func=handlers.get("cmd_doctor"))
+
     s = sub.add_parser("trace", help="print the link tree from a UID")
     s.add_argument("uid", nargs="?", default=None,
                    help="UID to trace (omit on a terminal to pick one)")

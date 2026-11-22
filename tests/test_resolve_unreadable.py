@@ -85,7 +85,9 @@ def _append(name: str, body: bytes):
     (_append("REQ-0003.yml", b"note: caf\xe9\n"), "REQ-0003.yml (at MERGE_HEAD) is not UTF-8"),
     (_append("REQ-0002.yml", b"note: caf\xe9\n"), "REQ-0002.yml (theirs) is not UTF-8"),
     (_append("REQ-0003.yml", b"created: 2026-13-45\n"), "month must be in 1..12"),
-    (_append("REQ-0002.yml", b"created: 2026-02-30\n"), "day is out of range"),
+    # CPython's own words for the bad date, which 3.14 changed.
+    (_append("REQ-0002.yml", b"created: 2026-02-30\n"),
+     ("day is out of range", "day 30 must be in range")),
 ], ids=["digits-words", "digits-below-nought", "digits-list", "reserved-number",
         "reserved-words", "not-utf8-dependent", "not-utf8-collided", "no-such-month",
         "no-such-day"])
@@ -97,7 +99,9 @@ def test_resolve_refuses_what_it_cannot_read_and_writes_nothing(
     capsys.readouterr()
     assert _cli(["-C", root, "resolve", *dry]) == 2
     got = capsys.readouterr()
-    assert says in got.err and got.err.count("\n") == 1 and got.out == ""
+    words = says if isinstance(says, tuple) else (says,)
+    assert any(w in got.err for w in words)
+    assert got.err.count("\n") == 1 and got.out == ""
     assert _state(root) == before
 
 
