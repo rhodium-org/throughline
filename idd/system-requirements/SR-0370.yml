@@ -1,0 +1,21 @@
+uid: SR-0370
+type: system_requirement
+status: proposed
+title: Every supported Python minor release is tested and declared
+text: CI shall run the tests on every Python minor release from the declared floor
+  to the newest released (3.11 to 3.14 today), and the trove classifiers shall name
+  exactly those releases.
+rationale: 'The classifiers stopped at 3.12 while operating systems moved to 3.14,
+  so a user could not tell whether the package runs on the Python they have. tl 6.0.0
+  and tl-ratify 0.19.1 were seen to run on 3.14.4 on 22 November 2026. Who pays:
+  this repository''s CI, more jobs a run; and its maintainers, who add each new Python
+  minor release when it comes out.'
+normative: true
+links:
+- target: UR-0016
+  type: implements
+  stamp: sha256:d6b8e3d3df4f70a813778c3c4c46b383ed1539ca61d524e53d5eb2dc15f675f8
+attrs:
+  priority: should
+  verification: inspection
+  origin: ai

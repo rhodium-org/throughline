@@ -30,6 +30,20 @@ jobs:
           - os: ubuntu-latest
             runner: blacksmith-4vcpu-ubuntu-2404
             python-version: "3.11"
+          # And every newer Python minor release (SR-0370): an OS that upgrades its
+          # Python under an install should find tl already tested there.
+          - os: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
+            python-version: "3.13"
+          - os: ubuntu-latest
+            runner: blacksmith-4vcpu-ubuntu-2404
+            python-version: "3.14"
+          - os: windows-latest
+            runner: windows-latest
+            python-version: "3.14"
+          - os: macos-latest
+            runner: blacksmith-6vcpu-macos-latest
+            python-version: "3.14"
     steps:
       - uses: actions/checkout@v7
 

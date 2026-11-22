@@ -1652,6 +1652,13 @@ def cmd_docs(args, resolver=None) -> int:
 
 
 
+def cmd_doctor(args) -> int:
+    """Which Python runs tl and how tl was installed (SR-0371). Reads no project."""
+    from . import doctor
+    print(doctor.render(doctor.report(doctor.Environment.running(), _version())))
+    return 0
+
+
 def cmd_context(args) -> int:
     try:
         project = load_project(args.path)
