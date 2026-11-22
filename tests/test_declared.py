@@ -411,6 +411,43 @@ def test_a_half_written_declaration_leaves_its_graph_loadable(tmp_path):
         load_project(follower(tmp_path))
 
 
+def test_a_half_made_link_declaration_does_not_hide_the_other_declarations(tmp_path):
+    # A coverage rule names a link type that a declaration item declares. Dropping
+    # every declaration because one link declaration is half made would lose that
+    # link type and make the whole graph unloadable (issue #190).
+    lts = [item("LT-0001", "link_type", name="verifies", grounds=True, scope="this-graph")]
+    std = standard(tmp_path, lts=lts, toml_extra=(
+        '[[rules.coverage]]\nfilter = "type == \'slide\'"\nneeds = "incoming:verifies"\n'
+        'severity = "warning"\n'))
+    root = follower(tmp_path, extra={"links": ("LINK", "link", [])})
+    # A LINK declaration written one link at a time: only its 'from' so far, with
+    # 'to' and 'via' still to come.
+    half = item("LINK-0009", "link", [("from", "presentation:REG-0003")])
+    (root / "links" / "LINK-0009.yml").write_text(yaml.safe_dump(half), encoding="utf-8")
+
+    project = load_project(root)
+    # The good 'verifies' declaration still stands, so the coverage rule resolves.
+    assert "verifies" in project.schema.link_types
+    faults = [f for f in validate(project) if f.rule == "declaration"]
+    assert faults and "LINK-0009" in faults[0].message
+    # The command needed to finish the half-made declaration now works.
+    assert main(["-C", str(root), "link", "LINK-0009", "meta:LT-0001", "--type", "via"]) == 0
+
+
+def test_a_half_made_link_declaration_keeps_attributes_coerced(tmp_path):
+    # Without a coverage rule the graph loads, but discarding every declaration
+    # means --attr values stop being coerced (issue #190, consequence B).
+    std = standard(tmp_path)
+    root = follower(tmp_path, extra={"links": ("LINK", "link", [])})
+    half = item("LINK-0009", "link", [("from", "presentation:REG-0003")])
+    (root / "links" / "LINK-0009.yml").write_text(yaml.safe_dump(half), encoding="utf-8")
+
+    assert main(["-C", str(root), "new", "SLD", "--title", "s", "--text", "s",
+                 "--attr", "weight=2.5", "--origin", "ai", "--no-interactive"]) == 0
+    written = yaml.safe_load((root / "slides" / "SLD-0002.yml").read_text(encoding="utf-8"))
+    assert written["attrs"]["weight"] == 2.5
+
+
 def test_an_alias_lets_a_follower_write_the_standards_attribute_under_its_own_name(tmp_path):
     standard(tmp_path)
     extra = {"attributes": ("ATTR", "attribute", [

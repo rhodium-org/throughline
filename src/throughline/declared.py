@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
+from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -528,14 +529,22 @@ def _apply_aliases(decls: Declarations) -> None:
 # ------------------------------------------------------------ attaching to a project
 
 def _decl_items(project):
-    return [it for it in project.items() if it.type in DECLARATION_TYPES | {"base"}]
+    skip = _SKIP_DECLS.get()
+    return [it for it in project.items()
+            if it.type in DECLARATION_TYPES | {"base"} and it.uid not in skip]
+
+
+# Declaration items being quarantined while a faulty one is isolated (issue #190).
+_SKIP_DECLS: ContextVar[frozenset] = ContextVar("skip_decls", default=frozenset())
 
 
 def attach(project) -> None:
     """Form ``project``'s declarations (see :func:`_attach`). A faulty declaration
     in the graph holding it is a finding there, under ``declaration``, so the graph
     can still be loaded and put right with tl; any graph following it is refused
-    when read."""
+    when read. One half-made declaration is quarantined on its own: the graph's
+    other declarations still form, so an in-progress item can be finished with
+    ``tl link`` / ``tl amend`` (issue #190)."""
     project.declaration_errors = []
     inh = project.inheritance
     source = getattr(inh, "source_project", None) if inh else None
@@ -543,15 +552,37 @@ def attach(project) -> None:
     if faults:
         raise DeclarationError(
             f"the schema source '{inh.namespace}' holds a faulty declaration: {faults[0]}")
+    items = _decl_items(project)
+    if not items:
+        _attach(project)
+        return
     try:
         _attach(project)
+        return
     except DeclarationError as e:
-        if not _decl_items(project):
-            raise
-        project.declaration_errors = [str(e)]
-        project.formed_declarations = None
-        project.offered = Declarations()
-        project.declarations = Declarations()
+        error = str(e)
+
+    # Isolate a single faulty declaration: if leaving exactly one item out lets the
+    # rest form, quarantine only that one and report its fault. This keeps the
+    # graph's other declarations (and the schema rules they satisfy) intact.
+    for uid in (it.uid for it in items):
+        token = _SKIP_DECLS.set(frozenset({uid}))
+        try:
+            _attach(project)
+        except DeclarationError:
+            _SKIP_DECLS.reset(token)
+            continue
+        else:
+            _SKIP_DECLS.reset(token)
+            project.declaration_errors = [error]
+            return
+
+    # No single item accounts for the fault (e.g. a clash between two): keep the
+    # previous whole-graph behaviour so the graph still loads with a finding.
+    project.declaration_errors = [error]
+    project.formed_declarations = None
+    project.offered = Declarations()
+    project.declarations = Declarations()
 
 
 def _attach(project) -> None:
