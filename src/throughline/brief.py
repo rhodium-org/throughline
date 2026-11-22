@@ -406,6 +406,7 @@ _CTX_COMMAND_USAGE = {
     "review": "tl review",
     "init": "tl init [--name NAME] [--no-demo | --bare] | tl init --from-schema <url|path> [--ref REF]",
     "context": "tl context [<UID>]",
+    "doctor": "tl doctor",
 }
 
 # Commands whose importance is not evident from a one-line help string, and which

@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-328
+331
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 49
@@ -68,24 +68,40 @@ throughline is pure Python (one dependency, `pyyaml`) and needs **Python >= 3.11
 (for the stdlib `tomllib`). The same steps work on **Linux, macOS, and Windows** —
 only how you obtain Python and put scripts on `PATH` differs.
 
-**Recommended — [`pipx`](https://pipx.pypa.io)** (installs the CLI in its own
-isolated environment):
+**Recommended — [`uv`](https://docs.astral.sh/uv/)** (installs the CLI in its own
+isolated environment, on a Python that uv manages rather than the one your operating
+system ships):
+
+```
+uv tool install --python 3.13 --managed-python throughline
+```
+
+`--managed-python` makes uv download and use its own build of Python instead of the
+system's, so when your OS upgrades or removes its Python, `tl` keeps running. Get uv
+with `curl -LsSf https://astral.sh/uv/install.sh | sh` (Linux, macOS),
+`powershell -c "irm https://astral.sh/uv/install.ps1 | iex"` (Windows), `brew install uv`
+or `pipx install uv`. Upgrade later with `uv tool upgrade throughline`.
+
+**Or [`pipx`](https://pipx.pypa.io)**, if you already use it:
 
 ```
 pipx install throughline
 ```
 
 > Prefer the bleeding edge? Install straight from Git instead:
-> `pipx install "git+https://github.com/rhodium-org/throughline.git"`
+> `uv tool install --managed-python "git+https://github.com/rhodium-org/throughline.git"`
+> (or the same URL with `pipx install`).
 
 Per-OS notes:
 
 - **Linux** — system Python is often "externally managed" (PEP 668); don't
-  `pip install` into it. Use `pipx` (`sudo apt install pipx` / `pacman -S python-pipx`)
+  `pip install` into it. Use uv, `pipx` (`sudo apt install pipx` / `pacman -S python-pipx`)
   or a virtual environment.
-- **macOS** — `brew install python pipx && pipx ensurepath`, then install as above.
-- **Windows** — install Python 3.12 from python.org or `winget install Python.Python.3.12`
-  (tick *Add to PATH*), then `python -m pip install --user pipx && pipx ensurepath`.
+- **macOS** — `brew install uv` (or `brew install python pipx && pipx ensurepath`), then
+  install as above.
+- **Windows** — with uv, nothing else is needed: uv fetches Python itself. For pipx,
+  install Python from python.org or `winget install Python.Python.3.13` (tick *Add to
+  PATH*), then `python -m pip install --user pipx && pipx ensurepath`.
   Both `tl.exe` and `throughline.exe` are generated.
 
 Either way you get `tl` (and the long form `throughline`) on your `PATH`. For a
@@ -97,6 +113,27 @@ Or run it containerised, no local Python at all:
 docker build -t throughline .
 docker run --rm -v "$PWD/my-project:/work" throughline -C /work check --strict
 ```
+
+### If `tl` says `bad interpreter` after a Python upgrade
+
+A tool installed with pipx (or into any virtual environment) runs on the Python it
+was installed with. When your operating system upgrades its Python — Ubuntu moving
+`python3` from 3.12 to 3.14, say, or Homebrew moving to a new minor release — the
+old interpreter is removed and every command in that environment fails before any of
+its code runs, with `bad interpreter: No such file or directory` or
+`No module named ...`. Nothing is wrong with your graphs; the environment just has to
+be rebuilt on the new Python:
+
+| Installed with | Rebuild with |
+|---|---|
+| pipx | `pipx reinstall-all --python python3` (or the full path of the new Python, e.g. `/usr/bin/python3.14`) |
+| pipx, when `pipx` itself is broken too | `uvx pipx reinstall-all --python python3` |
+| uv | `uv tool install --reinstall --python 3.13 --managed-python throughline` |
+
+A uv install made with `--managed-python` does not hit this, because the OS does not
+touch the Python uv manages. `tl doctor` says which Python is running `tl`, how `tl`
+was installed and the rebuild command for that install: run it before an upgrade to
+see whether you depend on the OS Python.
 
 ---
 
@@ -155,6 +192,7 @@ tl diagram [types|transitions|both]           # Mermaid of the model / lifecycle
 tl docs [FILE ...] [--at REF]                 # inject graph content into marked Markdown regions
 tl docs [FILE ...] --check                     # CI gate: fail if any document is out of date
 tl context                                    # agent-facing brief (IDD + this project's model)
+tl doctor                                     # which Python runs tl, how tl was installed, how to rebuild it
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…"      # a signature no longer stands; awaits a human again

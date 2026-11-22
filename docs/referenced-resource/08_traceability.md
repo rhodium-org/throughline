@@ -27,11 +27,11 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0013 | Baselines | SR-0090 |
 | UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093, SR-0248, SR-0250, SR-0265 |
 | UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137, SR-0274, SR-0355, SR-0358 |
-| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210, SR-0324, SR-0333, SR-0354 |
+| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210, SR-0324, SR-0333, SR-0354, SR-0370 |
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
 | UR-0018 | Migration path in | — |
 | UR-0019 | Requirements-to-code traceability | — |
-| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168, SR-0362, SR-0367 |
+| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168, SR-0362, SR-0367, SR-0369, SR-0371 |
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102, SR-0129, SR-0161, SR-0171, SR-0190, SR-0204 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162, SR-0170, SR-0205, SR-0208, SR-0219, SR-0242, SR-0243, SR-0244, SR-0245, SR-0267, SR-0269, SR-0272 |
