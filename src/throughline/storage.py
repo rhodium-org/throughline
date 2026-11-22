@@ -824,6 +824,13 @@ class RepairResult(NamedTuple):
     # out of them, ``uid -> "from -> to"`` (SR-0313).
     retired_statuses: tuple[str, ...] = ()
     moved: Mapping[str, str] = _NO_STRINGS
+    # The built axis (SR-0377, SR-0379, SR-0383): the statuses bound to the built
+    # role, the move added so work may be built before it is signed, each item
+    # dated from history, and each built item history could not date.
+    built_role: tuple[str, ...] = ()
+    build_route: Mapping[str, str] = _NO_STRINGS
+    dated: Mapping[str, str] = _NO_STRINGS
+    undated: tuple[str, ...] = ()
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -1161,7 +1168,9 @@ def unsigned_agreement_statuses(config: dict) -> tuple[str, ...]:
     if not proposed or not ratified or values is None:
         return ()
     transitions = config.get("transitions")
-    bound = set(roles.values())
+    # The built role binds a list (SR-0377); every other role binds one status.
+    bound = {s for v in roles.values()
+             for s in (v if isinstance(v, list) else [v])}
     retiring = []
     initial = roles.get("initial")
     if initial and initial != proposed and initial in values:
@@ -1294,6 +1303,124 @@ def _retire_borrowed_unsigned_agreement(root: Path) -> tuple[tuple[str, ...],
     return retiring, _move_out_of(project, set(retiring), proposed, ratified)
 
 
+_BUILT_DEFAULT = ("implemented", "verified")
+
+
+def _backfill_built_role(root: Path) -> tuple[str, ...]:
+    """Bind the built role (SR-0377) for a project that declares both implemented
+    and verified, binds its other roles, and binds no built role. Returns the
+    statuses bound, empty when nothing was written. A project with other names
+    for built work, or none, is left to say so itself."""
+    cfg_file = root / CONFIG_NAME
+    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    status = config.get("status") or {}
+    roles = status.get("roles")
+    values = status.get("values") or []
+    # A roles table declared and left empty is a deliberate choice (SR-0136),
+    # and one that already says what built means needs nothing.
+    if not isinstance(roles, dict) or not roles or "built" in roles:
+        return ()
+    if not all(v in values for v in _BUILT_DEFAULT):
+        return ()
+    doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
+    if not doc.has_table(("status", "roles")):
+        return ()
+    doc.set_key(("status", "roles"), "built", list(_BUILT_DEFAULT), because=(
+        "`tl migrate` bound the built role (SR-0377): the statuses in which an "
+        "item is realised by the work the graph governs, each move into or out of "
+        "them dated on the item (SR-0378). Remove it if nothing in this graph is "
+        "ever built."))
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return _BUILT_DEFAULT
+
+
+def _backfill_build_route(root: Path) -> dict[str, str]:
+    """Let the proposed status move into the built role (SR-0379), where the
+    ratified status may and the proposed one may not. Returns ``proposed ->
+    built status`` for the move added, empty when none was."""
+    project = load_project(root)
+    schema = project.schema
+    roles = schema.status_roles or {}
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if not schema.built_order or schema.transitions is None or not proposed or not ratified:
+        return {}
+    if any(schema.allows_transition(proposed, b) for b in schema.built_order):
+        return {}
+    into = next((b for b in schema.built_order
+                 if schema.allows_transition(ratified, b)), None)
+    if into is None:
+        return {}
+    cfg_file = root / CONFIG_NAME
+    doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
+    if not doc.has_table("transitions"):
+        return {}
+    because = (f"`tl migrate` added the move to '{into}' (SR-0379): work may be "
+               "built before it is signed, and `tl check --strict` refuses it built "
+               "and unsigned, so it cannot land that way (SR-0380).")
+    if proposed in (project.config.get("transitions") or {}):
+        doc.add_to_array("transitions", proposed, [into], because=because)
+    else:
+        doc.set_key("transitions", proposed, [into], because=because)
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return {proposed: into}
+
+
+def _first_built_commit(path: Path, built: frozenset[str]) -> tuple[str, str, str] | None:
+    """The first commit in which the item file at ``path`` entered a built status,
+    as ``(commit, author, UTC time)``, following renames; ``None`` where git or
+    its history cannot say."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(path.parent), "log", "--follow", "--reverse",
+             "--unified=0", "--format=\x1f%H\x1f%an\x1f%aI", "--", path.name],
+            capture_output=True, text=True, encoding="utf-8", timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    current = None
+    for line in out.stdout.splitlines():
+        if line.startswith("\x1f"):
+            parts = line.split("\x1f")
+            current = (parts[1], parts[2], parts[3]) if len(parts) >= 4 else None
+            continue
+        if current and line.startswith("+status:"):
+            if line.split(":", 1)[1].strip().strip("'\"") in built:
+                return current
+    return None
+
+
+def _backfill_implementations(root: Path) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Date the built work a graph already holds (SR-0383): an item in a built
+    status with no ``implementations`` list is given one entry, from the first
+    commit in which it entered that status, by that commit's author, at that
+    commit, marked ``backfilled``. Returns ``uid -> time`` for each dated and the
+    UIDs history could not date. Idempotent: an item with a list is left alone."""
+    from .built import AT, BACKFILLED, BY, REVISION, normalise_time
+    project = load_project(root)
+    schema = project.schema
+    if not schema.built_order:
+        return {}, ()
+    dated: dict[str, str] = {}
+    undated: list[str] = []
+    for item in project.items():
+        if item.is_deleted or item.status not in schema.built_statuses:
+            continue
+        if item.implementations or item._path is None:
+            continue
+        found = _first_built_commit(Path(item._path), schema.built_statuses)
+        if found is None:
+            undated.append(item.uid)
+            continue
+        commit, author, when = found
+        at = normalise_time(when)
+        item.implementations = [{AT: at, BY: author, REVISION: commit,
+                                 BACKFILLED: True}]
+        write_item(item, project.register_of(item.uid))
+        dated[item.uid] = at
+    return dated, tuple(undated)
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -1333,6 +1460,7 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
         # leave what the source retires or has retired (SR-0319), after the lift,
         # whose records decide where a signed item goes.
         retired_statuses, moved = _retire_borrowed_unsigned_agreement(root)
+        built_role, build_route = (), {}
     else:
         roles = _backfill_status_roles(root)
         routes = _backfill_suspect_routes(root)
@@ -1340,6 +1468,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
         # After the vocabulary is declared, which it reads; before the records,
         # which read nothing of status (SR-0313).
         retired_statuses, moved = _retire_unsigned_agreement(root)
+        # The built axis (SR-0377, SR-0379): the role first, which the route
+        # reads, both after the vocabulary that declares their statuses.
+        built_role = _backfill_built_role(root)
+        build_route = _backfill_build_route(root)
     # Signed content before the flags (SR-0218): a record whose item reproduces its
     # stamp now is proved by the item as it stands, and the flag repair below may
     # change a fingerprint input and leave only history to prove it from.
@@ -1357,10 +1489,13 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     revisions = _backfill_ratification_revisions(root)
     # Manifests only: no item, stamp or configuration reads a register's type.
     registers = _backfill_register_types(root)
+    # Last: it reads the built role bound above, and writes only items.
+    dated, undated = _backfill_implementations(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
                         registers, lifted, withdrawn,
-                        inherited, retired_statuses, moved)
+                        inherited, retired_statuses, moved,
+                        built_role, build_route, dated, undated)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -1455,6 +1590,11 @@ class MigrationResult(NamedTuple):
     # Each register still declaring no item type after the repairs, as
     # ``(prefix, folder relative to the project)`` (SR-0350).
     untyped: tuple[tuple[str, str], ...] = ()
+    # The built axis (SR-0377, SR-0379, SR-0383); see RepairResult.
+    built_role: tuple[str, ...] = ()
+    build_route: Mapping[str, str] = _NO_STRINGS
+    dated: Mapping[str, str] = _NO_STRINGS
+    undated: tuple[str, ...] = ()
 
 
 def migrate_project(path: str | Path, *,
@@ -1537,7 +1677,9 @@ def _migrate_project(root: Path, cfg_file: Path, config: dict,
                            result.lifted,
                            result.withdrawn, result.inherited,
                            result.retired_statuses, result.moved,
-                           _untyped_after(root))
+                           _untyped_after(root),
+                           result.built_role, result.build_route,
+                           result.dated, result.undated)
 
 
 def _untyped_after(root: Path) -> tuple[tuple[str, str], ...]:
@@ -2550,17 +2692,21 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+# The statuses in which an item is realised by the work the graph governs
+# (SR-0377). Each move into or out of them is dated on the item (SR-0378). A
+# graph of intentions with nothing to build leaves this out, and has no built axis.
+built = ["implemented", "verified"]
 
 # Allowed status moves (SR-0083). `tl check` compares each item against its
 # status in the previous commit and flags any change these do not permit. Delete
 # this table to leave every status freely reachable.
 # Every live status keeps a route to 'ratified' (SR-0150), so parked scope can
 # still be put forward for a person to sign, and to 'suspect' (SR-0175), so that
-# an item whose grounding is withdrawn can be flagged wherever it sits. Nothing
-# reaches 'implemented' without passing 'ratified' (SR-0312); an item carried
-# past it unsigned is still signed where it stands.
+# an item whose grounding is withdrawn can be flagged wherever it sits. An item
+# may be built before it is signed (SR-0379, SR-0312); `tl check --strict`
+# refuses it built and unsigned (SR-0380), so it cannot land that way.
 [transitions]
-proposed    = ["ratified", "deferred", "suspect", "rejected", "deleted"]
+proposed    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
 deferred    = ["proposed", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]

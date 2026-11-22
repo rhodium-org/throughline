@@ -35,7 +35,9 @@ from .filters import FilterError
 # the gate judge an item by the same functions.
 _FIELDS = frozenset({"uid", "type", "status", "register", "title", "text",
                      "rationale", "normative", "derived"})
-_STANDING = frozenset({"signed", "stale", "retired", "reviewed", "signers"})
+_STANDING = frozenset({"signed", "stale", "retired", "reviewed", "signers",
+                       # Whether and when built, and when signed (SR-0382).
+                       "built", "built_at", "signed_at", "adopted"})
 _FUNCTIONS = ("LOWER", "UPPER", "TRIM", "COALESCE", "SIZE")
 _KEYWORDS = frozenset({"AND", "OR", "NOT", "IS", "NULL", "IN", "CONTAINS", "STARTS",
                        "ENDS", "WITH", "EXISTS", "TRUE", "FALSE", "WHERE"})

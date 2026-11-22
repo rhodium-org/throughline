@@ -57,6 +57,7 @@ ratifications:
         in 6.0.0, so there is no name left to print the notice for.'
       fingerprint: sha256:200960b55b35a1c035782a1aff4247d71b6d0e89bac2820f1cfa97beabeadfe0
       from: implemented
+  revision: adf6a58e3e3b6819525b13853ef680f92e45cfdb
 deleted:
   date: '2026-11-15'
   reason: 'Superseded by SR-0353: the deprecated names it announced are removed in

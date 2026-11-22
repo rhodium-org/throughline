@@ -2386,8 +2386,11 @@ def test_shipped_lifecycle_can_put_a_below_proposed_item_forward(tmp_path):
     proposed, ratified = (schema.status_role("proposed"),
                           schema.status_role("ratified"))
 
+    # A built status is not below proposed: an item there is signed where it
+    # stands (SR-0379, SR-0384), and the strict check refuses it unsigned (SR-0380).
     below = {s for s in moves.get(proposed, ())
              if s not in dead and s not in (proposed, ratified)
+             and s not in schema.built_statuses
              and ratified not in moves.get(s, ())}
     assert below, "expected the shipped table to have statuses below proposed"
     stranded = sorted(s for s in below if proposed not in moves.get(s, ()))
@@ -4122,7 +4125,10 @@ def test_default_status_set_includes_deferred(tmp_path):
     assert values.index("deferred") == values.index("proposed") + 1
     assert "approved" not in values and "draft" not in values
     assert cfg["status"]["roles"]["initial"] == cfg["status"]["roles"]["proposed"]
-    assert "implemented" not in cfg["transitions"]["proposed"]
+    # An item may be built before it is signed (SR-0379, SR-0312 as amended), and
+    # the shipped lifecycle says which statuses mean built (SR-0377).
+    assert "implemented" in cfg["transitions"]["proposed"]
+    assert cfg["status"]["roles"]["built"] == ["implemented", "verified"]
 
 
 def test_find_nested_project_reports_progress(tmp_path):

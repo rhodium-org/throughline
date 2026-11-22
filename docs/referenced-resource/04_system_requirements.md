@@ -308,9 +308,9 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0022 -->
 **SR-0022 — Built-in core fields** — `system_requirement`, status `ratified`
 
-> The Tool shall reserve these top-level fields on every item: `uid`, `type`, `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`, `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`, `deleted` and `key`.
+> The Tool shall reserve these top-level fields on every item: `uid`, `type`, `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`, `attrs`, `ratifications`, `withdrawals`, `implementations`, `reviewed`, `created`, `modified`, `deleted` and `key`.
 
-*Rationale:* The list named twelve fields while the Tool reserves fifteen, so a reader who built against it got an item shape that rejects valid files (issue #39). rationale, attrs and deleted were missing, and order/level named a field the Tool calls order; doc 06 §4 already showed all fifteen. The requirement says reserve rather than reserve and manage, because no command sets order, created or modified: the Tool reads them and writes them back unchanged.
+*Rationale:* The list named twelve fields while the Tool reserves fifteen, so a reader who built against it got an item shape that rejects valid files (issue #39). rationale, attrs and deleted were missing, and order/level named a field the Tool calls order; doc 06 §4 already showed all fifteen. implementations joined the list with SR-0378, the dated record of when an item was built. The requirement says reserve rather than reserve and manage, because no command sets order, created or modified: the Tool reads them and writes them back unchanged.
 
 *Implements:* UR-0011
 *Relates:* SR-0280
@@ -637,7 +637,7 @@ kept as a live example of the tombstone convention.)*
 <!-- tl:item SR-0045 -->
 **SR-0045 — Filter expression language** — `system_requirement`, status `ratified`
 
-> The Tool shall provide one boolean filter language over an item's `uid`, `type`, `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs` and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed` and `signers`, usable identically in search, table generation, exports, and coverage rules.
+> The Tool shall provide one boolean filter language over an item's `uid`, `type`, `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs` and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed`, `signers`, `built`, `built_at`, `signed_at` and `adopted`, usable identically in search, table generation, exports, and coverage rules.
 
 *Rationale:* The list named tags, which the Tool has never had, and left out uid, rationale, normative and derived, which it admits (issue #40). The names are written out exactly because a reader reproducing the language needs the set, and SR-0103 bounds what the parser may read by it. Tags came from the filter strings other tools offer and were never built, so UR-0010 no longer promises them.
 

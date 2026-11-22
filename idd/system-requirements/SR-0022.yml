@@ -4,14 +4,15 @@ status: ratified
 title: Built-in core fields
 text: 'The Tool shall reserve these top-level fields on every item: `uid`, `type`,
   `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`,
-  `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`, `deleted`
-  and `key`.'
+  `attrs`, `ratifications`, `withdrawals`, `implementations`, `reviewed`, `created`,
+  `modified`, `deleted` and `key`.'
 rationale: 'The list named twelve fields while the Tool reserves fifteen, so a reader
   who built against it got an item shape that rejects valid files (issue #39). rationale,
   attrs and deleted were missing, and order/level named a field the Tool calls order;
-  doc 06 §4 already showed all fifteen. The requirement says reserve rather than
-  reserve and manage, because no command sets order, created or modified: the Tool
-  reads them and writes them back unchanged.'
+  doc 06 §4 already showed all fifteen. implementations joined the list with SR-0378,
+  the dated record of when an item was built. The requirement says reserve rather
+  than reserve and manage, because no command sets order, created or modified: the
+  Tool reads them and writes them back unchanged.'
 normative: true
 links:
 - target: UR-0011
@@ -23,14 +24,14 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  at: '2026-10-30T19:13:28Z'
-  fingerprint: sha256:131747457bab28342a19606037d21155d64ad6784f0e040fb6ee39773e1ceea4
+  at: '2026-11-22T12:29:25Z'
+  fingerprint: sha256:13f017af8e7089806b5706a04fac9661cb99bfd9b0dc31a8f2fad071258e9906
   content:
     type: system_requirement
     text: 'The Tool shall reserve these top-level fields on every item: `uid`, `type`,
       `status`, `title`, `text`, `rationale`, `normative`, `derived`, `order`, `links`,
-      `attrs`, `ratifications`, `withdrawals`, `reviewed`, `created`, `modified`,
-      `deleted` and `key`.'
+      `attrs`, `ratifications`, `withdrawals`, `implementations`, `reviewed`, `created`,
+      `modified`, `deleted` and `key`.'
     normative: true
     derived: false
     attrs:

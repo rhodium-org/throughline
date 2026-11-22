@@ -12,6 +12,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import built
 from .fingerprint import content_fingerprint, deletion_fingerprint, fingerprint
 from .signed_links import describe_drift, link_drift, recorded_links
 from .filters import FilterError, safe_eval
@@ -64,7 +65,7 @@ _DEFAULT_SEVERITY = {
     "no-status-roles": WARNING, "suspect-unreachable": WARNING,
     "suspect-link": WARNING, "unreviewed": WARNING, "unratified": WARNING,
     "ratified-stale": WARNING, "ratified-content-mismatch": ERROR,
-    "awaiting-signatures": WARNING,
+    "awaiting-signatures": WARNING, "awaiting-acceptance": WARNING,
     "ambiguous": WARNING, "coverage": WARNING, "vague-word": WARNING,
     "unpublished": WARNING, "normative-mismatch": WARNING,
     "register-type-mismatch": WARNING,
@@ -75,6 +76,11 @@ _DEFAULT_SEVERITY = {
 # judgement a project may reasonably make differently; a coverage rule that
 # cannot be evaluated is not one of those. Silencing it would restore exactly the
 # inert gate SR-0191 exists to expose, with nothing to tell it from a live one.
+
+# Findings `--strict` leaves as warnings: existing work the graph was laid over
+# awaits acceptance, and no one could have agreed it before it was built (SR-0380).
+_KEPT_UNDER_STRICT = frozenset({"awaiting-acceptance"})
+
 
 def _file(item) -> str:
     return str(item._path) if item._path else ""
@@ -94,7 +100,10 @@ def validate(project, strict: bool = False,
     tombstone_status = schema.tombstone_status() or None   # optional vocabulary
 
     def add(rule, uid, file, msg):
-        sev = schema.rule_severity(rule, _DEFAULT_SEVERITY.get(rule, WARNING), strict)
+        # Existing work awaiting acceptance stays a warning under --strict
+        # (SR-0380): no one could have agreed it before it was built.
+        sev = schema.rule_severity(rule, _DEFAULT_SEVERITY.get(rule, WARNING),
+                                   strict and rule not in _KEPT_UNDER_STRICT)
         if sev != OFF:
             out.append(Finding(rule, sev, uid, file, msg))
 
@@ -384,6 +393,16 @@ def validate(project, strict: bool = False,
                 add("awaiting-signatures", item.uid, f,
                     f"deletion {where.describe()} — the signatures are recorded, "
                     "but the item does not yet count as retired")
+        elif (not requirement_met(item, schema) and built.adopted(item, schema)
+                and item.status not in schema.dead_statuses()):
+            # Existing work the graph was laid over (SR-0380, SR-0381): built
+            # before anyone could agree it, so it waits to be accepted, and the
+            # gate a project lands work through does not refuse it.
+            first = built.first_built_at(item)
+            add("awaiting-acceptance", item.uid, f,
+                f"was built by {first}, before the graph was laid over existing "
+                f"work at {schema.adopted}, and awaits acceptance — `tl ratify "
+                f"{item.uid}` accepts it, `tl invalidate` rejects it")
         elif (not signatures(item) and item.status not in schema.dead_statuses()
                 and (counts(item, schema) or origin in schema.ai_origins)):
             roles = schema.status_roles or {}
@@ -402,6 +421,11 @@ def validate(project, strict: bool = False,
             elif item.status == roles.get("ratified"):
                 why = ("sits in the ratified status but names no ratifier — a status "
                        "can be set directly; only `tl ratify` records who accepted it")
+            elif built.is_built(item, schema):
+                # Judged on the built role, not the status name (SR-0380).
+                why = (f"is built ('{item.status}') and no person has signed it — "
+                       "built work lands only once agreed; `tl ratify` signs it "
+                       "where it stands")
             elif item.status == roles.get("initial"):
                 why = (f"is still '{item.status}' and was never proposed for "
                        "ratification — a machine-authored item is born proposed")
@@ -759,6 +783,12 @@ _STANDING = {
     "reviewed": lambda item, schema: (item.reviewed is not None
                                       and fingerprint(item, schema) == item.reviewed),
     "signers": _signers,
+    # Whether and when it was built, and when it was signed (SR-0382): the
+    # judgements the strict gate makes on the built axis (SR-0380).
+    "built": lambda item, schema: built.is_built(item, schema),
+    "built_at": lambda item, schema: built.built_at(item, schema),
+    "signed_at": lambda item, schema: built.signed_at(item),
+    "adopted": lambda item, schema: built.adopted(item, schema),
 }
 
 

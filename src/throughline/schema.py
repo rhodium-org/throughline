@@ -57,6 +57,10 @@ _ATTR_KINDS = {"enum", "string", "text", "int", "float", "bool", "date"}
 # attribute kinds above); the mapped *values* are the project's choice.
 _STATUS_ROLE_KEYS = frozenset(
     {"initial", "proposed", "ratified", "invalidated", "suspect", "tombstone"})
+# The statuses in which an item is realised by the work the graph governs
+# (SR-0377): the one role bound to a list, and one a project may leave out, in
+# which case it has no built axis at all.
+BUILT_ROLE = "built"
 
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -302,6 +306,10 @@ def check_shape(config: dict) -> None:
     status = _is_table(config.get("status"), "[status]")
     _is_names(status.get("values"), "[status] values")
     for role, bound in _is_table(status.get("roles"), "[status.roles]").items():
+        if role == BUILT_ROLE:
+            # The one role a project binds to several statuses (SR-0377).
+            _is_names(bound, f"[status.roles] {role}")
+            continue
         if isinstance(bound, (list, dict)):
             raise SchemaError(f"[status.roles] {role} must name a status, not "
                               f"{_article(bound)}")
@@ -515,6 +523,15 @@ class Schema:
     suggested_namespace: str | None = None
     # The language this project's filters are in (SR-0337).
     filter_language: str = PYTHON
+    # The statuses of the built role, in the order declared (SR-0377); empty
+    # where the project names none, and so has no built axis.
+    built_order: tuple[str, ...] = ()
+    # When the graph was laid over existing work, UTC (SR-0381); None if never.
+    adopted: str | None = None
+
+    @property
+    def built_statuses(self) -> frozenset[str]:
+        return frozenset(self.built_order)
 
     # ------------------------------------------------------------------ build
 
@@ -590,12 +607,25 @@ class Schema:
         raw_roles = status_cfg.get("roles")
         status_roles: dict[str, str] | None = None
         if raw_roles is not None:
-            unknown = set(raw_roles) - _STATUS_ROLE_KEYS
+            unknown = set(raw_roles) - _STATUS_ROLE_KEYS - {BUILT_ROLE}
             if unknown:
                 raise SchemaError(
                     f"[status.roles] declares unknown role(s) {sorted(unknown)} "
-                    f"(expected a subset of {sorted(_STATUS_ROLE_KEYS)})")
-            status_roles = {str(k): str(v) for k, v in raw_roles.items()}
+                    f"(expected a subset of {sorted(_STATUS_ROLE_KEYS | {BUILT_ROLE})})")
+            status_roles = {str(k): str(v) for k, v in raw_roles.items()
+                            if k != BUILT_ROLE}
+        built_raw = (raw_roles or {}).get(BUILT_ROLE)
+        built_order = tuple(str(v) for v in (
+            [built_raw] if isinstance(built_raw, str) else (built_raw or [])))
+        # [project] adopted: when the graph was laid over existing work (SR-0381).
+        adopted_raw = (config.get("project") or {}).get("adopted")
+        try:
+            from .built import normalise_time
+            adopted = normalise_time(adopted_raw)
+        except (TypeError, ValueError):
+            raise SchemaError(
+                f"[project] adopted must be a date and time, such as "
+                f"2026-11-22T12:00:00Z, not {shown(adopted_raw)}") from None
 
         # [transitions] status = ["next", ...] — the statuses each may move to.
         transitions: dict[str, frozenset[str]] | None = None
@@ -686,6 +716,7 @@ class Schema:
             type_normative=type_normative,
             suggested_namespace=suggested_namespace,
             filter_language=filter_language,
+            built_order=built_order, adopted=adopted,
         )
         schema._check_consistency()
         return schema
@@ -707,6 +738,12 @@ class Schema:
                 raise SchemaError(
                     f"[transitions] references status(es) {sorted(unknown)} "
                     "that are not in the declared [status] values")
+        if self.built_order and self.statuses is not None:
+            bad = {v for v in self.built_order if v not in self.statuses}
+            if bad:
+                raise SchemaError(
+                    f"[status.roles] built names status(es) {sorted(bad)} that are "
+                    "not in the declared [status] values")
         if self.status_roles is not None and self.statuses is not None:
             bad = {v for v in self.status_roles.values() if v not in self.statuses}
             if bad:

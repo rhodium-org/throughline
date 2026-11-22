@@ -434,6 +434,7 @@ def _migrate_alone(args) -> int:
                  or result.unprovable or result.registers or result.lifted
                  or result.withdrawn
                  or result.inherited or result.moved or result.retired_statuses
+                 or result.built_role or result.build_route or result.dated
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -540,6 +541,21 @@ def _migrate_alone(args) -> int:
                   "so sign each that still awaits a signature:")
             for uid, move in result.moved.items():
                 print(f"  {uid}: {move}")
+    # The built axis (SR-0377, SR-0379, SR-0383).
+    if result.built_role:
+        print(f"bound the built role to {', '.join(result.built_role)}: each move "
+              "into or out of them is now dated on the item (SR-0377, SR-0378)")
+    for frm, into in result.build_route.items():
+        print(f"allowed '{frm}' -> '{into}': work may be built before it is signed, "
+              "and `tl check --strict` refuses it built and unsigned (SR-0379)")
+    if result.dated:
+        print(f"dated {len(result.dated)} built item(s) from git history, marked "
+              "backfilled (SR-0383)")
+    if result.undated:
+        # Written nothing, so not counted as a change above: a note, on every run,
+        # until someone dates them or history can.
+        print(f"note: history could not say when {len(result.undated)} built "
+              "item(s) were built, so none was dated: " + " ".join(result.undated))
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")
@@ -2127,6 +2143,28 @@ def cmd_flag(args) -> int:
     return OK
 
 
+def cmd_adopt(args) -> int:
+    """Record when the graph was laid over existing work, and mark that work built
+    (SR-0381)."""
+    from .built import AdoptError, adopt
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    try:
+        when, marked, changed = adopt(project, args.uids, all_items=args.all,
+                                      at=args.at, by=args.by)
+    except (AdoptError, ValueError) as e:
+        return _err(str(e))
+    if changed:
+        print(f"adopted: the graph was laid over existing work at {when}")
+    for uid in marked:
+        print(f"{uid}: built at {when} (existing work, awaiting acceptance)")
+    if not changed and not marked:
+        print(f"nothing to do: already adopted at {when}")
+    return OK
+
+
 def cmd_status(args) -> int:
     """The generic, transition-validated status verb (SR-0132). Every status
     move a project's [transitions] table permits is reachable through this
@@ -2152,7 +2190,7 @@ def cmd_status(args) -> int:
     frm = item.status
     try:
         refuse_ratified_status(project.schema, to)
-        set_status(project.schema, item, to)
+        set_status(project.schema, item, to, by=getattr(args, "by", None))
     except GroundingError as e:
         return _err(str(e))
     write_item(item, project.register_of(item.uid))

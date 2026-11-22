@@ -14,6 +14,7 @@ import json
 
 from pathlib import Path
 
+from .built import describe_for_signing
 from .graph import Index
 from .signatures import (
     describe, is_stale, relevant, retired, signatures, signs_deletion, standing,
@@ -179,6 +180,12 @@ def render_for_ratification(project, item, *, emit) -> None:
         # A root needs no grounding and says so; anything else could not have got
         # this far, since ratification_obstacle refuses an ungrounded item.
         emit("grounded by: nothing — this is a root and justifies itself")
+    # Agreeing a plan and accepting what exists are different judgements, so the
+    # signer is told which this is (SR-0384, UR-0052).
+    kind = describe_for_signing(item, schema)
+    if kind:
+        emit("")
+        emit(kind)
     normative = [n for n in schema.normative_attrs(item.type) if n in item.attrs]
     if normative:
         emit("")

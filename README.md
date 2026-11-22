@@ -193,6 +193,7 @@ tl docs [FILE ...] [--at REF]                 # inject graph content into marked
 tl docs [FILE ...] --check                     # CI gate: fail if any document is out of date
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl doctor                                     # which Python runs tl, how tl was installed, how to rebuild it
+tl adopt (<UID> … | --all) [--at TIME]        # the graph was laid over existing work: mark it built, awaiting acceptance
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…"      # a signature no longer stands; awaits a human again

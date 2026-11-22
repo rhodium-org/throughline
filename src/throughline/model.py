@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .schema import SHIPPED_TOMBSTONE, Schema, kind_name, shown
+from .built import IMPLEMENTATIONS
 from .signatures import RATIFICATIONS, WITHDRAWALS, lift_legacy
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 CORE_FIELDS = [
     "uid", "type", "status", "title", "text", "rationale",
     "normative", "derived", "order", "links", "attrs",
-    RATIFICATIONS, WITHDRAWALS, "reviewed",
+    RATIFICATIONS, WITHDRAWALS, IMPLEMENTATIONS, "reviewed",
     "created", "modified", "deleted", "key",
 ]
 
@@ -73,6 +74,10 @@ _LINK_SHAPE = {"type": _ONE, "stamp": _ONE}
 _RECORD_SHAPE = {key: _ONE for key in (
     "by", "id", "role", "at", "fingerprint", "revision", "supersedes", "of",
     "reason")}
+# When an item was built and unbuilt (SR-0378): an entry per move across the built
+# role's edge. Written by status changes, tl adopt and tl migrate only.
+_BUILT_SHAPE = {key: _ONE for key in (
+    "at", "by", "revision", "withdrawn", "adopted", "backfilled")}
 _DELETED_SHAPE = {key: _ONE for key in ("date", "reason", "fingerprint", "from",
                                         "outright")}
 
@@ -139,6 +144,9 @@ class Item:
     # by ratify, withdraw and migration (SR-0263); see :mod:`signatures`.
     ratifications: list[dict] = field(default_factory=list)
     withdrawals: list[dict] = field(default_factory=list)
+    # When the item was built and unbuilt (SR-0378), oldest first; see :mod:`built`.
+    # Outside the fingerprint: marking work built never stales a signature.
+    implementations: list[dict] = field(default_factory=list)
     reviewed: str | None = None       # own fingerprint at last review (SR-0038)
     created: str | None = None
     modified: str | None = None
@@ -250,6 +258,11 @@ class Item:
                                       else [], start=1):
                 if isinstance(entry, dict):
                     _refuse_shape(entry, _RECORD_SHAPE, f"{name} entry #{n}: ")
+        for n, entry in enumerate(d.get(IMPLEMENTATIONS) or []
+                                  if isinstance(d.get(IMPLEMENTATIONS), list)
+                                  else [], start=1):
+            if isinstance(entry, dict):
+                _refuse_shape(entry, _BUILT_SHAPE, f"{IMPLEMENTATIONS} entry #{n}: ")
         for n, entry in enumerate(d.get("links") or [] if isinstance(d.get("links"), list)
                                   else [], start=1):
             if isinstance(entry, dict):
@@ -278,6 +291,9 @@ class Item:
         load_errors += errs
         withdrawals, errs = cls._parse_records(d.get(WITHDRAWALS), WITHDRAWALS)
         load_errors += errs
+        implementations, errs = cls._parse_records(d.get(IMPLEMENTATIONS),
+                                                   IMPLEMENTATIONS)
+        load_errors += errs
         item = cls(
             uid=d["uid"], type=d["type"],
             # Written with no value, a status is the one an absent key gives.
@@ -288,6 +304,7 @@ class Item:
             order=d.get("order"), links=links, attrs=attrs,
             ratifications=lifted + ratifications,
             withdrawals=withdrawn + withdrawals,
+            implementations=implementations,
             reviewed=d.get("reviewed"), created=d.get("created"),
             modified=d.get("modified"), deleted=d.get("deleted"),
             key=_as_text(d.get("key")),
@@ -319,6 +336,8 @@ class Item:
             d[RATIFICATIONS] = self.ratifications
         if self.withdrawals:
             d[WITHDRAWALS] = self.withdrawals
+        if self.implementations:
+            d[IMPLEMENTATIONS] = self.implementations
         if self.reviewed is not None:
             d["reviewed"] = self.reviewed
         if self.created:

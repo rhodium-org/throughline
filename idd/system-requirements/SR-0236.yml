@@ -46,6 +46,7 @@ ratifications:
         installed (removed in 6.0.0, as SR-0247 announced).'
       fingerprint: sha256:ddfe16dc92b330afb9a828c3247c3bb6044cc2ba118e6daf0ef8f1ecbaf506ed
       from: ratified
+  revision: adf6a58e3e3b6819525b13853ef680f92e45cfdb
 deleted:
   date: '2026-11-15'
   reason: 'Superseded by SR-0353: tl-compose and throughline-compose are no longer

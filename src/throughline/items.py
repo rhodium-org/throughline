@@ -402,8 +402,12 @@ def restore_item(project, uid: str) -> Item:
     if not project.schema.is_status(was):
         raise GroundingError(
             f"{uid} held the status '{was}', which the project no longer declares")
+    from .built import note_move
+    frm = item.status
     item.status = was
     item.deleted = None
+    # Back into a built status is built again, and dated (SR-0378).
+    note_move(project.schema, item, frm, was)
     return item
 
 

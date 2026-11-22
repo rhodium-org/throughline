@@ -112,8 +112,9 @@ def test_the_configuration_loses_the_retired_statuses(tmp_path):
     assert config["status"]["roles"]["initial"] == "proposed"
     transitions = config["transitions"]
     assert "approved" not in transitions and "draft" not in transitions
+    # The move into the built role is added after (SR-0379).
     assert transitions["proposed"] == ["ratified", "deferred", "suspect",
-                                       "rejected", "deleted"]
+                                       "rejected", "deleted", "implemented"]
     # A move into a retired status became a move into proposal.
     assert transitions["deferred"][0] == "proposed"
     assert transitions["rejected"] == ["proposed", "deleted"]

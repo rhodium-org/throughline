@@ -17,6 +17,7 @@ from typing import NamedTuple
 
 from dataclasses import dataclass, field
 
+from .built import note_move
 from .fingerprint import fingerprint
 from .signatures import (
     AT, BY, CONTENT, FILES, ID, LINKS, ROLE, STAMP, SUPERSEDES,
@@ -126,7 +127,8 @@ def transition_refusal(schema, item: Item, to: str) -> str | None:
     return None
 
 
-def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
+def set_status(schema, item: Item, to: str, *, deleting: bool = False,
+               by: str | None = None, at: str | None = None) -> None:
     """The single choke point for a status change (SR-0130). Every operation
     moves an item through here, so a move the configured [transitions] forbid is
     refused at the source rather than written and caught later by `check`. When a
@@ -153,7 +155,11 @@ def set_status(schema, item: Item, to: str, *, deleting: bool = False) -> None:
     refusal = transition_refusal(schema, item, to)
     if refusal is not None:
         raise GroundingError(refusal)
+    frm = item.status
     item.status = to
+    # Every move across the built role's edge is dated on the item (SR-0378);
+    # recorded here, at the one choke point, so no route forgets it.
+    note_move(schema, item, frm, to, by=by, at=at)
 
 
 def tombstone_refusal(uid: str) -> str:
@@ -732,7 +738,9 @@ def cascade_suspicion(project, idx: Index, uid: str, note: str, *,
         if not schema.allows_transition(dep.status, suspect):
             result.refused.append(Refusal(aid, dep.status, suspect))
             continue
+        frm = dep.status
         dep.status = suspect
+        note_move(schema, dep, frm, suspect)
         reasons = suspect_reasons(dep)
         reasons.append(note)
         result.marked.append(aid)

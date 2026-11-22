@@ -99,6 +99,10 @@ withdrawals:                 # one record per signature withdrawn (SR-0197, SR-0
     reason: signed under a misspelled name
     of: AAda Lovelace        #   whose signature it was
     at: "2026-10-25T10:01:44Z"
+implementations:             # when it was built and unbuilt (SR-0378), oldest first
+  - at: "2026-10-26T14:20:00Z"   #   when it entered a status of the built role
+    by: Ada Lovelace         #   who moved it
+    revision: 9f2c…e1        #   the commit the work tree stood at
 reviewed: "sha256:77ab…04"   # own fingerprint at last review (SR-0038)
 created: 2026-07-08
 modified: 2026-07-08
@@ -118,6 +122,16 @@ Rules:
   (the commit whose content reproduces the stamp, cached by migration, SR-0166).
   An item is ratified when its current signatures meet what `[ratify.requires]`
   asks of its type (SR-0260); a project that declares no roles needs one.
+- `implementations` is written only by a status change, `tl adopt` and `tl migrate`
+  (SR-0378, SR-0381, SR-0383), and only in a project whose `[status.roles]` names a
+  `built` role (SR-0377). Each move into one of the role's statuses appends `at`,
+  `by` and `revision`; each move out appends `at`, `by` and `withdrawn: true`. An
+  entry may carry `adopted: true` (existing work the graph was laid over, as of
+  `[project] adopted`) or `backfilled: true` (dated by `tl migrate` from git
+  history). It is outside the fingerprint, so marking work built never stales a
+  signature. Agreement and building are independent: an item may be signed and not
+  built, or built and not signed, and `tl check --strict` refuses the second unless
+  it was built no later than `[project] adopted` (SR-0380).
 - Before format 4 the record was flat under `attrs` (`ratified_by`,
   `ratified_fingerprint`, …, `withdrawn_by`, …). `tl migrate` lifts it into a list
   of one, verbatim, with no role and no time (SR-0255); a file read at the older
