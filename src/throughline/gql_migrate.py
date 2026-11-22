@@ -31,7 +31,9 @@ from .gql import check_condition
 from .graph import Index
 from .inject import _BLOCK, _MATRIX_REL, document_paths
 from .schema import GQL, PYTHON
-from .storage import CONFIG_NAME, FORMAT_VERSION, ProjectError, load_project
+from .atomic import write_all
+from .storage import (CONFIG_NAME, FORMAT_VERSION, ProjectError, load_project,
+                      read_text)
 from .tomledit import TomlDocument, render_assignment
 from .validate import eval_filter
 
@@ -426,7 +428,7 @@ def plan_move(path) -> Move:
 
     # The documents: every marked region whose directive takes a filter.
     for path_ in document_paths(project):
-        text = path_.read_text(encoding="utf-8")
+        text = read_text(path_, "a document")
         shown = path_.relative_to(root).as_posix() if path_.is_relative_to(root) \
             else str(path_)
 
@@ -460,9 +462,12 @@ def apply_move(move: Move) -> None:
         raise ProjectError("the move to GQL filters was refused; nothing is written")
     if move.already or move.config is None:
         return
-    (move.root / CONFIG_NAME).write_text(move.config, encoding="utf-8")
-    for path_, text in move.documents.items():
-        path_.write_text(text, encoding="utf-8")
+    # The configuration and every document, or none of them (SR-0356).
+    try:
+        write_all({move.root / CONFIG_NAME: move.config, **move.documents})
+    except OSError as e:
+        raise ProjectError(f"cannot write {e.filename}: {e.strerror} — nothing "
+                           "was written") from e
 
 
 def filters_in_earlier_language(path) -> int:
@@ -479,8 +484,8 @@ def filters_in_earlier_language(path) -> int:
     for path_ in document_paths(project):
         try:
             text = path_.read_text(encoding="utf-8")
-        except OSError:
-            continue
+        except (OSError, UnicodeDecodeError):
+            continue                 # `tl docs` reports a document it cannot read
         for m in _BLOCK.finditer(text):
             try:
                 count += filter_of(m.group("kind").lower(), m.group("arg")) is not None

@@ -198,7 +198,7 @@ def test_clarify_refuses_a_tombstone(graph, capsys):
     capsys.readouterr()
     assert _cli(["-C", graph, "clarify", "REQ-0001", "--reason", "r",
                  "--by", "Ada"]) == 2
-    assert "tombstone is permanent" in capsys.readouterr().err
+    assert "a tombstone is not changed" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("argv, says", [

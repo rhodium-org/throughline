@@ -1,0 +1,36 @@
+uid: SR-0366
+type: system_requirement
+status: ratified
+title: A register left untyped does not end a migration early
+text: Where tl migrate ends with a register still declaring no item type (SR-0350),
+  it shall still make the pass over the union in a project that declares sources,
+  give the advice it gives after any migration, and exit 1.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. In a project with sources the finding ended the command before the union's
+  pass and the advice, though SR-0350 says the migration is kept and the rest of
+  the advice still holds.
+normative: true
+links:
+- target: UR-0002
+  type: implements
+  stamp: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7
+- target: SR-0350
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:16Z'
+  fingerprint: sha256:f3ccdaf02ae8c127c676fe3eb63b9d110de697097c13ee2f0fae48e5a037d627
+  content:
+    type: system_requirement
+    text: Where tl migrate ends with a register still declaring no item type (SR-0350),
+      it shall still make the pass over the union in a project that declares sources,
+      give the advice it gives after any migration, and exit 1.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

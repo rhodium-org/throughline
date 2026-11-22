@@ -13,12 +13,12 @@ away, and the whole graph is validated by `tl check --strict`.
 | UID | Title | Implements (incoming) |
 |---|---|---|
 | UR-0001 | Stable requirement identity | SR-0001, SR-0002, SR-0003, SR-0004, SR-0008, SR-0101, SR-0140, SR-0239, SR-0249 |
-| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326, SR-0349, SR-0350, SR-0351 |
-| UR-0003 | Version-to-version comparison | SR-0012, SR-0037 |
+| UR-0002 | Frictionless add/remove | SR-0003, SR-0004, SR-0005, SR-0012, SR-0013, SR-0241, SR-0267, SR-0268, SR-0272, SR-0326, SR-0349, SR-0350, SR-0351, SR-0359, SR-0360, SR-0366 |
+| UR-0003 | Version-to-version comparison | SR-0012, SR-0037, SR-0361 |
 | UR-0004 | Traceability | SR-0030, SR-0031, SR-0032, SR-0051, SR-0099, SR-0107, SR-0108, SR-0110, SR-0143, SR-0211, SR-0212, SR-0271, SR-0344, SR-0347 |
 | UR-0005 | Stale-link awareness | SR-0033, SR-0034, SR-0159, SR-0160, SR-0169, SR-0173, SR-0174, SR-0175, SR-0177, SR-0178, SR-0188, SR-0270, SR-0343 |
 | UR-0006 | Review state | SR-0033, SR-0038 |
-| UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072 |
+| UR-0007 | Plain text under version control | NFR-0012, SR-0010, SR-0072, SR-0356 |
 | UR-0008 | Stakeholder-quality publishing | SR-0015, SR-0057 |
 | UR-0009 | Exchange with other tools | — |
 | UR-0010 | Search and filter | SR-0045, SR-0046, SR-0079, SR-0103, SR-0104, SR-0105, SR-0106, SR-0335, SR-0336, SR-0337, SR-0338, SR-0339, SR-0340, SR-0346 |
@@ -26,18 +26,18 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0012 | Coverage and impact analysis | SR-0035, SR-0042, SR-0051, SR-0052, SR-0078, SR-0085, SR-0086, SR-0096, SR-0189, SR-0191, SR-0348 |
 | UR-0013 | Baselines | SR-0090 |
 | UR-0014 | Team collaboration without a server | SR-0006, SR-0010, SR-0072, SR-0093, SR-0248, SR-0250, SR-0265 |
-| UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137, SR-0274 |
-| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210, SR-0324, SR-0333 |
+| UR-0015 | No lock-in | NFR-0001, NFR-0002, NFR-0003, NFR-0010, NFR-0019, SR-0055, SR-0061, SR-0071, SR-0133, SR-0137, SR-0274, SR-0355, SR-0358 |
+| UR-0016 | CI automation | SR-0023, SR-0032, SR-0040, SR-0041, SR-0044, SR-0060, SR-0076, SR-0134, SR-0135, SR-0136, SR-0139, SR-0146, SR-0164, SR-0176, SR-0179, SR-0180, SR-0185, SR-0193, SR-0194, SR-0209, SR-0210, SR-0324, SR-0333, SR-0354 |
 | UR-0017 | Requirement quality support | SR-0043, SR-0073, SR-0091, SR-0163 |
 | UR-0018 | Migration path in | — |
 | UR-0019 | Requirements-to-code traceability | — |
-| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168 |
+| UR-0020 | Comprehensible to newcomers | NFR-0005, NFR-0013, NFR-0021, SR-0014, SR-0074, SR-0077, SR-0100, SR-0102, SR-0120, SR-0121, SR-0168, SR-0362, SR-0367 |
 | UR-0021 | Verifiable development environment | SR-0075 |
 | UR-0022 | Comprehensible to AI agents | SR-0088, SR-0102, SR-0129, SR-0161, SR-0171, SR-0190, SR-0204 |
 | UR-0023 | Machine-authored items require human ratification | SR-0092, SR-0098, SR-0141, SR-0148, SR-0149, SR-0150, SR-0151, SR-0152, SR-0153, SR-0154, SR-0156, SR-0157, SR-0162, SR-0170, SR-0205, SR-0208, SR-0219, SR-0242, SR-0243, SR-0244, SR-0245, SR-0267, SR-0269, SR-0272 |
 | UR-0024 | Drift-free narrative documents | SR-0094, SR-0095, SR-0109, SR-0111, SR-0112, SR-0113, SR-0115, SR-0116, SR-0117, SR-0118, SR-0119, SR-0186, SR-0187, SR-0220, SR-0341 |
 | UR-0025 | Explicit non-goals as first-class items | SR-0097 |
-| UR-0026 | Conflict-free parallel identity allocation | SR-0006, SR-0248 |
+| UR-0026 | Conflict-free parallel identity allocation | SR-0006, SR-0248, SR-0357, SR-0364 |
 | UR-0027 | Item identity is tamper-evident | SR-0127 |
 | UR-0028 | A stale item shows what changed before it asks to be re-ratified | SR-0165, SR-0166, SR-0167, SR-0198, SR-0200, SR-0215, SR-0216, SR-0217, SR-0218, SR-0246 |
 | UR-0029 | Ratification shows the ratifier what they are accepting | SR-0195, SR-0269 |
@@ -48,15 +48,15 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0034 | An item flagged ambiguous can be clarified, with a record of who did it and why | SR-0213, SR-0214 |
 | UR-0035 | An item's wording can be flagged ambiguous, with a record of who flagged it and why | SR-0221, SR-0222, SR-0223, SR-0329 |
 | UR-0036 | Another program can use the Tool through a named interface that returns data | SR-0224, SR-0225, SR-0226, SR-0227, SR-0228, SR-0229, SR-0234, SR-0266 |
-| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0238, SR-0240, SR-0332, SR-0345, SR-0353 |
+| UR-0037 | A project that composes other graphs is worked with the Tool alone | SR-0230, SR-0231, SR-0232, SR-0233, SR-0234, SR-0235, SR-0238, SR-0240, SR-0332, SR-0345, SR-0353, SR-0363 |
 | UR-0038 | Changes drafted where tl cannot run are applied as proposals, never over a newer item | SR-0251, SR-0252, SR-0253, SR-0352 |
 | UR-0039 | More than one person can take accountability for an item, each in a role the project declares | SR-0254, SR-0255, SR-0257, SR-0258, SR-0259, SR-0260, SR-0261, SR-0262, SR-0263, SR-0264, SR-0265, SR-0342 |
 | UR-0040 | A ratification record says when it was given | SR-0256 |
 | UR-0041 | A graph that follows a standard declares only what it adds | SR-0275, SR-0276, SR-0277, SR-0278, SR-0279 |
-| UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281 |
+| UR-0042 | A change set applied twice changes the graph once | SR-0280, SR-0281, SR-0365 |
 | UR-0043 | A graph that follows a standard is started with one command | SR-0283 |
 | UR-0044 | A standard declares its followers' shape as items, and tl check can check followers against it | SR-0285, SR-0286, SR-0287, SR-0288, SR-0289, SR-0290, SR-0291, SR-0292, SR-0293, SR-0294, SR-0295, SR-0296, SR-0299, SR-0320, SR-0321 |
-| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0316, SR-0350 |
+| UR-0045 | Migrate every graph beneath a path | SR-0300, SR-0301, SR-0302, SR-0303, SR-0304, SR-0316, SR-0350, SR-0368 |
 | UR-0046 | Proposed until a person signs it | SR-0305, SR-0306, SR-0307, SR-0308, SR-0309, SR-0310, SR-0311, SR-0312, SR-0313, SR-0314, SR-0315, SR-0317, SR-0318, SR-0319 |
 | UR-0047 | A standard's guidance for AI agents arrives with every graph that follows it | SR-0322, SR-0323 |
 | UR-0048 | A release is shown to leave existing graphs as they were, or to say what it changes | SR-0334 |

@@ -1,0 +1,37 @@
+uid: SR-0365
+type: system_requirement
+status: ratified
+title: A change set stamps a stale link again
+text: A link operation that asks for a stamp, on a link the item already holds, shall
+  count as already applied only while that link's stamp is the fingerprint of its
+  target. Otherwise tl apply shall stamp the link again and report it restamped.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. A link on an existing link was already applied whatever its stamp, so
+  an assistant working from an export could not confirm a link whose target had changed,
+  which tl link --stamp does. Applying the set a second time still changes nothing.
+normative: true
+links:
+- target: UR-0042
+  type: implements
+  stamp: sha256:fdbab3fc90033d0cba1c63c2c10552b9a7a183d270374221e2a8a03aeb1f8370
+- target: SR-0281
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:15Z'
+  fingerprint: sha256:caa22bf7c0484e22868014851b30903302416839d70bb6c6742ac5f59b32c0bc
+  content:
+    type: system_requirement
+    text: A link operation that asks for a stamp, on a link the item already holds,
+      shall count as already applied only while that link's stamp is the fingerprint
+      of its target. Otherwise tl apply shall stamp the link again and report it
+      restamped.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -202,6 +202,20 @@ def test_a_copy_to_path_that_holds_something_else_is_kept_and_init_carries_on(tm
     assert (fol / "throughline.toml").is_file() and not (fol / "AGENTS.md").exists()
 
 
+def test_an_agent_file_that_is_not_utf8_is_kept_and_init_carries_on(tmp_path, monkeypatch, capsys):
+    """SR-0354: it ended `tl init --from-schema` in a traceback, the graph made."""
+    _standard(tmp_path)
+    fol = tmp_path / "fol"
+    fol.mkdir()
+    (fol / "AGENTS.md").write_bytes(b"# caf\xe9\n")
+    monkeypatch.chdir(tmp_path)
+    assert _cli(["-C", "fol", "init", "--from-schema", "std"]) == 0
+    assert (fol / "AGENTS.md").read_bytes() == b"# caf\xe9\n"
+    err = capsys.readouterr().err
+    assert "fol/AGENTS.md is not UTF-8 text, so it was kept as it is" in err
+    assert (fol / "deck-guidance.md").is_file() and (fol / "CLAUDE.md").is_file()
+
+
 def test_a_copy_to_that_leaves_the_new_project_is_refused(tmp_path, monkeypatch, capsys):
     _standard(tmp_path, copy_to="../escaped.md")
     monkeypatch.chdir(tmp_path)

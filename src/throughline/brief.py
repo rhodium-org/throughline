@@ -404,7 +404,7 @@ _CTX_COMMAND_USAGE = {
     "schema": "tl schema <noun> <verb> … --because <why>",
     "migrate": "tl migrate",
     "review": "tl review",
-    "init": "tl init [--demo] | tl init --from-schema <url|path> [--ref REF]",
+    "init": "tl init [--name NAME] [--no-demo | --bare] | tl init --from-schema <url|path> [--ref REF]",
     "context": "tl context [<UID>]",
 }
 

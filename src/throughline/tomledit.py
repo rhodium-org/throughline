@@ -224,7 +224,12 @@ class TomlDocument:
         if span is None:
             self.add_table(table, comment=comment)
             span = self._table_span(table)
-        assert span is not None
+        if span is None:
+            # A name the editor can write and cannot find again (one holding a
+            # quote): refused, never asserted, so the caller says so in a line.
+            raise TomlEditError(
+                f"the table [{_render_path(_as_path(table))}] cannot be written "
+                "and found again; choose a name without a quote or a backslash")
         start, end = span
         found = self._key_span(start + 1, end, _as_path(key))
         note = comment_block(because) if because else []

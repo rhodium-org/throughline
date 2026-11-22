@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """`tl migrate --beneath` finds every graph beneath some paths, lists the ones
 behind the current format, and with --apply migrates those safe to rewrite
-(UR-0045, SR-0300..SR-0304).
+(UR-0045, SR-0300..SR-0304, SR-0368).
 
 Asked on 1 November 2026, when tl-ratify found 268 of 430 graphs unreadable
 because they were still at format 3, many of them in other sessions' worktrees.
@@ -179,7 +179,8 @@ def test_apply_skips_a_graph_in_a_linked_worktree(tmp_path, capsys):
 
 # ----------------------------------------------------------------- SR-0304
 
-def test_apply_migrates_the_rest_commits_nothing_and_carries_on(tmp_path, capsys):
+def test_apply_migrates_every_graph_or_none(tmp_path, capsys):
+    """SR-0304: a graph that fails puts back the graphs migrated before it."""
     repo = _repo(tmp_path / "repo")
     a = _graph(repo / "a")
     b = _graph(repo / "b")
@@ -189,12 +190,40 @@ def test_apply_migrates_the_rest_commits_nothing_and_carries_on(tmp_path, capsys
 
     assert _cli(["migrate", "--beneath", repo, "--apply"]) == 1
     out = capsys.readouterr().out
-    assert _declared(a) == _declared(b) == EARLIER_FORMAT_VERSION
     assert f"{bad.resolve()} — no migration path from format version 0" in out
+    assert "put back 2 graph(s) this run had migrated before it" in out
+    assert f"  {a.resolve()}\n" in out and f"  {b.resolve()}\n" in out
+    assert "nothing was migrated" in out
+    assert "migrated 2 graph(s)" not in out
+    assert _declared(a) == _declared(b) == 3
+    assert _git(repo, "rev-parse", "HEAD") == head
+    assert _git(repo, "status", "--porcelain") == ""       # every file as it was
+
+
+def test_apply_migrates_and_commits_nothing(tmp_path, capsys):
+    """SR-0304: with nothing failing, every graph is migrated and none committed."""
+    repo = _repo(tmp_path / "repo")
+    a = _graph(repo / "a")
+    b = _graph(repo / "b")
+    _commit(repo)
+    head = _git(repo, "rev-parse", "HEAD")
+
+    assert _cli(["migrate", "--beneath", repo, "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert _declared(a) == _declared(b) == EARLIER_FORMAT_VERSION
     assert (f"migrated 2 graph(s) in {repo.resolve()} to format version "
             f"{EARLIER_FORMAT_VERSION}") in out
     assert _git(repo, "rev-parse", "HEAD") == head
     assert _git(repo, "status", "--porcelain") != ""
+
+
+def test_beneath_a_path_that_is_not_there_is_refused(tmp_path, capsys):
+    """SR-0368: the parent of a missing path is not searched in its place."""
+    _graph(tmp_path / "here")
+    capsys.readouterr()
+    assert _cli(["migrate", "--beneath", tmp_path / "nope"]) == 2
+    got = capsys.readouterr()
+    assert "nope: no such file or directory" in got.err and got.out == ""
 
 
 def test_apply_reports_one_line_per_repository(tmp_path, capsys):

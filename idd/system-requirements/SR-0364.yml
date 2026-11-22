@@ -1,0 +1,35 @@
+uid: SR-0364
+type: system_requirement
+status: ratified
+title: tl resolve keeps the line endings of the files it rewrites
+text: An item file tl resolve renumbers, relinks or settles the signatures of shall
+  be written back with the line endings it was read with.
+rationale: Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. A file with CRLF line endings came back with LF, every line changed in
+  the diff of a merge that moved one UID. The rewrite was already made line by line
+  to keep the layout; the files were read and written in text mode, which translated
+  the endings on the way.
+normative: true
+links:
+- target: UR-0026
+  type: implements
+  stamp: sha256:26c11d6feeecd5e5004c45eb6cddcb52c951858d462d1642c237f546643d4bcc
+- target: SR-0248
+  type: refines
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:15Z'
+  fingerprint: sha256:1c6bd49ea97dcf0b1fc0794e4209b8ce7c32a76040cee5b17a53bb8d3ac9ec75
+  content:
+    type: system_requirement
+    text: An item file tl resolve renumbers, relinks or settles the signatures of
+      shall be written back with the line endings it was read with.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

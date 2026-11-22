@@ -37,20 +37,81 @@ def _load_yaml(text: str):
     return yaml.load(text, Loader=_YAML_LOADER)
 
 
+def read_text(path: Path, what: str) -> str:
+    """The text of the file at ``path``, refused by name where it cannot be read
+    as ``what`` (SR-0354): the Tool reads and writes UTF-8, and a file in another
+    encoding, or one that cannot be opened, is no item, register or configuration
+    a finding could name."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        raise ProjectError(f"cannot read {path} as {what}: it is not UTF-8 text "
+                           f"— {e.reason} at byte {e.start}") from e
+    except OSError as e:
+        raise ProjectError(f"cannot read {path} as {what}: "
+                           f"{e.strerror or e}") from e
+
+
+def read_config(cfg_file: Path) -> dict:
+    """The configuration ``cfg_file`` holds, refused by name where it is not UTF-8
+    text or not TOML (SR-0354). The one reader of a project's configuration, so
+    every command refuses an unreadable one in the same words."""
+    text = read_text(cfg_file, "a project's configuration")
+    try:
+        config = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as e:
+        raise ProjectError(f"cannot read {cfg_file} as a project's configuration: "
+                           f"it is not valid TOML — {e}") from e
+    # Asked here as well as where the schema is built: a migration and the
+    # format gate read the tables before any schema is.
+    try:
+        check_shape(config)
+    except SchemaError as e:
+        raise ProjectError(f"invalid configuration in {cfg_file}: {e}") from e
+    return config
+
+
+def _holds_itself(value, above: tuple = ()) -> bool:
+    """Whether a list or mapping in ``value`` holds itself, at any depth."""
+    if not isinstance(value, (list, dict)):
+        return False
+    if any(value is seen for seen in above):
+        return True
+    members = value.values() if isinstance(value, dict) else value
+    return any(_holds_itself(m, above + (value,)) for m in members)
+
+
+def _formed(form, raw: dict, at: Path, path: Path, what: str):
+    """``form(raw, path=at)``, refused by name where ``raw`` holds a value of a
+    kind its key never holds (SR-0354)."""
+    try:
+        return form(raw, path=at)
+    except ShapeError as e:
+        raise ProjectError(f"cannot read {path} as {what}: {e}") from e
+
+
 def _read_mapping(path: Path, what: str, needs: tuple[str, ...]) -> dict:
     """The mapping the file at ``path`` holds, refused by name where it cannot be
     read as ``what`` (SR-0324): not valid YAML, not a mapping, or without one of
     the keys in ``needs``. Such a file gives no item or register a finding could
     name, so the project is not loaded at all."""
     try:
-        raw = _load_yaml(path.read_text(encoding="utf-8"))
-    except (yaml.YAMLError, UnicodeDecodeError) as e:
-        why = " ".join(str(e).split())
+        raw = _load_yaml(read_text(path, what))
+    except (yaml.YAMLError, ValueError, RecursionError) as e:
+        # PyYAML raises its own error for text that is not YAML, and a plain
+        # ValueError for a value it recognises and cannot build: a date that is
+        # not in the calendar, a binary value that is not base64 (SR-0354).
+        why = " ".join(str(e).split()) or type(e).__name__
         raise ProjectError(f"cannot read {path} as {what}: it is not valid YAML "
                            f"— {why}") from e
     if not isinstance(raw, dict):
         kind = "empty" if raw is None else f"a {kind_name(raw)}, not a mapping"
         raise ProjectError(f"cannot read {path} as {what}: the file is {kind}")
+    if _holds_itself(raw):
+        # A YAML alias may name the value it sits in. Nothing can write such a
+        # value out again, or take a fingerprint of it (SR-0354).
+        raise ProjectError(f"cannot read {path} as {what}: a value in it "
+                           "contains itself, through a YAML alias")
     for key in needs:
         if not isinstance(raw.get(key), str) or not raw[key]:
             raise ProjectError(f"cannot read {path} as {what}: it holds no '{key}'")
@@ -59,13 +120,14 @@ def _read_mapping(path: Path, what: str, needs: tuple[str, ...]) -> dict:
 from collections.abc import Mapping
 from types import MappingProxyType
 
+from .atomic import Snapshot, write_all
 from .fingerprint import (
     content_fingerprint, deletion_content, deletion_fingerprint, fingerprint, signed_content,
 )
 from .graph import Index
 from .grounding import ratification_refusal
-from .model import Item, Link, Project, Register
-from .schema import SchemaError, kind_name
+from .model import Item, Link, Project, Register, ShapeError
+from .schema import SchemaError, check_shape, kind_name
 from .signatures import (
     AT, BACKFILLED, BY, CONTENT, ID, LEGACY_SIGNATURE, LEGACY_WITHDRAWAL, REVISION,
     STAMP, requirement_met, retired, signs_deletion,
@@ -369,7 +431,7 @@ def _backfill_status_roles(root: Path) -> dict[str, str] | None:
     (SR-0137): a project that declares the table and deliberately binds nothing
     has made a choice, and re-appending would emit a duplicate TOML table."""
     cfg_file = root / CONFIG_NAME
-    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    config = read_config(cfg_file)
     status_cfg = config.get("status") or {}
     if status_cfg.get("roles") is not None:
         return None
@@ -418,13 +480,13 @@ def _lift_ratification_records(root: Path) -> int:
             if not name.endswith(".yml") or name in _ALL_MANIFEST_NAMES:
                 continue
             path = here / name
-            data = _load_yaml(path.read_text(encoding="utf-8")) or {}
-            attrs = data.get("attrs") if isinstance(data, dict) else None
+            # Read as every item is (SR-0354): a file that is no item is refused
+            # by name before anything of the project is rewritten.
+            data = _read_mapping(path, "an item", ("uid", "type"))
+            attrs = data.get("attrs")
             if not isinstance(attrs, dict) or not (set(attrs) & legacy):
                 continue
-            if "uid" not in data or "type" not in data:
-                continue                          # not an item; leave it alone
-            write_item(Item.from_dict(data, path=path))
+            write_item(_formed(Item.from_dict, data, path, path, "an item"))
             count += 1
     return count
 
@@ -976,7 +1038,7 @@ def _remove_withdrawn_source_keys(root: Path) -> tuple[str, ...]:
 def _schema_source_config_declared(root: Path) -> bool:
     """Whether the project's own configuration marks a schema source (SR-0275)."""
     from .sources import schema_source
-    config = tomllib.loads((root / CONFIG_NAME).read_text(encoding="utf-8"))
+    config = read_config(root / CONFIG_NAME)
     return schema_source(config) is not None
 
 
@@ -1421,7 +1483,29 @@ def migrate_project(path: str | Path, *,
     if not cfg_file.exists():
         raise ProjectError(
             f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
-    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    config = read_config(cfg_file)
+    # A migration is a sequence of steps that each rewrite the tree, and any of
+    # them may refuse. What they may rewrite is remembered first and put back if
+    # one does, so a migration that fails leaves the project as it found it
+    # (SR-0355).
+    snapshot = project_snapshot(root)
+    try:
+        return _migrate_project(root, cfg_file, config, index)
+    except ProjectError as e:
+        if snapshot.restore() and not isinstance(e, FormatError):
+            # Said where something had been written, so the refusal is not read
+            # as a migration that stopped half-way.
+            raise ProjectError(f"{e} — the project was put back as it stood, and "
+                               "nothing was migrated") from e
+        raise
+    except BaseException:
+        snapshot.restore()
+        raise
+
+
+def _migrate_project(root: Path, cfg_file: Path, config: dict,
+                     index: Index | None) -> MigrationResult:
+    """The steps of :func:`migrate_project`, each writing as it goes."""
     start = _read_format_version(config, root)
     if start > FORMAT_VERSION:
         raise FormatError(
@@ -1634,7 +1718,8 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
     for manifest in manifests:
         reg_dir = manifest.parent
         raw = _read_mapping(manifest, "a register manifest", ("prefix",))
-        reg = Register.from_manifest(raw, path=reg_dir)
+        reg = _formed(Register.from_manifest, raw, reg_dir, manifest,
+                      "a register manifest")
         if reg.prefix in project.registers:
             # A second register folder claims a prefix already loaded. Keeping the
             # first-seen register is deterministic (the manifests are sorted);
@@ -1648,7 +1733,7 @@ def _build_project(root: Path, config: dict, manifest_names: set[str], *,
             if item_file.name in manifest_names:
                 continue
             d = _read_mapping(item_file, "an item", ("uid", "type"))
-            item = Item.from_dict(d, path=item_file)
+            item = _formed(Item.from_dict, d, item_file, item_file, "an item")
             item._register_prefix = reg.prefix
             for msg in item._load_errors:
                 # A malformed structure (e.g. a link missing its target) was
@@ -1686,7 +1771,7 @@ def load_project(path: str | Path, *, base: str | Path | None = None) -> Project
     cfg_file = root / CONFIG_NAME
     if not cfg_file.exists():
         raise ProjectError(f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
-    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    config = read_config(cfg_file)
     _gate_format_version(config, root)
     project = _build_project(root, config, {MANIFEST_NAME},
                              base=Path(base) if base is not None else None)
@@ -1708,7 +1793,7 @@ def read_project(path: str | Path) -> Project:
     cfg_file = root / CONFIG_NAME
     if not cfg_file.exists():
         raise ProjectError(f"no {CONFIG_NAME} at {root} — not a throughline project (run `tl init`)")
-    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    config = read_config(cfg_file)
     disk = _read_format_version(config, root)
     if disk > FORMAT_VERSION:
         raise FormatError(
@@ -1957,7 +2042,8 @@ def baseline_statuses(project: Project, ref: str = "HEAD") -> dict[str, str] | N
     return read_baseline(project, ref=ref).statuses
 
 
-def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
+def load_project_at_ref(path: str | Path, ref: str, *,
+                        to: str | None = None) -> tuple[Project, str]:
     """Reconstruct the project *exactly as it stood* at git ``ref`` and load it
     into the pure model, without touching the working tree (SR-0090).
 
@@ -1974,8 +2060,11 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
             ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
             capture_output=True, text=True, check=True).stdout.strip())
     except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # ``to`` is what the caller was asked to do with the revision, in its own
+        # words (SR-0361); rendering a document is the first use and the default.
         raise ProjectError(
-            f"{root} is not inside a git work tree — cannot render `--at {ref}`") from e
+            f"{root} is not inside a git work tree — cannot "
+            f"{to or f'render `--at {ref}`'}") from e
 
     resolved = subprocess.run(
         ["git", "-C", str(top), "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
@@ -2014,7 +2103,8 @@ def load_project_at_ref(path: str | Path, ref: str) -> tuple[Project, str]:
 
 # ---------------------------------------------------------------------- write
 
-def write_item(item: Item, reg: Register | None = None) -> Path:
+def _item_file(item: Item, reg: Register | None) -> tuple[Path, str]:
+    """Where ``item`` is written and the text written there."""
     if item._path is None:
         if reg is None or reg.path is None:
             raise ProjectError(f"cannot write {item.uid}: no path known")
@@ -2022,8 +2112,34 @@ def write_item(item: Item, reg: Register | None = None) -> Path:
     text = _dump_yaml(item.to_dict())
     if not text.endswith("\n"):
         text += "\n"
-    item._path.write_text(text, encoding="utf-8")
-    return item._path
+    return item._path, text
+
+
+def write_item(item: Item, reg: Register | None = None) -> Path:
+    path, text = _item_file(item, reg)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def write_items(project: Project, items) -> list[Path]:
+    """Write every item in ``items`` or none of them (SR-0356): a command that
+    changes several items leaves the graph as it found it when one cannot be
+    written. Each is written once, however often it is named."""
+    files: dict[Path, str] = {}
+    for item in items:
+        path, text = _item_file(item, project.register_of(item.uid))
+        files[path] = text
+    write_all(files)
+    return list(files)
+
+
+def project_snapshot(root: Path) -> Snapshot:
+    """What a migration of the project at ``root`` may rewrite, as it stands
+    (SR-0355): its configuration, and every item and manifest in a folder of its
+    own tree that holds a register manifest under any name the Tool has used."""
+    folders = sorted({here for here, names in _walk_project(Path(root))
+                      if _ALL_MANIFEST_NAMES & set(names)})
+    return Snapshot(files=[Path(root) / CONFIG_NAME], folders=folders)
 
 
 def write_manifest(reg: Register) -> Path:
@@ -2140,7 +2256,8 @@ def _init_project(root: Path, name: str, force: bool, defaults: bool, demo: bool
         # Seeded demo items have no register to live in, so the demo goes with the
         # registers (SR-0100).
         demo = False
-    cfg_text = _DEFAULT_CONFIG.format(name=name, format_version=FORMAT_VERSION)
+    cfg_text = _DEFAULT_CONFIG.format(name=_toml_escaped(name),
+                                      format_version=FORMAT_VERSION)
     # Only the seeded demo publishes through a document, so [docs] is wired only when
     # the demo is written; a registers-only or bare project ships no document.
     if demo:
@@ -2252,10 +2369,21 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
     return project
 
 
+_TOML_ESCAPES = {"\\": "\\\\", '"': '\\"', "\b": "\\b", "\t": "\\t", "\n": "\\n",
+                 "\f": "\\f", "\r": "\\r"}
+
+
+def _toml_escaped(value: str) -> str:
+    """``value`` as it stands between the quotes of a TOML basic string: the
+    backslash, the quote and every control character escaped (SR-0367)."""
+    return "".join(_TOML_ESCAPES.get(ch) or (f"\\u{ord(ch):04X}"
+                                             if ord(ch) < 0x20 or ord(ch) == 0x7F else ch)
+                   for ch in value)
+
+
 def _toml_string(value: str) -> str:
     """``value`` as a TOML basic string."""
-    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-    return f'"{escaped}"'
+    return f'"{_toml_escaped(value)}"'
 
 
 def _seed_registers(root: Path) -> dict[str, Register]:

@@ -1,0 +1,51 @@
+uid: SR-0360
+type: system_requirement
+status: ratified
+title: No status change leaves the tombstone status
+text: tl status, and the operation every command sets a status through, shall refuse
+  to move an item out of the status bound to the tombstone role, whatever transitions
+  the project declares and where it declares none, naming tl restore. Declining a
+  deletion with tl restore (SR-0268) shall be the only way an item leaves that status.
+rationale: 'Found 16 November 2026 by two independent builds of the Tool from its
+  specification and about 100,000 runs comparing them with tl 5.11.1, reproduced
+  on 6.0.0. A proof of the specification''s guarantees found, and a run on 6.0.0
+  confirmed, that in a project declaring no transitions tl status moved a signed
+  tombstone to any live status and removed its deletion record: a retirement a person
+  had signed was undone with no signature withdrawn and no record. A project that
+  declared a move out of the tombstone status could do the same to an unsigned one.
+  The owner decided on 16 November 2026 that status never leaves the tombstone status.
+  Rejected: refusing only where no transitions are declared, which leaves a declared
+  row able to undo a deletion without restoring the status the item held. Who pays:
+  a project that declared a transition out of its tombstone status and used tl status
+  to revive an item uses tl restore instead, which returns the status the item held
+  and not one chosen.'
+normative: true
+links:
+- target: UR-0002
+  type: implements
+  stamp: sha256:9774c5b86f5b7f4db4d11fd532ea2552cd87d27c339615c88ecf72fc837e82b7
+- target: SR-0268
+  type: refines
+- target: SR-0130
+  type: relates
+- target: SR-0327
+  type: relates
+attrs:
+  priority: must
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T10:19:12Z'
+  fingerprint: sha256:312247a51716652a48858c8e5b544436817fa22deff401efdec14ba67e233e4c
+  content:
+    type: system_requirement
+    text: tl status, and the operation every command sets a status through, shall
+      refuse to move an item out of the status bound to the tombstone role, whatever
+      transitions the project declares and where it declares none, naming tl restore.
+      Declining a deletion with tl restore (SR-0268) shall be the only way an item
+      leaves that status.
+    normative: true
+    derived: false
+    attrs:
+      priority: must

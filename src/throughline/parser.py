@@ -222,9 +222,15 @@ def _add_schema_parser(sub, handlers) -> None:
     v.add_argument("index", type=int, metavar="N")
 
 
+# What `tl --help` says the program is (SR-0362): the tool, not this module.
+DESCRIPTION = ("throughline: requirements kept in Git, one file per item, each "
+               "with a permanent UID and typed links. `tl check` is the gate: "
+               "every item reaches a root, and counts once a person has signed it.")
+
+
 def build_parser(handlers=None) -> argparse.ArgumentParser:
     handlers = handlers or {}
-    p = argparse.ArgumentParser(prog="tl", description=__doc__.splitlines()[0])
+    p = argparse.ArgumentParser(prog="tl", description=DESCRIPTION)
     p.add_argument("--version", action="version", version=f"tl {distribution_version('throughline')}")
     p.add_argument("-C", "--path", default=".", help="project root (default: .)")
     sub = p.add_subparsers(dest="cmd", required=True)

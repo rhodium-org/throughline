@@ -138,7 +138,15 @@ def copy_guidance(standard, root: Path, *, agents_root: Path | None = None) -> l
     for path, body, heading in (
             (base / AGENTS_NAME, lines, "# Guidance for AI agents\n\n"),
             (base / CLAUDE_NAME, [(CLAUDE_IMPORT, CLAUDE_IMPORT)], "")):
-        did = _append(path, body, heading)
+        try:
+            did = _append(path, body, heading)
+        except UnicodeDecodeError:
+            # A file the Tool cannot read is not added to: it is kept as it
+            # stands and said, as a destination that holds something else is.
+            notes.append(Note(WARNING, f"{_shown(path)} is not UTF-8 text, so it was "
+                              "kept as it is and no line referring to the "
+                              "standard's guidance was added"))
+            continue
         if did is not None:
             notes.append(Note(did, _shown(path)))
     return notes

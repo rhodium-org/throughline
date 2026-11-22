@@ -239,6 +239,109 @@ def _check_coverage(coverage: tuple, language: str = PYTHON) -> None:
                 f"'{ERROR}', '{WARNING}' or '{OFF}')")
 
 
+
+# ------------------------------------------------- the configuration's shape
+
+def _is_table(value, where: str) -> dict:
+    """``value`` as the table ``where`` must be; an absent one is empty."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise SchemaError(f"{where} must be a table, not {_article(value)}")
+    return value
+
+
+def _article(value) -> str:
+    kind = kind_name(value)
+    return f"an {kind}" if kind[0] in "aeiou" else f"a {kind}"
+
+
+def _is_names(value, where: str) -> None:
+    """Refuse ``value`` unless it is absent or a list of strings."""
+    if value is None:
+        return
+    if not isinstance(value, list):
+        raise SchemaError(f"{where} must be a list of names, not {_article(value)}")
+    for member in value:
+        if not isinstance(member, str):
+            raise SchemaError(f"{where} must be a list of names, and holds "
+                              f"{_article(member)} ({shown(member)})")
+
+
+def check_shape(config: dict) -> None:
+    """Refuse a configuration whose tables and lists are not the kinds the
+    schema is built from (SR-0354), naming the key and what stands there.
+
+    What a key means is judged where the schema is built; this asks only that a
+    table is a table and a list of names is one, so that nothing built from the
+    configuration meets a value of a kind it was never written for. Asked before
+    anything is built, so a damaged configuration is one refusal, whichever
+    command reads it."""
+    if not isinstance(config, dict):
+        raise SchemaError(f"the configuration must be a table, not {_article(config)}")
+    project = _is_table(config.get("project"), "[project]")
+    name = project.get("name")
+    if isinstance(name, (list, dict)):
+        raise SchemaError(f"[project] name must be text, not {_article(name)}")
+    for tname, tbody in _is_table(config.get("types"), "[types]").items():
+        tbody = _is_table(tbody, f"[types.{tname}]")
+        attrs = _is_table(tbody.get("attrs"), f"[types.{tname}] attrs")
+        for aname, meta in attrs.items():
+            if not isinstance(meta, dict):
+                continue                                   # bare: free-form
+            where = f"type '{tname}' attribute '{aname}'"
+            kind = meta.get("type")
+            if isinstance(kind, (list, dict)):
+                raise SchemaError(f"{where} type must be text, not {_article(kind)}")
+            values = meta.get("values")
+            if values is not None and (not isinstance(values, list) or any(
+                    isinstance(v, (list, dict)) for v in values)):
+                raise SchemaError(f"{where} values must be a list of plain values, "
+                                  f"not {shown(values)}")
+    _is_names(_is_table(config.get("links"), "[links]").get("types"), "[links] types")
+    status = _is_table(config.get("status"), "[status]")
+    _is_names(status.get("values"), "[status] values")
+    for role, bound in _is_table(status.get("roles"), "[status.roles]").items():
+        if isinstance(bound, (list, dict)):
+            raise SchemaError(f"[status.roles] {role} must name a status, not "
+                              f"{_article(bound)}")
+    for frm, tos in _is_table(config.get("transitions"), "[transitions]").items():
+        _is_names(tos, f"[transitions] {frm}")
+    for ltype, rule in _is_table(config.get("link_rules"), "[link_rules]").items():
+        rule = _is_table(rule, f"[link_rules] {ltype}")
+        for side in ("from", "to"):
+            _is_names(rule.get(side), f"[link_rules] {ltype} {side}")
+    grounding = _is_table(config.get("grounding"), "[grounding]")
+    for key in ("root_types", "delivery_roots", "ground_link_types",
+                "suspect_link_types", "ai_origins"):
+        if key in grounding and grounding[key] is None:
+            raise SchemaError(f"[grounding] {key} must be a list of names, not a null")
+        _is_names(grounding.get(key), f"[grounding] {key}")
+    rules = _is_table(config.get("rules"), "[rules]")
+    coverage = rules.get("coverage")
+    if coverage is not None:
+        if not isinstance(coverage, list):
+            raise SchemaError("[[rules.coverage]] must be a list of tables, not "
+                              f"{_article(coverage)}")
+        for n, rule in enumerate(coverage, 1):
+            if not isinstance(rule, dict):
+                raise SchemaError(f"coverage rule {n} must be a table, not "
+                                  f"{_article(rule)}")
+            for key in ("filter", "needs", "severity", "name"):
+                if rule.get(key) is not None and not isinstance(rule[key], str):
+                    raise SchemaError(f"coverage rule {n} {key} must be text, not "
+                                      f"{_article(rule[key])}")
+    paths = _is_table(config.get("docs"), "[docs]").get("paths")
+    _is_names(paths, "[docs] paths")
+    for pattern in paths or []:
+        # A document is found by a pattern relative to the project; an empty one
+        # or an absolute one is no pattern the search can take.
+        if not pattern.strip():
+            raise SchemaError("[docs] paths holds an empty pattern")
+        if pattern.startswith(("/", "\\")) or (len(pattern) > 1 and pattern[1] == ":"):
+            raise SchemaError(f"[docs] paths holds {shown(pattern)}, an absolute "
+                              "path: a document is named relative to the project")
+
 @dataclass(frozen=True)
 class AttrSpec:
     """One declared attribute of an item type."""
@@ -418,6 +521,7 @@ class Schema:
     @classmethod
     def from_config(cls, config: dict | None) -> "Schema":
         config = config or {}
+        check_shape(config)
 
         name = ((config.get("project") or {}).get("name")) or ""
         suggested_namespace = _parse_suggested_namespace(

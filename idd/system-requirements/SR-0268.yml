@@ -4,14 +4,22 @@ status: ratified
 title: An unsigned tombstone can be restored to the status it held
 text: tl restore <UID> shall return an unsigned tombstone to the status its record
   says it held, removing the deletion record and touching no signature. It shall
-  refuse a tombstone whose deletion is ratified or was outright (SR-0093), and one
-  whose record does not say what status it held. The transition gate shall accept
-  the restore of a tombstone that was unsigned at the baseline, since the item is
-  back where the lifecycle last left it.
+  refuse a tombstone whose deletion is ratified, saying that a signed deletion is
+  permanent while its signature stands and that withdrawing that signature with tl
+  withdraw, then restoring, undoes a deletion signed in error; that is the only way
+  one is undone. It shall refuse a tombstone retired outright, and one whose record
+  does not say what status it held. The transition gate shall accept the restore
+  of a tombstone that was unsigned at the baseline, since the item is back where
+  the lifecycle last left it.
 rationale: 'A proposed deletion a reviewer declines must be undoable without a hand
   edit, and the item''s own signatures still cover its content, so nothing is re-signed.
-  Permanence (SR-0093) attaches to the retired tombstone: a record nobody has accepted
-  is a proposal, not a death record.'
+  A record nobody has accepted is a proposal, not a death record. The refusal used
+  to say a tombstone is permanent and then name tl withdraw, which reopens it: a
+  proof of the specification found the two could not both hold. The owner decided
+  on 16 November 2026 that withdrawing the deletion''s signature and then restoring
+  is the intended way, and the only one, to undo a deletion signed in error, so the
+  wording is permanent while its signature stands. The file itself is never removed
+  (SR-0093).'
 normative: true
 links:
 - target: UR-0002
@@ -24,13 +32,16 @@ attrs:
   origin: ai
 ratifications:
 - by: Henry Grech-Cini
-  at: '2026-10-26T19:20:48Z'
-  fingerprint: sha256:a1513b69a884da0e03770707521d498b2b800588d323d01244ebae0cf8e857ac
+  at: '2026-11-22T10:19:17Z'
+  fingerprint: sha256:7485ba87e0759f4f13de36355dbffc24706ef1e8f41e4a469fb926fd638937b1
   content:
     type: system_requirement
     text: tl restore <UID> shall return an unsigned tombstone to the status its record
       says it held, removing the deletion record and touching no signature. It shall
-      refuse a tombstone whose deletion is ratified or was outright (SR-0093), and
+      refuse a tombstone whose deletion is ratified, saying that a signed deletion
+      is permanent while its signature stands and that withdrawing that signature
+      with tl withdraw, then restoring, undoes a deletion signed in error; that is
+      the only way one is undone. It shall refuse a tombstone retired outright, and
       one whose record does not say what status it held. The transition gate shall
       accept the restore of a tombstone that was unsigned at the baseline, since
       the item is back where the lifecycle last left it.
