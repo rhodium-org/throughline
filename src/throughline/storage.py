@@ -152,8 +152,14 @@ MANIFEST_NAME = ".register.yml"
 # v4 (SR-0254) holds an item's ratification record as a top-level `ratifications`
 # list, one signature per person, in place of the flat `ratified_*` attributes;
 # v5 (SR-0346) is v4 on disk, declared by a project whose filters are GQL search
-# conditions, so a Tool that cannot read them refuses it by its format.
-FORMAT_VERSION = 5
+# conditions, so a Tool that cannot read them refuses it by its format; v6
+# (SR-0385) is declared by a project that names a built role, whose items carry
+# the dated `implementations` record (SR-0378), for the same reason. Each is
+# declared only by a project that needs it, so one that uses neither stays where
+# every Tool since v4 reads it.
+GQL_FORMAT_VERSION = 5
+BUILT_FORMAT_VERSION = 6
+FORMAT_VERSION = BUILT_FORMAT_VERSION
 
 # The major a project whose filters are in the earlier language may stay at, read
 # with no migration (SR-0346), and the one `tl migrate` brings an older project
@@ -292,7 +298,12 @@ def _read_format_version(config: dict, root: Path) -> int:
     """
     project = config.get("project", {})
     if "format_version" not in project:
-        return _infer_format_version(root)
+        inferred = _infer_format_version(root)
+        # No layout of an older major on disk: read it at the format its own
+        # configuration needs (SR-0346, SR-0385), which is what it would declare.
+        if inferred == EARLIER_FORMAT_VERSION:
+            return max(inferred, required_format(config))
+        return inferred
     raw = project["format_version"]
     if isinstance(raw, bool) or not isinstance(raw, int):
         raise ProjectError(
@@ -359,7 +370,7 @@ def _gate_format_version(config: dict, root: Path) -> None:
             f"({_running_tool()}) uses {EARLIER_FORMAT_VERSION} — run `tl migrate` to "
             f"upgrade the project (a lossless, in-place rewrite)",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
-    _gate_filter_language(_declares_gql(config), disk, root)
+    _gate_required(_declares_gql(config), _declares_built(config), disk, root)
 
 
 def _declares_gql(config: dict) -> bool:
@@ -367,17 +378,41 @@ def _declares_gql(config: dict) -> bool:
     return (config.get("project") or {}).get("filter_language") == "gql"
 
 
-def _gate_filter_language(gql: bool, disk: int, root: Path) -> None:
-    """Refuse a project whose filters are GQL at any format version but the one
-    that says so (SR-0346). A Tool from before GQL filters reads each as a filter
-    of the earlier language that fails to parse and selects nothing, and refuses
-    nothing; the format version is what it does refuse on."""
-    if gql and disk != FORMAT_VERSION:
+def _declares_built(config: dict) -> bool:
+    """Whether a configuration names a built role (SR-0377)."""
+    roles = (config.get("status") or {}).get("roles")
+    return isinstance(roles, dict) and bool(roles.get("built"))
+
+
+def required_format(config: dict) -> int:
+    """The lowest format version a configuration may declare (SR-0346, SR-0385):
+    6 where it names a built role, 5 where its filters are GQL, else 4."""
+    if _declares_built(config):
+        return BUILT_FORMAT_VERSION
+    if _declares_gql(config):
+        return GQL_FORMAT_VERSION
+    return EARLIER_FORMAT_VERSION
+
+
+def _gate_required(gql: bool, built: bool, disk: int, root: Path) -> None:
+    """Refuse a project that declares a lower format version than what it uses
+    needs (SR-0346, SR-0385). A Tool from before GQL filters reads each as a filter
+    that selects nothing, and one from before the built axis refuses its role with
+    a message that names no remedy; the format version is what an older Tool does
+    refuse on, naming the upgrade (SR-0168)."""
+    if built and disk < BUILT_FORMAT_VERSION:
+        raise FormatError(
+            f"{root / CONFIG_NAME} names a built role at format version {disk}; a "
+            f"project that does declares format version {BUILT_FORMAT_VERSION}, so "
+            "that a tl that cannot read its items' build record refuses it — run "
+            "`tl migrate` to set it",
+            declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
+    if gql and disk < GQL_FORMAT_VERSION:
         raise FormatError(
             f'{root / CONFIG_NAME} declares filter_language = "gql" at format '
             f"version {disk}; a project whose filters are GQL declares format "
-            f"version {FORMAT_VERSION}, so that a tl that cannot read them refuses "
-            f"it — run `tl migrate` to set it",
+            f"version {GQL_FORMAT_VERSION} or higher, so that a tl that cannot read "
+            f"them refuses it — run `tl migrate` to set it",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
 
 
@@ -824,6 +859,13 @@ class RepairResult(NamedTuple):
     # out of them, ``uid -> "from -> to"`` (SR-0313).
     retired_statuses: tuple[str, ...] = ()
     moved: Mapping[str, str] = _NO_STRINGS
+    # The built axis (SR-0377, SR-0379, SR-0383): the statuses bound to the built
+    # role, the move added so work may be built before it is signed, each item
+    # dated from history, and each built item history could not date.
+    built_role: tuple[str, ...] = ()
+    build_route: Mapping[str, str] = _NO_STRINGS
+    dated: Mapping[str, str] = _NO_STRINGS
+    undated: tuple[str, ...] = ()
 
 
 def _repair_normative_flags(root: Path) -> tuple[dict[str, bool],
@@ -1161,7 +1203,9 @@ def unsigned_agreement_statuses(config: dict) -> tuple[str, ...]:
     if not proposed or not ratified or values is None:
         return ()
     transitions = config.get("transitions")
-    bound = set(roles.values())
+    # The built role binds a list (SR-0377); every other role binds one status.
+    bound = {s for v in roles.values()
+             for s in (v if isinstance(v, list) else [v])}
     retiring = []
     initial = roles.get("initial")
     if initial and initial != proposed and initial in values:
@@ -1294,6 +1338,136 @@ def _retire_borrowed_unsigned_agreement(root: Path) -> tuple[tuple[str, ...],
     return retiring, _move_out_of(project, set(retiring), proposed, ratified)
 
 
+_BUILT_DEFAULT = ("implemented", "verified")
+
+
+def built_role_due(config: dict) -> bool:
+    """Whether `tl migrate` would bind the built role here (SR-0377): the
+    project's own configuration binds roles, names no built role, and declares
+    both statuses the shipped role binds. Asked by the repair and by `tl check`'s
+    note (SR-0386), so the two cannot disagree."""
+    status = config.get("status") or {}
+    roles = status.get("roles")
+    values = status.get("values") or []
+    return (isinstance(roles, dict) and bool(roles) and "built" not in roles
+            and all(v in values for v in _BUILT_DEFAULT))
+
+
+def _backfill_built_role(root: Path) -> tuple[str, ...]:
+    """Bind the built role (SR-0377) for a project that declares both implemented
+    and verified, binds its other roles, and binds no built role. Returns the
+    statuses bound, empty when nothing was written. A project with other names
+    for built work, or none, is left to say so itself."""
+    cfg_file = root / CONFIG_NAME
+    config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
+    # A roles table declared and left empty is a deliberate choice (SR-0136),
+    # and one that already says what built means needs nothing.
+    if not built_role_due(config):
+        return ()
+    doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
+    if not doc.has_table(("status", "roles")):
+        return ()
+    doc.set_key(("status", "roles"), "built", list(_BUILT_DEFAULT), because=(
+        "`tl migrate` bound the built role (SR-0377): the statuses in which an "
+        "item is realised by the work the graph governs, each move into or out of "
+        "them dated on the item (SR-0378). Remove it if nothing in this graph is "
+        "ever built."))
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    # With the role, the format version that says so (SR-0385), at once: every
+    # repair after this one loads the project, and the gate refuses it otherwise.
+    declared = (config.get("project") or {}).get("format_version")
+    if not isinstance(declared, int) or declared < BUILT_FORMAT_VERSION:
+        _rewrite_format_version(cfg_file, BUILT_FORMAT_VERSION)
+    return _BUILT_DEFAULT
+
+
+def _backfill_build_route(root: Path) -> dict[str, str]:
+    """Let the proposed status move into the built role (SR-0379), where the
+    ratified status may and the proposed one may not. Returns ``proposed ->
+    built status`` for the move added, empty when none was."""
+    project = load_project(root)
+    schema = project.schema
+    roles = schema.status_roles or {}
+    proposed, ratified = roles.get("proposed"), roles.get("ratified")
+    if not schema.built_order or schema.transitions is None or not proposed or not ratified:
+        return {}
+    if any(schema.allows_transition(proposed, b) for b in schema.built_order):
+        return {}
+    into = next((b for b in schema.built_order
+                 if schema.allows_transition(ratified, b)), None)
+    if into is None:
+        return {}
+    cfg_file = root / CONFIG_NAME
+    doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
+    if not doc.has_table("transitions"):
+        return {}
+    because = (f"`tl migrate` added the move to '{into}' (SR-0379): work may be "
+               "built before it is signed, and `tl check --strict` refuses it built "
+               "and unsigned, so it cannot land that way (SR-0380).")
+    if proposed in (project.config.get("transitions") or {}):
+        doc.add_to_array("transitions", proposed, [into], because=because)
+    else:
+        doc.set_key("transitions", proposed, [into], because=because)
+    cfg_file.write_text(doc.text(), encoding="utf-8")
+    return {proposed: into}
+
+
+def _first_built_commit(path: Path, built: frozenset[str]) -> tuple[str, str, str] | None:
+    """The first commit in which the item file at ``path`` entered a built status,
+    as ``(commit, author, UTC time)``, following renames; ``None`` where git or
+    its history cannot say."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(path.parent), "log", "--follow", "--reverse",
+             "--unified=0", "--format=\x1f%H\x1f%an\x1f%aI", "--", path.name],
+            capture_output=True, text=True, encoding="utf-8", timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if out.returncode != 0:
+        return None
+    current = None
+    for line in out.stdout.splitlines():
+        if line.startswith("\x1f"):
+            parts = line.split("\x1f")
+            current = (parts[1], parts[2], parts[3]) if len(parts) >= 4 else None
+            continue
+        if current and line.startswith("+status:"):
+            if line.split(":", 1)[1].strip().strip("'\"") in built:
+                return current
+    return None
+
+
+def _backfill_implementations(root: Path) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Date the built work a graph already holds (SR-0383): an item in a built
+    status with no ``implementations`` list is given one entry, from the first
+    commit in which it entered that status, by that commit's author, at that
+    commit, marked ``backfilled``. Returns ``uid -> time`` for each dated and the
+    UIDs history could not date. Idempotent: an item with a list is left alone."""
+    from .built import AT, BACKFILLED, BY, REVISION, normalise_time
+    project = load_project(root)
+    schema = project.schema
+    if not schema.built_order:
+        return {}, ()
+    dated: dict[str, str] = {}
+    undated: list[str] = []
+    for item in project.items():
+        if item.is_deleted or item.status not in schema.built_statuses:
+            continue
+        if item.implementations or item._path is None:
+            continue
+        found = _first_built_commit(Path(item._path), schema.built_statuses)
+        if found is None:
+            undated.append(item.uid)
+            continue
+        commit, author, when = found
+        at = normalise_time(when)
+        item.implementations = [{AT: at, BY: author, REVISION: commit,
+                                 BACKFILLED: True}]
+        write_item(item, project.register_of(item.uid))
+        dated[item.uid] = at
+    return dated, tuple(undated)
+
+
 def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     """The repair for the major that requires [status.roles] (SR-0137, SR-0152,
     SR-0185, SR-0188).
@@ -1333,6 +1507,7 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
         # leave what the source retires or has retired (SR-0319), after the lift,
         # whose records decide where a signed item goes.
         retired_statuses, moved = _retire_borrowed_unsigned_agreement(root)
+        built_role, build_route = (), {}
     else:
         roles = _backfill_status_roles(root)
         routes = _backfill_suspect_routes(root)
@@ -1340,6 +1515,10 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
         # After the vocabulary is declared, which it reads; before the records,
         # which read nothing of status (SR-0313).
         retired_statuses, moved = _retire_unsigned_agreement(root)
+        # The built axis (SR-0377, SR-0379): the role first, which the route
+        # reads, both after the vocabulary that declares their statuses.
+        built_role = _backfill_built_role(root)
+        build_route = _backfill_build_route(root)
     # Signed content before the flags (SR-0218): a record whose item reproduces its
     # stamp now is proved by the item as it stands, and the flag repair below may
     # change a fingerprint input and leave only history to prove it from.
@@ -1357,10 +1536,13 @@ def _repair_status_roles_major(root: Path, index: Index | None) -> RepairResult:
     revisions = _backfill_ratification_revisions(root)
     # Manifests only: no item, stamp or configuration reads a register's type.
     registers = _backfill_register_types(root)
+    # Last: it reads the built role bound above, and writes only items.
+    dated, undated = _backfill_implementations(root)
     return RepairResult(roles, routes, vocabularies, stamps, revisions,
                         normative, restamped, stale, contents, unprovable,
                         registers, lifted, withdrawn,
-                        inherited, retired_statuses, moved)
+                        inherited, retired_statuses, moved,
+                        built_role, build_route, dated, undated)
 
 
 # Structural migrations keyed by the source major they upgrade FROM; each rewrites
@@ -1377,7 +1559,8 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 _REPAIRS: dict[int, Callable[[Path, "Index | None"], RepairResult]] = {
     STATUS_ROLES_MAJOR: _repair_status_roles_major,
     EARLIER_FORMAT_VERSION: _repair_status_roles_major,
-    FORMAT_VERSION: _repair_status_roles_major}
+    GQL_FORMAT_VERSION: _repair_status_roles_major,
+    BUILT_FORMAT_VERSION: _repair_status_roles_major}
 
 
 def _rewrite_format_version(cfg_file: Path, version: int) -> None:
@@ -1455,6 +1638,11 @@ class MigrationResult(NamedTuple):
     # Each register still declaring no item type after the repairs, as
     # ``(prefix, folder relative to the project)`` (SR-0350).
     untyped: tuple[tuple[str, str], ...] = ()
+    # The built axis (SR-0377, SR-0379, SR-0383); see RepairResult.
+    built_role: tuple[str, ...] = ()
+    build_route: Mapping[str, str] = _NO_STRINGS
+    dated: Mapping[str, str] = _NO_STRINGS
+    undated: tuple[str, ...] = ()
 
 
 def migrate_project(path: str | Path, *,
@@ -1523,13 +1711,18 @@ def _migrate_project(root: Path, cfg_file: Path, config: dict,
     # A project in the earlier language stays at the major every Tool since it
     # reads; one whose filters are GQL says the major that tells an older Tool
     # to refuse it (SR-0346), which nothing on disk but the number changes for.
-    if _declares_gql(config):
-        current = FORMAT_VERSION
+    current = max(current, required_format(config))
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
     result = (repair(root, index) if repair is not None
               else RepairResult(None, {}, {}, {}, {}))
+    # The repairs may have bound the built role (SR-0377), which the format
+    # version must then say (SR-0385); raised, never lowered.
+    needed = required_format(read_config(cfg_file))
+    if needed > current:
+        current = needed
+        _rewrite_format_version(cfg_file, current)
     return MigrationResult(start, current, result.config, result.routes,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
@@ -1537,7 +1730,9 @@ def _migrate_project(root: Path, cfg_file: Path, config: dict,
                            result.lifted,
                            result.withdrawn, result.inherited,
                            result.retired_statuses, result.moved,
-                           _untyped_after(root))
+                           _untyped_after(root),
+                           result.built_role, result.build_route,
+                           result.dated, result.undated)
 
 
 def _untyped_after(root: Path) -> tuple[tuple[str, str], ...]:
@@ -1776,8 +1971,8 @@ def load_project(path: str | Path, *, base: str | Path | None = None) -> Project
     project = _build_project(root, config, {MANIFEST_NAME},
                              base=Path(base) if base is not None else None)
     # The language may come with a schema the project takes from a source.
-    _gate_filter_language(project.filter_language == "gql",
-                          _read_format_version(config, root), root)
+    _gate_required(project.filter_language == "gql", False,
+                   _read_format_version(config, root), root)
     return project
 
 
@@ -1800,7 +1995,10 @@ def read_project(path: str | Path) -> Project:
             f"{cfg_file} declares format version {disk}, but this tl understands up "
             f"to {FORMAT_VERSION} — upgrade tl to read this source",
             declared=disk, implemented=FORMAT_VERSION, path=cfg_file)
-    _gate_filter_language(_declares_gql(config), disk, root)
+    # Only from the first format read without migration: an older one is lifted
+    # in memory below, and its configuration is judged as it is lifted.
+    if disk >= EARLIER_FORMAT_VERSION:
+        _gate_required(_declares_gql(config), _declares_built(config), disk, root)
     major = disk
     while major < FORMAT_VERSION:
         upgrade = _CONFIG_UPGRADES.get(major)
@@ -1808,7 +2006,7 @@ def read_project(path: str | Path) -> Project:
             config = upgrade(config)
         major += 1
     project = _build_project(root, config, _ALL_MANIFEST_NAMES)
-    _gate_filter_language(project.filter_language == "gql", disk, root)
+    _gate_required(project.filter_language == "gql", False, disk, root)
     return project
 
 
@@ -2334,7 +2532,9 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
     lines = [
         "[project]",
         f"name = {_toml_string(name)}",
-        f"format_version = {FORMAT_VERSION}",
+        # What its own configuration needs (SR-0385): a built role the standard
+        # binds is the standard's to declare, at its own format.
+        f"format_version = {GQL_FORMAT_VERSION}",
         # The standard's language, since its coverage rules are this graph's too
         # and a project's filters are all in one (SR-0337).
         f'filter_language = "{standard.filter_language}"',
@@ -2550,17 +2750,21 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+# The statuses in which an item is realised by the work the graph governs
+# (SR-0377). Each move into or out of them is dated on the item (SR-0378). A
+# graph of intentions with nothing to build leaves this out, and has no built axis.
+built = ["implemented", "verified"]
 
 # Allowed status moves (SR-0083). `tl check` compares each item against its
 # status in the previous commit and flags any change these do not permit. Delete
 # this table to leave every status freely reachable.
 # Every live status keeps a route to 'ratified' (SR-0150), so parked scope can
 # still be put forward for a person to sign, and to 'suspect' (SR-0175), so that
-# an item whose grounding is withdrawn can be flagged wherever it sits. Nothing
-# reaches 'implemented' without passing 'ratified' (SR-0312); an item carried
-# past it unsigned is still signed where it stands.
+# an item whose grounding is withdrawn can be flagged wherever it sits. An item
+# may be built before it is signed (SR-0379, SR-0312); `tl check --strict`
+# refuses it built and unsigned (SR-0380), so it cannot land that way.
 [transitions]
-proposed    = ["ratified", "deferred", "suspect", "rejected", "deleted"]
+proposed    = ["ratified", "implemented", "deferred", "suspect", "rejected", "deleted"]
 deferred    = ["proposed", "suspect", "rejected", "deleted"]
 ratified    = ["implemented", "suspect", "rejected", "deleted"]
 implemented = ["verified", "suspect", "rejected", "deleted"]

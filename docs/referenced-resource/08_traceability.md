@@ -60,7 +60,7 @@ away, and the whole graph is validated by `tl check --strict`.
 | UR-0046 | Proposed until a person signs it | SR-0305, SR-0306, SR-0307, SR-0308, SR-0309, SR-0310, SR-0311, SR-0312, SR-0313, SR-0314, SR-0315, SR-0317, SR-0318, SR-0319 |
 | UR-0047 | A standard's guidance for AI agents arrives with every graph that follows it | SR-0322, SR-0323 |
 | UR-0048 | A release is shown to leave existing graphs as they were, or to say what it changes | SR-0334 |
-| UR-0049 | Agreed and built are recorded apart, each with when | SR-0377, SR-0378, SR-0379, SR-0382, SR-0383 |
+| UR-0049 | Agreed and built are recorded apart, each with when | SR-0377, SR-0378, SR-0379, SR-0382, SR-0383, SR-0385, SR-0386 |
 | UR-0050 | A graph laid over existing work says when it was laid | SR-0381 |
 | UR-0051 | Nothing lands built but unagreed, except what was built before the graph | SR-0380 |
 | UR-0052 | Signing says whether it agrees a plan or accepts what exists | SR-0384 |

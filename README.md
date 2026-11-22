@@ -8,7 +8,7 @@ version control; a `check` command validates the whole graph and gates CI.
 
 **Dogfooded:** throughline's own spec is itself a throughline project —
 <!-- tl:count type == 'system_requirement' -->
-331
+333
 <!-- tl:end --> system requirements,
 <!-- tl:count type == 'user_requirement' -->
 49
@@ -193,6 +193,7 @@ tl docs [FILE ...] [--at REF]                 # inject graph content into marked
 tl docs [FILE ...] --check                     # CI gate: fail if any document is out of date
 tl context                                    # agent-facing brief (IDD + this project's model)
 tl doctor                                     # which Python runs tl, how tl was installed, how to rebuild it
+tl adopt (<UID> … | --all) [--at TIME]        # the graph was laid over existing work: mark it built, awaiting acceptance
 tl ratify <UID> --by <who>                    # a human takes accountability
 tl invalidate <UID> --reason "…"              # falsify; cascade suspect
 tl withdraw <UID> [<UID> …] --reason "…"      # a signature no longer stands; awaits a human again

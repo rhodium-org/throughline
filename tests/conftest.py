@@ -16,7 +16,8 @@ import pytest
 import throughline.storage as storage
 
 # The test modules whose projects are what `tl init` writes today.
-_GQL_MODULES = {"test_gql_filters", "test_gql_migrate", "test_gql_format_version"}
+_GQL_MODULES = {"test_gql_filters", "test_gql_migrate", "test_gql_format_version",
+                "test_built_axis"}
 
 
 def _earlier(template: str) -> str:

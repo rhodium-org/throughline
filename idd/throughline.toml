@@ -1,6 +1,6 @@
 [project]
 name = "throughline"
-format_version = 4
+format_version = 6
 
 # throughline's own spec, self-hosted (SR-0061). Roots are the vision (intent) and
 # the eight goals + the maintainability need (business_need); every user and
@@ -68,7 +68,11 @@ values = ["proposed", "deferred", "ratified", "implemented", "verified",
 # route to 'suspect' (SR-0175): an item whose grounding is withdrawn must be
 # flaggable wherever it sits.
 [transitions]
-proposed = ["ratified", "deferred", "suspect", "rejected", "deleted"]
+# `tl migrate` added the move to 'implemented' (SR-0379): work may be built
+# before it is signed, and `tl check --strict` refuses it built and unsigned,
+# so it cannot land that way (SR-0380).
+proposed = ["ratified", "deferred", "suspect", "rejected", "deleted",
+            "implemented"]
 deferred = ["proposed", "suspect", "rejected", "deleted"]
 # A ratified requirement that is not going to be built yet is parked, not
 # rejected: it was agreed, and it can be put forward again. Asked for by Henry
@@ -101,6 +105,10 @@ ratified = "ratified"
 invalidated = "rejected"
 suspect = "suspect"
 tombstone = "deleted"
+# `tl migrate` bound the built role (SR-0377): the statuses in which an item is
+# realised by the work the graph governs, each move into or out of them dated
+# on the item (SR-0378). Remove it if nothing in this graph is ever built.
+built = ["implemented", "verified"]
 
 # An intent is the why, not an obligation; its items already carry normative:
 # false (SR-0201, SR-0202)

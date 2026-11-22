@@ -47,6 +47,8 @@ FILTER_NAMES = frozenset({
     # An item's standing (SR-0335): the judgement the gate makes, read here and
     # never worked out in a filter.
     "signed", "stale", "retired", "reviewed", "signers",
+    # Whether and when it was built, and when it was signed (SR-0382).
+    "built", "built_at", "signed_at", "adopted",
     "true", "false", "none",
 })
 

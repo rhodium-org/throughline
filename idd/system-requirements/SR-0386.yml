@@ -1,0 +1,44 @@
+uid: SR-0386
+type: system_requirement
+status: implemented
+title: tl check says when migrating would turn on the built axis
+text: Where a project names no built role and declares the statuses implemented and
+  verified, tl check shall end with one line saying that tl migrate would bind the
+  built role and date the items in those statuses from history, with how many there
+  are. It is a note, not a finding, and changes no exit code.
+rationale: 'tl migrate is the one command that turns the built axis on (SR-0377,
+  SR-0383), and nothing told a graph''s keeper it had anything to do. Rejected, migrating
+  automatically when a graph is read: on throughline''s own graph it rewrote 214
+  files, and tl check runs read-only in CI and inside other tools, so it would put
+  changes in working trees nobody asked for and date records behind people''s backs.
+  The note follows the earlier filter language''s (SR-0339). Who pays: nobody; one
+  line.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+- target: SR-0339
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T12:44:31Z'
+  fingerprint: sha256:7e5ad09f40e58a5a6de58c2b2c9a6e429c871f019c5ede1ace7bc1e2002291c4
+  content:
+    type: system_requirement
+    text: Where a project names no built role and declares the statuses implemented
+      and verified, tl check shall end with one line saying that tl migrate would
+      bind the built role and date the items in those statuses from history, with
+      how many there are. It is a note, not a finding, and changes no exit code.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+implementations:
+- at: '2026-11-22T12:49:22Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: 0f21cfb3daf5afbf8fc001abf964b9fd2d1e1c55

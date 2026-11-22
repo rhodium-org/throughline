@@ -133,6 +133,8 @@ from .storage import (
     EARLIER_FORMAT_VERSION,
     FORMAT_VERSION,
     MANIFEST_NAME,
+    _BUILT_DEFAULT,
+    built_role_due,
     ProjectError,
     baseline_note,
     nested_note,
@@ -434,6 +436,7 @@ def _migrate_alone(args) -> int:
                  or result.unprovable or result.registers or result.lifted
                  or result.withdrawn
                  or result.inherited or result.moved or result.retired_statuses
+                 or result.built_role or result.build_route or result.dated
                  else " — nothing to migrate"))
     else:
         # Already at this major, but missing configuration the major requires —
@@ -540,6 +543,21 @@ def _migrate_alone(args) -> int:
                   "so sign each that still awaits a signature:")
             for uid, move in result.moved.items():
                 print(f"  {uid}: {move}")
+    # The built axis (SR-0377, SR-0379, SR-0383).
+    if result.built_role:
+        print(f"bound the built role to {', '.join(result.built_role)}: each move "
+              "into or out of them is now dated on the item (SR-0377, SR-0378)")
+    for frm, into in result.build_route.items():
+        print(f"allowed '{frm}' -> '{into}': work may be built before it is signed, "
+              "and `tl check --strict` refuses it built and unsigned (SR-0379)")
+    if result.dated:
+        print(f"dated {len(result.dated)} built item(s) from git history, marked "
+              "backfilled (SR-0383)")
+    if result.undated:
+        # Written nothing, so not counted as a change above: a note, on every run,
+        # until someone dates them or history can.
+        print(f"note: history could not say when {len(result.undated)} built "
+              "item(s) were built, so none was dated: " + " ".join(result.undated))
     if result.registers:
         print(f"declared the item type of {len(result.registers)} register(s), "
               "which `tl new` now gives items born there (SR-0241):")
@@ -1378,7 +1396,26 @@ def cmd_check(args) -> int:
     if not args.quiet and errs == 0:
         tally += "  — graph is sound" + (" (strict)" if args.strict else "")
     print(tally, file=sys.stderr)
+    # Offered, never made unasked (SR-0386): a note after the result, which moves
+    # neither the findings nor the exit status.
+    built_note = _built_axis_note(project, args.path)
+    if built_note:
+        print(built_note, file=sys.stderr)
     return FINDINGS if any(f.severity == ERROR for f in findings) else OK
+
+
+def _built_axis_note(project, path) -> str | None:
+    """The line `tl check` ends with where `tl migrate` would turn on the built
+    axis (SR-0386): it would bind the built role and date the items now in its
+    statuses from history. None where there is nothing to turn on."""
+    if not built_role_due(project.config):
+        return None
+    statuses = set(_BUILT_DEFAULT)
+    held = sum(1 for i in project.items()
+               if not i.is_deleted and i.status in statuses)
+    return (f"also: `tl -C {_shown_path(path)} migrate` would record when work is "
+            f"built — it binds the built role to {', '.join(_BUILT_DEFAULT)} and "
+            f"dates the {held} item(s) in them from history (SR-0377, SR-0383)")
 
 
 def cmd_query(args) -> int:
@@ -2127,6 +2164,28 @@ def cmd_flag(args) -> int:
     return OK
 
 
+def cmd_adopt(args) -> int:
+    """Record when the graph was laid over existing work, and mark that work built
+    (SR-0381)."""
+    from .built import AdoptError, adopt
+    try:
+        project = load_project(args.path)
+    except ProjectError as e:
+        return _err(str(e))
+    try:
+        when, marked, changed = adopt(project, args.uids, all_items=args.all,
+                                      at=args.at, by=args.by)
+    except (AdoptError, ValueError) as e:
+        return _err(str(e))
+    if changed:
+        print(f"adopted: the graph was laid over existing work at {when}")
+    for uid in marked:
+        print(f"{uid}: built at {when} (existing work, awaiting acceptance)")
+    if not changed and not marked:
+        print(f"nothing to do: already adopted at {when}")
+    return OK
+
+
 def cmd_status(args) -> int:
     """The generic, transition-validated status verb (SR-0132). Every status
     move a project's [transitions] table permits is reachable through this
@@ -2152,7 +2211,7 @@ def cmd_status(args) -> int:
     frm = item.status
     try:
         refuse_ratified_status(project.schema, to)
-        set_status(project.schema, item, to)
+        set_status(project.schema, item, to, by=getattr(args, "by", None))
     except GroundingError as e:
         return _err(str(e))
     write_item(item, project.register_of(item.uid))
@@ -2649,9 +2708,9 @@ def _migrate_beneath(args) -> int:
         _print_unmarked(unmarked)
         _print_holding(holding)
     _print_unmigratable(found)
-    # Both formats this Tool reads (SR-0346); the later only where one is found,
-    # so a tree of graphs in the earlier language is reported as it always was.
-    for version in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+    # Every format this Tool reads (SR-0346, SR-0385); the later ones only where
+    # one is found, so a tree of graphs in the earlier language reads as it did.
+    for version in range(EARLIER_FORMAT_VERSION, FORMAT_VERSION + 1):
         current = sum(1 for f in found if f.declared == version and not f.due)
         if current or version == EARLIER_FORMAT_VERSION:
             print(f"{current} graph(s) already at format version {version}"
@@ -2736,13 +2795,13 @@ def _print_untyped_beneath(untyped: dict) -> None:
 
 
 def _print_unmarked(unmarked) -> None:
-    """Graphs whose filters are GQL at a format version that does not say so
-    (SR-0346), as tl 5.9 left a graph it moved."""
+    """Graphs below the format version what they use needs: GQL filters (SR-0346),
+    as tl 5.9 left a graph it moved, or a built role (SR-0385)."""
     if not unmarked:
         return
-    print(f"{len(unmarked)} graph(s) whose filters are GQL below format version "
-          f"{FORMAT_VERSION}, which `tl migrate` sets so that an older tl refuses "
-          "them instead of misreading them:")
+    print(f"{len(unmarked)} graph(s) below the format version their filters or "
+          "their built role need, which `tl migrate` sets so that an older tl "
+          "refuses them instead of misreading them:")
     for f in unmarked:
         print(f"  {f.root}  format {f.declared}")
 

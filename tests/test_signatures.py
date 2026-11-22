@@ -391,7 +391,7 @@ def test_the_dump_carries_the_list_and_says_so(tmp_path, capsys):
     assert _cli(["-C", root, "dump"]) == 0
     dump = json.loads(capsys.readouterr().out)
     assert dump["throughline_dump"]["dump_schema_version"] == 2
-    assert dump["throughline_dump"]["format_version"] == 5   # as tl init wrote
+    assert dump["throughline_dump"]["format_version"] == 6   # as tl init wrote
     item = {i["uid"]: i for i in dump["items"]}["REQ-0001"]
     assert item["ratifications"][0]["by"] == "Ada" and "ratified_by" not in item.get("attrs", {})
 
@@ -425,9 +425,8 @@ def _as_format_3(root: Path) -> Path:
                        "ratified_content": entry["content"], "ratified_id": "github:ada"})
     write_item(item)
     cfg = root / "throughline.toml"
-    cfg.write_text(cfg.read_text(encoding="utf-8").replace("format_version = 5",
-                                                           "format_version = 3"),
-                   encoding="utf-8")
+    cfg.write_text(re.sub(r"format_version = \d+", "format_version = 3",
+                          cfg.read_text(encoding="utf-8")), encoding="utf-8")
     return root / "requirements" / "REQ-0001.yml"
 
 
@@ -457,7 +456,7 @@ def test_a_format_3_project_is_read_only_until_migrated_and_then_lifted(tmp_path
     assert item.ratifications[0][STAMP] == stamp and item.ratifications[0][ID] == "github:ada"
 
     result = migrate_project(root)
-    assert (result.start, result.end, result.lifted) == (3, 4, 1)
+    assert (result.start, result.end, result.lifted) == (3, 6, 1)  # SR-0385
     text = path.read_text(encoding="utf-8")
     assert "ratified_by" not in text and "\nratifications:\n- by: Ada\n" in text
     item = _req(root)
@@ -477,7 +476,7 @@ def test_the_lift_is_reported_by_the_command(tmp_path, capsys):
     capsys.readouterr()
     assert _cli(["-C", root, "migrate"]) == 0
     out = capsys.readouterr().out
-    assert "migrated project from format version 3 to 4" in out
+    assert "migrated project from format version 3 to 6" in out
     assert "lifted the ratification record on 1 item(s)" in out
 
 

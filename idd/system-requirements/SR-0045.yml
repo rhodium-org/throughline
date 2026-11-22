@@ -4,9 +4,9 @@ status: ratified
 title: Filter expression language
 text: The Tool shall provide one boolean filter language over an item's `uid`, `type`,
   `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`, `attrs`
-  and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed` and
-  `signers`, usable identically in search, table generation, exports, and coverage
-  rules.
+  and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed`, `signers`,
+  `built`, `built_at`, `signed_at` and `adopted`, usable identically in search, table
+  generation, exports, and coverage rules.
 rationale: 'The list named tags, which the Tool has never had, and left out uid,
   rationale, normative and derived, which it admits (issue #40). The names are written
   out exactly because a reader reproducing the language needs the set, and SR-0103
@@ -23,17 +23,18 @@ attrs:
   verification: test
 ratifications:
 - by: Henry Grech-Cini
-  id: github:rhodium289
-  at: '2026-11-14T17:21:05Z'
-  fingerprint: sha256:f71a1fff1f1789ce9d5ea2d4f9f12da5c8ece7e5d51ef095836b9c959ee1fca7
+  at: '2026-11-22T12:29:31Z'
+  fingerprint: sha256:156ad3e7f839f5f04b128387a028c30755f5100570c08e382c00cc6b66e0ba37
   content:
     type: system_requirement
     text: The Tool shall provide one boolean filter language over an item's `uid`,
       `type`, `status`, `register`, `title`, `text`, `rationale`, `normative`, `derived`,
-      `attrs` and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed`
-      and `signers`, usable identically in search, table generation, exports, and
-      coverage rules.
+      `attrs` and `links`, and over its standing, `signed`, `stale`, `retired`, `reviewed`,
+      `signers`, `built`, `built_at`, `signed_at` and `adopted`, usable identically
+      in search, table generation, exports, and coverage rules.
     normative: true
     derived: false
     attrs:
       priority: must
+  id: github:rhodium289
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30

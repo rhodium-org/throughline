@@ -1,6 +1,6 @@
 uid: SR-0384
 type: system_requirement
-status: ratified
+status: implemented
 title: A request for a signature says whether it agrees a plan or accepts what exists
 text: tl ratify shall state, for each item before asking, either that the signature
   agrees work not yet built, or that it accepts work built at a given time from a
@@ -36,3 +36,8 @@ ratifications:
     derived: false
     attrs:
       priority: should
+  revision: 84920ea597fdff19aca75aeb475c3a4d99827586
+implementations:
+- at: '2026-11-22T12:30:26Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30

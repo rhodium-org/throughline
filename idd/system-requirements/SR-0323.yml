@@ -71,3 +71,9 @@ ratifications:
     derived: false
     attrs:
       priority: should
+  revision: 0969d5b4923dcbad9b2e9dfbc599edd41fd10a67
+implementations:
+- at: '2026-11-13T09:53:09Z'
+  by: Claude
+  revision: 0969d5b4923dcbad9b2e9dfbc599edd41fd10a67
+  backfilled: true

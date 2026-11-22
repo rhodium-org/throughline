@@ -2386,8 +2386,11 @@ def test_shipped_lifecycle_can_put_a_below_proposed_item_forward(tmp_path):
     proposed, ratified = (schema.status_role("proposed"),
                           schema.status_role("ratified"))
 
+    # A built status is not below proposed: an item there is signed where it
+    # stands (SR-0379, SR-0384), and the strict check refuses it unsigned (SR-0380).
     below = {s for s in moves.get(proposed, ())
              if s not in dead and s not in (proposed, ratified)
+             and s not in schema.built_statuses
              and ratified not in moves.get(s, ())}
     assert below, "expected the shipped table to have statuses below proposed"
     stranded = sorted(s for s in below if proposed not in moves.get(s, ()))
@@ -2560,7 +2563,7 @@ def test_migrate_v2_to_v3_backfills_status_roles(tmp_path):
     cfg_file.write_text(text, encoding="utf-8")
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (2, FORMAT_VERSION)  # the built role it binds (SR-0385)
     schema = load_project(root).schema
     assert schema.status_role("ratified") == "ratified"
     # no draft is declared, so the repair binds initial to proposal (SR-0313)
@@ -2584,6 +2587,7 @@ format_version = 2
 values = ["draft", "ratified"]
 '''
     cfg_file.write_text(text, encoding="utf-8")
+    # No implemented or verified declared, so no built role and no format 6.
     assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
     schema = load_project(root).schema
     assert schema.status_role("initial") == "draft"
@@ -3311,7 +3315,7 @@ def test_infer_absent_field_from_v1_layout_routes_to_migrate(tmp_path):
     _set_format_version(root, None)  # drop the version line entirely
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (1, EARLIER_FORMAT_VERSION)  # migrate off the inferred major
+    assert migrate_project(root)[:2] == (1, FORMAT_VERSION)  # migrate off the inferred major; the built role it binds (SR-0385)
 
 
 def test_infer_absent_field_from_v2_layout_routes_to_migrate(tmp_path):
@@ -3325,7 +3329,7 @@ def test_infer_absent_field_from_v2_layout_routes_to_migrate(tmp_path):
     _set_format_version(root, None)
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (2, EARLIER_FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (2, FORMAT_VERSION)  # the built role it binds (SR-0385)
     assert list(load_project(root).items()) == []  # loads after upgrade
 
 
@@ -3535,7 +3539,7 @@ def test_migrate_binds_records_on_a_project_that_also_needs_upgrading(tmp_path):
         f"format_version = {FORMAT_VERSION}", "format_version = 2"), encoding="utf-8")
 
     result = migrate_project(root)
-    assert (result.start, result.end) == (2, EARLIER_FORMAT_VERSION)
+    assert (result.start, result.end) == (2, FORMAT_VERSION)  # the built role it binds (SR-0385)
     assert list(result.bound) == ["REQ-0001"]
     assert load_project(root).schema.status_role("ratified") == "ratified"
 
@@ -4065,10 +4069,11 @@ def test_migrate_v1_document_manifests_to_v2_registers(tmp_path):
     its item intact — a genuine upgrade that preserves data (NFR-0010, SR-0102)."""
     root = tmp_path / "proj"
     reg = _make_legacy_v1_project(root)
-    assert migrate_project(root)[:2] == (1, EARLIER_FORMAT_VERSION)  # walks the whole chain
+    # Walks the whole chain, to the format the built role it binds needs (SR-0385).
+    assert migrate_project(root)[:2] == (1, FORMAT_VERSION)
     assert (reg / ".register.yml").exists()
     assert not (reg / ".document.yml").exists()
-    assert f"format_version = {EARLIER_FORMAT_VERSION}" in (
+    assert f"format_version = {FORMAT_VERSION}" in (
         root / "throughline.toml").read_text(encoding="utf-8")
     assert [i.uid for i in load_project(root).items()] == ["SR-0001"]  # item survived
 
@@ -4122,7 +4127,10 @@ def test_default_status_set_includes_deferred(tmp_path):
     assert values.index("deferred") == values.index("proposed") + 1
     assert "approved" not in values and "draft" not in values
     assert cfg["status"]["roles"]["initial"] == cfg["status"]["roles"]["proposed"]
-    assert "implemented" not in cfg["transitions"]["proposed"]
+    # An item may be built before it is signed (SR-0379, SR-0312 as amended), and
+    # the shipped lifecycle says which statuses mean built (SR-0377).
+    assert "implemented" in cfg["transitions"]["proposed"]
+    assert cfg["status"]["roles"]["built"] == ["implemented", "verified"]
 
 
 def test_find_nested_project_reports_progress(tmp_path):

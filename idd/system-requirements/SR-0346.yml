@@ -3,12 +3,12 @@ type: system_requirement
 status: implemented
 title: A project whose filters are GQL is refused by a Tool that cannot read them
 text: A project whose filter_language is gql shall declare on-disk format version
-  5, and the Tool shall refuse a project that declares gql at any other version,
+  5 or higher, and the Tool shall refuse a project that declares gql at a lower version,
   saying so. The Tool shall read a project at format version 4, whose filters are
   in the earlier language, and one at version 5, without asking either to migrate.
-  tl init shall write version 5, and tl migrate --to-gql shall set it with the language.
-  A Tool older than this requirement refuses version 5 as a format it does not understand,
-  naming the upgrade.
+  tl init shall write the version its configuration needs (SR-0385), and tl migrate
+  --to-gql shall raise it to 5 where it is lower. A Tool older than this requirement
+  refuses version 5 as a format it does not understand, naming the upgrade.
 rationale: 'Found building SR-0339, when throughline''s own graph was moved and checked
   by the released Tool: an older tl does not know the filter_language key, reads
   each GQL marker as a filter of the earlier language that fails to parse, and treats
@@ -35,19 +35,25 @@ attrs:
   origin: ai
 ratifications:
 - by: Henry Grech-Cini
-  id: github:rhodium289
-  at: '2026-11-15T07:51:27Z'
-  fingerprint: sha256:4c575adf6ea7e270775287aff9a5728860e7dc627a20fba0f187e9e7a3c01487
+  at: '2026-11-22T12:44:32Z'
+  fingerprint: sha256:bd1ab825803b53cb537a99b0e014d699f8c515e64074f8940218a710a47e811e
   content:
     type: system_requirement
     text: A project whose filter_language is gql shall declare on-disk format version
-      5, and the Tool shall refuse a project that declares gql at any other version,
-      saying so. The Tool shall read a project at format version 4, whose filters
-      are in the earlier language, and one at version 5, without asking either to
-      migrate. tl init shall write version 5, and tl migrate --to-gql shall set it
-      with the language. A Tool older than this requirement refuses version 5 as
-      a format it does not understand, naming the upgrade.
+      5 or higher, and the Tool shall refuse a project that declares gql at a lower
+      version, saying so. The Tool shall read a project at format version 4, whose
+      filters are in the earlier language, and one at version 5, without asking either
+      to migrate. tl init shall write the version its configuration needs (SR-0385),
+      and tl migrate --to-gql shall raise it to 5 where it is lower. A Tool older
+      than this requirement refuses version 5 as a format it does not understand,
+      naming the upgrade.
     normative: true
     derived: false
     attrs:
       priority: must
+  id: github:rhodium289
+implementations:
+- at: '2026-11-15T08:05:17Z'
+  by: Henry Grech-Cini
+  revision: c20262f4af88986a0159f99c12a0c9d92bf585de
+  backfilled: true

@@ -1,0 +1,57 @@
+uid: SR-0385
+type: system_requirement
+status: implemented
+title: A graph that uses the built axis declares format version 6
+text: 'A project that names a built role shall declare on-disk format version 6,
+  and the Tool shall refuse one that names it at a lower version, saying that tl
+  migrate sets it. The Tool shall read format versions 4, 5 and 6, each where the
+  project needs no higher: 4 for the earlier filter language and no built role, 5
+  for GQL filters, 6 for a built role. tl init shall write the version its configuration
+  needs; tl migrate shall raise the version to what the project needs once its repairs
+  have run, and never lower it. A Tool older than this requirement refuses version
+  6 as a format it does not understand, naming the upgrade.'
+rationale: 'Found on 22 November 2026: tl 6.0.0 opening a graph migrated by this
+  release failed with "[status.roles] declares unknown role(s) [''built'']", and
+  with the role moved elsewhere it reported 106 unknown-key errors for the implementations
+  record. Given format 6, it refused with its version refusal (SR-0168), naming pipx
+  upgrade throughline. Rejected, moving the role out of [status.roles]: the items''
+  record is refused wherever the role lives. Rejected, format 6 for every graph:
+  a graph that does not use the axis would force every reader to upgrade for nothing,
+  the reasoning SR-0337 gave for GQL. Who pays: people reading a graph that uses
+  the axis need this release or later; a graph that does not use it changes nothing.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+- target: SR-0346
+  type: relates
+- target: SR-0168
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T12:44:29Z'
+  fingerprint: sha256:03e5bbd453842acf4569f5c3a2e1297a68c00e166ee67965c44f81a821f9a316
+  content:
+    type: system_requirement
+    text: 'A project that names a built role shall declare on-disk format version
+      6, and the Tool shall refuse one that names it at a lower version, saying that
+      tl migrate sets it. The Tool shall read format versions 4, 5 and 6, each where
+      the project needs no higher: 4 for the earlier filter language and no built
+      role, 5 for GQL filters, 6 for a built role. tl init shall write the version
+      its configuration needs; tl migrate shall raise the version to what the project
+      needs once its repairs have run, and never lower it. A Tool older than this
+      requirement refuses version 6 as a format it does not understand, naming the
+      upgrade.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
+implementations:
+- at: '2026-11-22T12:49:22Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: 0f21cfb3daf5afbf8fc001abf964b9fd2d1e1c55

@@ -622,12 +622,30 @@ def build_parser(handlers=None) -> argparse.ArgumentParser:
                         "defaults to the identity this repository signs with)")
     s.set_defaults(func=handlers.get("cmd_flag"))
 
+    s = sub.add_parser(
+        "adopt",
+        help="record that this graph was laid over work that already existed, and "
+             "mark that work built (SR-0381)")
+    s.add_argument("uids", nargs="*", metavar="UID",
+                   help="the items that already exist")
+    s.add_argument("--all", action="store_true",
+                   help="every live item already exists")
+    s.add_argument("--at", default=None,
+                   help="when the graph was laid over the work (default: now), "
+                        "such as 2026-11-22T12:00:00Z")
+    s.add_argument("--by", default=None,
+                   help="who is recording it (default: the git identity)")
+    s.set_defaults(func=handlers.get("cmd_adopt"))
+
     s = sub.add_parser("status",
                        help="move an item to a status (transition-validated)")
     s.add_argument("uid", nargs="?", default=None,
                    help="UID to change (omit on a terminal to pick one)")
     s.add_argument("status", nargs="?", default=None,
                    help="target status (omit on a terminal to pick one)")
+    s.add_argument("--by", default=None,
+                   help="who is moving it, recorded when it becomes built or stops "
+                        "being built (default: the git identity; SR-0378)")
     s.set_defaults(func=handlers.get("cmd_status"))
 
     return p

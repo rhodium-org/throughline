@@ -1,6 +1,6 @@
 uid: SR-0381
 type: system_requirement
-status: ratified
+status: implemented
 title: tl adopt records when a graph was laid over existing work
 text: 'tl adopt shall set adopted under [project] to a UTC time (now, or --at), and
   mark the items it is given, or with --all every live item, as built with an implementations
@@ -36,3 +36,8 @@ ratifications:
     derived: false
     attrs:
       priority: should
+  revision: 84920ea597fdff19aca75aeb475c3a4d99827586
+implementations:
+- at: '2026-11-22T12:30:25Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30

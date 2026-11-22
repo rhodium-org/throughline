@@ -214,7 +214,7 @@ def test_format_inference_and_migration_read_only_the_projects_own_manifests(tmp
                                                         encoding="utf-8")
     with pytest.raises(ProjectError, match="tl migrate"):
         load_project(root)
-    assert migrate_project(root)[:2] == (1, EARLIER_FORMAT_VERSION)
+    assert migrate_project(root)[:2] == (1, FORMAT_VERSION)  # built role bound (SR-0385)
     assert (root / "system" / ".register.yml").is_file()
     assert (archived / "system" / ".document.yml").is_file()
     assert not (archived / "system" / ".register.yml").exists()

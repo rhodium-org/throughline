@@ -1,6 +1,6 @@
 uid: SR-0382
 type: system_requirement
-status: ratified
+status: implemented
 title: A filter can read when an item was built and when it was signed
 text: 'A filter shall be able to read, for each item: built, true when it is in a
   status of the built role; built_at, the time of the entry that last put it there,
@@ -36,3 +36,8 @@ ratifications:
     derived: false
     attrs:
       priority: should
+  revision: 84920ea597fdff19aca75aeb475c3a4d99827586
+implementations:
+- at: '2026-11-22T12:30:26Z'
+  by: Claude (agent, for Henry Grech-Cini)
+  revision: b17a95bf37069b06893ed9f2a81a0bd138ca5a30
