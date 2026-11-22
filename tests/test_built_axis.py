@@ -308,3 +308,62 @@ def test_dump_carries_the_built_record(tmp_path, capsys):
     assert _cli(["-C", str(root), "dump"]) == 0
     items = {i["uid"]: i for i in json.loads(capsys.readouterr().out)["items"]}
     assert items[uid]["implementations"][0]["by"] == "Bo"
+
+
+# --- SR-0385: a graph that uses the built axis declares format version 6 ----------
+
+
+def test_a_built_role_below_six_is_refused_naming_migrate(tmp_path):
+    from throughline.storage import FormatError
+    root = _project(tmp_path)
+    cfg = root / "throughline.toml"
+    cfg.write_text(cfg.read_text().replace("format_version = 6", "format_version = 5"))
+    with pytest.raises(FormatError, match="built role at format version 5.*tl migrate"):
+        load_project(root)
+
+
+def test_a_graph_without_a_built_role_keeps_a_lower_version(tmp_path):
+    root = _project(tmp_path)
+    cfg = root / "throughline.toml"
+    text = cfg.read_text().replace('built = ["implemented", "verified"]\n', "")
+    cfg.write_text(text.replace("format_version = 6", "format_version = 5"))
+    assert load_project(root).schema.built_order == ()
+
+
+def test_migrate_raises_the_version_when_it_binds_the_role(tmp_path):
+    root = _project(tmp_path)
+    cfg = root / "throughline.toml"
+    text = cfg.read_text().replace('built = ["implemented", "verified"]\n', "")
+    cfg.write_text(text.replace("format_version = 6", "format_version = 5"))
+    assert _cli(["-C", str(root), "migrate"]) == 0
+    assert "format_version = 6" in cfg.read_text()
+    assert load_project(root).schema.built_order == ("implemented", "verified")
+
+
+# --- SR-0386: tl check says when migrating would turn on the built axis -----------
+
+
+def test_check_notes_that_migrate_would_turn_on_the_built_axis(tmp_path, capsys):
+    root = _project(tmp_path)
+    cfg = root / "throughline.toml"
+    text = cfg.read_text().replace('built = ["implemented", "verified"]\n', "")
+    cfg.write_text(text.replace("format_version = 6", "format_version = 5"))
+    uid = _new(root, ground=_intent(root))
+    item_file = next(root.rglob(f"{uid}.yml"))
+    item_file.write_text(item_file.read_text().replace("status: proposed",
+                                                       "status: implemented"))
+    capsys.readouterr()
+    code = _cli(["-C", str(root), "check"])
+    err = capsys.readouterr().err
+    assert "migrate` would record when work is built" in err
+    assert "dates the 1 item(s)" in err
+    # A note, not a finding: an unsigned item is a warning without --strict, so
+    # the check still passes.
+    assert code == 0
+
+
+def test_check_says_nothing_once_the_axis_is_on(tmp_path, capsys):
+    root = _project(tmp_path)
+    capsys.readouterr()
+    assert _cli(["-C", str(root), "check"]) == 0
+    assert "would record when work is built" not in capsys.readouterr().err

@@ -32,7 +32,7 @@ from .graph import Index
 from .inject import _BLOCK, _MATRIX_REL, document_paths
 from .schema import GQL, PYTHON
 from .atomic import write_all
-from .storage import (CONFIG_NAME, FORMAT_VERSION, ProjectError, load_project,
+from .storage import (CONFIG_NAME, GQL_FORMAT_VERSION, ProjectError, load_project,
                       read_text)
 from .tomledit import TomlDocument, render_assignment
 from .validate import eval_filter
@@ -423,7 +423,11 @@ def plan_move(path) -> Move:
         "from the earlier language by `tl migrate --to-gql` (SR-0339)."))
     # With the language, the format version that says so (SR-0346): a tl from
     # before GQL filters refuses the project instead of misreading it.
-    doc.set_key("project", "format_version", FORMAT_VERSION)
+    # Raised to it, never lowered: a project already at a later format for
+    # another reason (SR-0385) keeps it.
+    declared = (project.config.get("project") or {}).get("format_version")
+    doc.set_key("project", "format_version", max(
+        GQL_FORMAT_VERSION, declared if isinstance(declared, int) else 0))
     move.config = doc.text()
 
     # The documents: every marked region whose directive takes a filter.

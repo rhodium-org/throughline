@@ -133,6 +133,8 @@ from .storage import (
     EARLIER_FORMAT_VERSION,
     FORMAT_VERSION,
     MANIFEST_NAME,
+    _BUILT_DEFAULT,
+    built_role_due,
     ProjectError,
     baseline_note,
     nested_note,
@@ -1394,7 +1396,26 @@ def cmd_check(args) -> int:
     if not args.quiet and errs == 0:
         tally += "  — graph is sound" + (" (strict)" if args.strict else "")
     print(tally, file=sys.stderr)
+    # Offered, never made unasked (SR-0386): a note after the result, which moves
+    # neither the findings nor the exit status.
+    built_note = _built_axis_note(project, args.path)
+    if built_note:
+        print(built_note, file=sys.stderr)
     return FINDINGS if any(f.severity == ERROR for f in findings) else OK
+
+
+def _built_axis_note(project, path) -> str | None:
+    """The line `tl check` ends with where `tl migrate` would turn on the built
+    axis (SR-0386): it would bind the built role and date the items now in its
+    statuses from history. None where there is nothing to turn on."""
+    if not built_role_due(project.config):
+        return None
+    statuses = set(_BUILT_DEFAULT)
+    held = sum(1 for i in project.items()
+               if not i.is_deleted and i.status in statuses)
+    return (f"also: `tl -C {_shown_path(path)} migrate` would record when work is "
+            f"built — it binds the built role to {', '.join(_BUILT_DEFAULT)} and "
+            f"dates the {held} item(s) in them from history (SR-0377, SR-0383)")
 
 
 def cmd_query(args) -> int:
@@ -2687,9 +2708,9 @@ def _migrate_beneath(args) -> int:
         _print_unmarked(unmarked)
         _print_holding(holding)
     _print_unmigratable(found)
-    # Both formats this Tool reads (SR-0346); the later only where one is found,
-    # so a tree of graphs in the earlier language is reported as it always was.
-    for version in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+    # Every format this Tool reads (SR-0346, SR-0385); the later ones only where
+    # one is found, so a tree of graphs in the earlier language reads as it did.
+    for version in range(EARLIER_FORMAT_VERSION, FORMAT_VERSION + 1):
         current = sum(1 for f in found if f.declared == version and not f.due)
         if current or version == EARLIER_FORMAT_VERSION:
             print(f"{current} graph(s) already at format version {version}"
@@ -2774,13 +2795,13 @@ def _print_untyped_beneath(untyped: dict) -> None:
 
 
 def _print_unmarked(unmarked) -> None:
-    """Graphs whose filters are GQL at a format version that does not say so
-    (SR-0346), as tl 5.9 left a graph it moved."""
+    """Graphs below the format version what they use needs: GQL filters (SR-0346),
+    as tl 5.9 left a graph it moved, or a built role (SR-0385)."""
     if not unmarked:
         return
-    print(f"{len(unmarked)} graph(s) whose filters are GQL below format version "
-          f"{FORMAT_VERSION}, which `tl migrate` sets so that an older tl refuses "
-          "them instead of misreading them:")
+    print(f"{len(unmarked)} graph(s) below the format version their filters or "
+          "their built role need, which `tl migrate` sets so that an older tl "
+          "refuses them instead of misreading them:")
     for f in unmarked:
         print(f"  {f.root}  format {f.declared}")
 

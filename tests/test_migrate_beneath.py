@@ -210,7 +210,7 @@ def test_apply_migrates_and_commits_nothing(tmp_path, capsys):
 
     assert _cli(["migrate", "--beneath", repo, "--apply"]) == 0
     out = capsys.readouterr().out
-    assert _declared(a) == _declared(b) == EARLIER_FORMAT_VERSION
+    assert _declared(a) == _declared(b) == FORMAT_VERSION  # built role bound (SR-0385)
     assert (f"migrated 2 graph(s) in {repo.resolve()} to format version "
             f"{EARLIER_FORMAT_VERSION}") in out
     assert _git(repo, "rev-parse", "HEAD") == head

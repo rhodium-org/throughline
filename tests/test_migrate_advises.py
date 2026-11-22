@@ -54,7 +54,7 @@ def test_apply_retires_them_and_a_second_survey_finds_nothing(tmp_path, capsys):
     assert not found.retires and not found.due
     capsys.readouterr()
     assert _cli(["migrate", "--beneath", tmp_path]) == 0
-    assert "1 graph(s) already at format version 4\n" in capsys.readouterr().out
+    assert "1 graph(s) already at format version 6\n" in capsys.readouterr().out  # SR-0385
 
 
 # ----------------------------------------------------------------- SR-0317

@@ -152,8 +152,14 @@ MANIFEST_NAME = ".register.yml"
 # v4 (SR-0254) holds an item's ratification record as a top-level `ratifications`
 # list, one signature per person, in place of the flat `ratified_*` attributes;
 # v5 (SR-0346) is v4 on disk, declared by a project whose filters are GQL search
-# conditions, so a Tool that cannot read them refuses it by its format.
-FORMAT_VERSION = 5
+# conditions, so a Tool that cannot read them refuses it by its format; v6
+# (SR-0385) is declared by a project that names a built role, whose items carry
+# the dated `implementations` record (SR-0378), for the same reason. Each is
+# declared only by a project that needs it, so one that uses neither stays where
+# every Tool since v4 reads it.
+GQL_FORMAT_VERSION = 5
+BUILT_FORMAT_VERSION = 6
+FORMAT_VERSION = BUILT_FORMAT_VERSION
 
 # The major a project whose filters are in the earlier language may stay at, read
 # with no migration (SR-0346), and the one `tl migrate` brings an older project
@@ -292,7 +298,12 @@ def _read_format_version(config: dict, root: Path) -> int:
     """
     project = config.get("project", {})
     if "format_version" not in project:
-        return _infer_format_version(root)
+        inferred = _infer_format_version(root)
+        # No layout of an older major on disk: read it at the format its own
+        # configuration needs (SR-0346, SR-0385), which is what it would declare.
+        if inferred == EARLIER_FORMAT_VERSION:
+            return max(inferred, required_format(config))
+        return inferred
     raw = project["format_version"]
     if isinstance(raw, bool) or not isinstance(raw, int):
         raise ProjectError(
@@ -359,7 +370,7 @@ def _gate_format_version(config: dict, root: Path) -> None:
             f"({_running_tool()}) uses {EARLIER_FORMAT_VERSION} — run `tl migrate` to "
             f"upgrade the project (a lossless, in-place rewrite)",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
-    _gate_filter_language(_declares_gql(config), disk, root)
+    _gate_required(_declares_gql(config), _declares_built(config), disk, root)
 
 
 def _declares_gql(config: dict) -> bool:
@@ -367,17 +378,41 @@ def _declares_gql(config: dict) -> bool:
     return (config.get("project") or {}).get("filter_language") == "gql"
 
 
-def _gate_filter_language(gql: bool, disk: int, root: Path) -> None:
-    """Refuse a project whose filters are GQL at any format version but the one
-    that says so (SR-0346). A Tool from before GQL filters reads each as a filter
-    of the earlier language that fails to parse and selects nothing, and refuses
-    nothing; the format version is what it does refuse on."""
-    if gql and disk != FORMAT_VERSION:
+def _declares_built(config: dict) -> bool:
+    """Whether a configuration names a built role (SR-0377)."""
+    roles = (config.get("status") or {}).get("roles")
+    return isinstance(roles, dict) and bool(roles.get("built"))
+
+
+def required_format(config: dict) -> int:
+    """The lowest format version a configuration may declare (SR-0346, SR-0385):
+    6 where it names a built role, 5 where its filters are GQL, else 4."""
+    if _declares_built(config):
+        return BUILT_FORMAT_VERSION
+    if _declares_gql(config):
+        return GQL_FORMAT_VERSION
+    return EARLIER_FORMAT_VERSION
+
+
+def _gate_required(gql: bool, built: bool, disk: int, root: Path) -> None:
+    """Refuse a project that declares a lower format version than what it uses
+    needs (SR-0346, SR-0385). A Tool from before GQL filters reads each as a filter
+    that selects nothing, and one from before the built axis refuses its role with
+    a message that names no remedy; the format version is what an older Tool does
+    refuse on, naming the upgrade (SR-0168)."""
+    if built and disk < BUILT_FORMAT_VERSION:
+        raise FormatError(
+            f"{root / CONFIG_NAME} names a built role at format version {disk}; a "
+            f"project that does declares format version {BUILT_FORMAT_VERSION}, so "
+            "that a tl that cannot read its items' build record refuses it — run "
+            "`tl migrate` to set it",
+            declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
+    if gql and disk < GQL_FORMAT_VERSION:
         raise FormatError(
             f'{root / CONFIG_NAME} declares filter_language = "gql" at format '
             f"version {disk}; a project whose filters are GQL declares format "
-            f"version {FORMAT_VERSION}, so that a tl that cannot read them refuses "
-            f"it — run `tl migrate` to set it",
+            f"version {GQL_FORMAT_VERSION} or higher, so that a tl that cannot read "
+            f"them refuses it — run `tl migrate` to set it",
             declared=disk, implemented=FORMAT_VERSION, path=root / CONFIG_NAME)
 
 
@@ -1306,6 +1341,18 @@ def _retire_borrowed_unsigned_agreement(root: Path) -> tuple[tuple[str, ...],
 _BUILT_DEFAULT = ("implemented", "verified")
 
 
+def built_role_due(config: dict) -> bool:
+    """Whether `tl migrate` would bind the built role here (SR-0377): the
+    project's own configuration binds roles, names no built role, and declares
+    both statuses the shipped role binds. Asked by the repair and by `tl check`'s
+    note (SR-0386), so the two cannot disagree."""
+    status = config.get("status") or {}
+    roles = status.get("roles")
+    values = status.get("values") or []
+    return (isinstance(roles, dict) and bool(roles) and "built" not in roles
+            and all(v in values for v in _BUILT_DEFAULT))
+
+
 def _backfill_built_role(root: Path) -> tuple[str, ...]:
     """Bind the built role (SR-0377) for a project that declares both implemented
     and verified, binds its other roles, and binds no built role. Returns the
@@ -1313,14 +1360,9 @@ def _backfill_built_role(root: Path) -> tuple[str, ...]:
     for built work, or none, is left to say so itself."""
     cfg_file = root / CONFIG_NAME
     config = tomllib.loads(cfg_file.read_text(encoding="utf-8"))
-    status = config.get("status") or {}
-    roles = status.get("roles")
-    values = status.get("values") or []
     # A roles table declared and left empty is a deliberate choice (SR-0136),
     # and one that already says what built means needs nothing.
-    if not isinstance(roles, dict) or not roles or "built" in roles:
-        return ()
-    if not all(v in values for v in _BUILT_DEFAULT):
+    if not built_role_due(config):
         return ()
     doc = TomlDocument(cfg_file.read_text(encoding="utf-8"))
     if not doc.has_table(("status", "roles")):
@@ -1331,6 +1373,11 @@ def _backfill_built_role(root: Path) -> tuple[str, ...]:
         "them dated on the item (SR-0378). Remove it if nothing in this graph is "
         "ever built."))
     cfg_file.write_text(doc.text(), encoding="utf-8")
+    # With the role, the format version that says so (SR-0385), at once: every
+    # repair after this one loads the project, and the gate refuses it otherwise.
+    declared = (config.get("project") or {}).get("format_version")
+    if not isinstance(declared, int) or declared < BUILT_FORMAT_VERSION:
+        _rewrite_format_version(cfg_file, BUILT_FORMAT_VERSION)
     return _BUILT_DEFAULT
 
 
@@ -1512,7 +1559,8 @@ _MIGRATIONS: dict[int, Callable[[Path], None]] = {
 _REPAIRS: dict[int, Callable[[Path, "Index | None"], RepairResult]] = {
     STATUS_ROLES_MAJOR: _repair_status_roles_major,
     EARLIER_FORMAT_VERSION: _repair_status_roles_major,
-    FORMAT_VERSION: _repair_status_roles_major}
+    GQL_FORMAT_VERSION: _repair_status_roles_major,
+    BUILT_FORMAT_VERSION: _repair_status_roles_major}
 
 
 def _rewrite_format_version(cfg_file: Path, version: int) -> None:
@@ -1663,13 +1711,18 @@ def _migrate_project(root: Path, cfg_file: Path, config: dict,
     # A project in the earlier language stays at the major every Tool since it
     # reads; one whose filters are GQL says the major that tells an older Tool
     # to refuse it (SR-0346), which nothing on disk but the number changes for.
-    if _declares_gql(config):
-        current = FORMAT_VERSION
+    current = max(current, required_format(config))
     if current != start:
         _rewrite_format_version(cfg_file, current)
     repair = _REPAIRS.get(current)
     result = (repair(root, index) if repair is not None
               else RepairResult(None, {}, {}, {}, {}))
+    # The repairs may have bound the built role (SR-0377), which the format
+    # version must then say (SR-0385); raised, never lowered.
+    needed = required_format(read_config(cfg_file))
+    if needed > current:
+        current = needed
+        _rewrite_format_version(cfg_file, current)
     return MigrationResult(start, current, result.config, result.routes,
                            result.vocabularies, result.stamps, result.revisions,
                            result.normative, result.restamped, result.stale,
@@ -1918,8 +1971,8 @@ def load_project(path: str | Path, *, base: str | Path | None = None) -> Project
     project = _build_project(root, config, {MANIFEST_NAME},
                              base=Path(base) if base is not None else None)
     # The language may come with a schema the project takes from a source.
-    _gate_filter_language(project.filter_language == "gql",
-                          _read_format_version(config, root), root)
+    _gate_required(project.filter_language == "gql", False,
+                   _read_format_version(config, root), root)
     return project
 
 
@@ -1942,7 +1995,10 @@ def read_project(path: str | Path) -> Project:
             f"{cfg_file} declares format version {disk}, but this tl understands up "
             f"to {FORMAT_VERSION} — upgrade tl to read this source",
             declared=disk, implemented=FORMAT_VERSION, path=cfg_file)
-    _gate_filter_language(_declares_gql(config), disk, root)
+    # Only from the first format read without migration: an older one is lifted
+    # in memory below, and its configuration is judged as it is lifted.
+    if disk >= EARLIER_FORMAT_VERSION:
+        _gate_required(_declares_gql(config), _declares_built(config), disk, root)
     major = disk
     while major < FORMAT_VERSION:
         upgrade = _CONFIG_UPGRADES.get(major)
@@ -1950,7 +2006,7 @@ def read_project(path: str | Path) -> Project:
             config = upgrade(config)
         major += 1
     project = _build_project(root, config, _ALL_MANIFEST_NAMES)
-    _gate_filter_language(project.filter_language == "gql", disk, root)
+    _gate_required(project.filter_language == "gql", False, disk, root)
     return project
 
 
@@ -2476,7 +2532,9 @@ def _init_from_schema(root: Path, name: str, given: str, ref: str | None,
     lines = [
         "[project]",
         f"name = {_toml_string(name)}",
-        f"format_version = {FORMAT_VERSION}",
+        # What its own configuration needs (SR-0385): a built role the standard
+        # binds is the standard's to declare, at its own format.
+        f"format_version = {GQL_FORMAT_VERSION}",
         # The standard's language, since its coverage rules are this graph's too
         # and a project's filters are all in one (SR-0337).
         f'filter_language = "{standard.filter_language}"',

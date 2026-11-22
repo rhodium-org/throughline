@@ -17,7 +17,7 @@ from . import discovery
 from .schema import SchemaError
 from .sources import schema_source
 from .storage import (CONFIG_NAME, EARLIER_FORMAT_VERSION, FORMAT_VERSION,
-                      ProjectError, _declares_gql, _read_format_version, borrowed_statuses_to_retire,
+                      ProjectError, _read_format_version, required_format, borrowed_statuses_to_retire,
                       load_project, migrate_project, project_snapshot, read_config,
                       unsigned_agreement_statuses, untyped_registers)
 
@@ -33,7 +33,8 @@ class Found:
     # The statuses between proposal and signature it still declares (SR-0316):
     # 5.0 retired them without a new format, so its format alone cannot say.
     retires: tuple[str, ...] = ()
-    # Its filters are GQL below the format version that says so (SR-0346).
+    # Below the format version what it uses needs: GQL filters (SR-0346) or a
+    # built role (SR-0385).
     unmarked: bool = False
     # The prefixes of its registers that declare no item type and that migration
     # cannot type (SR-0350); read only where its format is one this Tool reads.
@@ -46,7 +47,8 @@ class Found:
     @property
     def read(self) -> bool:
         """At a format this Tool reads without migration (SR-0346)."""
-        return self.declared in (EARLIER_FORMAT_VERSION, FORMAT_VERSION) \
+        return self.declared is not None \
+            and EARLIER_FORMAT_VERSION <= self.declared <= FORMAT_VERSION \
             and not self.unmarked
 
     @property
@@ -72,9 +74,9 @@ def _found(root: Path) -> Found:
     try:
         config = read_config(root / CONFIG_NAME)
         declared = _read_format_version(config, root)
-        unmarked = _declares_gql(config) and \
-            EARLIER_FORMAT_VERSION <= declared < FORMAT_VERSION
-        readable = not unmarked and declared in (EARLIER_FORMAT_VERSION, FORMAT_VERSION)
+        unmarked = EARLIER_FORMAT_VERSION <= declared < required_format(config)
+        readable = (not unmarked
+                    and EARLIER_FORMAT_VERSION <= declared <= FORMAT_VERSION)
         return Found(root, repository, declared,
                      retires=() if unmarked else _retires(root, config, declared),
                      unmarked=unmarked,
@@ -90,7 +92,7 @@ def _retires(root: Path, config: dict, declared: int) -> tuple[str, ...]:
     items hold (SR-0319). Writes nothing."""
     if schema_source(config) is None:
         return unsigned_agreement_statuses(config)
-    if declared not in (EARLIER_FORMAT_VERSION, FORMAT_VERSION):
+    if not EARLIER_FORMAT_VERSION <= declared <= FORMAT_VERSION:
         return ()   # behind already, so due; only the formats read load
     try:
         return borrowed_statuses_to_retire(load_project(root))

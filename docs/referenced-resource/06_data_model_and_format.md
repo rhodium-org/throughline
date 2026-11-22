@@ -268,4 +268,7 @@ surface for third-party tools and the web viewer.
 3. Every link target resolves to an existing UID, path, or URL.
 4. No `refines` cycles (configurable).
 5. Every item validates against its type schema.
-6. `format_version` supported.
+6. `format_version` supported, and no lower than what the project uses needs: 4 by
+   default, 5 where its filters are GQL (SR-0346), 6 where it names a built role
+   (SR-0385). An older tl refuses a version it does not implement and names the
+   upgrade (SR-0168); `tl migrate` raises the version, never lowers it.

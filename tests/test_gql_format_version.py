@@ -17,8 +17,8 @@ import pytest
 
 from throughline.cli import main as cli_main
 from throughline.storage import (EARLIER_FORMAT_VERSION, FORMAT_VERSION,
-                                 FormatError, load_project, migrate_project,
-                                 read_project)
+                                 GQL_FORMAT_VERSION, FormatError, load_project,
+                                 migrate_project, read_project)
 
 
 def _cli(argv) -> int:
@@ -37,9 +37,18 @@ def _declare(root: Path, version: int) -> None:
                           cfg.read_text(encoding="utf-8")), encoding="utf-8")
 
 
-def _gql(tmp_path: Path, version: int = FORMAT_VERSION) -> Path:
+def _unbuilt(root: Path) -> None:
+    """Leave out the built role `tl init` binds, so a project's format is decided
+    by its filters alone (SR-0385 decides it where the role is named)."""
+    cfg = root / "throughline.toml"
+    cfg.write_text(re.sub(r'(?m)^built = \[.*\]\n', "", cfg.read_text(encoding="utf-8")),
+                   encoding="utf-8")
+
+
+def _gql(tmp_path: Path, version: int = GQL_FORMAT_VERSION) -> Path:
     root = tmp_path / "gql"
     assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    _unbuilt(root)
     _declare(root, version)
     return root
 
@@ -59,6 +68,7 @@ def _earlier(tmp_path: Path, version: int = EARLIER_FORMAT_VERSION) -> Path:
     doc = root / "docs" / "overview.md"
     doc.write_text(doc.read_text(encoding="utf-8").replace("item.type = '", "type == '"),
                    encoding="utf-8")
+    _unbuilt(root)
     _declare(root, version)
     assert _cli(["-C", root, "docs"]) == 0
     return root
@@ -68,14 +78,17 @@ def _files(root: Path) -> dict:
     return {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
 
 
-def test_the_two_versions_are_four_and_five():
-    assert (EARLIER_FORMAT_VERSION, FORMAT_VERSION) == (4, 5)
+def test_the_versions_are_four_five_and_six():
+    assert (EARLIER_FORMAT_VERSION, GQL_FORMAT_VERSION, FORMAT_VERSION) == (4, 5, 6)
 
 
-def test_init_writes_version_five(tmp_path):
-    root = _gql(tmp_path)
-    assert _declared(root) == 5
-    assert load_project(root).filter_language == "gql"
+def test_init_writes_the_version_its_configuration_needs(tmp_path):
+    # GQL filters and a built role: version 6 (SR-0346, SR-0385).
+    root = tmp_path / "gql"
+    assert _cli(["-C", root, "init", "--name", "t"]) == 0
+    assert _declared(root) == 6
+    project = load_project(root)
+    assert project.filter_language == "gql" and project.schema.built_order
     assert _cli(["-C", root, "check"]) == 0
 
 
@@ -93,16 +106,21 @@ def test_a_project_at_four_in_the_earlier_language_is_read_as_it_is(tmp_path, ca
     assert load_project(root).filter_language == "python"
     assert _cli(["-C", root, "check"]) == 0
     assert _cli(["-C", root, "docs", "--check"]) == 0
-    assert "migrate" not in capsys.readouterr().err
+    # Not asked to migrate (SR-0346); the built axis is offered (SR-0386).
+    err = capsys.readouterr().err
+    assert "run `tl migrate`" not in err and "--to-gql" not in err
     assert _files(root) == before
 
 
-def test_tl_migrate_leaves_a_project_at_four_at_four(tmp_path):
-    """An older tl still reads version 4, so nothing moves it unasked."""
+def test_tl_migrate_takes_a_project_at_four_to_what_it_then_needs(tmp_path):
+    """Reading never moves a project (SR-0346); migrating binds the built role
+    where implemented and verified are declared (SR-0377), and the version says
+    so (SR-0385). Run again, it moves nothing."""
     root = _earlier(tmp_path)
+    assert load_project(root) is not None and _declared(root) == 4
     assert _cli(["-C", root, "migrate"]) == 0
-    assert _declared(root) == 4
-    assert migrate_project(root)[:2] == (4, 4)
+    assert _declared(root) == 6
+    assert migrate_project(root)[:2] == (6, 6)
 
 
 def test_a_project_in_the_earlier_language_is_read_at_five(tmp_path):
@@ -118,7 +136,7 @@ def test_gql_at_four_is_refused_saying_so(tmp_path, capsys):
     said = str(caught.value)
     assert "gql" in said and "format version 4" in said
     assert "format version 5" in said and "tl migrate" in said
-    assert (caught.value.declared, caught.value.implemented) == (4, 5)
+    assert (caught.value.declared, caught.value.implemented) == (4, FORMAT_VERSION)
     capsys.readouterr()
     assert _cli(["-C", root, "check"]) != 0
     assert "format version 5" in capsys.readouterr().err
@@ -130,11 +148,12 @@ def test_gql_at_four_is_refused_as_a_source_too(tmp_path):
         read_project(root)
 
 
-def test_tl_migrate_sets_five_on_a_gql_project_at_four(tmp_path):
-    """What tl 5.9 wrote: the language without the version."""
+def test_tl_migrate_raises_a_gql_project_at_four(tmp_path):
+    """What tl 5.9 wrote: the language without the version. At least 5 for the
+    language (SR-0346); 6 once the built role is bound (SR-0385)."""
     root = _gql(tmp_path, version=4)
     assert _cli(["-C", root, "migrate"]) == 0
-    assert _declared(root) == 5
+    assert _declared(root) == 6
     assert _cli(["-C", root, "check"]) == 0
 
 
@@ -154,12 +173,12 @@ def test_a_dry_run_of_the_move_leaves_the_version(tmp_path):
     assert _files(root) == before
 
 
-def test_a_version_above_five_is_refused_naming_the_upgrade(tmp_path):
-    root = _gql(tmp_path, version=6)
+def test_a_version_above_six_is_refused_naming_the_upgrade(tmp_path):
+    root = _gql(tmp_path, version=7)
     with pytest.raises(FormatError) as caught:
         load_project(root)
     assert "upgrade" in str(caught.value)
-    assert (caught.value.declared, caught.value.implemented) == (6, 5)
+    assert (caught.value.declared, caught.value.implemented) == (7, 6)
 
 
 def test_a_version_below_four_is_still_sent_to_migrate(tmp_path):
@@ -168,8 +187,8 @@ def test_a_version_below_four_is_still_sent_to_migrate(tmp_path):
     with pytest.raises(FormatError) as caught:
         load_project(root)
     assert "tl migrate" in str(caught.value)
-    assert migrate_project(root)[:2] == (3, 4)
-    assert _declared(root) == 4
+    assert migrate_project(root)[:2] == (3, 6)
+    assert _declared(root) == 6
 
 
 def test_dump_says_the_version_the_project_declares(tmp_path, capsys):
@@ -190,4 +209,5 @@ def test_beneath_counts_both_versions_as_current(tmp_path, capsys):
     assert "newer than this tl" not in said
     assert "1 graph(s) already at format version 4" in said
     assert "1 graph(s) already at format version 5" in said
-    assert "1 graph(s) whose filters are GQL below format version 5" in said
+    assert "1 graph(s) below the format version their filters or their built " \
+        "role need" in said
