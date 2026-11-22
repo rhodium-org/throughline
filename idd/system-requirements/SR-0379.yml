@@ -1,0 +1,39 @@
+uid: SR-0379
+type: system_requirement
+status: ratified
+title: An item may be built before it is signed
+text: The lifecycle tl init writes, and every standard this repository publishes,
+  shall allow proposed to move to implemented. tl migrate shall add that move to
+  a project's own transitions where the status of the ratified role may move into
+  a built status and the proposed one may not.
+rationale: 'Today tl status refuses proposed to implemented, so built ahead of agreement
+  cannot be recorded (found 22 November 2026, rhodium-org/throughline#186). Whether
+  that is allowed to land is the gate''s question (UR-0051), not the status table''s.
+  Rejected, removing the ratified status so status carries building alone: every
+  follower graph, standard and tool counts by it, and the cost is not yet shown to
+  be worth it; the signature already carries agreement, so the ratified status now
+  only says agreed and not built. Who pays: projects with their own transitions table,
+  which gain one move through tl migrate.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:10Z'
+  fingerprint: sha256:77e1aca36f00c963ab0199dece17fe16e1964a2189239d2712b74e57a9d80b5c
+  content:
+    type: system_requirement
+    text: The lifecycle tl init writes, and every standard this repository publishes,
+      shall allow proposed to move to implemented. tl migrate shall add that move
+      to a project's own transitions where the status of the ratified role may move
+      into a built status and the proposed one may not.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

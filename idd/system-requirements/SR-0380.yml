@@ -1,0 +1,39 @@
+uid: SR-0380
+type: system_requirement
+status: ratified
+title: The strict check refuses built and unsigned work, except work the graph was
+  laid over
+text: tl check --strict shall report an error for an item in a built status whose
+  signatures do not meet what its type requires, unless its first implementations
+  entry is no later than the project's adopted time; such an item it shall report
+  as a warning, awaiting acceptance.
+rationale: 'Keeps UR-0046''s rule that built work needs a signature, judged on the
+  record rather than the status name, and lets a graph laid over existing work pass
+  its gate while its items wait to be accepted. Work in progress may hold built unsigned
+  items; the strict check is what a pull request lands through, so they cannot reach
+  the main line. Rejected, a warning for every built unsigned item: that would let
+  agent work land unagreed. Who pays: nobody new; adopted graphs stop failing a gate
+  they could never pass.'
+normative: true
+links:
+- target: UR-0051
+  type: implements
+  stamp: sha256:c77d19f0706b19b353f6a481ac64280d18dc602ca8b6d459434e48700d7f6f42
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:11Z'
+  fingerprint: sha256:4928aa2547dc0a1261049376ade6e684535ca39ff1b22d6052d80f66d0e5ec1f
+  content:
+    type: system_requirement
+    text: tl check --strict shall report an error for an item in a built status whose
+      signatures do not meet what its type requires, unless its first implementations
+      entry is no later than the project's adopted time; such an item it shall report
+      as a warning, awaiting acceptance.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

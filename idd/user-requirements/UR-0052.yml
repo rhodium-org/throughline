@@ -1,0 +1,36 @@
+uid: UR-0052
+type: user_requirement
+status: ratified
+title: Signing says whether it agrees a plan or accepts what exists
+text: Where a person is asked to sign an item, the Tool shall say whether the signature
+  agrees something not yet built or accepts something already built, and for the
+  latter show when it was built and from which revision.
+rationale: 'Signing a plan and accepting existing work are different judgements;
+  the operator found the line between them blurred on 22 November 2026, when signatures
+  given at review read as plans agreed. UR-0029 shows the signer the wording; this
+  shows them what the wording describes the state of. Who pays: front ends that ask
+  for signatures (tl ratify, tl-ratify), which show one more line.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+  stamp: sha256:1fb5f07ed2575d3676b5c41ad196b9b2566f4147605b42c2ac0b9eb9a780d059
+- target: UR-0029
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:00Z'
+  fingerprint: sha256:ee7ed783b5ed8b4cc86aa1ebe059654ca60dbbae78cc26f568f9ee90889d920c
+  content:
+    type: user_requirement
+    text: Where a person is asked to sign an item, the Tool shall say whether the
+      signature agrees something not yet built or accepts something already built,
+      and for the latter show when it was built and from which revision.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

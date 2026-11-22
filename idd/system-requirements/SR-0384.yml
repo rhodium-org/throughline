@@ -1,0 +1,38 @@
+uid: SR-0384
+type: system_requirement
+status: ratified
+title: A request for a signature says whether it agrees a plan or accepts what exists
+text: tl ratify shall state, for each item before asking, either that the signature
+  agrees work not yet built, or that it accepts work built at a given time from a
+  given revision, and tl dump shall carry each item's implementations list so that
+  every other front end can say the same.
+rationale: 'Signing a plan and accepting work already done are different judgements;
+  on 22 November 2026 signatures given at review read as plans agreed (rhodium-org/throughline#186).
+  tl-ratify draws from the dump, so carrying the record there is what lets it show
+  the line; its own change belongs to its repository. Who pays: front ends that ask
+  for signatures, one more line each; dump consumers, one more field.'
+normative: true
+links:
+- target: UR-0052
+  type: implements
+  stamp: sha256:ee7ed783b5ed8b4cc86aa1ebe059654ca60dbbae78cc26f568f9ee90889d920c
+- target: UR-0029
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:13Z'
+  fingerprint: sha256:08c00e42fdd95f39b834d22efff2d64bd335707fa05e016b2e26f14cc4c8ec7d
+  content:
+    type: system_requirement
+    text: tl ratify shall state, for each item before asking, either that the signature
+      agrees work not yet built, or that it accepts work built at a given time from
+      a given revision, and tl dump shall carry each item's implementations list
+      so that every other front end can say the same.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

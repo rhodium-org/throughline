@@ -1,0 +1,38 @@
+uid: UR-0050
+type: user_requirement
+status: ratified
+title: A graph laid over existing work says when it was laid
+text: A project shall be able to record when its graph was laid over work that already
+  existed, so that items built before then are read as existing work waiting to be
+  accepted, not as work done without agreement.
+rationale: 'Laying a graph over an existing project makes every item unsigned and
+  built, which is honest; building from scratch should build nothing unsigned. One
+  date tells the two apart without a mode per graph, and a graph started from scratch
+  simply has none. Rejected, a mode switch per graph (adopted or greenfield): a graph
+  adopted once is greenfield for everything added after, and a mode cannot say which
+  items are which. Who pays: a project laying a graph over existing work sets one
+  date.'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+  stamp: sha256:d963287bd1c6c760632eb9ffe5a8a8a8d06bccfe6959fd9ea055fbd928f6464f
+- target: UR-0049
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:49:46Z'
+  fingerprint: sha256:3c23ec73fef2476e322225a7192220ffc838b87e00624b9f969707db10c42532
+  content:
+    type: user_requirement
+    text: A project shall be able to record when its graph was laid over work that
+      already existed, so that items built before then are read as existing work
+      waiting to be accepted, not as work done without agreement.
+    normative: true
+    derived: false
+    attrs:
+      priority: should
