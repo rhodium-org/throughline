@@ -1,0 +1,48 @@
+uid: SR-0377
+type: system_requirement
+status: ratified
+title: Which statuses mean built is a role a graph may leave out
+text: '[status.roles] may name, as built, the statuses in which an item is realised
+  by the work the graph governs: code shipped, a deck published, a policy in force.
+  tl init shall write implemented and verified there, and tl migrate shall add them
+  to a project that declares both and has no built role. A project that names no
+  built role has no built axis: its items record no implementations, filters read
+  built as false and built_at as null, and neither the strict check''s built rule
+  nor tl adopt applies to it.'
+rationale: 'Not every graph governs something that gets built: a mission statement
+  is agreed and that is all, and a presentation graph''s items are realised when
+  a deck is published, not implemented. The Tool finds statuses by their role, never
+  by name (SR-0131), so a graph says what realised means in its own words, or says
+  nothing and is judged on agreement alone. Rejected, hard-coding implemented and
+  verified: it would tell a graph of intentions that its items are unbuilt work.
+  Rejected, a separate flag to switch the axis off: leaving out the role already
+  says it, in one place. Who pays: a project with its own vocabulary that wants the
+  built axis sets the role once; one that does not, nothing.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+- target: SR-0131
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:52:24Z'
+  fingerprint: sha256:0ca450667c26daaf37ba45feb8e365b4a4af6d073b81867043366e5f008b4aa6
+  content:
+    type: system_requirement
+    text: '[status.roles] may name, as built, the statuses in which an item is realised
+      by the work the graph governs: code shipped, a deck published, a policy in
+      force. tl init shall write implemented and verified there, and tl migrate shall
+      add them to a project that declares both and has no built role. A project that
+      names no built role has no built axis: its items record no implementations,
+      filters read built as false and built_at as null, and neither the strict check''s
+      built rule nor tl adopt applies to it.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

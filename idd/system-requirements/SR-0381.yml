@@ -1,0 +1,38 @@
+uid: SR-0381
+type: system_requirement
+status: ratified
+title: tl adopt records when a graph was laid over existing work
+text: 'tl adopt shall set adopted under [project] to a UTC time (now, or --at), and
+  mark the items it is given, or with --all every live item, as built with an implementations
+  entry at that time, by the person running it, at the current revision, with adopted:
+  true. Run again with the same time it shall change nothing.'
+rationale: 'One date separates existing work from work done after the graph (UR-0050),
+  so the gate needs no mode. Marking the items built in the same command keeps the
+  date and the records consistent. Rejected, inferring adoption from the earliest
+  commit of the graph: a graph is often written over weeks before it is meant to
+  govern anything. Who pays: whoever lays a graph over an existing project runs one
+  command.'
+normative: true
+links:
+- target: UR-0050
+  type: implements
+  stamp: sha256:3c23ec73fef2476e322225a7192220ffc838b87e00624b9f969707db10c42532
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:11Z'
+  fingerprint: sha256:074f9b4ed6cc0fa312501c069d7f2ec6e3e190e3e4fc359fd475548a80775878
+  content:
+    type: system_requirement
+    text: 'tl adopt shall set adopted under [project] to a UTC time (now, or --at),
+      and mark the items it is given, or with --all every live item, as built with
+      an implementations entry at that time, by the person running it, at the current
+      revision, with adopted: true. Run again with the same time it shall change
+      nothing.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -1,0 +1,42 @@
+uid: SR-0378
+type: system_requirement
+status: ratified
+title: Moving an item into a built status writes a dated record
+text: 'When tl moves an item from a status outside the built role into one inside
+  it, it shall append to the item''s implementations list an entry with at (UTC,
+  ISO 8601), by (who moved it, as a signature records it) and revision (the commit
+  the work tree stood at). Moving it out shall append an entry with withdrawn: true
+  and its own at. The list is not part of the item''s fingerprint and no signature
+  covers it.'
+rationale: 'A signature records who agreed and when (UR-0040); building needs the
+  same, or the order of the two cannot be read. The revision says which code the
+  claim was made about. Kept out of the fingerprint so marking work built never stales
+  a signature, as a ratification record does not. Rejected, reading the time from
+  git alone: one commit carries many moves, and work done offline is committed later
+  (the reason UR-0040 gave). Who pays: every item that is built gains a few lines;
+  tools that rewrite item files must keep the list.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:10Z'
+  fingerprint: sha256:bf86a971c958bd5bc5d7ad26825683a241021b6deca938477201e23fedc9a3d5
+  content:
+    type: system_requirement
+    text: 'When tl moves an item from a status outside the built role into one inside
+      it, it shall append to the item''s implementations list an entry with at (UTC,
+      ISO 8601), by (who moved it, as a signature records it) and revision (the commit
+      the work tree stood at). Moving it out shall append an entry with withdrawn:
+      true and its own at. The list is not part of the item''s fingerprint and no
+      signature covers it.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

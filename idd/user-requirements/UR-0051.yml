@@ -1,0 +1,38 @@
+uid: UR-0051
+type: user_requirement
+status: ratified
+title: Nothing lands built but unagreed, except what was built before the graph
+text: The gate a project lands work through shall refuse an item that is built and
+  not agreed, unless it was built before the graph was laid over existing work; work
+  in progress may hold such items until it lands.
+rationale: 'UR-0046 already makes the strict check refuse an implemented item with
+  no signature. This keeps that rule, lets it apply to the item and not to its status
+  name, and exempts existing work a graph was laid over, which no one could have
+  agreed before it was built. Building ahead on a branch is allowed because the gate
+  is landing: an agent builds and a person signs at review (the Python-upgrade pull
+  requests of 22 November 2026). Who pays: nobody new; an adopted graph''s existing
+  work stops failing the gate it could never pass.'
+normative: true
+links:
+- target: BN-0009
+  type: derives_from
+  stamp: sha256:1fb5f07ed2575d3676b5c41ad196b9b2566f4147605b42c2ac0b9eb9a780d059
+- target: UR-0046
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:49:53Z'
+  fingerprint: sha256:c77d19f0706b19b353f6a481ac64280d18dc602ca8b6d459434e48700d7f6f42
+  content:
+    type: user_requirement
+    text: The gate a project lands work through shall refuse an item that is built
+      and not agreed, unless it was built before the graph was laid over existing
+      work; work in progress may hold such items until it lands.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

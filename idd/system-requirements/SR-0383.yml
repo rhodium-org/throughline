@@ -1,0 +1,39 @@
+uid: SR-0383
+type: system_requirement
+status: ratified
+title: tl migrate dates the built work a graph already holds
+text: 'For an item in a built status with no implementations list, tl migrate shall
+  write one entry dated from the first commit in which the item entered that status,
+  by that commit''s author, at that commit, with backfilled: true; where history
+  cannot say, it shall write none and name the item. It is idempotent.'
+rationale: 'Existing graphs hold hundreds of implemented items (throughline has 106)
+  whose building has no record; without one they cannot be ordered against their
+  signatures. Git history is the best evidence there is and is marked as such, as
+  backfilled signatures are. Rejected, dating them all at migration time: that would
+  claim they were built after they were signed. Who pays: the first migrate after
+  this release takes longer on a long history.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+- target: SR-0313
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:12Z'
+  fingerprint: sha256:0adc3273cf7dff09039a7a16b8b813205f74ad013a235a68a26ef03b20babd0f
+  content:
+    type: system_requirement
+    text: 'For an item in a built status with no implementations list, tl migrate
+      shall write one entry dated from the first commit in which the item entered
+      that status, by that commit''s author, at that commit, with backfilled: true;
+      where history cannot say, it shall write none and name the item. It is idempotent.'
+    normative: true
+    derived: false
+    attrs:
+      priority: should

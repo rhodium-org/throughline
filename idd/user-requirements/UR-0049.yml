@@ -1,0 +1,41 @@
+uid: UR-0049
+type: user_requirement
+status: ratified
+title: Agreed and built are recorded apart, each with when
+text: Whether an item is agreed and whether it is built shall be recorded independently,
+  each with the time it became so, so that any of the four combinations can be recorded
+  and the order of the two read from the item itself.
+rationale: 'Found on 22 November 2026 (rhodium-org/throughline#186): an agent built
+  requirements on a branch and the operator signed them afterwards; the graph then
+  said only ratified, nothing said the items were built or when, and built-but-unsigned
+  could not be recorded at all. Agreement already has its record and its time (UR-0040);
+  building has neither. The operator''s position: the two are orthogonal. Rejected,
+  one status carrying both: it cannot say built before signed, which is how every
+  adopted graph and every agent pull request starts. Who pays: every graph, whose
+  items gain a second record; and readers of the dump, who see one more field.'
+normative: true
+links:
+- target: BN-0004
+  type: derives_from
+  stamp: sha256:d963287bd1c6c760632eb9ffe5a8a8a8d06bccfe6959fd9ea055fbd928f6464f
+- target: UR-0040
+  type: relates
+- target: UR-0046
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:49:27Z'
+  fingerprint: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+  content:
+    type: user_requirement
+    text: Whether an item is agreed and whether it is built shall be recorded independently,
+      each with the time it became so, so that any of the four combinations can be
+      recorded and the order of the two read from the item itself.
+    normative: true
+    derived: false
+    attrs:
+      priority: should

@@ -1,0 +1,38 @@
+uid: SR-0382
+type: system_requirement
+status: ratified
+title: A filter can read when an item was built and when it was signed
+text: 'A filter shall be able to read, for each item: built, true when it is in a
+  status of the built role; built_at, the time of the entry that last put it there,
+  or null; signed_at, the time of the latest signature that stands, or null; and
+  adopted, true when it was built no later than the project''s adopted time. Each
+  is the judgement tl check makes (SR-0335).'
+rationale: 'With these, the four cells and the order of the two are a query, for
+  example built and not signed, or built_at before signed_at, without reading the
+  records. Who pays: nobody; four more read-only properties.'
+normative: true
+links:
+- target: UR-0049
+  type: implements
+  stamp: sha256:08737c38223e90cb5336b16266985f72fabb54d5a5add9103c9cf0678cedc9ab
+- target: SR-0335
+  type: relates
+attrs:
+  priority: should
+  verification: test
+  origin: ai
+ratifications:
+- by: Henry Grech-Cini
+  at: '2026-11-22T11:50:12Z'
+  fingerprint: sha256:2311b22b51d4437cd601835653aa87e3d2ab225471ff486682f2e4966cd94dde
+  content:
+    type: system_requirement
+    text: 'A filter shall be able to read, for each item: built, true when it is
+      in a status of the built role; built_at, the time of the entry that last put
+      it there, or null; signed_at, the time of the latest signature that stands,
+      or null; and adopted, true when it was built no later than the project''s adopted
+      time. Each is the judgement tl check makes (SR-0335).'
+    normative: true
+    derived: false
+    attrs:
+      priority: should
